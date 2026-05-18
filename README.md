@@ -18,14 +18,44 @@ Portfolio Outlook Manager is een professionele **AI-ondersteunde paper portfolio
 
 ## High-level architectuur (foundation)
 - **Frontend (apps/web):** eenvoudige Nederlandse UI met hulpteksten.
-- **API-backend (apps/api):** domeinlogica, validatie, audit, policy-handhaving.
-- **Workers (apps/worker):** geplande analyses, dataverwerking en monitoringjobs.
-- **Pakketten (packages/*):** domeinmodules (risk, portfolio, tax, audit, ai, enz.).
-- **Opslag:** PostgreSQL/TimescaleDB + immutable raw archief + research/audit archief.
-- **Infra (infra/docker):** Docker Compose-gedreven deployment en portabiliteit.
+- **API-backend (apps/api):** FastAPI shell met health-endpoints en basisconfiguratie.
+- **Workers (apps/worker):** placeholder workerproces met veilige paper-only statusfunctie.
+- **Pakketten (packages/*):** placeholder domeinmodules (risk, portfolio, tax, audit, ai, enz.).
+- **Opslag:** PostgreSQL placeholder via Docker Compose; nog geen businessmodellen/migraties.
+- **Infra (infra/docker):** Docker Compose-gedreven development setup en portabiliteit.
 
-## Lokale development (placeholder)
-Definitieve setup-instructies volgen in een volgende fase. Deze repository bevat nu bewust alleen fundament, documentatie en mappenstructuur.
+## Lokale development (technische skeleton)
+
+### API
+```bash
+cd apps/api
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+uvicorn portfolio_outlook_api.main:app --reload --app-dir src
+```
+
+### Worker
+```bash
+cd apps/worker
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+python src/portfolio_outlook_worker/main.py
+```
+
+### Web
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+### Docker Compose
+```bash
+cd infra/docker
+docker compose up --build
+```
 
 ## No-live-trading principe
 De applicatie mag in versie 1 geen echte broker-orders uitvoeren, geen live-accounts aansturen en geen real-money transacties automatiseren.

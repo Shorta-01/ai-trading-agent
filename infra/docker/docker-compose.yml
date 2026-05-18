@@ -1,0 +1,58 @@
+services:
+  api:
+    build:
+      context: ../../apps/api
+    env_file:
+      - .env.example
+    environment:
+      API_ENVIRONMENT: ${ENVIRONMENT:-development}
+      API_PAPER_ONLY_MODE: ${PAPER_ONLY_MODE:-true}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: ../../apps/worker
+    env_file:
+      - .env.example
+    environment:
+      WORKER_ENVIRONMENT: ${ENVIRONMENT:-development}
+      WORKER_PAPER_ONLY_MODE: ${PAPER_ONLY_MODE:-true}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../../apps/web
+    env_file:
+      - .env.example
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    env_file:
+      - .env.example
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio_outlook}
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_with_local_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-portfolio_user} -d $${POSTGRES_DB:-portfolio_outlook}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
