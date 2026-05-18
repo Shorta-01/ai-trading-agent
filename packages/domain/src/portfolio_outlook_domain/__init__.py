@@ -85,6 +85,11 @@ from .enums import (
     OrderStatus,
     OrderType,
     PaperLiveMode,
+    PaperPortfolioBaseCurrency,
+    PaperSetupBlockReason,
+    PaperSetupMode,
+    PaperSetupStatus,
+    PaperSetupWarningReason,
     ParallelExecutionPolicy,
     PromptInjectionRisk,
     ResearchReportStatus,
@@ -153,6 +158,7 @@ from .identifiers import (
     ExternalIntegrationId,
     FifoAllocationId,
     FillId,
+    FirstRunSetupPreviewId,
     HealthCheckId,
     InstrumentId,
     JobEligibilityCheckId,
@@ -161,6 +167,8 @@ from .identifiers import (
     LotId,
     ModelPricingId,
     OrderId,
+    PaperCashAccountId,
+    PaperPortfolioSetupId,
     PortfolioId,
     RawDataArchiveId,
     ResearchArchiveId,
@@ -192,6 +200,17 @@ from .investment_policy import InvestmentPolicyStatement
 from .ledger import CashLedgerEntry, PaperTransaction
 from .lots import FifoLotAllocation, PaperLot
 from .orders import ExecutionFill, PaperOrder
+from .paper_setup import (
+    FirstRunPaperPortfolioSetupPreview,
+    FirstRunPaperPortfolioSetupRequest,
+    PaperCashAccountDefinition,
+    PaperPortfolioSetupDefaults,
+    PaperPortfolioSetupState,
+    build_default_paper_portfolio_setup_defaults,
+    build_first_run_setup_preview,
+    build_not_configured_paper_setup_state,
+    paper_setup_ready_for_creation,
+)
 from .portfolio import PortfolioSummary, PositionSnapshot
 from .primitives import CurrencyCode, Money, Percentage, Quantity
 from .research import ResearchFinding, ResearchReport, ResearchRun
@@ -524,4 +543,22 @@ __all__ = [
     "ApiConnectionCheckId",
     "ApiConnectionCheck",
     "ApiBudgetPolicy",
+    "PaperPortfolioSetupId",
+    "PaperCashAccountId",
+    "FirstRunSetupPreviewId",
+    "PaperSetupStatus",
+    "PaperSetupMode",
+    "PaperPortfolioBaseCurrency",
+    "PaperSetupBlockReason",
+    "PaperSetupWarningReason",
+    "PaperCashAccountDefinition",
+    "FirstRunPaperPortfolioSetupRequest",
+    "FirstRunPaperPortfolioSetupPreview",
+    "PaperPortfolioSetupDefaults",
+    "PaperPortfolioSetupState",
+    "build_default_paper_portfolio_setup_defaults",
+    "build_not_configured_paper_setup_state",
+    "build_first_run_setup_preview",
+    "paper_setup_ready_for_creation",
+
 ]

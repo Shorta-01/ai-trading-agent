@@ -50,6 +50,12 @@ from .lots import (
     validate_lot_quantities,
 )
 from .money import add_money, ensure_same_currency, multiply_quantity_by_price, subtract_money
+from .paper_setup_guards import (
+    check_first_run_setup_request_allowed,
+    check_setup_preview_safe,
+    require_first_run_setup_request_allowed,
+    require_setup_preview_safe,
+)
 from .performance import (
     PortfolioCashFlowSummary,
     PortfolioCostAndTaxSummary,
@@ -149,6 +155,10 @@ __all__ = [
     "calculate_net_result_since_start",
     "calculate_return_since_start",
     "build_portfolio_performance_summary",
+    "check_first_run_setup_request_allowed",
+    "require_first_run_setup_request_allowed",
+    "check_setup_preview_safe",
+    "require_setup_preview_safe",
     "term_months",
     "calculate_maturity_date",
     "calculate_gross_interest_for_term_deposit",
