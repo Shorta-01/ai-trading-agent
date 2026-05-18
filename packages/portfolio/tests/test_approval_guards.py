@@ -2,7 +2,6 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from pydantic import ValidationError
 from portfolio_outlook_domain import (
     AdviceAction,
     ApprovalDecision,
@@ -11,6 +10,7 @@ from portfolio_outlook_domain import (
     ExecutionMode,
     Money,
 )
+from pydantic import ValidationError
 
 from portfolio_outlook_portfolio import (
     build_approved_action,
