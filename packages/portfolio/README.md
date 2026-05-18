@@ -26,3 +26,11 @@ python -m ruff check .
 python -m mypy src
 python -m pytest -q
 ```
+
+## Paper ledger service helpers
+- Deze helpers maken gevalideerde paper-transacties en cash-ledger entries aan.
+- Geen persistentie en geen database.
+- Geen broker-executie en geen echte orders.
+- Geen aanbevelingen, geen AI en geen market-data calls.
+- Decimal-only accounting via gedeelde domeinprimitives.
+- Blijft strikt paper-only voor versie 1.
