@@ -73,3 +73,80 @@ class PaperLiveMode(StrEnum):
     LIVE_READ_ONLY = "live_read_only"
     LIVE_MANUAL_APPROVAL = "live_manual_approval"
     LIVE_AUTOMATION_BLOCKED = "live_automation_blocked"
+
+
+class LedgerEntryType(StrEnum):
+    DEPOSIT = "deposit"
+    WITHDRAWAL = "withdrawal"
+    BUY = "buy"
+    SELL = "sell"
+    DIVIDEND = "dividend"
+    DISTRIBUTION = "distribution"
+    FEE = "fee"
+    TAX_ESTIMATE = "tax_estimate"
+    FX_CONVERSION = "fx_conversion"
+    CASH_ADJUSTMENT = "cash_adjustment"
+    CORPORATE_ACTION = "corporate_action"
+    REBALANCE_ACTION = "rebalance_action"
+
+
+class TransactionSide(StrEnum):
+    BUY = "buy"
+    SELL = "sell"
+
+
+class TransactionStatus(StrEnum):
+    DRAFT = "draft"
+    SUGGESTED = "suggested"
+    PENDING = "pending"
+    FILLED = "filled"
+    PARTIALLY_FILLED = "partially_filled"
+    CANCELLED = "cancelled"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+    BLOCKED = "blocked"
+
+
+class OrderType(StrEnum):
+    MARKET = "market"
+    LIMIT = "limit"
+
+
+class OrderStatus(StrEnum):
+    SUGGESTED = "suggested"
+    PENDING = "pending"
+    SUBMITTED = "submitted"
+    PARTIALLY_FILLED = "partially_filled"
+    FILLED = "filled"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+    BLOCKED = "blocked"
+
+
+class LotStatus(StrEnum):
+    OPEN = "open"
+    PARTIALLY_CLOSED = "partially_closed"
+    CLOSED = "closed"
+
+
+class CostType(StrEnum):
+    BROKER_FEE = "broker_fee"
+    TOB_ESTIMATE = "tob_estimate"
+    FX_COST = "fx_cost"
+    SPREAD_ESTIMATE = "spread_estimate"
+    SLIPPAGE_ESTIMATE = "slippage_estimate"
+    WITHHOLDING_TAX_ESTIMATE = "withholding_tax_estimate"
+    OTHER = "other"
+
+
+class CorporateActionType(StrEnum):
+    DIVIDEND = "dividend"
+    DISTRIBUTION = "distribution"
+    SPLIT = "split"
+    REVERSE_SPLIT = "reverse_split"
+    SPECIAL_DIVIDEND = "special_dividend"
+    MERGER = "merger"
+    SPIN_OFF = "spin_off"
+    TICKER_CHANGE = "ticker_change"
+    DELISTING = "delisting"

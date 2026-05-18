@@ -24,3 +24,11 @@ python -m ruff check .
 python -m mypy src
 python -m pytest -q
 ```
+
+## Paper ledger and accounting contracts
+- Alleen contracten (datavormen en validatie), geen accounting engine.
+- Nog geen FIFO-verkoopallocatie-algoritme.
+- Nog geen database/ORM-opslag.
+- Geen broker-executie.
+- Paper-only afbakening blijft actief.
+- Financiële waarden blijven Decimal-only via `Money`, `Quantity` en `Percentage`.
