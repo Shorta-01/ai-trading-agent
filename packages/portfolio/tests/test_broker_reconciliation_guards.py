@@ -2,16 +2,17 @@ from datetime import UTC, datetime
 
 import pytest
 from portfolio_outlook_domain import (
+    BrokerReconciliationDifference,
+    BrokerReconciliationReport,
     BrokerSuggestionPolicy,
     BrokerSystem,
     ReconciliationDifferenceKind,
     ReconciliationSeverity,
     ReconciliationStatus,
-    BrokerReconciliationDifference,
-    BrokerReconciliationReport,
     build_empty_reconciliation_report,
     build_ibkr_source_of_truth_policy,
 )
+
 from portfolio_outlook_portfolio import (
     check_reconciliation_allows_suggestions,
     require_reconciliation_allows_suggestions,
@@ -62,7 +63,14 @@ def test_reconciliation_guards():
         source_reference_ids=[],
         audit_event_ids=[],
     )
-    report = _clean_report().model_copy(update={"status": ReconciliationStatus.DIFFERENCES_FOUND, "differences": [diff], "can_create_suggestions": False, "suggestion_policy": BrokerSuggestionPolicy.BLOCK_UNTIL_RECONCILED})
+    report = _clean_report().model_copy(
+        update={
+            "status": ReconciliationStatus.DIFFERENCES_FOUND,
+            "differences": [diff],
+            "can_create_suggestions": False,
+            "suggestion_policy": BrokerSuggestionPolicy.BLOCK_UNTIL_RECONCILED,
+        }
+    )
     assert not check_reconciliation_allows_suggestions(report)
     with pytest.raises(InvalidAccountingInputError):
         require_reconciliation_allows_suggestions(report)

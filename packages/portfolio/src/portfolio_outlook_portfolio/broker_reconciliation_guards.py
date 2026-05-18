@@ -17,7 +17,9 @@ def check_reconciliation_allows_suggestions(report: BrokerReconciliationReport) 
 
 def require_reconciliation_allows_suggestions(report: BrokerReconciliationReport) -> None:
     if not check_reconciliation_allows_suggestions(report):
-        raise InvalidAccountingInputError("Actiesuggesties zijn geblokkeerd door brokerreconciliatie.")
+        raise InvalidAccountingInputError(
+            "Actiesuggesties zijn geblokkeerd door brokerreconciliatie."
+        )
 
 
 def check_no_blocking_reconciliation_differences(
