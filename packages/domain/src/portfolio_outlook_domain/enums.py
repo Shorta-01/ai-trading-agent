@@ -934,3 +934,122 @@ class PaperSetupWarningReason(StrEnum):
     OPENAI_NOT_CONFIGURED = "openai_not_configured"
     NO_POSITIONS_YET = "no_positions_yet"
     NO_WATCHLIST_YET = "no_watchlist_yet"
+
+
+class StorageBackendKind(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    POSTGRES = "postgres"
+    TIMESCALEDB = "timescaledb"
+    IMMUTABLE_ARCHIVE = "immutable_archive"
+    RESEARCH_ARCHIVE = "research_archive"
+    AUDIT_LOG = "audit_log"
+    LOCAL_FILE_FUTURE = "local_file_future"
+    OTHER = "other"
+
+
+class StorageBackendStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    PLANNED = "planned"
+    CONFIGURED = "configured"
+    CONNECTED = "connected"
+    DEGRADED = "degraded"
+    ERROR = "error"
+    BLOCKED = "blocked"
+
+
+class PersistenceMode(StrEnum):
+    NOT_AVAILABLE = "not_available"
+    READ_ONLY = "read_only"
+    WRITE_PREVIEW_ONLY = "write_preview_only"
+    WRITE_ENABLED = "write_enabled"
+    DISABLED = "disabled"
+
+
+class StorageReadinessStatus(StrEnum):
+    NOT_READY = "not_ready"
+    READY_FOR_PREVIEW = "ready_for_preview"
+    READY_FOR_PERSISTENCE = "ready_for_persistence"
+    DEGRADED = "degraded"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class StorageBlockReason(StrEnum):
+    BACKEND_NOT_CONFIGURED = "backend_not_configured"
+    SCHEMA_NOT_READY = "schema_not_ready"
+    MIGRATION_REQUIRED = "migration_required"
+    BACKUP_NOT_CONFIGURED = "backup_not_configured"
+    RESTORE_NOT_TESTED = "restore_not_tested"
+    AUDIT_STORAGE_MISSING = "audit_storage_missing"
+    SECRET_STORAGE_UNSAFE = "secret_storage_unsafe"
+    PERMISSION_MISSING = "permission_missing"
+    DATA_INTEGRITY_RISK = "data_integrity_risk"
+    UNKNOWN = "unknown"
+
+
+class StorageWarningReason(StrEnum):
+    PREVIEW_ONLY = "preview_only"
+    BACKUP_NOT_TESTED = "backup_not_tested"
+    RETENTION_POLICY_MISSING = "retention_policy_missing"
+    ARCHIVE_NOT_CONFIGURED = "archive_not_configured"
+    LOCAL_ONLY = "local_only"
+    MANUAL_REVIEW_REQUIRED = "manual_review_required"
+    UNKNOWN = "unknown"
+
+
+class PersistedEntityKind(StrEnum):
+    PAPER_SETUP = "paper_setup"
+    PAPER_CASH_ACCOUNT = "paper_cash_account"
+    PAPER_CASH_MOVEMENT = "paper_cash_movement"
+    PAPER_TRANSACTION = "paper_transaction"
+    POSITION_LOT = "position_lot"
+    WATCHLIST_ITEM = "watchlist_item"
+    ACTION_SUGGESTION = "action_suggestion"
+    APPROVAL_DECISION = "approval_decision"
+    SOURCE_REFERENCE = "source_reference"
+    AI_RESEARCH_RECORD = "ai_research_record"
+    DATA_QUALITY_CHECK = "data_quality_check"
+    SCHEDULER_JOB_RUN = "scheduler_job_run"
+    SETTINGS_PROFILE = "settings_profile"
+    API_USAGE_SUMMARY = "api_usage_summary"
+    AUDIT_EVENT = "audit_event"
+    TAX_RECORD = "tax_record"
+    BACKUP_RECORD = "backup_record"
+    OTHER = "other"
+
+
+class StorageSensitivity(StrEnum):
+    PUBLIC = "public"
+    INTERNAL = "internal"
+    CONFIDENTIAL = "confidential"
+    SECRET_REFERENCE_ONLY = "secret_reference_only"
+    PROHIBITED_SECRET_VALUE = "prohibited_secret_value"
+
+
+class RetentionCategory(StrEnum):
+    SHORT_TERM_OPERATIONAL = "short_term_operational"
+    PORTFOLIO_LIFETIME = "portfolio_lifetime"
+    AUDIT_LIFETIME = "audit_lifetime"
+    TAX_LIFETIME = "tax_lifetime"
+    RESEARCH_ARCHIVE = "research_archive"
+    IMMUTABLE_RAW_ARCHIVE = "immutable_raw_archive"
+    USER_CONFIG = "user_config"
+    SECRET_REFERENCE_METADATA = "secret_reference_metadata"
+
+
+class BackupStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    PLANNED = "planned"
+    CONFIGURED = "configured"
+    LAST_BACKUP_OK = "last_backup_ok"
+    LAST_BACKUP_FAILED = "last_backup_failed"
+    RESTORE_TESTED = "restore_tested"
+    BLOCKED = "blocked"
+
+
+class RestoreCheckStatus(StrEnum):
+    NOT_TESTED = "not_tested"
+    PASSED = "passed"
+    FAILED = "failed"
+    BLOCKED = "blocked"
+    NOT_APPLICABLE = "not_applicable"

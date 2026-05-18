@@ -84,6 +84,13 @@ from .suggestion_engine_guards import (
     require_candidate_ready_for_suggestion,
     require_suggestion_draft_ready,
 )
+from .storage_guards import (
+    check_storage_allows_paper_setup_persistence,
+    check_storage_allows_transaction_persistence,
+    require_storage_allows_paper_setup_persistence,
+    require_storage_allows_transaction_persistence,
+)
+
 from .suggestion_guards import (
     check_data_quality_allows_suggestions,
     check_suggestion_eligible,
@@ -184,5 +191,9 @@ __all__ = [
     "check_candidate_ready_for_suggestion",
     "require_candidate_ready_for_suggestion",
     "check_suggestion_draft_ready",
+    "require_storage_allows_transaction_persistence",
+    "check_storage_allows_transaction_persistence",
+    "require_storage_allows_paper_setup_persistence",
+    "check_storage_allows_paper_setup_persistence",
     "require_suggestion_draft_ready",
 ]

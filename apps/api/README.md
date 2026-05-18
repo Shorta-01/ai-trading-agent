@@ -42,3 +42,4 @@ Eigenschappen:
 - Maakt geen database-calls.
 - Start geen worker jobs of scheduler.
 - Alle UI-gerichte labels/hulpteksten zijn Nederlandstalig.
+\n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.

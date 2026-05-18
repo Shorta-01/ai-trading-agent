@@ -15,6 +15,7 @@ from portfolio_outlook_api.status_builders import (
     build_settings_summary,
     build_system_status_summary,
 )
+from portfolio_outlook_api.storage_status import StorageStatusResponse, build_storage_status
 from portfolio_outlook_api.status_models import (
     AiUsageSummary,
     DutchLabelsSummary,
@@ -67,3 +68,8 @@ def preview_portfolio_setup(payload: SetupPreviewInput) -> dict[str, object]:
         return create_setup_preview(payload)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/storage/status", response_model=StorageStatusResponse)
+def read_storage_status() -> StorageStatusResponse:
+    return build_storage_status()

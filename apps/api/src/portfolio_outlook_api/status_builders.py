@@ -96,6 +96,15 @@ def build_system_status_summary() -> SystemStatusSummary:
             last_checked_at=None,
         ),
         ServiceStatusCard(
+            key="storage",
+            label_nl="Opslag",
+            status_key="not_configured",
+            status_nl="Nog niet ingesteld",
+            help_nl="Opslag staat nog uit; portfolio en auditlog kunnen nog niet worden opgeslagen.",
+            blocks_suggestions=True,
+            last_checked_at=None,
+        ),
+        ServiceStatusCard(
             key="backup",
             label_nl="Backup",
             status_key="not_checked",
