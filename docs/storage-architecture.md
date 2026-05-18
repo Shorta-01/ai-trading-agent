@@ -43,3 +43,4 @@ Infra blijft platform-onafhankelijk via Docker Compose, env-files, named volumes
 - Publieke nieuws- en websitebronnen zijn standaard niet geschikt voor suggestion eligibility.
 - Geen data kwaliteit of traceerbaarheid betekent geen advies/suggestie.
 
+\n## Scheduler and background job planning\nContracts define planning only: plan -> eligibility -> skip/block/run status -> audit trace. Suggestion jobs require gezonde services en verse data; geen job voert trades uit. Zware AI/research taken horen in queue of externe worker, niet als onbeperkte Raspberry Pi scan.
