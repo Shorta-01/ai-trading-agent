@@ -26,6 +26,18 @@ from .lots import (
     validate_lot_quantities,
 )
 from .money import add_money, ensure_same_currency, multiply_quantity_by_price, subtract_money
+from .performance import (
+    PortfolioCashFlowSummary,
+    PortfolioCostAndTaxSummary,
+    PortfolioPerformanceSummary,
+    build_portfolio_performance_summary,
+    calculate_cash_flow_summary,
+    calculate_cost_and_tax_summary,
+    calculate_current_total_value,
+    calculate_net_result_since_start,
+    calculate_result_since_start,
+    calculate_return_since_start,
+)
 from .snapshot import (
     InstrumentPositionQuantity,
     InstrumentTransactionTotals,
@@ -69,4 +81,14 @@ __all__ = [
     "calculate_transaction_totals",
     "validate_no_oversells",
     "build_paper_portfolio_snapshot",
+    "PortfolioCashFlowSummary",
+    "PortfolioCostAndTaxSummary",
+    "PortfolioPerformanceSummary",
+    "calculate_cash_flow_summary",
+    "calculate_cost_and_tax_summary",
+    "calculate_current_total_value",
+    "calculate_result_since_start",
+    "calculate_net_result_since_start",
+    "calculate_return_since_start",
+    "build_portfolio_performance_summary",
 ]
