@@ -35,14 +35,22 @@ class PaperLot(DomainBaseModel):
             raise ValueError("buy_currency must match buy_price currency.")
         if self.cost_basis.currency != self.buy_price.currency:
             raise ValueError("cost_basis currency must match buy_price currency.")
-        if self.fees_allocated is not None and self.fees_allocated.currency != self.buy_price.currency:
+        if (
+            self.fees_allocated is not None
+            and self.fees_allocated.currency != self.buy_price.currency
+        ):
             raise ValueError("fees_allocated currency must match buy_price currency.")
 
         remaining = self.remaining_quantity.value
         original = self.original_quantity.value
         if remaining == original and self.status is not LotStatus.OPEN:
-            raise ValueError("status must be open when remaining_quantity equals original_quantity.")
-        if Decimal("0") < remaining < original and self.status is not LotStatus.PARTIALLY_CLOSED:
+            raise ValueError(
+                "status must be open when remaining_quantity equals original_quantity."
+            )
+        if (
+            Decimal("0") < remaining < original
+            and self.status is not LotStatus.PARTIALLY_CLOSED
+        ):
             raise ValueError("status must be partially_closed when lot is partially consumed.")
         if remaining == Decimal("0") and self.status is not LotStatus.CLOSED:
             raise ValueError("status must be closed when remaining_quantity is zero.")

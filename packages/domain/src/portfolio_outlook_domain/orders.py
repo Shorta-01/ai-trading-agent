@@ -45,9 +45,17 @@ class PaperOrder(DomainBaseModel):
         if has_quantity and has_amount:
             raise ValueError("Provide requested_quantity or requested_amount, not both.")
 
-        if has_quantity and self.requested_quantity is not None and self.requested_quantity.value <= Decimal("0"):
+        if (
+            has_quantity
+            and self.requested_quantity is not None
+            and self.requested_quantity.value <= Decimal("0")
+        ):
             raise ValueError("requested_quantity must be greater than zero.")
-        if has_amount and self.requested_amount is not None and self.requested_amount.amount <= Decimal("0"):
+        if (
+            has_amount
+            and self.requested_amount is not None
+            and self.requested_amount.amount <= Decimal("0")
+        ):
             raise ValueError("requested_amount must be greater than zero.")
 
         if self.order_type is OrderType.LIMIT and self.limit_price is None:
