@@ -59,3 +59,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Missing audit storage blocks future suggestion/approval persistence.
 - Migration-required status must block writes until resolved.
 - Backup not tested must be visible as warning or blocker based on operation context.
+
+
+## Storage trust and credential risk (Task 22)
+- Running a PostgreSQL container does not mean storage is trusted.
+- Writes remain blocked until migrations, audit persistence, and backup/restore readiness are implemented.
+- Missing credentials or placeholder/default credentials are unsafe for production use.

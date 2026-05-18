@@ -30,3 +30,13 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Connection strings must come from environment variables or secret references, never hardcoded in code.
 - Database backups must be encrypted.
 - Trusted-backup status requires a successful restore test, not only a backup file.
+
+
+## PostgreSQL development service foundation (Task 22)
+- A local PostgreSQL development service is now available in Docker Compose.
+- Production and Raspberry Pi deployments must use safe env vars or secret references (no committed passwords).
+- Named volumes holding persistence data must be backed up.
+- Backups must be encrypted.
+- Backup trust requires restore tests before being marked reliable.
+- Deployment remains portable across `linux/arm64` and `linux/amd64` where practical.
+- No Raspberry Pi-specific application logic may be introduced.
