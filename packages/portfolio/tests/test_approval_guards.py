@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 from portfolio_outlook_domain import (
     AdviceAction,
     ApprovalDecision,
@@ -66,9 +67,15 @@ def test_approval_guards() -> None:
     with pytest.raises(InvalidAccountingInputError):
         build_approved_action(request=req, decision=mismatched)
 
+    with pytest.raises(ValidationError, match="blocked_auto"):
+        _req(ExecutionMode.BLOCKED_AUTO)
+
+    blocked_request = req.model_copy(
+        update={"target_execution_mode": ExecutionMode.BLOCKED_AUTO}
+    )
     with pytest.raises(InvalidAccountingInputError):
         build_approved_action(
-            request=_req(ExecutionMode.BLOCKED_AUTO),
+            request=blocked_request,
             decision=dec.model_copy(update={"approval_request_id": "ar1"}),
         )
 
