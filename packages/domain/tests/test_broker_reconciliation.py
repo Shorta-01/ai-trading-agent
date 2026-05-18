@@ -100,6 +100,27 @@ def test_snapshots_decimal_support():
     assert pos.quantity == Decimal("1")
     with pytest.raises(ValidationError):
         BrokerPositionSnapshot(**{**pos.model_dump(), "quantity": 1.1})
+    with pytest.raises(ValidationError):
+        BrokerPositionSnapshot(**{**pos.model_dump(), "average_cost": 2.2})
+    with pytest.raises(ValidationError):
+        BrokerPositionSnapshot(**{**pos.model_dump(), "market_value": 3.3})
+
+    cash = BrokerCashBalanceSnapshot(
+        broker_cash_snapshot_id="cash_1",
+        broker_snapshot_id="s_1",
+        broker_account_id="a_1",
+        broker_system=BrokerSystem.IBKR,
+        imported_at=now,
+        currency="EUR",
+        cash_amount=Decimal("100"),
+        source_data_kind=BrokerDataKind.CASH_BALANCE,
+        origin=BrokerActivityOrigin.IMPORTED_IBKR_CASH,
+        source_reference_ids=[],
+        explanation_nl="ok",
+    )
+    assert cash.cash_amount == Decimal("100")
+    with pytest.raises(ValidationError):
+        BrokerCashBalanceSnapshot(**{**cash.model_dump(), "cash_amount": 100.1})
 
 
 def test_execution_commission_and_blocking():
@@ -125,6 +146,11 @@ def test_execution_commission_and_blocking():
         explanation_nl="ok",
     )
     assert exec_snapshot.price == Decimal("10")
+    with pytest.raises(ValidationError):
+        BrokerExecutionSnapshot(**{**exec_snapshot.model_dump(), "quantity": 1.1})
+    with pytest.raises(ValidationError):
+        BrokerExecutionSnapshot(**{**exec_snapshot.model_dump(), "price": 10.1})
+
     comm = BrokerCommissionSnapshot(
         broker_commission_snapshot_id="cs_1",
         broker_snapshot_id="s_1",
@@ -139,6 +165,13 @@ def test_execution_commission_and_blocking():
         explanation_nl="ok",
     )
     assert comm.realized_pnl == Decimal("2")
+    with pytest.raises(ValidationError):
+        BrokerCommissionSnapshot(**{**comm.model_dump(), "commission_amount": 1.1})
+    with pytest.raises(ValidationError):
+        BrokerCommissionSnapshot(**{**comm.model_dump(), "realized_pnl": 2.2})
+
+    comm_none = BrokerCommissionSnapshot(**{**comm.model_dump(), "realized_pnl": None})
+    assert comm_none.realized_pnl is None
 
 
 def test_report_rules_and_external_activity_and_secret_names():
