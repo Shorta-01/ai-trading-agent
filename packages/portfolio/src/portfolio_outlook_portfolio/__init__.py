@@ -143,6 +143,10 @@ __all__ = [
     "is_approval_decision_final",
     "build_approved_action",
     "require_approved_decision",
+    "check_suggestion_eligible",
+    "require_suggestion_eligible",
+    "check_data_quality_allows_suggestions",
+    "require_data_quality_allows_suggestions",
 ]
 
 from .approval_guards import (
@@ -156,4 +160,10 @@ from .execution_guards import (
     get_default_execution_targets,
     require_execution_mode_available,
     require_manual_approval_required,
+)
+from .suggestion_guards import (
+    check_data_quality_allows_suggestions,
+    check_suggestion_eligible,
+    require_data_quality_allows_suggestions,
+    require_suggestion_eligible,
 )
