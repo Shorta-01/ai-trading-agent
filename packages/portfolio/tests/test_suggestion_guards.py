@@ -45,11 +45,22 @@ def _check(status: SuggestionEligibilityStatus):
 
 
 def _gate(decision: DataGateDecision):
+    status_by_decision = {
+        DataGateDecision.CONTINUE_ALLOWED: DataQualityGateStatus.PASSED,
+        DataGateDecision.CONTINUE_WITH_WARNING: DataQualityGateStatus.WARNING,
+        DataGateDecision.SKIP_JOB: DataQualityGateStatus.SKIPPED,
+        DataGateDecision.BLOCK_SUGGESTION: DataQualityGateStatus.BLOCKED,
+    }
+    try:
+        status = status_by_decision[decision]
+    except KeyError as exc:  # pragma: no cover - defensive for future enum expansion
+        raise AssertionError(f"Unsupported test decision: {decision}") from exc
+
     return DataQualityGate(
         data_quality_gate_id="g1",
         gate_name="g",
         required_domains=[DataDomain.MARKET_DATA],
-        status=DataQualityGateStatus.PASSED,
+        status=status,
         decision=decision,
         checked_at=datetime.now(UTC),
         explanation_nl="x",
