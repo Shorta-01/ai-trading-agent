@@ -92,3 +92,9 @@ No persistence module is implemented in this PR.
 - `packages/domain` en `packages/portfolio` blijven database-vrij.
 - API/worker zullen later repository-services aanroepen, niet rechtstreeks SQL in routes/jobs.
 - Migraties en Alembic-config mogen geen businesslogica bevatten.
+
+## Task 24 storage boundary update
+- Storage-schema bestaat nu als foundation, terwijl domain/portfolio de bron van businessregels blijven.
+- Database-schema is bedoeld om later gevalideerde feiten op te slaan, niet om berekeningslogica te dragen.
+- API en worker zijn nog niet aan PostgreSQL gekoppeld.
+- Repository-interfaces en persistence orchestration volgen in volgende taken.

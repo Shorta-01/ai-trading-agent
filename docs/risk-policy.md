@@ -70,3 +70,8 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Een migratie-skeleton betekent niet dat schrijfacties al veilig of toegestaan zijn.
 - Schrijven blijft geblokkeerd tot schema, repositories, audit-persistence en backup/restore-checks bestaan.
 - Latere migratie-uitvoering moet backup-readiness als harde voorwaarde afdwingen.
+
+## Task 24 opslag-risicoboundary
+- Het bestaan van schema/migraties betekent niet dat persistence al veilig of operationeel is.
+- Writes blijven geblokkeerd tot repositorylaag, audit-persistence, migratie-uitvoering en backup/restore-checks bestaan en groen zijn.
+- Huidige cashbalans mag niet worden verzonnen vanuit alleen setup-startkapitaal; dit volgt later via ledger/accounting.
