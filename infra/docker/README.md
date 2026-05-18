@@ -72,3 +72,8 @@ docker compose down -v
 - Geen portfolio/setup persistence
 
 PostgreSQL can run locally for infrastructure preparation, but the application does **not** write to it yet.
+
+## Task 23 storage/migration note
+- PostgreSQL container blijft beschikbaar voor toekomstige migraties.
+- Alembic skeleton staat klaar in `packages/storage`.
+- Draai nog geen migraties: er bestaat nog geen schema/migratie-revisie.

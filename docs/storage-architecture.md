@@ -106,3 +106,11 @@ Future implementation order:
 5. first-run setup persistence
 6. audit event persistence
 7. backup/restore workflow
+
+## Task 23: storage dependency layer en Alembic skeleton
+- Nieuw package `packages/storage` toegevoegd als duidelijke storage-boundary.
+- SQLAlchemy metadata-target en Alembic skeleton zijn aanwezig.
+- Er is nog geen schema, geen tabellen en geen migratie-revisie.
+- Er is nog geen persistence van setup/portfolio/transacties/suggesties.
+- Database-URL labels moeten secrets redigeren (geen wachtwoorden tonen).
+- Volgende stap: eerste schema-migratie voor paper setup + audit foundation.

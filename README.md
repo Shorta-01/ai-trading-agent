@@ -91,3 +91,7 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - Local PostgreSQL development service is available via `infra/docker/docker-compose.yml`.
 - The application still does not persist setup, portfolio, cash, transactions, or settings yet.
 - No setup/portfolio data is saved in the app runtime at this stage.
+
+## Storage dependency and migration skeleton (Task 23)
+- Nieuw package `packages/storage` met SQLAlchemy/Alembic skeleton.
+- Nog geen tabellen, nog geen migraties en nog geen persistence in app-runtime.

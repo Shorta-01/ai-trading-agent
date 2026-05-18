@@ -86,3 +86,9 @@ No persistence module is implemented in this PR.
 - Domain and portfolio packages remain database-free.
 - API/worker persistence layers must not contain financial rules.
 - A future repository layer will handle persistence mapping between storage and domain contracts.
+
+## Task 23: storage package boundary
+- `packages/storage` is toegevoegd voor toekomstige migraties en repository-adapters.
+- `packages/domain` en `packages/portfolio` blijven database-vrij.
+- API/worker zullen later repository-services aanroepen, niet rechtstreeks SQL in routes/jobs.
+- Migraties en Alembic-config mogen geen businesslogica bevatten.
