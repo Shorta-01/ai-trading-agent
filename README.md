@@ -66,3 +66,5 @@ De applicatie mag in versie 1 geen echte broker-orders uitvoeren, geen live-acco
 Alle hoofdschermen, labels, waarschuwingen en acties moeten begrijpelijk zijn voor niet-experts. Elke veldwaarde krijgt eenvoudige Nederlandse helptekst/tooltip.
 
 - Nieuw in de paper-only foundation: contracten en berekeningshelpers voor **Mijn termijnrekeningen**.
+
+- Nieuw: backend-foundation voor een paper-only asset capability registry met allowed/watch-only/blocked regels.

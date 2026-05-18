@@ -37,3 +37,7 @@ python -m pytest -q
 - Nieuwe contracten voor manuele termijnrekeningen: input- en projectiemodel.
 - Ondersteunt vaste rente en vast intrestbedrag, plus kosten en geschatte taksen.
 - Alleen validatie en datastructuur; geen tax engine of bankintegratie.
+
+## Capability contracts
+- `AssetCapability` en `CapabilityCheckResult` leggen centraal vast wat per categorie toegestaan, watch-only of geblokkeerd is.
+- Inclusief reden-codes en eenvoudige Nederlandse uitleg voor latere UI-weergave.

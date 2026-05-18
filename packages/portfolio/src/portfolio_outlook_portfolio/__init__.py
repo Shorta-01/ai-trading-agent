@@ -5,6 +5,18 @@ from .accounting import (
     calculate_total_costs,
     validate_transaction_amounts,
 )
+from .capabilities import (
+    check_can_create_paper_order,
+    check_can_create_paper_transaction,
+    check_can_enter_paper_portfolio,
+    check_can_generate_action_suggestion,
+    check_can_research,
+    check_can_watch,
+    get_asset_capability,
+    get_default_asset_capabilities,
+    require_can_create_paper_order,
+    require_can_create_paper_transaction,
+)
 from .errors import (
     CurrencyMismatchError,
     InsufficientLotQuantityError,
@@ -62,6 +74,16 @@ from .term_deposits import (
 )
 
 __all__ = [
+    "get_default_asset_capabilities",
+    "get_asset_capability",
+    "check_can_watch",
+    "check_can_research",
+    "check_can_generate_action_suggestion",
+    "check_can_create_paper_order",
+    "check_can_create_paper_transaction",
+    "check_can_enter_paper_portfolio",
+    "require_can_create_paper_order",
+    "require_can_create_paper_transaction",
     "PortfolioAccountingError",
     "CurrencyMismatchError",
     "InvalidAccountingInputError",
