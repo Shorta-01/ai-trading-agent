@@ -8,7 +8,7 @@ from .errors import InvalidAccountingInputError
 
 
 def check_storage_allows_paper_setup_persistence(check: StorageReadinessCheck) -> bool:
-    return storage_allows_paper_setup_persistence(check)
+    return bool(storage_allows_paper_setup_persistence(check))
 
 
 def require_storage_allows_paper_setup_persistence(check: StorageReadinessCheck) -> None:
@@ -17,7 +17,7 @@ def require_storage_allows_paper_setup_persistence(check: StorageReadinessCheck)
 
 
 def check_storage_allows_transaction_persistence(check: StorageReadinessCheck) -> bool:
-    return storage_allows_transaction_persistence(check)
+    return bool(storage_allows_transaction_persistence(check))
 
 
 def require_storage_allows_transaction_persistence(check: StorageReadinessCheck) -> None:

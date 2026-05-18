@@ -100,7 +100,9 @@ def build_system_status_summary() -> SystemStatusSummary:
             label_nl="Opslag",
             status_key="not_configured",
             status_nl="Nog niet ingesteld",
-            help_nl="Opslag staat nog uit; portfolio en auditlog kunnen nog niet worden opgeslagen.",
+            help_nl=(
+                "Opslag staat nog uit; portfolio en auditlog kunnen nog niet worden opgeslagen."
+            ),
             blocks_suggestions=True,
             last_checked_at=None,
         ),
@@ -217,8 +219,7 @@ def build_ai_usage_summary() -> AiUsageSummary:
         budget_help_nl="Er is nog geen budgetmeting omdat er geen echte verbruiksbron actief is.",
         source_nl="Nog geen OpenAI-koppeling actief",
         warning_nl=(
-            "Echte token- en kostgegevens verschijnen pas na een geldige koppeling en "
-            "logging."
+            "Echte token- en kostgegevens verschijnen pas na een geldige koppeling en logging."
         ),
     )
 

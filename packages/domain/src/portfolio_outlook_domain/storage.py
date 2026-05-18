@@ -48,7 +48,10 @@ class StorageBackendDefinition(BaseModel):
                 raise ValueError("Niet geconfigureerde backend mag niet enabled zijn.")
             if self.status is not StorageBackendStatus.NOT_CONFIGURED:
                 raise ValueError("Niet geconfigureerde backend moet status not_configured hebben.")
-            if self.persistence_mode not in {PersistenceMode.NOT_AVAILABLE, PersistenceMode.DISABLED}:
+            if self.persistence_mode not in {
+                PersistenceMode.NOT_AVAILABLE,
+                PersistenceMode.DISABLED,
+            }:
                 raise ValueError("Niet geconfigureerde backend heeft ongeldige persistence mode.")
         if self.enabled:
             if self.backend_kind is StorageBackendKind.NOT_CONFIGURED:
@@ -226,25 +229,135 @@ class StorageProfile(BaseModel):
 
 def build_default_storage_profile(*, created_at: datetime) -> StorageProfile:
     backends = [
-        StorageBackendDefinition(storage_backend_id="postgres_structured", backend_kind=StorageBackendKind.POSTGRES, status=StorageBackendStatus.PLANNED, persistence_mode=PersistenceMode.NOT_AVAILABLE, label_nl="PostgreSQL", help_nl="Toekomstige opslag voor gestructureerde portefeuillegegevens.", stores_sensitive_data=True, stores_secret_values=False, enabled=False),
-        StorageBackendDefinition(storage_backend_id="timescaledb_series", backend_kind=StorageBackendKind.TIMESCALEDB, status=StorageBackendStatus.PLANNED, persistence_mode=PersistenceMode.NOT_AVAILABLE, label_nl="TimescaleDB", help_nl="Toekomstige opslag voor tijdreeksen en metingen.", stores_sensitive_data=True, stores_secret_values=False, enabled=False),
-        StorageBackendDefinition(storage_backend_id="immutable_raw_archive", backend_kind=StorageBackendKind.IMMUTABLE_ARCHIVE, status=StorageBackendStatus.PLANNED, persistence_mode=PersistenceMode.NOT_AVAILABLE, label_nl="Raw data archief", help_nl="Toekomstig immutable archief van ruwe brondata.", stores_sensitive_data=True, stores_secret_values=False, enabled=False),
-        StorageBackendDefinition(storage_backend_id="research_archive", backend_kind=StorageBackendKind.RESEARCH_ARCHIVE, status=StorageBackendStatus.PLANNED, persistence_mode=PersistenceMode.NOT_AVAILABLE, label_nl="Research archief", help_nl="Toekomstige opslag van AI-onderzoek en bronverwijzingen.", stores_sensitive_data=True, stores_secret_values=False, enabled=False),
-        StorageBackendDefinition(storage_backend_id="audit_log_append_only", backend_kind=StorageBackendKind.AUDIT_LOG, status=StorageBackendStatus.PLANNED, persistence_mode=PersistenceMode.NOT_AVAILABLE, label_nl="Auditlog", help_nl="Toekomstige append-only auditlog met hash-ready sporen.", stores_sensitive_data=True, stores_secret_values=False, enabled=False),
+        StorageBackendDefinition(
+            storage_backend_id="postgres_structured",
+            backend_kind=StorageBackendKind.POSTGRES,
+            status=StorageBackendStatus.PLANNED,
+            persistence_mode=PersistenceMode.NOT_AVAILABLE,
+            label_nl="PostgreSQL",
+            help_nl="Toekomstige opslag voor gestructureerde portefeuillegegevens.",
+            stores_sensitive_data=True,
+            stores_secret_values=False,
+            enabled=False,
+        ),
+        StorageBackendDefinition(
+            storage_backend_id="timescaledb_series",
+            backend_kind=StorageBackendKind.TIMESCALEDB,
+            status=StorageBackendStatus.PLANNED,
+            persistence_mode=PersistenceMode.NOT_AVAILABLE,
+            label_nl="TimescaleDB",
+            help_nl="Toekomstige opslag voor tijdreeksen en metingen.",
+            stores_sensitive_data=True,
+            stores_secret_values=False,
+            enabled=False,
+        ),
+        StorageBackendDefinition(
+            storage_backend_id="immutable_raw_archive",
+            backend_kind=StorageBackendKind.IMMUTABLE_ARCHIVE,
+            status=StorageBackendStatus.PLANNED,
+            persistence_mode=PersistenceMode.NOT_AVAILABLE,
+            label_nl="Raw data archief",
+            help_nl="Toekomstig immutable archief van ruwe brondata.",
+            stores_sensitive_data=True,
+            stores_secret_values=False,
+            enabled=False,
+        ),
+        StorageBackendDefinition(
+            storage_backend_id="research_archive",
+            backend_kind=StorageBackendKind.RESEARCH_ARCHIVE,
+            status=StorageBackendStatus.PLANNED,
+            persistence_mode=PersistenceMode.NOT_AVAILABLE,
+            label_nl="Research archief",
+            help_nl="Toekomstige opslag van AI-onderzoek en bronverwijzingen.",
+            stores_sensitive_data=True,
+            stores_secret_values=False,
+            enabled=False,
+        ),
+        StorageBackendDefinition(
+            storage_backend_id="audit_log_append_only",
+            backend_kind=StorageBackendKind.AUDIT_LOG,
+            status=StorageBackendStatus.PLANNED,
+            persistence_mode=PersistenceMode.NOT_AVAILABLE,
+            label_nl="Auditlog",
+            help_nl="Toekomstige append-only auditlog met hash-ready sporen.",
+            stores_sensitive_data=True,
+            stores_secret_values=False,
+            enabled=False,
+        ),
     ]
     policy_pairs = [
-        ("paper_setup", PersistedEntityKind.PAPER_SETUP, RetentionCategory.PORTFOLIO_LIFETIME, False),
-        ("paper_cash_account", PersistedEntityKind.PAPER_CASH_ACCOUNT, RetentionCategory.PORTFOLIO_LIFETIME, False),
-        ("paper_transaction", PersistedEntityKind.PAPER_TRANSACTION, RetentionCategory.PORTFOLIO_LIFETIME, False),
-        ("position_lot", PersistedEntityKind.POSITION_LOT, RetentionCategory.PORTFOLIO_LIFETIME, False),
-        ("action_suggestion", PersistedEntityKind.ACTION_SUGGESTION, RetentionCategory.PORTFOLIO_LIFETIME, False),
-        ("approval_decision", PersistedEntityKind.APPROVAL_DECISION, RetentionCategory.AUDIT_LIFETIME, True),
-        ("source_reference", PersistedEntityKind.SOURCE_REFERENCE, RetentionCategory.RESEARCH_ARCHIVE, True),
-        ("ai_research_record", PersistedEntityKind.AI_RESEARCH_RECORD, RetentionCategory.RESEARCH_ARCHIVE, True),
-        ("data_quality_check", PersistedEntityKind.DATA_QUALITY_CHECK, RetentionCategory.AUDIT_LIFETIME, True),
-        ("scheduler_job_run", PersistedEntityKind.SCHEDULER_JOB_RUN, RetentionCategory.AUDIT_LIFETIME, True),
-        ("settings_profile", PersistedEntityKind.SETTINGS_PROFILE, RetentionCategory.USER_CONFIG, False),
-        ("api_usage_summary", PersistedEntityKind.API_USAGE_SUMMARY, RetentionCategory.SHORT_TERM_OPERATIONAL, False),
+        (
+            "paper_setup",
+            PersistedEntityKind.PAPER_SETUP,
+            RetentionCategory.PORTFOLIO_LIFETIME,
+            False,
+        ),
+        (
+            "paper_cash_account",
+            PersistedEntityKind.PAPER_CASH_ACCOUNT,
+            RetentionCategory.PORTFOLIO_LIFETIME,
+            False,
+        ),
+        (
+            "paper_transaction",
+            PersistedEntityKind.PAPER_TRANSACTION,
+            RetentionCategory.PORTFOLIO_LIFETIME,
+            False,
+        ),
+        (
+            "position_lot",
+            PersistedEntityKind.POSITION_LOT,
+            RetentionCategory.PORTFOLIO_LIFETIME,
+            False,
+        ),
+        (
+            "action_suggestion",
+            PersistedEntityKind.ACTION_SUGGESTION,
+            RetentionCategory.PORTFOLIO_LIFETIME,
+            False,
+        ),
+        (
+            "approval_decision",
+            PersistedEntityKind.APPROVAL_DECISION,
+            RetentionCategory.AUDIT_LIFETIME,
+            True,
+        ),
+        (
+            "source_reference",
+            PersistedEntityKind.SOURCE_REFERENCE,
+            RetentionCategory.RESEARCH_ARCHIVE,
+            True,
+        ),
+        (
+            "ai_research_record",
+            PersistedEntityKind.AI_RESEARCH_RECORD,
+            RetentionCategory.RESEARCH_ARCHIVE,
+            True,
+        ),
+        (
+            "data_quality_check",
+            PersistedEntityKind.DATA_QUALITY_CHECK,
+            RetentionCategory.AUDIT_LIFETIME,
+            True,
+        ),
+        (
+            "scheduler_job_run",
+            PersistedEntityKind.SCHEDULER_JOB_RUN,
+            RetentionCategory.AUDIT_LIFETIME,
+            True,
+        ),
+        (
+            "settings_profile",
+            PersistedEntityKind.SETTINGS_PROFILE,
+            RetentionCategory.USER_CONFIG,
+            False,
+        ),
+        (
+            "api_usage_summary",
+            PersistedEntityKind.API_USAGE_SUMMARY,
+            RetentionCategory.SHORT_TERM_OPERATIONAL,
+            False,
+        ),
         ("audit_event", PersistedEntityKind.AUDIT_EVENT, RetentionCategory.AUDIT_LIFETIME, True),
         ("tax_record", PersistedEntityKind.TAX_RECORD, RetentionCategory.TAX_LIFETIME, False),
     ]
@@ -278,7 +391,10 @@ def build_not_ready_storage_check(*, checked_at: datetime) -> StorageReadinessCh
         migration_plans=[],
         backup_plan=None,
         restore_checks=[],
-        block_reasons=[StorageBlockReason.BACKEND_NOT_CONFIGURED, StorageBlockReason.AUDIT_STORAGE_MISSING],
+        block_reasons=[
+            StorageBlockReason.BACKEND_NOT_CONFIGURED,
+            StorageBlockReason.AUDIT_STORAGE_MISSING,
+        ],
         warning_reasons=[StorageWarningReason.PREVIEW_ONLY, StorageWarningReason.BACKUP_NOT_TESTED],
         checked_at=checked_at,
         can_persist_paper_setup=False,
@@ -309,14 +425,23 @@ def storage_allows_transaction_persistence(check: StorageReadinessCheck) -> bool
 
 
 def storage_blocks_persistence(check: StorageReadinessCheck) -> bool:
-    if check.status in {StorageReadinessStatus.BLOCKED, StorageReadinessStatus.FAILED, StorageReadinessStatus.NOT_READY}:
+    if check.status in {
+        StorageReadinessStatus.BLOCKED,
+        StorageReadinessStatus.FAILED,
+        StorageReadinessStatus.NOT_READY,
+    }:
         return True
     return bool(check.block_reasons)
 
 
-def backup_restore_trusted(*, backup_plan: BackupPlan | None, restore_checks: list[RestoreCheck]) -> bool:
+def backup_restore_trusted(
+    *, backup_plan: BackupPlan | None, restore_checks: list[RestoreCheck]
+) -> bool:
     if backup_plan is None:
         return False
     if not backup_plan.encrypted_required or not backup_plan.restore_test_required:
         return False
-    return any(check.status is RestoreCheckStatus.PASSED and not check.blocks_persistence for check in restore_checks)
+    return any(
+        check.status is RestoreCheckStatus.PASSED and not check.blocks_persistence
+        for check in restore_checks
+    )
