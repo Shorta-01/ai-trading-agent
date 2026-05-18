@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      ENVIRONMENT: "${ENVIRONMENT:-development}"
+      PAPER_ONLY_MODE: "${PAPER_ONLY_MODE:-true}"
+
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      ENVIRONMENT: "${ENVIRONMENT:-development}"
+      PAPER_ONLY_MODE: "${PAPER_ONLY_MODE:-true}"
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-portfolio_outlook}"
+      POSTGRES_USER: "${POSTGRES_USER:-portfolio_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-replace_with_local_password}"
