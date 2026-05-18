@@ -48,7 +48,10 @@ class BrokerSourceOfTruthPolicy(DomainBaseModel):
 
     @model_validator(mode="after")
     def validate_policy(self) -> "BrokerSourceOfTruthPolicy":
-        if self.broker_system is not BrokerSystem.IBKR or not self.ibkr_is_authoritative_for_broker_facts:
+        if (
+            self.broker_system is not BrokerSystem.IBKR
+            or not self.ibkr_is_authoritative_for_broker_facts
+        ):
             raise ValueError("IBKR must be authoritative for broker facts.")
         if not self.local_system_is_authoritative_for_suggestions:
             raise ValueError("Local suggestions authority must be true.")
@@ -246,16 +249,21 @@ class BrokerReconciliationReport(DomainBaseModel):
             raise ValueError("can_create_orders must stay false in paper mode.")
         if self.status is ReconciliationStatus.CLEAN and self.differences:
             raise ValueError("Clean status must not include differences.")
-        if self.status in {ReconciliationStatus.DIFFERENCES_FOUND, ReconciliationStatus.MANUAL_REVIEW_REQUIRED} and not self.differences:
+        if (
+            self.status
+            in {
+                ReconciliationStatus.DIFFERENCES_FOUND,
+                ReconciliationStatus.MANUAL_REVIEW_REQUIRED,
+            }
+            and not self.differences
+        ):
             raise ValueError("Differences are required for this status.")
-        if has_blocking_reconciliation_differences(self.differences) and self.can_create_suggestions:
+        if (
+            has_blocking_reconciliation_differences(self.differences)
+            and self.can_create_suggestions
+        ):
             raise ValueError("Blocking differences cannot allow suggestions.")
         return self
-
-
-for _decimal_field in ["quantity", "average_cost", "market_value", "cash_amount", "price", "commission_amount", "realized_pnl"]:
-    pass
-
 
 def build_ibkr_source_of_truth_policy() -> BrokerSourceOfTruthPolicy:
     return BrokerSourceOfTruthPolicy(
@@ -268,7 +276,10 @@ def build_ibkr_source_of_truth_policy() -> BrokerSourceOfTruthPolicy:
         no_silent_correction=True,
         title_nl="Bron van waarheid",
         summary_nl="IBKR is leidend voor brokerfeiten.",
-        help_nl="IBKR is de bron van waarheid voor cash, posities en uitgevoerde transacties. AI-Trading-Agent bewaart later een lokale kopie voor analyse en audit.",
+        help_nl=(
+            "IBKR is de bron van waarheid voor cash, posities en uitgevoerde transacties. "
+            "AI-Trading-Agent bewaart later een lokale kopie voor analyse en audit."
+        ),
     )
 
 
@@ -280,7 +291,10 @@ def build_not_configured_broker_account_identity() -> BrokerAccountIdentity:
         connection_status=BrokerConnectionStatus.NOT_CONFIGURED,
         source_reference_ids=[],
         label_nl="IBKR account",
-        help_nl="IBKR is nog niet ingesteld. Het systeem kan daarom nog geen brokerposities of cash synchroniseren.",
+        help_nl=(
+            "IBKR is nog niet ingesteld. "
+            "Het systeem kan daarom nog geen brokerposities of cash synchroniseren."
+        ),
         configured=False,
         paper_account=False,
         live_trading_allowed=False,
@@ -300,11 +314,18 @@ def build_not_configured_broker_sync_plan() -> BrokerSyncPlan:
         blocks_suggestions_until_complete=True,
         title_nl="IBKR synchronisatie",
         summary_nl="Nog niet ingesteld.",
-        help_nl="Na het instellen van IBKR kan het systeem later cash, posities en uitvoeringen synchroniseren.",
+        help_nl=(
+            "Na het instellen van IBKR kan het systeem later cash, "
+            "posities en uitvoeringen synchroniseren."
+        ),
     )
 
 
-def build_empty_reconciliation_report(*, broker_sync_run_id: BrokerSyncRunId, checked_at: datetime) -> BrokerReconciliationReport:
+def build_empty_reconciliation_report(
+    *,
+    broker_sync_run_id: BrokerSyncRunId,
+    checked_at: datetime,
+) -> BrokerReconciliationReport:
     return BrokerReconciliationReport(
         broker_reconciliation_report_id="broker_reconciliation_not_available",
         broker_sync_run_id=broker_sync_run_id,
@@ -323,9 +344,13 @@ def build_empty_reconciliation_report(*, broker_sync_run_id: BrokerSyncRunId, ch
     )
 
 
-def has_blocking_reconciliation_differences(differences: list[BrokerReconciliationDifference]) -> bool:
+def has_blocking_reconciliation_differences(
+    differences: list[BrokerReconciliationDifference],
+) -> bool:
     return any(
-        diff.blocks_suggestions or diff.severity in {ReconciliationSeverity.BLOCKING, ReconciliationSeverity.CRITICAL}
+        diff.blocks_suggestions
+        or diff.severity
+        in {ReconciliationSeverity.BLOCKING, ReconciliationSeverity.CRITICAL}
         for diff in differences
     )
 

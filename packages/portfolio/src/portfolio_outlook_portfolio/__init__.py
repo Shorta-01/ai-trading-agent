@@ -200,5 +200,7 @@ __all__ = [
     "require_storage_allows_paper_setup_persistence",
     "check_storage_allows_paper_setup_persistence",
     "require_suggestion_draft_ready",
+    "check_no_blocking_reconciliation_differences",
     "check_reconciliation_allows_suggestions",
+    "require_reconciliation_allows_suggestions",
 ]
