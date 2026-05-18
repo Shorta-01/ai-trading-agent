@@ -59,7 +59,10 @@ class ApprovalDecision(DomainBaseModel):
             raise ValueError("ApprovalDecision cannot be pending")
         if not self.decided_by.strip():
             raise ValueError("decided_by is required")
-        if self.decision in {ApprovalDecisionStatus.REJECTED, ApprovalDecisionStatus.BLOCKED} and not (self.reason_nl and self.reason_nl.strip()):
+        if self.decision in {
+            ApprovalDecisionStatus.REJECTED,
+            ApprovalDecisionStatus.BLOCKED,
+        } and not (self.reason_nl and self.reason_nl.strip()):
             raise ValueError("reason_nl is required for rejected/blocked decisions")
         return self
 

@@ -145,7 +145,11 @@ __all__ = [
     "require_approved_decision",
 ]
 
-from .approval_guards import build_approved_action, is_approval_decision_final, require_approved_decision
+from .approval_guards import (
+    build_approved_action,
+    is_approval_decision_final,
+    require_approved_decision,
+)
 from .execution_guards import (
     check_can_submit_order_to_target,
     check_execution_mode_available,

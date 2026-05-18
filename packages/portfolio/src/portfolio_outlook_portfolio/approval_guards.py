@@ -1,6 +1,12 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from portfolio_outlook_domain import ApprovalDecision, ApprovalDecisionStatus, ApprovalRequest, ApprovedAction, ExecutionMode
+from portfolio_outlook_domain import (
+    ApprovalDecision,
+    ApprovalDecisionStatus,
+    ApprovalRequest,
+    ApprovedAction,
+    ExecutionMode,
+)
 
 from .errors import InvalidAccountingInputError
 
@@ -24,9 +30,14 @@ def require_approved_decision(*, request: ApprovalRequest, decision: ApprovalDec
         raise InvalidAccountingInputError("blocked_auto is never approvable")
 
 
-def build_approved_action(*, request: ApprovalRequest, decision: ApprovalDecision) -> ApprovedAction:
+def build_approved_action(
+    *, request: ApprovalRequest, decision: ApprovalDecision
+) -> ApprovedAction:
     require_approved_decision(request=request, decision=decision)
-    if request.status not in {ApprovalDecisionStatus.PENDING, ApprovalDecisionStatus.APPROVED}:
+    if request.status not in {
+        ApprovalDecisionStatus.PENDING,
+        ApprovalDecisionStatus.APPROVED,
+    }:
         raise InvalidAccountingInputError("Approval request status must be pending or approved")
     return ApprovedAction(
         approval_request_id=request.approval_request_id,
@@ -36,5 +47,5 @@ def build_approved_action(*, request: ApprovalRequest, decision: ApprovalDecisio
         instrument_id=request.instrument_id,
         action=request.action,
         target_execution_mode=request.target_execution_mode,
-        approved_at=decision.decided_at or datetime.now(timezone.utc),
+        approved_at=decision.decided_at or datetime.now(UTC),
     )

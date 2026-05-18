@@ -2,8 +2,20 @@ from datetime import datetime
 
 from pydantic import Field, field_validator, model_validator
 
-from .enums import AIResearchRole, DataQualityStatus, PromptInjectionRisk, ResearchReportStatus, ResearchUse
-from .identifiers import InstrumentId, PortfolioId, ResearchReportId, ResearchRunId, SourceReferenceId
+from .enums import (
+    AIResearchRole,
+    DataQualityStatus,
+    PromptInjectionRisk,
+    ResearchReportStatus,
+    ResearchUse,
+)
+from .identifiers import (
+    InstrumentId,
+    PortfolioId,
+    ResearchReportId,
+    ResearchRunId,
+    SourceReferenceId,
+)
 from .primitives import DomainBaseModel, Percentage
 
 
@@ -53,9 +65,15 @@ class ResearchReport(DomainBaseModel):
 
     @model_validator(mode="after")
     def validate_report(self) -> "ResearchReport":
-        if self.prompt_injection_risk == PromptInjectionRisk.BLOCKED and self.status != ResearchReportStatus.BLOCKED_BY_POLICY:
+        if (
+            self.prompt_injection_risk == PromptInjectionRisk.BLOCKED
+            and self.status != ResearchReportStatus.BLOCKED_BY_POLICY
+        ):
             raise ValueError("blocked prompt injection requires blocked_by_policy status")
-        if self.data_quality_status == DataQualityStatus.FAILED and self.status == ResearchReportStatus.COMPLETED:
+        if (
+            self.data_quality_status == DataQualityStatus.FAILED
+            and self.status == ResearchReportStatus.COMPLETED
+        ):
             raise ValueError("failed data quality cannot be completed")
         return self
 
