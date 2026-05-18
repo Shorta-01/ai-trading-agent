@@ -70,11 +70,15 @@ class RuntimeServiceHealth(DomainBaseModel):
     def validate_model(self) -> "RuntimeServiceHealth":
         if not self.message_nl.strip():
             raise ValueError("message_nl is verplicht")
-        if self.severity is RuntimeHealthSeverity.CRITICAL and not self.blocks_new_suggestions:
+        if (
+            self.severity is RuntimeHealthSeverity.CRITICAL
+            and not self.blocks_new_suggestions
+        ):
             raise ValueError("critical severity moet suggestions blokkeren")
         if (
             self.status is RuntimeServiceStatus.UNHEALTHY
-            and self.severity in {RuntimeHealthSeverity.ERROR, RuntimeHealthSeverity.CRITICAL}
+            and self.severity
+            in {RuntimeHealthSeverity.ERROR, RuntimeHealthSeverity.CRITICAL}
             and not self.blocks_new_suggestions
         ):
             raise ValueError("unhealthy + error/critical moet suggestions blokkeren")
@@ -166,23 +170,201 @@ class BackgroundJobType(DomainBaseModel):
 
 def build_default_runtime_topology(*, created_at: datetime) -> RuntimeTopology:
     services = [
-        RuntimeServiceDefinition(runtime_service_id="svc_api", service_kind=RuntimeServiceKind.API, service_name="API", criticality=RuntimeServiceCriticality.REQUIRED, startup_phase=StartupPhase.API, startup_dependency_policy=StartupDependencyPolicy.MUST_START_BEFORE, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE, failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS, enabled_by_default=True, explanation_nl="Deze service verwerkt verzoeken van de app en toont actuele gegevens."),
-        RuntimeServiceDefinition(runtime_service_id="svc_worker", service_kind=RuntimeServiceKind.WORKER, service_name="Worker", criticality=RuntimeServiceCriticality.REQUIRED, startup_phase=StartupPhase.WORKER, dependency_service_ids=["svc_api"], startup_dependency_policy=StartupDependencyPolicy.SHOULD_START_BEFORE, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE, failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS, enabled_by_default=True, explanation_nl="Deze service verwerkt veilige achtergrondtaken zonder orders uit te voeren."),
-        RuntimeServiceDefinition(runtime_service_id="svc_web", service_kind=RuntimeServiceKind.WEB_FRONTEND, service_name="Web frontend", criticality=RuntimeServiceCriticality.IMPORTANT, startup_phase=StartupPhase.READY, dependency_service_ids=["svc_api"], startup_dependency_policy=StartupDependencyPolicy.SHOULD_START_BEFORE, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE, failure_policy=ServiceFailurePolicy.ALLOW_READ_ONLY, enabled_by_default=True, explanation_nl="Deze service toont de gebruikersinterface in de browser."),
-        RuntimeServiceDefinition(runtime_service_id="svc_health", service_kind=RuntimeServiceKind.HEALTH_MONITOR, service_name="Health monitor", criticality=RuntimeServiceCriticality.REQUIRED, startup_phase=StartupPhase.MONITORING, startup_dependency_policy=StartupDependencyPolicy.INDEPENDENT, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE, failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS, enabled_by_default=True, explanation_nl="Deze service bewaakt de gezondheid van onderdelen en meldt fouten."),
-        RuntimeServiceDefinition(runtime_service_id="svc_audit", service_kind=RuntimeServiceKind.AUDIT_LOGGER, service_name="Audit logger", criticality=RuntimeServiceCriticality.REQUIRED, startup_phase=StartupPhase.MONITORING, startup_dependency_policy=StartupDependencyPolicy.INDEPENDENT, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE, failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS, enabled_by_default=True, explanation_nl="Deze service logt beslissingen zodat controle mogelijk blijft."),
-        RuntimeServiceDefinition(runtime_service_id="svc_db", service_kind=RuntimeServiceKind.DATABASE, service_name="Database", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.STORAGE, startup_dependency_policy=StartupDependencyPolicy.MUST_START_BEFORE, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.NOT_PARALLEL, failure_policy=ServiceFailurePolicy.MANUAL_INTERVENTION_REQUIRED, enabled_by_default=False, explanation_nl="Deze toekomstige service bewaart gegevens duurzaam en herstelbaar."),
-        RuntimeServiceDefinition(runtime_service_id="svc_scheduler", service_kind=RuntimeServiceKind.SCHEDULER, service_name="Scheduler", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.SCHEDULER, startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE, enabled_by_default=False, explanation_nl="Deze toekomstige service plant veilige jobs in vaste intervallen."),
-        RuntimeServiceDefinition(runtime_service_id="svc_data_updater", service_kind=RuntimeServiceKind.DATA_SOURCE_UPDATER, service_name="Data bijwerken", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.BACKGROUND_JOBS, startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED, failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS, enabled_by_default=False, explanation_nl="Deze toekomstige service ververst databronnen via gecontroleerde taken."),
-        RuntimeServiceDefinition(runtime_service_id="svc_research_worker", service_kind=RuntimeServiceKind.RESEARCH_WORKER, service_name="Onderzoek worker", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.BACKGROUND_JOBS, startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY, resource_profile=RuntimeResourceProfile.HEAVY, parallel_execution_policy=ParallelExecutionPolicy.EXTERNAL_WORKER_RECOMMENDED, failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE, enabled_by_default=False, explanation_nl="Deze toekomstige service voert zwaar onderzoek uit via queue op sterkere machine."),
-        RuntimeServiceDefinition(runtime_service_id="svc_ai_queue", service_kind=RuntimeServiceKind.AI_RESEARCH_QUEUE, service_name="AI onderzoek queue", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.BACKGROUND_JOBS, startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED, failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE, enabled_by_default=False, explanation_nl="Deze toekomstige service beheert AI onderzoekstaken in een controleerbare wachtrij."),
-        RuntimeServiceDefinition(runtime_service_id="svc_ibkr", service_kind=RuntimeServiceKind.IBKR_ADAPTER, service_name="IBKR adapter", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.ADAPTERS, startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, failure_policy=ServiceFailurePolicy.ALLOW_EXISTING_DATA_WITH_WARNING, enabled_by_default=False, explanation_nl="Deze toekomstige service controleert IBKR paper-status zonder live uitvoering."),
-        RuntimeServiceDefinition(runtime_service_id="svc_backup", service_kind=RuntimeServiceKind.BACKUP_SERVICE, service_name="Backup service", criticality=RuntimeServiceCriticality.FUTURE, startup_phase=StartupPhase.MONITORING, startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, failure_policy=ServiceFailurePolicy.MANUAL_INTERVENTION_REQUIRED, enabled_by_default=False, explanation_nl="Deze toekomstige service bewaakt backups en herstelcontroles."),
-        RuntimeServiceDefinition(runtime_service_id="svc_proxy", service_kind=RuntimeServiceKind.REVERSE_PROXY, service_name="Reverse proxy", criticality=RuntimeServiceCriticality.OPTIONAL, startup_phase=StartupPhase.READY, startup_dependency_policy=StartupDependencyPolicy.INDEPENDENT, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE, failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE, enabled_by_default=False, explanation_nl="Deze optionele service regelt netwerktoegang voor lokale clients."),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_api",
+            service_kind=RuntimeServiceKind.API,
+            service_name="API",
+            criticality=RuntimeServiceCriticality.REQUIRED,
+            startup_phase=StartupPhase.API,
+            startup_dependency_policy=StartupDependencyPolicy.MUST_START_BEFORE,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE,
+            failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS,
+            enabled_by_default=True,
+            explanation_nl="Deze service verwerkt verzoeken van de app en toont actuele gegevens.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_worker",
+            service_kind=RuntimeServiceKind.WORKER,
+            service_name="Worker",
+            criticality=RuntimeServiceCriticality.REQUIRED,
+            startup_phase=StartupPhase.WORKER,
+            dependency_service_ids=["svc_api"],
+            startup_dependency_policy=StartupDependencyPolicy.SHOULD_START_BEFORE,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE,
+            failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS,
+            enabled_by_default=True,
+            explanation_nl=(
+                "Deze service verwerkt veilige achtergrondtaken zonder orders uit te voeren."
+            ),
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_web",
+            service_kind=RuntimeServiceKind.WEB_FRONTEND,
+            service_name="Web frontend",
+            criticality=RuntimeServiceCriticality.IMPORTANT,
+            startup_phase=StartupPhase.READY,
+            dependency_service_ids=["svc_api"],
+            startup_dependency_policy=StartupDependencyPolicy.SHOULD_START_BEFORE,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE,
+            failure_policy=ServiceFailurePolicy.ALLOW_READ_ONLY,
+            enabled_by_default=True,
+            explanation_nl="Deze service toont de gebruikersinterface in de browser.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_health",
+            service_kind=RuntimeServiceKind.HEALTH_MONITOR,
+            service_name="Health monitor",
+            criticality=RuntimeServiceCriticality.REQUIRED,
+            startup_phase=StartupPhase.MONITORING,
+            startup_dependency_policy=StartupDependencyPolicy.INDEPENDENT,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE,
+            failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS,
+            enabled_by_default=True,
+            explanation_nl="Deze service bewaakt de gezondheid van onderdelen en meldt fouten.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_audit",
+            service_kind=RuntimeServiceKind.AUDIT_LOGGER,
+            service_name="Audit logger",
+            criticality=RuntimeServiceCriticality.REQUIRED,
+            startup_phase=StartupPhase.MONITORING,
+            startup_dependency_policy=StartupDependencyPolicy.INDEPENDENT,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE,
+            failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS,
+            enabled_by_default=True,
+            explanation_nl="Deze service logt beslissingen zodat controle mogelijk blijft.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_db",
+            service_kind=RuntimeServiceKind.DATABASE,
+            service_name="Database",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.STORAGE,
+            startup_dependency_policy=StartupDependencyPolicy.MUST_START_BEFORE,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.NOT_PARALLEL,
+            failure_policy=ServiceFailurePolicy.MANUAL_INTERVENTION_REQUIRED,
+            enabled_by_default=False,
+            explanation_nl="Deze toekomstige service bewaart gegevens duurzaam en herstelbaar.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_scheduler",
+            service_kind=RuntimeServiceKind.SCHEDULER,
+            service_name="Scheduler",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.SCHEDULER,
+            startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE,
+            enabled_by_default=False,
+            explanation_nl="Deze toekomstige service plant veilige jobs in vaste intervallen.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_data_updater",
+            service_kind=RuntimeServiceKind.DATA_SOURCE_UPDATER,
+            service_name="Data bijwerken",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.BACKGROUND_JOBS,
+            startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED,
+            failure_policy=ServiceFailurePolicy.BLOCK_SUGGESTIONS,
+            enabled_by_default=False,
+            explanation_nl=(
+                "Deze toekomstige service ververst databronnen via gecontroleerde taken."
+            ),
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_research_worker",
+            service_kind=RuntimeServiceKind.RESEARCH_WORKER,
+            service_name="Onderzoek worker",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.BACKGROUND_JOBS,
+            startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY,
+            resource_profile=RuntimeResourceProfile.HEAVY,
+            parallel_execution_policy=ParallelExecutionPolicy.EXTERNAL_WORKER_RECOMMENDED,
+            failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE,
+            enabled_by_default=False,
+            explanation_nl=(
+                "Deze toekomstige service voert zwaar onderzoek uit via queue op sterkere machine."
+            ),
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_ai_queue",
+            service_kind=RuntimeServiceKind.AI_RESEARCH_QUEUE,
+            service_name="AI onderzoek queue",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.BACKGROUND_JOBS,
+            startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED,
+            failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE,
+            enabled_by_default=False,
+            explanation_nl=(
+                "Deze toekomstige service beheert AI onderzoekstaken "
+                "in een controleerbare wachtrij."
+            ),
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_ibkr",
+            service_kind=RuntimeServiceKind.IBKR_ADAPTER,
+            service_name="IBKR adapter",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.ADAPTERS,
+            startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            failure_policy=ServiceFailurePolicy.ALLOW_EXISTING_DATA_WITH_WARNING,
+            enabled_by_default=False,
+            explanation_nl=(
+                "Deze toekomstige service controleert IBKR paper-status zonder live uitvoering."
+            ),
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_backup",
+            service_kind=RuntimeServiceKind.BACKUP_SERVICE,
+            service_name="Backup service",
+            criticality=RuntimeServiceCriticality.FUTURE,
+            startup_phase=StartupPhase.MONITORING,
+            startup_dependency_policy=StartupDependencyPolicy.OPTIONAL_AFTER_READY,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            failure_policy=ServiceFailurePolicy.MANUAL_INTERVENTION_REQUIRED,
+            enabled_by_default=False,
+            explanation_nl="Deze toekomstige service bewaakt backups en herstelcontroles.",
+        ),
+        RuntimeServiceDefinition(
+            runtime_service_id="svc_proxy",
+            service_kind=RuntimeServiceKind.REVERSE_PROXY,
+            service_name="Reverse proxy",
+            criticality=RuntimeServiceCriticality.OPTIONAL,
+            startup_phase=StartupPhase.READY,
+            startup_dependency_policy=StartupDependencyPolicy.INDEPENDENT,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.PARALLEL_SAFE,
+            failure_policy=ServiceFailurePolicy.DISABLE_OPTIONAL_FEATURE,
+            enabled_by_default=False,
+            explanation_nl="Deze optionele service regelt netwerktoegang voor lokale clients.",
+        ),
     ]
     steps = [
-        StartupPlanStep(step_order=i + 1, startup_phase=s.startup_phase, runtime_service_id=s.runtime_service_id, required=s.criticality is RuntimeServiceCriticality.REQUIRED, explanation_nl=f"Start {s.service_name.lower()} in fase {s.startup_phase.value}.")
-        for i, s in enumerate(services)
+        StartupPlanStep(
+            step_order=i + 1,
+            startup_phase=service.startup_phase,
+            runtime_service_id=service.runtime_service_id,
+            required=service.criticality is RuntimeServiceCriticality.REQUIRED,
+            explanation_nl=(
+                f"Start {service.service_name.lower()} "
+                f"in fase {service.startup_phase.value}."
+            ),
+        )
+        for i, service in enumerate(services)
     ]
     return RuntimeTopology(
         runtime_topology_id="topology_default",
@@ -202,25 +384,103 @@ def build_default_runtime_topology(*, created_at: datetime) -> RuntimeTopology:
 
 def build_default_background_job_types() -> list[BackgroundJobType]:
     return [
-        BackgroundJobType(background_job_type_id="job_portfolio_review", job_name="Portfolio review", service_kind=RuntimeServiceKind.WORKER, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, allowed_on_raspberry_pi_5=True, requires_queue=False, explanation_nl="Periodieke controle van portefeuilledata zonder uitvoering."),
-        BackgroundJobType(background_job_type_id="job_data_source_refresh", job_name="Data source refresh", service_kind=RuntimeServiceKind.DATA_SOURCE_UPDATER, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED, allowed_on_raspberry_pi_5=True, requires_queue=True, explanation_nl="Ververs databronnen via queue met zichtbare status."),
-        BackgroundJobType(background_job_type_id="job_ibkr_paper_status_check", job_name="IBKR paper status check", service_kind=RuntimeServiceKind.IBKR_ADAPTER, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, allowed_on_raspberry_pi_5=True, requires_queue=False, explanation_nl="Controleer alleen paper-verbinding en rechten."),
-        BackgroundJobType(background_job_type_id="job_ai_research_run", job_name="AI research run", service_kind=RuntimeServiceKind.RESEARCH_WORKER, resource_profile=RuntimeResourceProfile.HEAVY, parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED, allowed_on_raspberry_pi_5=False, requires_queue=True, explanation_nl="AI onderzoek via queue en audit, zonder trade-uitvoering."),
-        BackgroundJobType(background_job_type_id="job_suggestion_generation", job_name="Suggestion generation", service_kind=RuntimeServiceKind.WORKER, resource_profile=RuntimeResourceProfile.MODERATE, parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED, allowed_on_raspberry_pi_5=True, requires_queue=True, explanation_nl="Genereer suggesties alleen na data-kwaliteitscontrole."),
-        BackgroundJobType(background_job_type_id="job_data_quality_check", job_name="Data quality check", service_kind=RuntimeServiceKind.HEALTH_MONITOR, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, allowed_on_raspberry_pi_5=True, requires_queue=False, explanation_nl="Controle op volledigheid, versheid en fouten in data."),
-        BackgroundJobType(background_job_type_id="job_audit_maintenance", job_name="Audit maintenance", service_kind=RuntimeServiceKind.AUDIT_LOGGER, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, allowed_on_raspberry_pi_5=True, requires_queue=False, explanation_nl="Onderhoud auditlog en controle op ontbrekende events."),
-        BackgroundJobType(background_job_type_id="job_backup_check", job_name="Backup check", service_kind=RuntimeServiceKind.BACKUP_SERVICE, resource_profile=RuntimeResourceProfile.LIGHTWEIGHT, parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY, allowed_on_raspberry_pi_5=True, requires_queue=False, explanation_nl="Controleer geplande backup en herstelteststatus."),
+        BackgroundJobType(
+            background_job_type_id="job_portfolio_review",
+            job_name="Portfolio review",
+            service_kind=RuntimeServiceKind.WORKER,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=False,
+            explanation_nl="Periodieke controle van portefeuilledata zonder uitvoering.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_data_source_refresh",
+            job_name="Data source refresh",
+            service_kind=RuntimeServiceKind.DATA_SOURCE_UPDATER,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=True,
+            explanation_nl="Ververs databronnen via queue met zichtbare status.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_ibkr_paper_status_check",
+            job_name="IBKR paper status check",
+            service_kind=RuntimeServiceKind.IBKR_ADAPTER,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=False,
+            explanation_nl="Controleer alleen paper-verbinding en rechten.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_ai_research_run",
+            job_name="AI research run",
+            service_kind=RuntimeServiceKind.RESEARCH_WORKER,
+            resource_profile=RuntimeResourceProfile.HEAVY,
+            parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED,
+            allowed_on_raspberry_pi_5=False,
+            requires_queue=True,
+            explanation_nl="AI onderzoek via queue en audit, zonder trade-uitvoering.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_suggestion_generation",
+            job_name="Suggestion generation",
+            service_kind=RuntimeServiceKind.WORKER,
+            resource_profile=RuntimeResourceProfile.MODERATE,
+            parallel_execution_policy=ParallelExecutionPolicy.QUEUE_REQUIRED,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=True,
+            explanation_nl="Genereer suggesties alleen na data-kwaliteitscontrole.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_data_quality_check",
+            job_name="Data quality check",
+            service_kind=RuntimeServiceKind.HEALTH_MONITOR,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=False,
+            explanation_nl="Controle op volledigheid, versheid en fouten in data.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_audit_maintenance",
+            job_name="Audit maintenance",
+            service_kind=RuntimeServiceKind.AUDIT_LOGGER,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=False,
+            explanation_nl="Onderhoud auditlog en controle op ontbrekende events.",
+        ),
+        BackgroundJobType(
+            background_job_type_id="job_backup_check",
+            job_name="Backup check",
+            service_kind=RuntimeServiceKind.BACKUP_SERVICE,
+            resource_profile=RuntimeResourceProfile.LIGHTWEIGHT,
+            parallel_execution_policy=ParallelExecutionPolicy.SCHEDULED_ONLY,
+            allowed_on_raspberry_pi_5=True,
+            requires_queue=False,
+            explanation_nl="Controleer geplande backup en herstelteststatus.",
+        ),
     ]
 
 
-def find_service(topology: RuntimeTopology, service_kind: RuntimeServiceKind) -> RuntimeServiceDefinition | None:
+def find_service(
+    topology: RuntimeTopology,
+    service_kind: RuntimeServiceKind,
+) -> RuntimeServiceDefinition | None:
     for service in topology.services:
         if service.service_kind is service_kind:
             return service
     return None
 
 
-def service_blocks_suggestions(service: RuntimeServiceDefinition, health: RuntimeServiceHealth) -> bool:
+def service_blocks_suggestions(
+    service: RuntimeServiceDefinition,
+    health: RuntimeServiceHealth,
+) -> bool:
     if health.blocks_new_suggestions:
         return True
     if health.severity is RuntimeHealthSeverity.CRITICAL:
@@ -248,8 +508,8 @@ def required_services(topology: RuntimeTopology) -> list[RuntimeServiceDefinitio
 
 def parallel_safe_services(topology: RuntimeTopology) -> list[RuntimeServiceDefinition]:
     return [
-        s
-        for s in topology.services
-        if s.parallel_execution_policy is ParallelExecutionPolicy.PARALLEL_SAFE
-        and s.resource_profile is not RuntimeResourceProfile.HEAVY
+        service
+        for service in topology.services
+        if service.parallel_execution_policy is ParallelExecutionPolicy.PARALLEL_SAFE
+        and service.resource_profile is not RuntimeResourceProfile.HEAVY
     ]

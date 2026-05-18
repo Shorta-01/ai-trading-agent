@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import BaseModel, ValidationError
@@ -15,7 +15,11 @@ from portfolio_outlook_domain.enums import (
     StartupDependencyPolicy,
     StartupPhase,
 )
-from portfolio_outlook_domain.identifiers import BackgroundJobTypeId, HealthCheckId, RuntimeServiceId
+from portfolio_outlook_domain.identifiers import (
+    BackgroundJobTypeId,
+    HealthCheckId,
+    RuntimeServiceId,
+)
 from portfolio_outlook_domain.runtime import (
     BackgroundJobType,
     RuntimeServiceDefinition,
@@ -77,16 +81,26 @@ def test_runtime_service_definition_validation() -> None:
     assert model.model_dump()["runtime_service_id"] == "svc_test"
 
     with pytest.raises(ValidationError):
-        _valid_service().model_copy(update={"service_name": " "})
+        RuntimeServiceDefinition(**(_valid_service().model_dump() | {"service_name": " "}))
 
     with pytest.raises(ValidationError):
         RuntimeServiceDefinition(**(_valid_service().model_dump() | {"enabled_by_default": False}))
 
     with pytest.raises(ValidationError):
-        RuntimeServiceDefinition(**(_valid_service().model_dump() | {"dependency_service_ids": ["svc_test"]}))
+        RuntimeServiceDefinition(
+            **(_valid_service().model_dump() | {"dependency_service_ids": ["svc_test"]})
+        )
 
     with pytest.raises(ValidationError):
-        RuntimeServiceDefinition(**(_valid_service().model_dump() | {"resource_profile": RuntimeResourceProfile.HEAVY, "parallel_execution_policy": ParallelExecutionPolicy.PARALLEL_SAFE}))
+        RuntimeServiceDefinition(
+            **(
+                _valid_service().model_dump()
+                | {
+                    "resource_profile": RuntimeResourceProfile.HEAVY,
+                    "parallel_execution_policy": ParallelExecutionPolicy.PARALLEL_SAFE,
+                }
+            )
+        )
 
 
 def test_runtime_service_health_validation() -> None:
@@ -105,7 +119,15 @@ def test_runtime_service_health_validation() -> None:
         RuntimeServiceHealth(**(health.model_dump() | {"message_nl": " "}))
 
     with pytest.raises(ValidationError):
-        RuntimeServiceHealth(**(health.model_dump() | {"severity": RuntimeHealthSeverity.CRITICAL, "blocks_new_suggestions": False}))
+        RuntimeServiceHealth(
+            **(
+                health.model_dump()
+                | {
+                    "severity": RuntimeHealthSeverity.CRITICAL,
+                    "blocks_new_suggestions": False,
+                }
+            )
+        )
 
 
 def test_startup_plan_validation() -> None:
@@ -129,7 +151,17 @@ def test_startup_plan_validation() -> None:
         StartupPlan(**(plan.model_dump() | {"steps": []}))
 
     with pytest.raises(ValidationError):
-        StartupPlan(**(plan.model_dump() | {"steps": [step, step.model_copy(update={"runtime_service_id": "svc_test_2"})]}))
+        StartupPlan(
+            **(
+                plan.model_dump()
+                | {
+                    "steps": [
+                        step,
+                        step.model_copy(update={"runtime_service_id": "svc_test_2"}),
+                    ]
+                }
+            )
+        )
 
 
 def test_runtime_topology_and_helpers() -> None:
@@ -139,8 +171,14 @@ def test_runtime_topology_and_helpers() -> None:
     assert find_service(topology, RuntimeServiceKind.API) is not None
     assert find_service(topology, RuntimeServiceKind.UNKNOWN) is None
     assert required_services(topology)
-    assert all(s.criticality is RuntimeServiceCriticality.REQUIRED for s in required_services(topology))
-    assert all(s.resource_profile is not RuntimeResourceProfile.HEAVY for s in parallel_safe_services(topology))
+    assert all(
+        service.criticality is RuntimeServiceCriticality.REQUIRED
+        for service in required_services(topology)
+    )
+    assert all(
+        service.resource_profile is not RuntimeResourceProfile.HEAVY
+        for service in parallel_safe_services(topology)
+    )
 
     for kind in [
         RuntimeServiceKind.WORKER,
@@ -157,7 +195,9 @@ def test_runtime_topology_and_helpers() -> None:
         assert find_service(topology, kind) is not None
 
     with pytest.raises(ValidationError):
-        RuntimeTopology(**(topology.model_dump() | {"services": topology.services + [topology.services[0]]}))
+        RuntimeTopology(
+            **(topology.model_dump() | {"services": topology.services + [topology.services[0]]})
+        )
 
 
 def test_background_jobs_and_blocking_logic() -> None:
@@ -166,8 +206,15 @@ def test_background_jobs_and_blocking_logic() -> None:
     by_id = {job.background_job_type_id: job for job in jobs}
     assert "job_ai_research_run" in by_id
     assert by_id["job_ai_research_run"].requires_queue is True
-    assert by_id["job_backup_check"].parallel_execution_policy is ParallelExecutionPolicy.SCHEDULED_ONLY
-    assert all("uitvoering" not in j.explanation_nl.lower() or "zonder" in j.explanation_nl.lower() for j in jobs)
+    assert (
+        by_id["job_backup_check"].parallel_execution_policy
+        is ParallelExecutionPolicy.SCHEDULED_ONLY
+    )
+    assert all(
+        "uitvoering" not in job.explanation_nl.lower()
+        or "zonder" in job.explanation_nl.lower()
+        for job in jobs
+    )
 
     service = _valid_service()
     critical_health = RuntimeServiceHealth(
