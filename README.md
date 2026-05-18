@@ -99,3 +99,4 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 ## Storage schema status (Task 24)
 - Eerste storage schema-migratie bestaat nu voor paper setup + audit foundation.
 - De applicatie persisteert nog steeds geen portfolio- of setupdata in runtime.
+\n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.

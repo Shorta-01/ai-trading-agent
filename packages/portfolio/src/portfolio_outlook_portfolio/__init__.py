@@ -10,6 +10,11 @@ from .approval_guards import (
     is_approval_decision_final,
     require_approved_decision,
 )
+from .broker_reconciliation_guards import (
+    check_no_blocking_reconciliation_differences,
+    check_reconciliation_allows_suggestions,
+    require_reconciliation_allows_suggestions,
+)
 from .capabilities import (
     check_can_create_paper_order,
     check_can_create_paper_transaction,
@@ -195,4 +200,5 @@ __all__ = [
     "require_storage_allows_paper_setup_persistence",
     "check_storage_allows_paper_setup_persistence",
     "require_suggestion_draft_ready",
+    "check_reconciliation_allows_suggestions",
 ]

@@ -65,3 +65,4 @@ Verplichte eenvoudige Nederlandse opslagstatuslabels:
 
 Verplichte hulptekst voor opslagstatus:
 “De database is nog niet actief. Daarom kan de app je paper portefeuille nog niet echt bewaren.”
+\n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.

@@ -98,3 +98,4 @@ No persistence module is implemented in this PR.
 - Database-schema is bedoeld om later gevalideerde feiten op te slaan, niet om berekeningslogica te dragen.
 - API en worker zijn nog niet aan PostgreSQL gekoppeld.
 - Repository-interfaces en persistence orchestration volgen in volgende taken.
+\n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
