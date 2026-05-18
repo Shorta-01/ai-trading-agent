@@ -25,3 +25,4 @@ cd apps/web
 npm run lint
 npm run build
 ```
+\n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.

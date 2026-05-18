@@ -52,3 +52,4 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - De API exposeert veilige, read-only samenvattingen voor status en instellingen.
 - De web-UI consumeert later deze samenvattingen voor statuskaarten en instellingenoverzicht.
 - Er is in deze stap geen runtime-integratie (geen broker, geen OpenAI, geen scheduler, geen worker-activatie).
+\n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.

@@ -41,3 +41,4 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - De AI-verbruiksendpoint mag alleen gebruik tonen op basis van echte records of expliciete schattingen.
 - Geen fake token- of kostcijfers.
 - In deze foundationstap maakt de endpoint geen OpenAI-calls.
+\n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.

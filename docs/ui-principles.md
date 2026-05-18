@@ -51,3 +51,4 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - De GUI blijft begrijpelijk voor niet-expert beleggers.
 - Geen fake grafieken en geen fake portefeuilledata.
 - Het dashboard blijft modern, snel, schoon en duidelijk.
+\n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.

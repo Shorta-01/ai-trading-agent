@@ -50,3 +50,4 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - De status-API mag geen service als actief tonen als die service niet echt actief is.
 - Ontbrekende IBKR- of OpenAI-configuratie moet gerelateerde jobs blokkeren.
 - API-responses mogen geen geheimen of geheime waardes blootstellen.
+\n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
