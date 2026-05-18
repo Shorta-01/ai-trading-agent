@@ -88,3 +88,20 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Persist audit event.
 - Expose saved portfolio status API.
 - Show saved paper cash in Dutch dashboard.
+
+
+## Storage roadmap update (Task 22)
+
+### Reeds afgerond
+- PostgreSQL development service foundation (Docker Compose + healthcheck + local volume).
+
+### Eerstvolgende taken
+- database dependency layer
+- Alembic migration skeleton
+- first schema migration
+- repository interfaces
+- persist first-run setup
+- persist paper cash account
+- persist audit event
+- storage backup/restore scripts
+- restore test workflow

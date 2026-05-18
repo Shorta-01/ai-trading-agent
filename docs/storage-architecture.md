@@ -90,3 +90,19 @@ Market data, AI research archives, and broader time-series persistence are later
 - The API may show storage as planned, but not connected.
 - Migrations are not available yet.
 - Restore testing is required before storage can be considered trusted.
+
+
+## PostgreSQL dev container status (Task 22)
+- PostgreSQL development container exists for local infrastructure preparation.
+- It is infrastructure-only in this phase.
+- No schema or migrations exist yet.
+- No app persistence is active yet.
+
+Future implementation order:
+1. database dependency layer
+2. Alembic skeleton
+3. first migration
+4. repository interfaces
+5. first-run setup persistence
+6. audit event persistence
+7. backup/restore workflow

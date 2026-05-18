@@ -85,3 +85,9 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - AI-Trading-Agent kiest **PostgreSQL** als geplande primaire gestructureerde database.
 - **Alembic** is gekozen als gepland migratiekader voor een latere implementatiefase.
 - Database-implementatie is nog niet gestart; de app bewaart nog geen paper-portefeuilledata.
+
+
+## PostgreSQL development service (Task 22)
+- Local PostgreSQL development service is available via `infra/docker/docker-compose.yml`.
+- The application still does not persist setup, portfolio, cash, transactions, or settings yet.
+- No setup/portfolio data is saved in the app runtime at this stage.

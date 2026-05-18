@@ -79,3 +79,10 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Schema mapping between persistence and domain contracts.
 
 No persistence module is implemented in this PR.
+
+
+## PostgreSQL infrastructure boundary (Task 22)
+- PostgreSQL service is infrastructure, not business logic.
+- Domain and portfolio packages remain database-free.
+- API/worker persistence layers must not contain financial rules.
+- A future repository layer will handle persistence mapping between storage and domain contracts.

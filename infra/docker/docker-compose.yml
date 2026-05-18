@@ -39,17 +39,19 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:16
+    image: postgres:16.4
     env_file:
       - .env.example
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-portfolio_outlook}
-      POSTGRES_USER: ${POSTGRES_USER:-portfolio_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_with_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_trading_agent}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_trading_agent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/docker/.env (local only, never commit)}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-portfolio_user} -d $${POSTGRES_DB:-portfolio_outlook}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 30s
       timeout: 5s
       retries: 5
