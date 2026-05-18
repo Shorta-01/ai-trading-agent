@@ -22,6 +22,7 @@ Portfolio Outlook Manager is een professionele **AI-ondersteunde paper portfolio
 - **Workers (apps/worker):** placeholder workerproces met veilige paper-only statusfunctie.
 - **Pakketten (packages/*):** placeholder domeinmodules (risk, portfolio, tax, audit, ai, enz.).
 - **Nieuw:** `packages/domain` bevat gedeelde, gevalideerde domeincontracten (data-shapes, geen tradinglogica).
+- **Nieuw:** `packages/portfolio` bevat paper accounting helperberekeningen (puur, deterministisch, Decimal-only).
 - **Opslag:** PostgreSQL placeholder via Docker Compose; nog geen businessmodellen/migraties.
 - **Infra (infra/docker):** Docker Compose-gedreven development setup en portabiliteit.
 

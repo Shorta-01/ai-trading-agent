@@ -1,0 +1,42 @@
+[project]
+name = "portfolio-outlook-portfolio"
+version = "0.1.0"
+description = "Paper accounting calculation helpers for Portfolio Outlook Manager"
+requires-python = ">=3.12"
+dependencies = [
+  "portfolio-outlook-domain",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.11.0",
+  "pytest>=8.3.0",
+  "ruff>=0.6.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["portfolio_outlook_portfolio"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["portfolio_outlook_domain"]
+ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = ["portfolio_outlook_domain.*"]
+ignore_missing_imports = true
