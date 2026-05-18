@@ -7,15 +7,15 @@ from .enums import (
     AdviceAction,
     CandidateSource,
     CandidateStatus,
+    RiskGateBlockReason,
     RiskGateStatus,
     SuggestionConfidenceLevel,
     SuggestionDraftDecision,
     SuggestionDraftStatus,
+    SuggestionEligibilityStatus,
     SuggestionEngineRunStatus,
     SuggestionGateStatus,
     SuggestionGateType,
-    SuggestionEligibilityStatus,
-    RiskGateBlockReason,
 )
 from .identifiers import (
     AuditEventId,
@@ -79,7 +79,10 @@ class SuggestionGateResult(DomainBaseModel):
         if self.status is SuggestionGateStatus.WARNING:
             if self.block_reasons_nl or not self.warning_reasons_nl:
                 raise ValueError("warning vereist alleen warning_reasons_nl")
-        if self.status in {SuggestionGateStatus.BLOCKED, SuggestionGateStatus.FAILED} and not self.block_reasons_nl:
+        if (
+            self.status in {SuggestionGateStatus.BLOCKED, SuggestionGateStatus.FAILED}
+            and not self.block_reasons_nl
+        ):
             raise ValueError("blocked/failed vereist block_reasons_nl")
         return self
 
@@ -102,7 +105,10 @@ class RiskGateResult(DomainBaseModel):
         if self.status is RiskGateStatus.WARNING:
             if self.block_reasons or not self.warning_reasons_nl:
                 raise ValueError("warning vereist warning_reasons_nl")
-        if self.status in {RiskGateStatus.BLOCKED, RiskGateStatus.FAILED} and not self.block_reasons:
+        if (
+            self.status in {RiskGateStatus.BLOCKED, RiskGateStatus.FAILED}
+            and not self.block_reasons
+        ):
             raise ValueError("blocked/failed vereist block_reasons")
         return self
 
@@ -138,12 +144,16 @@ class SuggestionEngineRun(DomainBaseModel):
     def validate_model(self) -> "SuggestionEngineRun":
         if not self.explanation_nl.strip() or not self.candidate_ids:
             raise ValueError("explanation_nl en candidate_ids zijn verplicht")
-        if self.status in {
-            SuggestionEngineRunStatus.COMPLETED,
-            SuggestionEngineRunStatus.COMPLETED_WITH_WARNINGS,
-            SuggestionEngineRunStatus.BLOCKED,
-            SuggestionEngineRunStatus.FAILED,
-        } and self.completed_at is None:
+        if (
+            self.status
+            in {
+                SuggestionEngineRunStatus.COMPLETED,
+                SuggestionEngineRunStatus.COMPLETED_WITH_WARNINGS,
+                SuggestionEngineRunStatus.BLOCKED,
+                SuggestionEngineRunStatus.FAILED,
+            }
+            and self.completed_at is None
+        ):
             raise ValueError("completed_at is verplicht voor eindstatus")
         if self.completed_at and self.completed_at < self.started_at:
             raise ValueError("completed_at moet na started_at liggen")
@@ -176,7 +186,13 @@ class ActionSuggestionDraft(DomainBaseModel):
             raise ValueError("converted_to_approval_request is niet toegestaan bij creatie")
         if self.action is AdviceAction.BLOCKED:
             raise ValueError("action blocked is niet toegestaan")
-        required_text = [self.title_nl, self.summary_nl, self.reason_nl, self.risk_nl, self.next_step_nl]
+        required_text = [
+            self.title_nl,
+            self.summary_nl,
+            self.reason_nl,
+            self.risk_nl,
+            self.next_step_nl,
+        ]
         if any(not field.strip() for field in required_text):
             raise ValueError("Nederlandse uitlegvelden zijn verplicht")
         if not self.source_reference_ids or not self.audit_event_ids or not self.gate_result_ids:
@@ -184,7 +200,15 @@ class ActionSuggestionDraft(DomainBaseModel):
         return self
 
 
-def build_passed_gate_result(*, suggestion_gate_result_id: SuggestionGateResultId, gate_type: SuggestionGateType, source_reference_ids: list[SourceReferenceId], audit_event_ids: list[AuditEventId], checked_at: datetime, explanation_nl: str) -> SuggestionGateResult:
+def build_passed_gate_result(
+    *,
+    suggestion_gate_result_id: SuggestionGateResultId,
+    gate_type: SuggestionGateType,
+    source_reference_ids: list[SourceReferenceId],
+    audit_event_ids: list[AuditEventId],
+    checked_at: datetime,
+    explanation_nl: str,
+) -> SuggestionGateResult:
     return SuggestionGateResult(
         suggestion_gate_result_id=suggestion_gate_result_id,
         gate_type=gate_type,
@@ -196,7 +220,14 @@ def build_passed_gate_result(*, suggestion_gate_result_id: SuggestionGateResultI
     )
 
 
-def build_blocked_gate_result(*, suggestion_gate_result_id: SuggestionGateResultId, gate_type: SuggestionGateType, block_reasons_nl: list[str], checked_at: datetime, explanation_nl: str) -> SuggestionGateResult:
+def build_blocked_gate_result(
+    *,
+    suggestion_gate_result_id: SuggestionGateResultId,
+    gate_type: SuggestionGateType,
+    block_reasons_nl: list[str],
+    checked_at: datetime,
+    explanation_nl: str,
+) -> SuggestionGateResult:
     return SuggestionGateResult(
         suggestion_gate_result_id=suggestion_gate_result_id,
         gate_type=gate_type,
@@ -215,7 +246,13 @@ def risk_gate_blocks_suggestion(gate: RiskGateResult) -> bool:
     return gate.status in {RiskGateStatus.BLOCKED, RiskGateStatus.FAILED}
 
 
-def decide_suggestion_draft_outcome(*, eligibility_check: SuggestionEligibilityCheck, gate_results: list[SuggestionGateResult], risk_gate_result: RiskGateResult, cost_tax_impact: CostTaxImpactPlaceholder | None = None) -> SuggestionDraftDecision:
+def decide_suggestion_draft_outcome(
+    *,
+    eligibility_check: SuggestionEligibilityCheck,
+    gate_results: list[SuggestionGateResult],
+    risk_gate_result: RiskGateResult,
+    cost_tax_impact: CostTaxImpactPlaceholder | None = None,
+) -> SuggestionDraftDecision:
     if eligibility_check.status is SuggestionEligibilityStatus.SKIPPED:
         return SuggestionDraftDecision.SKIP
     if eligibility_check.status is SuggestionEligibilityStatus.FAILED:
@@ -226,7 +263,10 @@ def decide_suggestion_draft_outcome(*, eligibility_check: SuggestionEligibilityC
         return SuggestionDraftDecision.BLOCK
     if risk_gate_blocks_suggestion(risk_gate_result):
         return SuggestionDraftDecision.BLOCK
-    if cost_tax_impact and cost_tax_impact.status in {SuggestionGateStatus.BLOCKED, SuggestionGateStatus.FAILED}:
+    if cost_tax_impact and cost_tax_impact.status in {
+        SuggestionGateStatus.BLOCKED,
+        SuggestionGateStatus.FAILED,
+    }:
         return SuggestionDraftDecision.BLOCK
     if (
         eligibility_check.status is SuggestionEligibilityStatus.ELIGIBLE_WITH_WARNINGS
@@ -237,17 +277,41 @@ def decide_suggestion_draft_outcome(*, eligibility_check: SuggestionEligibilityC
     return SuggestionDraftDecision.CREATE_DRAFT
 
 
-def build_action_suggestion_draft(*, suggestion_draft_id: SuggestionDraftId, candidate: SuggestionCandidate, action: AdviceAction, confidence: SuggestionConfidenceLevel, eligibility_check: SuggestionEligibilityCheck, gate_results: list[SuggestionGateResult], risk_gate_result: RiskGateResult, cost_tax_impact: CostTaxImpactPlaceholder | None, title_nl: str, summary_nl: str, reason_nl: str, risk_nl: str, next_step_nl: str, created_at: datetime) -> ActionSuggestionDraft:
+def build_action_suggestion_draft(
+    *,
+    suggestion_draft_id: SuggestionDraftId,
+    candidate: SuggestionCandidate,
+    action: AdviceAction,
+    confidence: SuggestionConfidenceLevel,
+    eligibility_check: SuggestionEligibilityCheck,
+    gate_results: list[SuggestionGateResult],
+    risk_gate_result: RiskGateResult,
+    cost_tax_impact: CostTaxImpactPlaceholder | None,
+    title_nl: str,
+    summary_nl: str,
+    reason_nl: str,
+    risk_nl: str,
+    next_step_nl: str,
+    created_at: datetime,
+) -> ActionSuggestionDraft:
     outcome = decide_suggestion_draft_outcome(
         eligibility_check=eligibility_check,
         gate_results=gate_results,
         risk_gate_result=risk_gate_result,
         cost_tax_impact=cost_tax_impact,
     )
-    if outcome in {SuggestionDraftDecision.BLOCK, SuggestionDraftDecision.SKIP, SuggestionDraftDecision.FAIL}:
+    if outcome in {
+        SuggestionDraftDecision.BLOCK,
+        SuggestionDraftDecision.SKIP,
+        SuggestionDraftDecision.FAIL,
+    }:
         raise ValueError(f"cannot build draft with outcome {outcome.value}")
 
-    gate_ids = [g.suggestion_gate_result_id for g in gate_results if g.status in {SuggestionGateStatus.PASSED, SuggestionGateStatus.WARNING}]
+    gate_ids = [
+        g.suggestion_gate_result_id
+        for g in gate_results
+        if g.status in {SuggestionGateStatus.PASSED, SuggestionGateStatus.WARNING}
+    ]
     return ActionSuggestionDraft(
         suggestion_draft_id=suggestion_draft_id,
         candidate_id=candidate.candidate_id,

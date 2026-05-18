@@ -10,6 +10,7 @@ from portfolio_outlook_domain import (
     SuggestionConfidenceLevel,
     SuggestionDraftStatus,
 )
+
 from portfolio_outlook_portfolio import (
     check_candidate_ready_for_suggestion,
     check_suggestion_draft_ready,
