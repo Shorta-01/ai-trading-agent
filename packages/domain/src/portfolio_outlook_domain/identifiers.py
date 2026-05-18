@@ -65,3 +65,12 @@ SuggestionEngineRunId = SafeIdentifier
 SuggestionGateResultId = SafeIdentifier
 RiskGateResultId = SafeIdentifier
 CostTaxImpactId = SafeIdentifier
+
+SettingsProfileId = SafeIdentifier
+ExternalIntegrationId = SafeIdentifier
+SecretReferenceId = SafeIdentifier
+ApiBudgetPolicyId = SafeIdentifier
+ApiUsageSummaryId = SafeIdentifier
+ApiCostEstimateId = SafeIdentifier
+ModelPricingId = SafeIdentifier
+ApiConnectionCheckId = SafeIdentifier

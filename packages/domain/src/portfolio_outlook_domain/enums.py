@@ -807,3 +807,93 @@ class SuggestionDraftDecision(StrEnum):
     BLOCK = "block"
     SKIP = "skip"
     FAIL = "fail"
+
+
+class ExternalIntegrationKind(StrEnum):
+    IBKR = "ibkr"
+    OPENAI = "openai"
+    OTHER = "other"
+
+
+class ExternalIntegrationStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    DISABLED = "disabled"
+    CONFIGURED = "configured"
+    CONNECTED = "connected"
+    DEGRADED = "degraded"
+    ERROR = "error"
+    BLOCKED = "blocked"
+
+
+class SecretStorageKind(StrEnum):
+    ENVIRONMENT_VARIABLE = "environment_variable"
+    LOCAL_GITIGNORED_FILE = "local_gitignored_file"
+    EXTERNAL_SECRET_MANAGER_FUTURE = "external_secret_manager_future"
+    NOT_CONFIGURED = "not_configured"
+
+
+class SecretStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    REFERENCE_CONFIGURED = "reference_configured"
+    AVAILABLE = "available"
+    MISSING = "missing"
+    INVALID = "invalid"
+    BLOCKED = "blocked"
+
+
+class IBKRConnectionMode(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    PAPER_ONLY = "paper_only"
+    PAPER_READINESS = "paper_readiness"
+    DISABLED = "disabled"
+
+
+class IBKRApiGatewayKind(StrEnum):
+    TWS = "tws"
+    IB_GATEWAY = "ib_gateway"
+    NOT_CONFIGURED = "not_configured"
+
+
+class OpenAIUsageSource(StrEnum):
+    LOCAL_ESTIMATE = "local_estimate"
+    OPENAI_USAGE_API_FUTURE = "openai_usage_api_future"
+    OPENAI_COSTS_API_FUTURE = "openai_costs_api_future"
+    MANUAL_IMPORT = "manual_import"
+    UNKNOWN = "unknown"
+
+
+class OpenAIModelPurpose(StrEnum):
+    DEEP_RESEARCH = "deep_research"
+    SIMPLE_EXPLANATION = "simple_explanation"
+    SUMMARIZATION = "summarization"
+    CLASSIFICATION = "classification"
+    FALLBACK = "fallback"
+    NOT_CONFIGURED = "not_configured"
+
+
+class BudgetPeriod(StrEnum):
+    DAILY = "daily"
+    MONTHLY = "monthly"
+
+
+class BudgetStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    OK = "ok"
+    WARNING = "warning"
+    CRITICAL = "critical"
+    EXCEEDED = "exceeded"
+    BLOCKED = "blocked"
+    UNKNOWN = "unknown"
+
+
+class CostCurrency(StrEnum):
+    USD = "usd"
+    EUR = "eur"
+
+
+class ApiConnectionCheckStatus(StrEnum):
+    NOT_CHECKED = "not_checked"
+    OK = "ok"
+    WARNING = "warning"
+    ERROR = "error"
+    BLOCKED = "blocked"
