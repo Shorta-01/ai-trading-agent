@@ -22,3 +22,6 @@ cd apps/web
 npm run lint
 npm run build
 ```
+
+## Task 16 foundation update
+Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.

@@ -18,3 +18,11 @@ export const uiText = {
     "Instellingen",
   ],
 } as const;
+
+export const settingsUiText = {
+  instellingenTitel: "Instellingen",
+  instellingenHelp:
+    "Hier stel je later de verbindingen met IBKR en OpenAI in. Geheime sleutels worden niet in de gewone app-gegevens opgeslagen.",
+  aiVerbruikHelp:
+    "Dit toont hoeveel AI-onderzoek het systeem heeft gebruikt. De kost in euro is een schatting zolang de bronkosten in dollar staan.",
+} as const;

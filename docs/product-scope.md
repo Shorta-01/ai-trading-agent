@@ -52,3 +52,6 @@ De interface moet ook voor een niet-expert begrijpelijk zijn met duidelijke Nede
 - Publieke nieuws- en websitebronnen zijn standaard niet geschikt voor suggestion eligibility.
 - Geen data kwaliteit of traceerbaarheid betekent geen advies/suggestie.
 
+
+## Task 16 foundation update
+Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.

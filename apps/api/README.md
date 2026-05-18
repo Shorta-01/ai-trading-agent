@@ -21,3 +21,6 @@ ruff check .
 mypy src
 ```
 \n\n## Runtime update\nContract-only update for backend runtime/service topology added in domain models for coordinated startup, health gating, and queue-first heavy workloads (no runtime implementation in this PR).
+
+## Task 16 foundation update
+Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
