@@ -1,28 +1,78 @@
 :root {
   color-scheme: light;
-  font-family: Arial, sans-serif;
+  font-family: Inter, Arial, sans-serif;
 }
 
 body {
   margin: 0;
-  background: #f7f7f7;
+  background: #f5f7fb;
   color: #1f2937;
 }
 
 .container {
-  max-width: 980px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 2rem 1rem 3rem;
 }
 
-.notice,
-.status-card,
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.hero-subtitle {
+  margin-top: 0.35rem;
+  color: #334155;
+}
+
+.hero-message {
+  margin-top: 0.9rem;
+}
+
+.paper-badge {
+  background: #e0ecff;
+  border: 1px solid #93c5fd;
+  color: #1d4ed8;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
 section {
+  margin-top: 1.4rem;
+}
+
+.section-header h2 {
+  margin-bottom: 0.3rem;
+}
+
+.dashboard-card {
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
   padding: 1rem;
-  margin-top: 1rem;
+}
+
+.dashboard-card-error {
+  border-color: #ef4444;
+}
+
+.card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card-topline h3 {
+  margin: 0;
+}
+
+.card-list {
+  margin: 0.8rem 0;
+  padding-left: 1.2rem;
 }
 
 .grid {
@@ -31,7 +81,48 @@ section {
   gap: 1rem;
 }
 
+.one-column {
+  grid-template-columns: 1fr;
+}
+
+.status-badge {
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  border: 1px solid;
+  font-weight: 600;
+}
+
+.status-badge-actief {
+  background: #e7f8ee;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.status-badge-waarschuwing {
+  background: #fff8e7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.status-badge-fout {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.status-badge-info {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #cbd5e1;
+}
+
 .help-text {
-  font-size: 0.85rem;
-  color: #4b5563;
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.help-text-label {
+  font-weight: 600;
 }

@@ -45,3 +45,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 ## API-naar-UI regel (Task 17)
 - API-responses die bedoeld zijn voor UI-weergave moeten eenvoudige Nederlandse labels en helpteksten bevatten.
 - Elke zichtbare veldnaam, status en actie moet een duidelijke Nederlandse uitleg of tooltiptekst hebben.
+
+## Task 18 dashboardregels
+- Elk zichtbaar veld, elke status en elke actie krijgt eenvoudige Nederlandse helptekst of tooltip.
+- De GUI blijft begrijpelijk voor niet-expert beleggers.
+- Geen fake grafieken en geen fake portefeuilledata.
+- Het dashboard blijft modern, snel, schoon en duidelijk.

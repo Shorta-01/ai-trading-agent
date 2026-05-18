@@ -1,11 +1,12 @@
 type HelpTextProps = {
+  id?: string;
   text: string;
 };
 
-export function HelpText({ text }: HelpTextProps) {
+export function HelpText({ id, text }: HelpTextProps) {
   return (
-    <p className="help-text" title={text}>
-      Help: {text}
+    <p id={id} className="help-text">
+      <span className="help-text-label">Help:</span> {text}
     </p>
   );
 }

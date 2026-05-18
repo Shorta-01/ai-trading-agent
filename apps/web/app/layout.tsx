@@ -1,9 +1,10 @@
-import "./globals.css";
 import type { Metadata } from "next";
 
+import "./globals.css";
+
 export const metadata: Metadata = {
-  title: "Portfolio Outlook Manager",
-  description: "Technische skeleton in papergeldmodus",
+  title: "AI-Trading-Agent",
+  description: "Moderne Nederlandstalige paper-only dashboard basis",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

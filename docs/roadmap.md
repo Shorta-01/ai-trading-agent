@@ -54,3 +54,16 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Bouw IBKR paper-statuschecker.
 - Bouw moderne Nederlandstalige Instellingen-UI.
 - Bouw modern Nederlandstalig Systeemstatus-dashboard.
+
+## Task 18 update
+- Moderne Nederlandstalige dashboard foundation opgeleverd in de webapp.
+- Veilige read-only secties toegevoegd voor systeemstatus, instellingen, AI-verbruik en koppelingen.
+- Lege, veilige placeholders toegevoegd voor actiesuggesties en portefeuille zonder nepdata.
+
+## Vervolg na Task 18
+- Koppel dashboardstatus aan echte runtime health-signalen.
+- Bouw veilige instellingenformulieren (zonder secrets in plain text).
+- Voeg first-run paper-portefeuille setup-UI toe.
+- Bouw echte portefeuilleweergave met alleen gevalideerde data.
+- Voeg actiesuggestie-grid toe zodra gates en data actief zijn.
+- Voeg grafieken pas toe als echte data beschikbaar is.
