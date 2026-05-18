@@ -7,12 +7,12 @@ from .costs import CostEstimate
 from .enums import LedgerEntryType, PaperLiveMode, TransactionSide, TransactionStatus
 from .identifiers import (
     InstrumentId,
+    LedgerEntryId,
     OrderId,
     PortfolioId,
     RunId,
     SuggestionId,
     TransactionId,
-    LedgerEntryId,
 )
 from .primitives import DomainBaseModel, Money, Quantity
 

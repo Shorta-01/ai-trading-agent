@@ -27,8 +27,16 @@ def test_cost_estimate_rejects_negative_amount() -> None:
 def test_total_by_currency_sums_costs_with_same_currency() -> None:
     total = TotalCostEstimate(
         costs=[
-            CostEstimate(cost_estimate_id="c1", cost_type=CostType.BROKER_FEE, amount=Money(amount="1.10", currency="EUR")),
-            CostEstimate(cost_estimate_id="c2", cost_type=CostType.FX_COST, amount=Money(amount="2.40", currency="EUR")),
+            CostEstimate(
+                cost_estimate_id="c1",
+                cost_type=CostType.BROKER_FEE,
+                amount=Money(amount="1.10", currency="EUR"),
+            ),
+            CostEstimate(
+                cost_estimate_id="c2",
+                cost_type=CostType.FX_COST,
+                amount=Money(amount="2.40", currency="EUR"),
+            ),
         ]
     )
     assert total.total_by_currency() == {"EUR": Decimal("3.50")}
@@ -37,8 +45,16 @@ def test_total_by_currency_sums_costs_with_same_currency() -> None:
 def test_total_by_currency_separates_currencies() -> None:
     total = TotalCostEstimate(
         costs=[
-            CostEstimate(cost_estimate_id="c1", cost_type=CostType.BROKER_FEE, amount=Money(amount="1.10", currency="EUR")),
-            CostEstimate(cost_estimate_id="c2", cost_type=CostType.FX_COST, amount=Money(amount="2.40", currency="USD")),
+            CostEstimate(
+                cost_estimate_id="c1",
+                cost_type=CostType.BROKER_FEE,
+                amount=Money(amount="1.10", currency="EUR"),
+            ),
+            CostEstimate(
+                cost_estimate_id="c2",
+                cost_type=CostType.FX_COST,
+                amount=Money(amount="2.40", currency="USD"),
+            ),
         ]
     )
     assert total.total_by_currency() == {"EUR": Decimal("1.10"), "USD": Decimal("2.40")}
