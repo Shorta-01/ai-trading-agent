@@ -1,7 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 
 from .enums import (
     BrokerAccountMode,
@@ -32,6 +33,12 @@ from .identifiers import (
     SourceReferenceId,
 )
 from .primitives import DomainBaseModel
+
+
+def _reject_float_decimal_input(value: Any) -> Any:
+    if isinstance(value, float):
+        raise ValueError("Decimal fields must not be provided as float values.")
+    return value
 
 
 class BrokerSourceOfTruthPolicy(DomainBaseModel):
@@ -136,6 +143,11 @@ class BrokerPositionSnapshot(DomainBaseModel):
     source_reference_ids: list[SourceReferenceId]
     explanation_nl: str
 
+    @field_validator("quantity", "average_cost", "market_value", mode="before")
+    @classmethod
+    def reject_float_decimal_inputs(cls, value: object) -> object:
+        return _reject_float_decimal_input(value)
+
 
 class BrokerCashBalanceSnapshot(DomainBaseModel):
     broker_cash_snapshot_id: BrokerCashSnapshotId
@@ -149,6 +161,11 @@ class BrokerCashBalanceSnapshot(DomainBaseModel):
     origin: BrokerActivityOrigin
     source_reference_ids: list[SourceReferenceId]
     explanation_nl: str
+
+    @field_validator("cash_amount", mode="before")
+    @classmethod
+    def reject_float_decimal_inputs(cls, value: object) -> object:
+        return _reject_float_decimal_input(value)
 
 
 class BrokerExecutionSnapshot(DomainBaseModel):
@@ -171,6 +188,11 @@ class BrokerExecutionSnapshot(DomainBaseModel):
     source_reference_ids: list[SourceReferenceId]
     explanation_nl: str
 
+    @field_validator("quantity", "price", mode="before")
+    @classmethod
+    def reject_float_decimal_inputs(cls, value: object) -> object:
+        return _reject_float_decimal_input(value)
+
 
 class BrokerCommissionSnapshot(DomainBaseModel):
     broker_commission_snapshot_id: BrokerCommissionSnapshotId
@@ -184,6 +206,11 @@ class BrokerCommissionSnapshot(DomainBaseModel):
     realized_pnl: Decimal | None
     source_reference_ids: list[SourceReferenceId]
     explanation_nl: str
+
+    @field_validator("commission_amount", "realized_pnl", mode="before")
+    @classmethod
+    def reject_float_decimal_inputs(cls, value: object) -> object:
+        return _reject_float_decimal_input(value)
 
 
 class ExternalBrokerActivity(DomainBaseModel):
