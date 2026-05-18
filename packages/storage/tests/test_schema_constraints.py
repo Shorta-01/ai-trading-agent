@@ -5,7 +5,11 @@ from ai_trading_agent_storage.metadata import metadata
 
 def _check_names(table_name: str) -> set[str]:
     table = metadata.tables[table_name]
-    return {constraint.name for constraint in table.constraints if isinstance(constraint, CheckConstraint)}
+    return {
+        constraint.name
+        for constraint in table.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
 
 
 def test_paper_portfolio_setups_constraints_exist() -> None:

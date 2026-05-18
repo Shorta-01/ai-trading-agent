@@ -10,8 +10,14 @@ def test_metadata_imports_and_expected_tables_only() -> None:
 
 
 def test_money_columns_are_numeric() -> None:
-    assert isinstance(metadata.tables["paper_portfolio_setups"].c.starting_cash_amount.type, Numeric)
-    assert isinstance(metadata.tables["paper_cash_accounts"].c.initial_paper_cash_amount.type, Numeric)
+    assert isinstance(
+        metadata.tables["paper_portfolio_setups"].c.starting_cash_amount.type,
+        Numeric,
+    )
+    assert isinstance(
+        metadata.tables["paper_cash_accounts"].c.initial_paper_cash_amount.type,
+        Numeric,
+    )
 
 
 def test_timestamp_columns_are_timezone_aware() -> None:
@@ -28,7 +34,10 @@ def test_timestamp_columns_are_timezone_aware() -> None:
 
 
 def test_paper_cash_accounts_has_expected_setup_fk() -> None:
-    setup_id_fk_targets = {fk.target_fullname for fk in metadata.tables["paper_cash_accounts"].c.setup_id.foreign_keys}
+    setup_id_fk_targets = {
+        fk.target_fullname
+        for fk in metadata.tables["paper_cash_accounts"].c.setup_id.foreign_keys
+    }
     assert setup_id_fk_targets == {"paper_portfolio_setups.setup_id"}
 
 

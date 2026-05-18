@@ -40,14 +40,35 @@ paper_portfolio_setups = Table(
     Column("updated_at", DateTime(timezone=True), nullable=True),
     Column("explanation_nl", Text, nullable=False),
     CheckConstraint("base_currency = 'eur'", name="ck_paper_portfolio_setups_base_currency_eur"),
-    CheckConstraint("starting_cash_amount > 0", name="ck_paper_portfolio_setups_starting_cash_amount_gt_0"),
+    CheckConstraint(
+        "starting_cash_amount > 0",
+        name="ck_paper_portfolio_setups_starting_cash_amount_gt_0",
+    ),
     CheckConstraint("paper_only IS TRUE", name="ck_paper_portfolio_setups_paper_only_true"),
-    CheckConstraint("real_money_used IS FALSE", name="ck_paper_portfolio_setups_real_money_used_false"),
-    CheckConstraint("broker_order_created IS FALSE", name="ck_paper_portfolio_setups_broker_order_created_false"),
-    CheckConstraint("live_trading_enabled IS FALSE", name="ck_paper_portfolio_setups_live_trading_enabled_false"),
-    CheckConstraint("user_confirmed_paper_only IS TRUE", name="ck_paper_portfolio_setups_user_confirmed_paper_only_true"),
-    CheckConstraint("user_confirmed_no_real_money IS TRUE", name="ck_paper_portfolio_setups_user_confirmed_no_real_money_true"),
-    CheckConstraint("user_confirmed_no_broker_order IS TRUE", name="ck_paper_portfolio_setups_user_confirmed_no_broker_order_true"),
+    CheckConstraint(
+        "real_money_used IS FALSE",
+        name="ck_paper_portfolio_setups_real_money_used_false",
+    ),
+    CheckConstraint(
+        "broker_order_created IS FALSE",
+        name="ck_paper_portfolio_setups_broker_order_created_false",
+    ),
+    CheckConstraint(
+        "live_trading_enabled IS FALSE",
+        name="ck_paper_portfolio_setups_live_trading_enabled_false",
+    ),
+    CheckConstraint(
+        "user_confirmed_paper_only IS TRUE",
+        name="ck_paper_portfolio_setups_user_confirmed_paper_only_true",
+    ),
+    CheckConstraint(
+        "user_confirmed_no_real_money IS TRUE",
+        name="ck_paper_portfolio_setups_user_confirmed_no_real_money_true",
+    ),
+    CheckConstraint(
+        "user_confirmed_no_broker_order IS TRUE",
+        name="ck_paper_portfolio_setups_user_confirmed_no_broker_order_true",
+    ),
 )
 
 paper_cash_accounts = Table(
@@ -62,7 +83,10 @@ paper_cash_accounts = Table(
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("explanation_nl", Text, nullable=False),
     CheckConstraint("currency = 'eur'", name="ck_paper_cash_accounts_currency_eur"),
-    CheckConstraint("initial_paper_cash_amount > 0", name="ck_paper_cash_accounts_initial_paper_cash_amount_gt_0"),
+    CheckConstraint(
+        "initial_paper_cash_amount > 0",
+        name="ck_paper_cash_accounts_initial_paper_cash_amount_gt_0",
+    ),
     CheckConstraint("paper_only IS TRUE", name="ck_paper_cash_accounts_paper_only_true"),
 )
 
