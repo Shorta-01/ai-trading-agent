@@ -224,6 +224,88 @@ class ExecutionMode(StrEnum):
     BLOCKED_AUTO = "blocked_auto"
 
 
+class ScheduleCadence(StrEnum):
+    MANUAL = "manual"
+    EVERY_5_MINUTES = "every_5_minutes"
+    EVERY_15_MINUTES = "every_15_minutes"
+    HOURLY = "hourly"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    MARKET_OPEN = "market_open"
+    MARKET_CLOSE = "market_close"
+    EVENT_DRIVEN = "event_driven"
+    DISABLED = "disabled"
+
+
+class ScheduledJobStatus(StrEnum):
+    PLANNED = "planned"
+    ELIGIBLE = "eligible"
+    SKIPPED = "skipped"
+    BLOCKED = "blocked"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    RETRY_SCHEDULED = "retry_scheduled"
+    CANCELLED = "cancelled"
+    DISABLED = "disabled"
+
+
+class JobSkipReason(StrEnum):
+    SERVICE_UNHEALTHY = "service_unhealthy"
+    DATA_STALE = "data_stale"
+    DATA_MISSING = "data_missing"
+    SOURCE_NOT_ALLOWED = "source_not_allowed"
+    MARKET_CLOSED = "market_closed"
+    OUTSIDE_SCHEDULE = "outside_schedule"
+    RESOURCE_LIMIT = "resource_limit"
+    DEPENDENCY_NOT_READY = "dependency_not_ready"
+    MANUAL_PAUSE = "manual_pause"
+    DISABLED = "disabled"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class JobBlockReason(StrEnum):
+    REQUIRED_SERVICE_UNHEALTHY = "required_service_unhealthy"
+    REQUIRED_DATA_MISSING = "required_data_missing"
+    DATA_QUALITY_FAILED = "data_quality_failed"
+    SOURCE_USAGE_NOT_ALLOWED = "source_usage_not_allowed"
+    RISK_POLICY_BLOCK = "risk_policy_block"
+    EXECUTION_MODE_BLOCK = "execution_mode_block"
+    MISSING_AUDIT_LINK = "missing_audit_link"
+    MANUAL_REVIEW_REQUIRED = "manual_review_required"
+    SYSTEM_NOT_READY = "system_not_ready"
+
+
+class RetryBackoffPolicy(StrEnum):
+    NONE = "none"
+    FIXED_DELAY = "fixed_delay"
+    EXPONENTIAL = "exponential"
+    MANUAL_ONLY = "manual_only"
+
+
+class JobPriority(StrEnum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class JobSafetyImpact(StrEnum):
+    READ_ONLY = "read_only"
+    MAY_UPDATE_RESEARCH = "may_update_research"
+    MAY_UPDATE_PORTFOLIO_STATE = "may_update_portfolio_state"
+    MAY_CREATE_SUGGESTIONS = "may_create_suggestions"
+    AUDIT_ONLY = "audit_only"
+
+
+class JobResourceLimit(StrEnum):
+    RASPBERRY_PI_SAFE = "raspberry_pi_safe"
+    QUEUE_REQUIRED = "queue_required"
+    EXTERNAL_WORKER_RECOMMENDED = "external_worker_recommended"
+    BLOCKED_ON_RASPBERRY_PI = "blocked_on_raspberry_pi"
+
+
 class ExecutionModeStatus(StrEnum):
     AVAILABLE = "available"
     UNAVAILABLE = "unavailable"
