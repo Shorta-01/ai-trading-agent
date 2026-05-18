@@ -26,6 +26,16 @@ from .lots import (
     validate_lot_quantities,
 )
 from .money import add_money, ensure_same_currency, multiply_quantity_by_price, subtract_money
+from .snapshot import (
+    InstrumentPositionQuantity,
+    InstrumentTransactionTotals,
+    PaperPortfolioSnapshot,
+    build_paper_portfolio_snapshot,
+    calculate_cash_balances,
+    calculate_position_quantities,
+    calculate_transaction_totals,
+    validate_no_oversells,
+)
 
 __all__ = [
     "PortfolioAccountingError",
@@ -51,4 +61,12 @@ __all__ = [
     "create_cash_entry_for_transaction",
     "validate_cash_entry_sign",
     "validate_transaction_cash_entry_pair",
+    "InstrumentPositionQuantity",
+    "InstrumentTransactionTotals",
+    "PaperPortfolioSnapshot",
+    "calculate_cash_balances",
+    "calculate_position_quantities",
+    "calculate_transaction_totals",
+    "validate_no_oversells",
+    "build_paper_portfolio_snapshot",
 ]
