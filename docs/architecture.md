@@ -46,3 +46,9 @@ Data-quality gate en suggestion eligibility foundations toegevoegd. Deze stap ma
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## Read-only status/settings API foundation
+- Domeincontracten blijven de bron voor regels en boundaries.
+- De API exposeert veilige, read-only samenvattingen voor status en instellingen.
+- De web-UI consumeert later deze samenvattingen voor statuskaarten en instellingenoverzicht.
+- Er is in deze stap geen runtime-integratie (geen broker, geen OpenAI, geen scheduler, geen worker-activatie).

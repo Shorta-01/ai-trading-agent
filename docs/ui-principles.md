@@ -41,3 +41,7 @@ Data-quality gate en suggestion eligibility foundations toegevoegd. Deze stap ma
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## API-naar-UI regel (Task 17)
+- API-responses die bedoeld zijn voor UI-weergave moeten eenvoudige Nederlandse labels en helpteksten bevatten.
+- Elke zichtbare veldnaam, status en actie moet een duidelijke Nederlandse uitleg of tooltiptekst hebben.

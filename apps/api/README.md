@@ -24,3 +24,21 @@ mypy src
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## Read-only status/settings API foundation (Task 17)
+
+Nieuwe read-only endpoints voor de toekomstige web-UI:
+- `GET /system/status`
+- `GET /settings/summary`
+- `GET /usage/ai/summary`
+- `GET /integrations/summary`
+- `GET /ui/dutch-labels`
+
+Eigenschappen:
+- Geeft alleen veilige placeholder-data terug.
+- Geeft geen geheimen terug.
+- Leest of bewaart geen geheime waarden.
+- Maakt geen IBKR-calls of OpenAI-calls.
+- Maakt geen database-calls.
+- Start geen worker jobs of scheduler.
+- Alle UI-gerichte labels/hulpteksten zijn Nederlandstalig.
