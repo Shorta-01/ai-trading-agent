@@ -24,3 +24,16 @@ CorporateActionId = SafeIdentifier
 FifoAllocationId = SafeIdentifier
 
 TermDepositId = SafeIdentifier
+
+
+ApprovalRequestId = SafeIdentifier
+ApprovalDecisionId = SafeIdentifier
+ExecutionIntentId = SafeIdentifier
+ExecutionTargetId = SafeIdentifier
+BrokerReferenceId = SafeIdentifier
+BrokerOrderReferenceId = SafeIdentifier
+ResearchRunId = SafeIdentifier
+ResearchReportId = SafeIdentifier
+SourceReferenceId = SafeIdentifier
+RawDataArchiveId = SafeIdentifier
+ResearchArchiveId = SafeIdentifier

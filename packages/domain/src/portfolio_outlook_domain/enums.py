@@ -214,3 +214,161 @@ class BlockedReasonCode(StrEnum):
     UNKNOWN_OR_UNSUPPORTED = "unknown_or_unsupported"
     OIL_PRODUCT_EXTRA_RISK = "oil_product_extra_risk"
     DIRECT_COMMODITY_OR_FUTURE_BLOCKED = "direct_commodity_or_future_blocked"
+
+
+class ExecutionMode(StrEnum):
+    INTERNAL_PAPER = "internal_paper"
+    IBKR_PAPER = "ibkr_paper"
+    IBKR_LIVE_READ_ONLY = "ibkr_live_read_only"
+    IBKR_LIVE_MANUAL = "ibkr_live_manual"
+    BLOCKED_AUTO = "blocked_auto"
+
+
+class ExecutionModeStatus(StrEnum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+    BLOCKED = "blocked"
+    REQUIRES_SETUP = "requires_setup"
+    REQUIRES_EXPLICIT_ACTIVATION = "requires_explicit_activation"
+
+
+class ExecutionTargetKind(StrEnum):
+    INTERNAL_PAPER_SIMULATOR = "internal_paper_simulator"
+    IBKR_PAPER_ACCOUNT = "ibkr_paper_account"
+    IBKR_LIVE_READ_ONLY = "ibkr_live_read_only"
+    IBKR_LIVE_MANUAL = "ibkr_live_manual"
+    BLOCKED_AUTOMATIC_EXECUTION = "blocked_automatic_execution"
+
+
+class ApprovalRequirement(StrEnum):
+    ALWAYS_REQUIRED = "always_required"
+    NOT_APPLICABLE = "not_applicable"
+    BLOCKED = "blocked"
+
+
+class ApprovalDecisionStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    BLOCKED = "blocked"
+
+
+class ExecutionIntentStatus(StrEnum):
+    DRAFT = "draft"
+    WAITING_FOR_APPROVAL = "waiting_for_approval"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+    BLOCKED = "blocked"
+    CONVERTED_TO_ORDER = "converted_to_order"
+
+
+class BrokerProvider(StrEnum):
+    NONE = "none"
+    INTERACTIVE_BROKERS = "interactive_brokers"
+
+
+class BrokerAccountMode(StrEnum):
+    INTERNAL_PAPER = "internal_paper"
+    IBKR_PAPER = "ibkr_paper"
+    IBKR_LIVE = "ibkr_live"
+
+
+class IBKRSecurityType(StrEnum):
+    STOCK = "stock"
+    ETF = "etf"
+    CASH = "cash"
+    FOREX = "forex"
+    BOND = "bond"
+    FUND = "fund"
+    COMMODITY_ETF_ETC = "commodity_etf_etc"
+    OPTION = "option"
+    FUTURE = "future"
+    CRYPTO = "crypto"
+    UNKNOWN = "unknown"
+
+
+class IBKRMarketDataPermissionStatus(StrEnum):
+    UNKNOWN = "unknown"
+    NOT_REQUIRED = "not_required"
+    SUBSCRIBED = "subscribed"
+    DELAYED = "delayed"
+    MISSING_SUBSCRIPTION = "missing_subscription"
+    MISSING_PERMISSION = "missing_permission"
+    UNAVAILABLE = "unavailable"
+
+
+class IBKRTradingPermissionStatus(StrEnum):
+    UNKNOWN = "unknown"
+    PERMITTED = "permitted"
+    PAPER_ONLY = "paper_only"
+    READ_ONLY = "read_only"
+    NOT_PERMITTED = "not_permitted"
+    BLOCKED_BY_SYSTEM = "blocked_by_system"
+
+
+class IBKROrderTransmissionStatus(StrEnum):
+    NOT_SUBMITTED = "not_submitted"
+    SUBMITTED_TO_PAPER = "submitted_to_paper"
+    ACCEPTED = "accepted"
+    PARTIALLY_FILLED = "partially_filled"
+    FILLED = "filled"
+    CANCELLED = "cancelled"
+    REJECTED = "rejected"
+    FAILED = "failed"
+    UNKNOWN = "unknown"
+
+
+class ResearchReportStatus(StrEnum):
+    DRAFT = "draft"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    BLOCKED_BY_DATA_QUALITY = "blocked_by_data_quality"
+    BLOCKED_BY_POLICY = "blocked_by_policy"
+    SUPERSEDED = "superseded"
+
+
+class ResearchSourceType(StrEnum):
+    IBKR_ACCOUNT_DATA = "ibkr_account_data"
+    IBKR_MARKET_DATA = "ibkr_market_data"
+    IBKR_ORDER_DATA = "ibkr_order_data"
+    IBKR_EXECUTION_DATA = "ibkr_execution_data"
+    IBKR_STATEMENT = "ibkr_statement"
+    COMPANY_REPORT = "company_report"
+    ETF_FACTSHEET = "etf_factsheet"
+    KID_KIID = "kid_kiid"
+    FILING = "filing"
+    NEWS = "news"
+    ANALYST_SUMMARY = "analyst_summary"
+    MACRO_DATA = "macro_data"
+    CENTRAL_BANK_DATA = "central_bank_data"
+    WEBSITE = "website"
+    MANUAL_INPUT = "manual_input"
+    OTHER = "other"
+
+
+class ResearchUse(StrEnum):
+    MARKET_CONTEXT = "market_context"
+    CANDIDATE_DISCOVERY = "candidate_discovery"
+    ASSET_DEEP_RESEARCH = "asset_deep_research"
+    RISK_REVIEW = "risk_review"
+    PERFORMANCE_REVIEW = "performance_review"
+    SUGGESTION_EXPLANATION = "suggestion_explanation"
+    SELF_LEARNING_REVIEW = "self_learning_review"
+
+
+class AIResearchRole(StrEnum):
+    RESEARCH_INPUT = "research_input"
+    EXPLANATION = "explanation"
+    REJECTED_INPUT = "rejected_input"
+    BLOCKED_INPUT = "blocked_input"
+
+
+class PromptInjectionRisk(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    BLOCKED = "blocked"

@@ -135,4 +135,21 @@ __all__ = [
     "build_term_deposit_projection",
     "calculate_total_term_deposit_value",
     "calculate_total_net_term_deposit_interest",
+    "get_default_execution_targets",
+    "check_execution_mode_available",
+    "require_execution_mode_available",
+    "check_can_submit_order_to_target",
+    "require_manual_approval_required",
+    "is_approval_decision_final",
+    "build_approved_action",
+    "require_approved_decision",
 ]
+
+from .approval_guards import build_approved_action, is_approval_decision_final, require_approved_decision
+from .execution_guards import (
+    check_can_submit_order_to_target,
+    check_execution_mode_available,
+    get_default_execution_targets,
+    require_execution_mode_available,
+    require_manual_approval_required,
+)
