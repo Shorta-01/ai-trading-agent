@@ -34,3 +34,11 @@ python -m pytest -q
 - Geen aanbevelingen, geen AI en geen market-data calls.
 - Decimal-only accounting via gedeelde domeinprimitives.
 - Blijft strikt paper-only voor versie 1.
+
+## Paper portfolio snapshot helpers
+- Deze helpers berekenen de actuele paper-state op basis van aangeleverde ledger-records.
+- Geen persistentie en geen database.
+- Geen market prices en geen valuation.
+- Geen aanbevelingen, geen AI en geen broker-executie.
+- Decimal-only accounting via domeinprimitives.
+- Blijft strikt paper-only voor versie 1.
