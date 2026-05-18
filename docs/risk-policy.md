@@ -65,3 +65,8 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Running a PostgreSQL container does not mean storage is trusted.
 - Writes remain blocked until migrations, audit persistence, and backup/restore readiness are implemented.
 - Missing credentials or placeholder/default credentials are unsafe for production use.
+
+## Task 23 risiconota over migraties
+- Een migratie-skeleton betekent niet dat schrijfacties al veilig of toegestaan zijn.
+- Schrijven blijft geblokkeerd tot schema, repositories, audit-persistence en backup/restore-checks bestaan.
+- Latere migratie-uitvoering moet backup-readiness als harde voorwaarde afdwingen.

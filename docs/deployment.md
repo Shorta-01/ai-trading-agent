@@ -40,3 +40,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Backup trust requires restore tests before being marked reliable.
 - Deployment remains portable across `linux/arm64` and `linux/amd64` where practical.
 - No Raspberry Pi-specific application logic may be introduced.
+
+## Task 23 deployment note
+- Alembic skeleton bestaat nu in `packages/storage`, maar er zijn nog geen migraties.
+- Productie-database-URL moet later uit veilige env/secret-referenties komen.
+- `alembic.ini` bevat alleen een placeholder, geen echte wachtwoorden.
+- Backup/restore-tests blijven verplicht vóór persistence als betrouwbaar geldt.

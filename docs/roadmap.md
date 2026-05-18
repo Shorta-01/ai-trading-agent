@@ -105,3 +105,13 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - persist audit event
 - storage backup/restore scripts
 - restore test workflow
+
+## Task 23 status
+- ✅ Database dependency layer en Alembic skeleton toegevoegd.
+
+## Volgende storage taken
+1. Eerste schema-migratie voor paper setup + audit foundation.
+2. Repository-interfaces toevoegen voor storage mapping.
+3. Persistente opslag voor first-run paper setup toevoegen.
+4. Database-readiness check toevoegen voor runtimestatus.
+5. Backup- en restore-scripts met restore-verificatie toevoegen.
