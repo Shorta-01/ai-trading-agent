@@ -147,6 +147,7 @@ __all__ = [
     "require_suggestion_eligible",
     "check_data_quality_allows_suggestions",
     "require_data_quality_allows_suggestions",
+    "check_candidate_ready_for_suggestion",
 ]
 
 from .approval_guards import (
@@ -166,4 +167,11 @@ from .suggestion_guards import (
     check_suggestion_eligible,
     require_data_quality_allows_suggestions,
     require_suggestion_eligible,
+)
+
+from .suggestion_engine_guards import (
+    check_candidate_ready_for_suggestion,
+    check_suggestion_draft_ready,
+    require_candidate_ready_for_suggestion,
+    require_suggestion_draft_ready,
 )

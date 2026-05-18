@@ -718,3 +718,92 @@ class DataGateDecision(StrEnum):
     SKIP_JOB = "skip_job"
     BLOCK_SUGGESTION = "block_suggestion"
     FAIL_JOB = "fail_job"
+
+
+class CandidateSource(StrEnum):
+    PORTFOLIO_REVIEW = "portfolio_review"
+    WATCHLIST = "watchlist"
+    WEEKLY_DISCOVERY = "weekly_discovery"
+    MANUAL_USER_INPUT = "manual_user_input"
+    AI_RESEARCH_REPORT = "ai_research_report"
+    SCHEDULER_JOB = "scheduler_job"
+    IBKR_REFERENCE_DATA = "ibkr_reference_data"
+    OTHER = "other"
+
+
+class CandidateStatus(StrEnum):
+    NEW = "new"
+    UNDER_REVIEW = "under_review"
+    ELIGIBLE_FOR_SUGGESTION = "eligible_for_suggestion"
+    BLOCKED = "blocked"
+    REJECTED = "rejected"
+    SUPERSEDED = "superseded"
+
+
+class SuggestionDraftStatus(StrEnum):
+    DRAFT = "draft"
+    READY_FOR_REVIEW = "ready_for_review"
+    BLOCKED = "blocked"
+    SUPERSEDED = "superseded"
+    CONVERTED_TO_APPROVAL_REQUEST = "converted_to_approval_request"
+    CANCELLED = "cancelled"
+
+
+class SuggestionGateStatus(StrEnum):
+    PASSED = "passed"
+    WARNING = "warning"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class SuggestionGateType(StrEnum):
+    CAPABILITY = "capability"
+    DATA_QUALITY = "data_quality"
+    ELIGIBILITY = "eligibility"
+    RISK = "risk"
+    COST_TAX = "cost_tax"
+    AUDIT = "audit"
+    POLICY = "policy"
+
+
+class RiskGateStatus(StrEnum):
+    NOT_EVALUATED = "not_evaluated"
+    PASSED = "passed"
+    WARNING = "warning"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class RiskGateBlockReason(StrEnum):
+    CONCENTRATION_LIMIT = "concentration_limit"
+    ASSET_CLASS_LIMIT = "asset_class_limit"
+    CASH_LIMIT = "cash_limit"
+    CAPABILITY_BLOCKED = "capability_blocked"
+    DATA_QUALITY_FAILED = "data_quality_failed"
+    EXECUTION_MODE_BLOCKED = "execution_mode_blocked"
+    POLICY_BLOCKED = "policy_blocked"
+    UNKNOWN = "unknown"
+
+
+class SuggestionConfidenceLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    NOT_AVAILABLE = "not_available"
+
+
+class SuggestionEngineRunStatus(StrEnum):
+    PLANNED = "planned"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    COMPLETED_WITH_WARNINGS = "completed_with_warnings"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class SuggestionDraftDecision(StrEnum):
+    CREATE_DRAFT = "create_draft"
+    CREATE_WITH_WARNING = "create_with_warning"
+    BLOCK = "block"
+    SKIP = "skip"
+    FAIL = "fail"

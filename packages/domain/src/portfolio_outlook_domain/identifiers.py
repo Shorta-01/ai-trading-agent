@@ -58,3 +58,10 @@ DataQualityGateId = SafeIdentifier
 SuggestionEligibilityCheckId = SafeIdentifier
 SuggestionEligibilityPolicyId = SafeIdentifier
 DataFreshnessCheckId = SafeIdentifier
+
+CandidateId = SafeIdentifier
+SuggestionDraftId = SafeIdentifier
+SuggestionEngineRunId = SafeIdentifier
+SuggestionGateResultId = SafeIdentifier
+RiskGateResultId = SafeIdentifier
+CostTaxImpactId = SafeIdentifier
