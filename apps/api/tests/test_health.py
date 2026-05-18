@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from portfolio_outlook_api.main import app
 
 
