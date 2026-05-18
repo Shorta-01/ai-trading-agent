@@ -460,3 +460,99 @@ class DataDomain(StrEnum):
     RESEARCH_OUTPUT = "research_output"
     AUDIT_LOG = "audit_log"
     RESEARCH_CONTEXT = "research_context"
+
+
+class RuntimeDeploymentTarget(StrEnum):
+    RASPBERRY_PI_5 = "raspberry_pi_5"
+    LINUX_ARM64 = "linux_arm64"
+    LINUX_AMD64 = "linux_amd64"
+    STRONGER_PC = "stronger_pc"
+    UNKNOWN = "unknown"
+
+
+class RuntimeServiceKind(StrEnum):
+    API = "api"
+    WORKER = "worker"
+    SCHEDULER = "scheduler"
+    DATABASE = "database"
+    DATA_SOURCE_UPDATER = "data_source_updater"
+    RESEARCH_WORKER = "research_worker"
+    AI_RESEARCH_QUEUE = "ai_research_queue"
+    IBKR_ADAPTER = "ibkr_adapter"
+    AUDIT_LOGGER = "audit_logger"
+    BACKUP_SERVICE = "backup_service"
+    HEALTH_MONITOR = "health_monitor"
+    WEB_FRONTEND = "web_frontend"
+    REVERSE_PROXY = "reverse_proxy"
+    UNKNOWN = "unknown"
+
+
+class RuntimeServiceStatus(StrEnum):
+    NOT_STARTED = "not_started"
+    STARTING = "starting"
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNHEALTHY = "unhealthy"
+    STOPPED = "stopped"
+    DISABLED = "disabled"
+    BLOCKED = "blocked"
+
+
+class RuntimeServiceCriticality(StrEnum):
+    REQUIRED = "required"
+    IMPORTANT = "important"
+    OPTIONAL = "optional"
+    FUTURE = "future"
+
+
+class StartupPhase(StrEnum):
+    CONFIGURATION = "configuration"
+    STORAGE = "storage"
+    API = "api"
+    WORKER = "worker"
+    SCHEDULER = "scheduler"
+    ADAPTERS = "adapters"
+    BACKGROUND_JOBS = "background_jobs"
+    MONITORING = "monitoring"
+    READY = "ready"
+
+
+class StartupDependencyPolicy(StrEnum):
+    MUST_START_BEFORE = "must_start_before"
+    SHOULD_START_BEFORE = "should_start_before"
+    INDEPENDENT = "independent"
+    OPTIONAL_AFTER_READY = "optional_after_ready"
+
+
+class ServiceFailurePolicy(StrEnum):
+    BLOCK_SUGGESTIONS = "block_suggestions"
+    ALLOW_READ_ONLY = "allow_read_only"
+    ALLOW_EXISTING_DATA_WITH_WARNING = "allow_existing_data_with_warning"
+    DISABLE_OPTIONAL_FEATURE = "disable_optional_feature"
+    STOP_SERVICE = "stop_service"
+    MANUAL_INTERVENTION_REQUIRED = "manual_intervention_required"
+
+
+class RuntimeResourceProfile(StrEnum):
+    LIGHTWEIGHT = "lightweight"
+    MODERATE = "moderate"
+    HEAVY = "heavy"
+    EXTERNAL_OR_STRONGER_MACHINE_RECOMMENDED = (
+        "external_or_stronger_machine_recommended"
+    )
+
+
+class ParallelExecutionPolicy(StrEnum):
+    NOT_PARALLEL = "not_parallel"
+    PARALLEL_SAFE = "parallel_safe"
+    QUEUE_REQUIRED = "queue_required"
+    SCHEDULED_ONLY = "scheduled_only"
+    EXTERNAL_WORKER_RECOMMENDED = "external_worker_recommended"
+
+
+class RuntimeHealthSeverity(StrEnum):
+    OK = "ok"
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"

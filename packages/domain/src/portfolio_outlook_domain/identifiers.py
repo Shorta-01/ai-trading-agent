@@ -42,3 +42,9 @@ DataSourceId = SafeIdentifier
 DataSourcePolicyId = SafeIdentifier
 DataSourceRequirementId = SafeIdentifier
 DataSourceRegistryId = SafeIdentifier
+
+RuntimeServiceId = SafeIdentifier
+RuntimeTopologyId = SafeIdentifier
+StartupPlanId = SafeIdentifier
+HealthCheckId = SafeIdentifier
+BackgroundJobTypeId = SafeIdentifier
