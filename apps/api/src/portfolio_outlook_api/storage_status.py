@@ -38,7 +38,10 @@ def build_storage_status() -> StorageStatusResponse:
     return StorageStatusResponse(
         title_nl="Opslagstatus",
         summary_nl="Opslag gepland, nog niet verbonden.",
-        help_nl="De database is gekozen, maar nog niet actief. De app kan je paper portefeuille daarom nog niet bewaren.",
+        help_nl=(
+            "De database is gekozen, maar nog niet actief. "
+            "De app kan je paper portefeuille daarom nog niet bewaren."
+        ),
         selected_database_nl="PostgreSQL gepland",
         migration_tool_nl="Alembic gepland",
         implementation_status_nl="Nog niet geïmplementeerd",
