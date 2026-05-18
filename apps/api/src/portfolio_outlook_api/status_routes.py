@@ -1,0 +1,45 @@
+"""Routes for read-only status/settings summaries."""
+
+from fastapi import APIRouter
+
+from portfolio_outlook_api.status_builders import (
+    build_ai_usage_summary,
+    build_dutch_labels_summary,
+    build_integrations_summary,
+    build_settings_summary,
+    build_system_status_summary,
+)
+from portfolio_outlook_api.status_models import (
+    AiUsageSummary,
+    DutchLabelsSummary,
+    IntegrationsSummary,
+    SettingsSummary,
+    SystemStatusSummary,
+)
+
+router = APIRouter()
+
+
+@router.get("/system/status", response_model=SystemStatusSummary)
+def read_system_status() -> SystemStatusSummary:
+    return build_system_status_summary()
+
+
+@router.get("/settings/summary", response_model=SettingsSummary)
+def read_settings_summary() -> SettingsSummary:
+    return build_settings_summary()
+
+
+@router.get("/usage/ai/summary", response_model=AiUsageSummary)
+def read_ai_usage_summary() -> AiUsageSummary:
+    return build_ai_usage_summary()
+
+
+@router.get("/integrations/summary", response_model=IntegrationsSummary)
+def read_integrations_summary() -> IntegrationsSummary:
+    return build_integrations_summary()
+
+
+@router.get("/ui/dutch-labels", response_model=DutchLabelsSummary)
+def read_dutch_labels() -> DutchLabelsSummary:
+    return build_dutch_labels_summary()

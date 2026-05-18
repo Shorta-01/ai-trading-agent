@@ -73,3 +73,6 @@ Alle hoofdschermen, labels, waarschuwingen en acties moeten begrijpelijk zijn vo
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## Task 17 update
+De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-samenvattingsendpoints voor de toekomstige web-UI, zonder secrets of externe runtime-calls.

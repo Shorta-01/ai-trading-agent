@@ -45,3 +45,8 @@ Data-quality gate en suggestion eligibility foundations toegevoegd. Deze stap ma
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## Status- en settings-API regels (Task 17)
+- De status-API mag geen service als actief tonen als die service niet echt actief is.
+- Ontbrekende IBKR- of OpenAI-configuratie moet gerelateerde jobs blokkeren.
+- API-responses mogen geen geheimen of geheime waardes blootstellen.

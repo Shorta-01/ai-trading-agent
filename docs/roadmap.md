@@ -46,3 +46,11 @@ Data-quality gate en suggestion eligibility foundations toegevoegd. Deze stap ma
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## Nieuwe vervolgstappen na Task 17
+- Koppel status-API aan echte runtime health-checks.
+- Koppel settings-API aan persistente instellingenopslag.
+- Koppel OpenAI-verbruiksendpoint aan echte usage/cost-collector.
+- Bouw IBKR paper-statuschecker.
+- Bouw moderne Nederlandstalige Instellingen-UI.
+- Bouw modern Nederlandstalig Systeemstatus-dashboard.

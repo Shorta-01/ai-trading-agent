@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.health import HealthResponse, get_health_response
+from portfolio_outlook_api.status_routes import router as status_router
 
 app = FastAPI(title=settings.app_name, version=settings.version)
 
@@ -20,3 +21,6 @@ def read_root() -> dict[str, str]:
 @app.get("/health", response_model=HealthResponse)
 def read_health() -> HealthResponse:
     return get_health_response()
+
+
+app.include_router(status_router)

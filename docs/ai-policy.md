@@ -36,3 +36,8 @@ Data-quality gate en suggestion eligibility foundations toegevoegd. Deze stap ma
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## AI-verbruik en kostenweergave (Task 17)
+- De AI-verbruiksendpoint mag alleen gebruik tonen op basis van echte records of expliciete schattingen.
+- Geen fake token- of kostcijfers.
+- In deze foundationstap maakt de endpoint geen OpenAI-calls.
