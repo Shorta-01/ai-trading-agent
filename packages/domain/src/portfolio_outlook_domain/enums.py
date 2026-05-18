@@ -372,3 +372,91 @@ class PromptInjectionRisk(StrEnum):
     MEDIUM = "medium"
     HIGH = "high"
     BLOCKED = "blocked"
+
+
+class DataProviderKind(StrEnum):
+    BROKER_OFFICIAL = "broker_official"
+    REGULATOR_OFFICIAL = "regulator_official"
+    CENTRAL_BANK_OFFICIAL = "central_bank_official"
+    GOVERNMENT_OFFICIAL = "government_official"
+    ISSUER_OFFICIAL = "issuer_official"
+    EXCHANGE_OFFICIAL = "exchange_official"
+    COMPANY_OFFICIAL = "company_official"
+    PUBLIC_NEWS = "public_news"
+    PUBLIC_WEBSITE = "public_website"
+    INTERNAL_SYSTEM = "internal_system"
+    MANUAL_INTERNAL = "manual_internal"
+    PAID_VENDOR = "paid_vendor"
+
+
+class DataAccessMethod(StrEnum):
+    BROKER_INTERFACE = "broker_interface"
+    PUBLIC_API = "public_api"
+    PUBLIC_FILE_DOWNLOAD = "public_file_download"
+    PUBLIC_WEBSITE = "public_website"
+    VENDOR_API = "vendor_api"
+    INTERNAL_SYSTEM = "internal_system"
+    MANUAL_ENTRY = "manual_entry"
+
+
+class DataCostTier(StrEnum):
+    FREE = "free"
+    BROKER_INCLUDED = "broker_included"
+    PAID = "paid"
+    INTERNAL = "internal"
+
+
+class DataUsageStatus(StrEnum):
+    ALLOWED = "allowed"
+    ALLOWED_WITH_LIMITS = "allowed_with_limits"
+    REVIEW_REQUIRED = "review_required"
+    BLOCKED = "blocked"
+
+
+class DataUsePermission(StrEnum):
+    RESEARCH_CONTEXT = "research_context"
+    PORTFOLIO_VALUATION = "portfolio_valuation"
+    SUGGESTION_ELIGIBILITY = "suggestion_eligibility"
+    AUDIT_EVIDENCE = "audit_evidence"
+
+
+class DataFreshnessClass(StrEnum):
+    NEAR_REAL_TIME = "near_real_time"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+
+class DataFailurePolicy(StrEnum):
+    BLOCK_OPERATION = "block_operation"
+    WARN_AND_LOG = "warn_and_log"
+    IGNORE_IF_OPTIONAL = "ignore_if_optional"
+
+
+class SourceReliabilityTier(StrEnum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    UNVERIFIED = "unverified"
+    UNKNOWN = "unknown"
+
+
+class DataDomain(StrEnum):
+    INSTRUMENT_REFERENCE = "instrument_reference"
+    ACCOUNT_POSITION = "account_position"
+    ORDER_EXECUTION = "order_execution"
+    MARKET_DATA = "market_data"
+    COMPANY_FUNDAMENTAL = "company_fundamental"
+    MACRO_DATA = "macro_data"
+    FX_DATA = "fx_data"
+    ETF_REFERENCE = "etf_reference"
+    LEGAL_DISCLOSURE = "legal_disclosure"
+    HOLDINGS_DATA = "holdings_data"
+    COMPANY_EVENT = "company_event"
+    NEWS_SIGNAL = "news_signal"
+    POLICY_EVENT = "policy_event"
+    MANUAL_OVERRIDE = "manual_override"
+    PORTFOLIO_ANALYTICS = "portfolio_analytics"
+    RESEARCH_OUTPUT = "research_output"
+    AUDIT_LOG = "audit_log"
+    RESEARCH_CONTEXT = "research_context"

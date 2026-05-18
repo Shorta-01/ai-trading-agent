@@ -37,3 +37,8 @@ ResearchReportId = SafeIdentifier
 SourceReferenceId = SafeIdentifier
 RawDataArchiveId = SafeIdentifier
 ResearchArchiveId = SafeIdentifier
+
+DataSourceId = SafeIdentifier
+DataSourcePolicyId = SafeIdentifier
+DataSourceRequirementId = SafeIdentifier
+DataSourceRegistryId = SafeIdentifier
