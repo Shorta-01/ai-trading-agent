@@ -30,3 +30,9 @@ De hoofdinterface gebruikt eenvoudige termen en vermijdt onverklaarde vakjargon 
 
 ## Vereiste voor niet-expert gebruiker
 De interface moet ook voor een niet-expert begrijpelijk zijn met duidelijke Nederlandse hulpteksten per veld/status/actie.
+
+## Mijn termijnrekeningen (nieuw, paper-only)
+- Aparte portefeuillezone: **Mijn termijnrekeningen** voor manueel ingegeven termijnrekeningen.
+- Dit zijn contractgebaseerde assets (geen marktverhandelde posities).
+- Ondersteunde standaardlooptijden: 1 maand, 3 maanden, 6 maanden en 1 jaar.
+- Blijft apart zichtbaar van ETF's, aandelen en valuta in de UI, maar telt wel mee in totale portefeuillewaarde en performance vanaf dag 1.

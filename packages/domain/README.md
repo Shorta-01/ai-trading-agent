@@ -32,3 +32,8 @@ python -m pytest -q
 - Geen broker-executie.
 - Paper-only afbakening blijft actief.
 - Financiële waarden blijven Decimal-only via `Money`, `Quantity` en `Percentage`.
+
+## Termijnrekening-contracten
+- Nieuwe contracten voor manuele termijnrekeningen: input- en projectiemodel.
+- Ondersteunt vaste rente en vast intrestbedrag, plus kosten en geschatte taksen.
+- Alleen validatie en datastructuur; geen tax engine of bankintegratie.

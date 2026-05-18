@@ -23,3 +23,9 @@ Belgische fiscaliteit/compliance blijft een aparte module/tab zodat de hoofdinte
 
 ## Disclaimer
 Dit systeem vervangt geen accountant of fiscaal adviseur.
+
+## Termijnrekening interest/taks-opvolging (informatief)
+- Het systeem ondersteunt registratie van bruto intrest, kosten en **geschatte taksen** voor termijnrekeningen.
+- Deze opvolging is informatief en ondersteunt audittrail/compliance-status.
+- Dit is geen fiscaal advies en vervangt geen accountant of fiscaal adviseur.
+- Officiële Belgische fiscale berekeningslogica en aangifteflows blijven latere uitbreidingen.

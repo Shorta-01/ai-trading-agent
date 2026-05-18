@@ -20,3 +20,7 @@ Later pas broker-koppeling voor papercontext; live uitvoering blijft buiten v1.
 - Geen real-money execution.
 - Geen broker order-routing.
 - Geen automatische plaatsing van echte orders.
+
+## Toegevoegd binnen paper foundation
+- Ondersteuning voor een aparte paper asset-zone: **Mijn termijnrekeningen** (contracten + pure berekeningshelpers).
+- API-endpoints, database-opslag en frontend-flow voor termijnrekeningen blijven expliciet future work.

@@ -8,6 +8,7 @@ class AssetType(StrEnum):
     STOCK = "stock"
     BENCHMARK = "benchmark"
     OTHER = "other"
+    TERM_DEPOSIT = "term_deposit"
 
 
 class InstrumentStatus(StrEnum):
@@ -138,6 +139,7 @@ class CostType(StrEnum):
     SLIPPAGE_ESTIMATE = "slippage_estimate"
     WITHHOLDING_TAX_ESTIMATE = "withholding_tax_estimate"
     OTHER = "other"
+    TERM_DEPOSIT = "term_deposit"
 
 
 class CorporateActionType(StrEnum):
@@ -150,3 +152,22 @@ class CorporateActionType(StrEnum):
     SPIN_OFF = "spin_off"
     TICKER_CHANGE = "ticker_change"
     DELISTING = "delisting"
+
+
+class TermDepositTerm(StrEnum):
+    ONE_MONTH = "one_month"
+    THREE_MONTHS = "three_months"
+    SIX_MONTHS = "six_months"
+    TWELVE_MONTHS = "twelve_months"
+
+
+class TermDepositStatus(StrEnum):
+    PLANNED = "planned"
+    ACTIVE = "active"
+    MATURED = "matured"
+    CANCELLED = "cancelled"
+
+
+class TermDepositInterestType(StrEnum):
+    FIXED_RATE = "fixed_rate"
+    FIXED_AMOUNT = "fixed_amount"

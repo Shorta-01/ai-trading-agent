@@ -22,3 +22,5 @@ LedgerEntryId = SafeIdentifier
 CostEstimateId = SafeIdentifier
 CorporateActionId = SafeIdentifier
 FifoAllocationId = SafeIdentifier
+
+TermDepositId = SafeIdentifier
