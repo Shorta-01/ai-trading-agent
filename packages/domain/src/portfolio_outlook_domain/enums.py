@@ -897,3 +897,40 @@ class ApiConnectionCheckStatus(StrEnum):
     WARNING = "warning"
     ERROR = "error"
     BLOCKED = "blocked"
+
+
+class PaperSetupStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    PREVIEW_READY = "preview_ready"
+    READY_TO_CREATE = "ready_to_create"
+    CREATED = "created"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class PaperSetupMode(StrEnum):
+    FIRST_RUN = "first_run"
+    RESET_PREVIEW = "reset_preview"
+    IMPORT_PREVIEW = "import_preview"
+
+
+class PaperPortfolioBaseCurrency(StrEnum):
+    EUR = "eur"
+
+
+class PaperSetupBlockReason(StrEnum):
+    INVALID_STARTING_CASH = "invalid_starting_cash"
+    UNSUPPORTED_CURRENCY = "unsupported_currency"
+    LIVE_TRADING_NOT_ALLOWED = "live_trading_not_allowed"
+    BROKER_CONNECTION_NOT_REQUIRED = "broker_connection_not_required"
+    PERSISTENCE_NOT_AVAILABLE = "persistence_not_available"
+    MISSING_AUDIT_REFERENCE = "missing_audit_reference"
+    UNKNOWN = "unknown"
+
+
+class PaperSetupWarningReason(StrEnum):
+    PREVIEW_NOT_SAVED = "preview_not_saved"
+    IBKR_NOT_CONFIGURED = "ibkr_not_configured"
+    OPENAI_NOT_CONFIGURED = "openai_not_configured"
+    NO_POSITIONS_YET = "no_positions_yet"
+    NO_WATCHLIST_YET = "no_watchlist_yet"

@@ -1,7 +1,13 @@
 """Routes for read-only status/settings summaries."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
+from portfolio_outlook_api.paper_setup import (
+    SetupPreviewInput,
+    create_setup_preview,
+    get_setup_defaults,
+    get_setup_status,
+)
 from portfolio_outlook_api.status_builders import (
     build_ai_usage_summary,
     build_dutch_labels_summary,
@@ -43,3 +49,21 @@ def read_integrations_summary() -> IntegrationsSummary:
 @router.get("/ui/dutch-labels", response_model=DutchLabelsSummary)
 def read_dutch_labels() -> DutchLabelsSummary:
     return build_dutch_labels_summary()
+
+
+@router.get("/portfolio/setup/status")
+def read_portfolio_setup_status() -> dict[str, object]:
+    return get_setup_status()
+
+
+@router.get("/portfolio/setup/defaults")
+def read_portfolio_setup_defaults() -> dict[str, object]:
+    return get_setup_defaults()
+
+
+@router.post("/portfolio/setup/preview")
+def preview_portfolio_setup(payload: SetupPreviewInput) -> dict[str, object]:
+    try:
+        return create_setup_preview(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -74,3 +74,7 @@ ApiUsageSummaryId = SafeIdentifier
 ApiCostEstimateId = SafeIdentifier
 ModelPricingId = SafeIdentifier
 ApiConnectionCheckId = SafeIdentifier
+
+PaperPortfolioSetupId = SafeIdentifier
+PaperCashAccountId = SafeIdentifier
+FirstRunSetupPreviewId = SafeIdentifier
