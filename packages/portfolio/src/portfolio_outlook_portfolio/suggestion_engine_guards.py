@@ -14,7 +14,10 @@ def check_candidate_ready_for_suggestion(candidate: SuggestionCandidate) -> bool
         return False
     if not candidate.audit_event_ids:
         return False
-    if candidate.source is not CandidateSource.MANUAL_USER_INPUT and not candidate.source_reference_ids:
+    if (
+        candidate.source is not CandidateSource.MANUAL_USER_INPUT
+        and not candidate.source_reference_ids
+    ):
         return False
     return True
 

@@ -5,6 +5,11 @@ from .accounting import (
     calculate_total_costs,
     validate_transaction_amounts,
 )
+from .approval_guards import (
+    build_approved_action,
+    is_approval_decision_final,
+    require_approved_decision,
+)
 from .capabilities import (
     check_can_create_paper_order,
     check_can_create_paper_transaction,
@@ -22,6 +27,13 @@ from .errors import (
     InsufficientLotQuantityError,
     InvalidAccountingInputError,
     PortfolioAccountingError,
+)
+from .execution_guards import (
+    check_can_submit_order_to_target,
+    check_execution_mode_available,
+    get_default_execution_targets,
+    require_execution_mode_available,
+    require_manual_approval_required,
 )
 from .ledger_services import (
     build_paper_transaction,
@@ -59,6 +71,18 @@ from .snapshot import (
     calculate_position_quantities,
     calculate_transaction_totals,
     validate_no_oversells,
+)
+from .suggestion_engine_guards import (
+    check_candidate_ready_for_suggestion,
+    check_suggestion_draft_ready,
+    require_candidate_ready_for_suggestion,
+    require_suggestion_draft_ready,
+)
+from .suggestion_guards import (
+    check_data_quality_allows_suggestions,
+    check_suggestion_eligible,
+    require_data_quality_allows_suggestions,
+    require_suggestion_eligible,
 )
 from .term_deposits import (
     build_term_deposit_projection,
@@ -148,30 +172,7 @@ __all__ = [
     "check_data_quality_allows_suggestions",
     "require_data_quality_allows_suggestions",
     "check_candidate_ready_for_suggestion",
+    "require_candidate_ready_for_suggestion",
+    "check_suggestion_draft_ready",
+    "require_suggestion_draft_ready",
 ]
-
-from .approval_guards import (
-    build_approved_action,
-    is_approval_decision_final,
-    require_approved_decision,
-)
-from .execution_guards import (
-    check_can_submit_order_to_target,
-    check_execution_mode_available,
-    get_default_execution_targets,
-    require_execution_mode_available,
-    require_manual_approval_required,
-)
-from .suggestion_guards import (
-    check_data_quality_allows_suggestions,
-    check_suggestion_eligible,
-    require_data_quality_allows_suggestions,
-    require_suggestion_eligible,
-)
-
-from .suggestion_engine_guards import (
-    check_candidate_ready_for_suggestion,
-    check_suggestion_draft_ready,
-    require_candidate_ready_for_suggestion,
-    require_suggestion_draft_ready,
-)
