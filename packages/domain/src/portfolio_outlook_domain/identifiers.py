@@ -15,3 +15,10 @@ SuggestionId = SafeIdentifier
 RunId = SafeIdentifier
 SourceId = SafeIdentifier
 AuditEventId = SafeIdentifier
+
+OrderId = SafeIdentifier
+FillId = SafeIdentifier
+LedgerEntryId = SafeIdentifier
+CostEstimateId = SafeIdentifier
+CorporateActionId = SafeIdentifier
+FifoAllocationId = SafeIdentifier
