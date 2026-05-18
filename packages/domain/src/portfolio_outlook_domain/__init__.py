@@ -15,6 +15,9 @@ from .enums import (
     RiskLevel,
     SuggestionStatus,
     TaxStatus,
+    TermDepositInterestType,
+    TermDepositStatus,
+    TermDepositTerm,
     TransactionSide,
     TransactionStatus,
 )
@@ -32,6 +35,7 @@ from .identifiers import (
     RunId,
     SourceId,
     SuggestionId,
+    TermDepositId,
     TransactionId,
 )
 from .instruments import ETFDetails, Instrument, InstrumentWithDetails
@@ -43,6 +47,7 @@ from .portfolio import PortfolioSummary, PositionSnapshot
 from .primitives import CurrencyCode, Money, Percentage, Quantity
 from .settings import PortfolioSettings
 from .suggestions import ActionSuggestion
+from .term_deposits import TermDepositInput, TermDepositProjection
 
 __all__ = [
     "ActionSuggestion",
@@ -92,6 +97,12 @@ __all__ = [
     "SuggestionId",
     "SuggestionStatus",
     "TaxStatus",
+    "TermDepositId",
+    "TermDepositInput",
+    "TermDepositInterestType",
+    "TermDepositProjection",
+    "TermDepositStatus",
+    "TermDepositTerm",
     "TotalCostEstimate",
     "TransactionId",
     "TransactionSide",

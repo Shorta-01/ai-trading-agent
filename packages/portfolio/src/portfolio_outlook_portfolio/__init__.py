@@ -48,6 +48,18 @@ from .snapshot import (
     calculate_transaction_totals,
     validate_no_oversells,
 )
+from .term_deposits import (
+    build_term_deposit_projection,
+    calculate_days_until_maturity,
+    calculate_expected_maturity_value,
+    calculate_gross_interest_for_term_deposit,
+    calculate_maturity_date,
+    calculate_net_interest_for_term_deposit,
+    calculate_total_net_term_deposit_interest,
+    calculate_total_term_deposit_value,
+    derive_term_deposit_status,
+    term_months,
+)
 
 __all__ = [
     "PortfolioAccountingError",
@@ -91,4 +103,14 @@ __all__ = [
     "calculate_net_result_since_start",
     "calculate_return_since_start",
     "build_portfolio_performance_summary",
+    "term_months",
+    "calculate_maturity_date",
+    "calculate_gross_interest_for_term_deposit",
+    "calculate_net_interest_for_term_deposit",
+    "calculate_expected_maturity_value",
+    "calculate_days_until_maturity",
+    "derive_term_deposit_status",
+    "build_term_deposit_projection",
+    "calculate_total_term_deposit_value",
+    "calculate_total_net_term_deposit_interest",
 ]

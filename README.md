@@ -64,3 +64,5 @@ De applicatie mag in versie 1 geen echte broker-orders uitvoeren, geen live-acco
 
 ## Eenvoudige Nederlandse UI-principe
 Alle hoofdschermen, labels, waarschuwingen en acties moeten begrijpelijk zijn voor niet-experts. Elke veldwaarde krijgt eenvoudige Nederlandse helptekst/tooltip.
+
+- Nieuw in de paper-only foundation: contracten en berekeningshelpers voor **Mijn termijnrekeningen**.

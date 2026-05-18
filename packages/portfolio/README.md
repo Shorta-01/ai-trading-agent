@@ -54,3 +54,8 @@ python -m pytest -q
 - Geen aanbevelingen, geen AI en geen broker-executie.
 - Decimal-only accounting via domeinprimitives.
 - Blijft strikt paper-only in versie 1.
+
+## Termijnrekening-berekeningshelpers
+- Helpers voor looptijd -> maanden, maturiteitsdatum (kalendermaanden met dag-clamp), bruto intrest, netto intrest en verwachte eindwaarde.
+- Helpers voor dagen tot maturiteit, statusafleiding en totalen per valuta.
+- Pure, deterministische Decimal-only berekeningen zonder API, DB, broker of AI.
