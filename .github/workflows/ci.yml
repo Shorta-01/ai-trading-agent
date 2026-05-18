@@ -21,6 +21,19 @@ jobs:
       - run: ruff check .
       - run: mypy src
       - run: pytest -q
+  portfolio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cd packages/domain && pip install -e .
+      - run: cd packages/portfolio && pip install -e .[dev]
+      - run: cd packages/portfolio && ruff check .
+      - run: cd packages/portfolio && mypy src
+      - run: cd packages/portfolio && pytest -q
+
   api:
     runs-on: ubuntu-latest
     defaults:
