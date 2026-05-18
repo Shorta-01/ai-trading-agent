@@ -1,8 +1,12 @@
 from .audit import AuditEvent
+from .capabilities import AssetCapability, CapabilityCheckResult
 from .costs import CostEstimate, TotalCostEstimate
 from .enums import (
     AdviceAction,
     AssetType,
+    BlockedReasonCode,
+    CapabilityCategory,
+    CapabilityStatus,
     CorporateActionType,
     CostType,
     DataQualityStatus,
@@ -53,7 +57,12 @@ __all__ = [
     "ActionSuggestion",
     "AdviceAction",
     "AssetType",
+    "AssetCapability",
     "AuditEvent",
+    "BlockedReasonCode",
+    "CapabilityCategory",
+    "CapabilityCheckResult",
+    "CapabilityStatus",
     "AuditEventId",
     "CashLedgerEntry",
     "CorporateActionId",

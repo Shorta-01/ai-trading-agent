@@ -36,3 +36,11 @@ De interface moet ook voor een niet-expert begrijpelijk zijn met duidelijke Nede
 - Dit zijn contractgebaseerde assets (geen marktverhandelde posities).
 - Ondersteunde standaardlooptijden: 1 maand, 3 maanden, 6 maanden en 1 jaar.
 - Blijft apart zichtbaar van ETF's, aandelen en valuta in de UI, maar telt wel mee in totale portefeuillewaarde en performance vanaf dag 1.
+
+## Asset capability registry (nieuw)
+- Backend hanteert per categorie een capabilitystatus: **Toegestaan**, **Alleen opvolgen**, of **Geblokkeerd**.
+- Toegestaan in versie 1: cash, termijnrekeningen, UCITS ETF, aandelen, FX, benchmark-data en commodity ETF/ETC.
+- Alleen opvolgen: futures, opties, leverage, short selling, crypto, penny stocks, complexe derivaten en high-frequency trading.
+- Geblokkeerd: automatische real-money uitvoering als systeemcapability.
+- Watch-only of geblokkeerde categorieën mogen voor context/educatie gevolgd worden maar mogen geen papieren orders, transacties of portefeuilleposities aanmaken in versie 1.
+- Grondstoffenblootstelling is alleen toegestaan via eenvoudige gereguleerde ETF/ETC-producten; directe futures en complexe/geleveragde commodityproducten blijven geblokkeerd.

@@ -9,6 +9,8 @@ class AssetType(StrEnum):
     BENCHMARK = "benchmark"
     OTHER = "other"
     TERM_DEPOSIT = "term_deposit"
+    COMMODITY_ETF_ETC = "commodity_etf_etc"
+    BLOCKED_OR_WATCH_ONLY = "blocked_or_watch_only"
 
 
 class InstrumentStatus(StrEnum):
@@ -171,3 +173,44 @@ class TermDepositStatus(StrEnum):
 class TermDepositInterestType(StrEnum):
     FIXED_RATE = "fixed_rate"
     FIXED_AMOUNT = "fixed_amount"
+
+
+class CapabilityCategory(StrEnum):
+    CASH = "cash"
+    TERM_DEPOSIT = "term_deposit"
+    UCITS_ETF = "ucits_etf"
+    STOCK = "stock"
+    FX = "fx"
+    BENCHMARK = "benchmark"
+    COMMODITY_ETF_ETC = "commodity_etf_etc"
+    FUTURES = "futures"
+    OPTIONS = "options"
+    LEVERAGE = "leverage"
+    SHORT_SELLING = "short_selling"
+    CRYPTO = "crypto"
+    PENNY_STOCK = "penny_stock"
+    COMPLEX_DERIVATIVE = "complex_derivative"
+    HIGH_FREQUENCY_TRADING = "high_frequency_trading"
+    AUTOMATIC_REAL_MONEY_EXECUTION = "automatic_real_money_execution"
+    UNKNOWN = "unknown"
+
+
+class CapabilityStatus(StrEnum):
+    ALLOWED = "allowed"
+    WATCH_ONLY = "watch_only"
+    BLOCKED = "blocked"
+
+
+class BlockedReasonCode(StrEnum):
+    NOT_ALLOWED_IN_VERSION_1 = "not_allowed_in_version_1"
+    COMPLEX_DERIVATIVE = "complex_derivative"
+    LEVERAGE_NOT_ALLOWED = "leverage_not_allowed"
+    SHORT_SELLING_NOT_ALLOWED = "short_selling_not_allowed"
+    CRYPTO_NOT_ALLOWED = "crypto_not_allowed"
+    PENNY_STOCK_NOT_ALLOWED = "penny_stock_not_allowed"
+    HFT_NOT_ALLOWED = "hft_not_allowed"
+    REAL_MONEY_EXECUTION_BLOCKED = "real_money_execution_blocked"
+    REQUIRES_FUTURE_EXPLICIT_APPROVAL = "requires_future_explicit_approval"
+    UNKNOWN_OR_UNSUPPORTED = "unknown_or_unsupported"
+    OIL_PRODUCT_EXTRA_RISK = "oil_product_extra_risk"
+    DIRECT_COMMODITY_OR_FUTURE_BLOCKED = "direct_commodity_or_future_blocked"

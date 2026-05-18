@@ -59,3 +59,7 @@ python -m pytest -q
 - Helpers voor looptijd -> maanden, maturiteitsdatum (kalendermaanden met dag-clamp), bruto intrest, netto intrest en verwachte eindwaarde.
 - Helpers voor dagen tot maturiteit, statusafleiding en totalen per valuta.
 - Pure, deterministische Decimal-only berekeningen zonder API, DB, broker of AI.
+
+## Capability registry helpers
+- Deterministische helperlaag voor capability checks per categorie (watch, research, suggestie, paper order/transaction, portfolio toegang).
+- Bevat ook `require_*` guard helpers die geblokkeerde categorieën hard stoppen in backendlogica.

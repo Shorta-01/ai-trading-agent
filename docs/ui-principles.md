@@ -23,3 +23,12 @@ Dashboard, Prestaties, Actiesuggesties, Portefeuille, Volglijst, Kansen en waars
 - **Geblokkeerd:** “Deze actie mag niet door een risico- of kwaliteitsregel.”
 - **Geen actie:** “Nu niets doen is de beste keuze volgens de huidige data.”
 - **Datakwaliteit:** “Geeft aan of de gebruikte data volledig en betrouwbaar is.”
+
+## Capabilitylabels voor toekomstige UI (nieuw)
+- Toegestaan
+- Alleen opvolgen
+- Geblokkeerd
+- Niet toegestaan in versie 1
+
+Extra hulptekst:
+“Dit product mag in versie 1 niet worden gekocht of verkocht. Je kan het alleen opvolgen als marktcontext.”

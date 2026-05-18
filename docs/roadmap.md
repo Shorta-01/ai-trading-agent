@@ -24,3 +24,8 @@ Later pas broker-koppeling voor papercontext; live uitvoering blijft buiten v1.
 ## Toegevoegd binnen paper foundation
 - Ondersteuning voor een aparte paper asset-zone: **Mijn termijnrekeningen** (contracten + pure berekeningshelpers).
 - API-endpoints, database-opslag en frontend-flow voor termijnrekeningen blijven expliciet future work.
+
+## Capability roadmap (nieuw)
+- Capabilities inbouwen in paper order creation en transaction-guardrails.
+- Capabilities blootstellen via API-contracten.
+- Toegestaan/alleen opvolgen/geblokkeerd zichtbaar maken in de Nederlandse UI.

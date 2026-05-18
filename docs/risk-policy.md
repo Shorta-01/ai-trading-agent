@@ -23,3 +23,8 @@ Versie 1 is strikt paper-only en risk-first.
 - Beslissings-cooldown verplicht.
 - “Insufficient evidence”-status totdat er voldoende paperhistoriek is.
 - Geen stale advice bij scheduler/data-update falen.
+
+## Capability-handhaving (nieuw)
+- De backend moet capabilityregels afdwingen voor opvolgen, onderzoek, actiesuggesties, papieren orders, papieren transacties en portefeuilletoegang.
+- UI-instellingen mogen geblokkeerde productregels nooit overrulen.
+- Dormante koop/verkoopcode voor geblokkeerde categorieën is niet toegestaan.
