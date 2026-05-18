@@ -9,6 +9,12 @@ from ai_trading_agent_storage.metadata import metadata
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _token_position(content: str, token: str) -> int:
+    position = content.find(token)
+    assert position >= 0, f"Missing token: {token}"
+    return position
+
+
 def test_alembic_files_and_versions_folder_exist() -> None:
     assert (ROOT / "alembic.ini").exists()
     assert (ROOT / "alembic" / "env.py").exists()
@@ -36,13 +42,18 @@ def test_revision_file_contains_required_upgrade_downgrade_and_table_ops() -> No
     assert "def upgrade()" in content
     assert "def downgrade()" in content
 
-    assert 'op.create_table("paper_portfolio_setups"' in content
-    assert 'op.create_table("paper_cash_accounts"' in content
-    assert 'op.create_table("audit_events"' in content
+    first_create_position = _token_position(content, "op.create_table(")
+    paper_setups_name_position = _token_position(content, '"paper_portfolio_setups"')
+    paper_cash_name_position = _token_position(content, '"paper_cash_accounts"')
+    audit_events_name_position = _token_position(content, '"audit_events"')
+    assert first_create_position < paper_setups_name_position
+    assert first_create_position < paper_cash_name_position
+    assert first_create_position < audit_events_name_position
 
-    assert 'op.drop_table("audit_events")' in content
-    assert 'op.drop_table("paper_cash_accounts")' in content
-    assert 'op.drop_table("paper_portfolio_setups")' in content
+    audit_drop_position = _token_position(content, 'op.drop_table("audit_events")')
+    cash_drop_position = _token_position(content, 'op.drop_table("paper_cash_accounts")')
+    setup_drop_position = _token_position(content, 'op.drop_table("paper_portfolio_setups")')
+    assert audit_drop_position < cash_drop_position < setup_drop_position
 
 
 def test_revision_file_has_no_runtime_package_imports() -> None:
