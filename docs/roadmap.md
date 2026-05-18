@@ -115,3 +115,14 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 3. Persistente opslag voor first-run paper setup toevoegen.
 4. Database-readiness check toevoegen voor runtimestatus.
 5. Backup- en restore-scripts met restore-verificatie toevoegen.
+
+## Task 24 status
+- ✅ Eerste schema-migratie voor paper setup en audit foundation afgerond.
+
+## Volgende storage-taken
+1. Repository-interfaces voor first-run setup toevoegen.
+2. Database-readiness check tegen migratiestatus toevoegen.
+3. First-run setup persisteren.
+4. Initiële paper cash account persisteren.
+5. Setup audit event persisteren.
+6. Dashboard status met opgeslagen portfolioinformatie tonen (zonder fake data).

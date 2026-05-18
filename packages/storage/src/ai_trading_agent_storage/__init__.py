@@ -4,7 +4,12 @@ from ai_trading_agent_storage.alembic_helpers import (
     get_target_metadata,
     is_migration_skeleton_ready,
 )
-from ai_trading_agent_storage.metadata import metadata
+from ai_trading_agent_storage.metadata import (
+    audit_events,
+    metadata,
+    paper_cash_accounts,
+    paper_portfolio_setups,
+)
 from ai_trading_agent_storage.settings import (
     DatabaseConnectionSettings,
     build_database_connection_settings,
@@ -13,9 +18,12 @@ from ai_trading_agent_storage.settings import (
 
 __all__ = [
     "DatabaseConnectionSettings",
+    "audit_events",
     "build_database_connection_settings",
     "get_target_metadata",
     "is_migration_skeleton_ready",
     "metadata",
+    "paper_cash_accounts",
+    "paper_portfolio_setups",
     "redact_database_url",
 ]

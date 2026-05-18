@@ -114,3 +114,12 @@ Future implementation order:
 - Er is nog geen persistence van setup/portfolio/transacties/suggesties.
 - Database-URL labels moeten secrets redigeren (geen wachtwoorden tonen).
 - Volgende stap: eerste schema-migratie voor paper setup + audit foundation.
+
+## Task 24: first migration and table foundation
+- Eerste schema-migratie is toegevoegd in `packages/storage/alembic/versions/0001_paper_setup_audit_foundation.py`.
+- Foundation-tabellen: `paper_portfolio_setups`, `paper_cash_accounts`, `audit_events`.
+- Er zijn nog geen repository-implementaties.
+- API/worker schrijven nog niet naar de database.
+- First-run setup wordt nog steeds niet opgeslagen.
+- Ledger/current-balance logica volgt later en wordt niet afgeleid als fake waarde uit setup cash.
+- Audit append-only/hash-ready gedrag is voorbereid, maar enforce-regels volgen later.

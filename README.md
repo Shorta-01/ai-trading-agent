@@ -95,3 +95,7 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 ## Storage dependency and migration skeleton (Task 23)
 - Nieuw package `packages/storage` met SQLAlchemy/Alembic skeleton.
 - Nog geen tabellen, nog geen migraties en nog geen persistence in app-runtime.
+
+## Storage schema status (Task 24)
+- Eerste storage schema-migratie bestaat nu voor paper setup + audit foundation.
+- De applicatie persisteert nog steeds geen portfolio- of setupdata in runtime.

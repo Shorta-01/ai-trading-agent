@@ -17,3 +17,13 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 
 ## Volgende stap (later)
 - Eerste schema-migratie toevoegen voor paper setup en audit foundation.
+
+## Task 24: first schema migration foundation
+- Eerste schema-tabellen zijn gedefinieerd in SQLAlchemy Core metadata.
+- Eerste Alembic migratie-revisie bestaat nu voor paper setup en audit foundation.
+- De app gebruikt de database nog niet in runtime (geen API/worker DB-verbinding).
+- First-run setup wordt nog niet gepersisteerd.
+- Tabellen zijn alleen storage-foundation mappings, zonder businesslogica.
+- Geldkolommen gebruiken Numeric (Decimal-compatibel), geen floattypes.
+- Paper-only constraints zijn expliciet op schema-niveau vastgelegd.
+- `audit_events` is foundation-only; hash-chain/append-only enforcement volgt later.
