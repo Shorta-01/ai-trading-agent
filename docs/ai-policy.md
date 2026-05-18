@@ -42,3 +42,10 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Geen fake token- of kostcijfers.
 - In deze foundationstap maakt de endpoint geen OpenAI-calls.
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## AI persistence guardrails (Task 21)
+- AI research records must later be persisted with source references and point-in-time metadata.
+- AI outputs must be stored as data records, never as executable instructions.
+- Prompt-injection text from external sources may never become system instructions.
+- No AI research record may be used for future decisions unless source, timestamp, and audit link are persisted.

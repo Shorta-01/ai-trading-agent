@@ -68,3 +68,23 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Voeg actiesuggestie-grid toe zodra gates en data actief zijn.
 - Voeg grafieken pas toe als echte data beschikbaar is.
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## Storage planning update (Task 21)
+
+### Reeds afgerond
+- Storage readiness contracts.
+- Storage status endpoint.
+- Database/migration decision (PostgreSQL + Alembic planning).
+
+### Eerstvolgende taken
+- Add PostgreSQL development service.
+- Add database dependency layer.
+- Add Alembic migration skeleton.
+- Add first schema migration.
+- Add repository interfaces.
+- Persist first-run setup.
+- Persist paper cash account.
+- Persist audit event.
+- Expose saved portfolio status API.
+- Show saved paper cash in Dutch dashboard.

@@ -59,6 +59,18 @@ export type AiUsageSummary = {
   warning_nl: string;
 };
 
+export type StorageStatusSummary = {
+  title_nl: string;
+  summary_nl: string;
+  help_nl: string;
+  selected_database_nl: string;
+  migration_tool_nl: string;
+  implementation_status_nl: string;
+  first_persistence_target_nl: string;
+  storage_ready: boolean;
+  can_persist_paper_setup: boolean;
+};
+
 export type IntegrationCard = {
   key: string;
   label_nl: string;
@@ -101,4 +113,5 @@ export const apiClient = {
   getSettingsSummary: () => getJson<SettingsSummary>("/settings/summary"),
   getAiUsageSummary: () => getJson<AiUsageSummary>("/usage/ai/summary"),
   getIntegrationsSummary: () => getJson<IntegrationsSummary>("/integrations/summary"),
+  getStorageStatus: () => getJson<StorageStatusSummary>("/storage/status"),
 };

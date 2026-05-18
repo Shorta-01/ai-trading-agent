@@ -52,3 +52,16 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Geen fake grafieken en geen fake portefeuilledata.
 - Het dashboard blijft modern, snel, schoon en duidelijk.
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## Opslagstatus teksten (Task 21)
+Verplichte eenvoudige Nederlandse opslagstatuslabels:
+- “Opslag gepland”
+- “Nog niet verbonden”
+- “Kan nog niet opslaan”
+- “Backup nog niet getest”
+- “Hersteltest nodig”
+- “Database nog niet actief”
+
+Verplichte hulptekst voor opslagstatus:
+“De database is nog niet actief. Daarom kan de app je paper portefeuille nog niet echt bewaren.”

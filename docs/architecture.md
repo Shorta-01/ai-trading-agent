@@ -53,3 +53,29 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - De web-UI consumeert later deze samenvattingen voor statuskaarten en instellingenoverzicht.
 - Er is in deze stap geen runtime-integratie (geen broker, geen OpenAI, geen scheduler, geen worker-activatie).
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## Database and repository architecture plan (Task 21)
+
+### Domain package
+- Validates data and policy boundaries.
+- Owns business contracts and safety rules.
+- Contains no database imports.
+
+### Portfolio package
+- Owns accounting/portfolio calculations and guardrails.
+- Contains no database-specific logic.
+
+### API package
+- Exposes read-only and later write-safe endpoints.
+- Will call repository services later for persistence orchestration.
+- Must not contain business calculations.
+- Must not expose secrets.
+
+### Future persistence module (planned, not implemented)
+- Typed repository interfaces.
+- PostgreSQL adapters.
+- Alembic migrations.
+- Schema mapping between persistence and domain contracts.
+
+No persistence module is implemented in this PR.
