@@ -21,3 +21,8 @@ def test_portfolio_settings_rejects_invalid_first_run_split() -> None:
             first_run_minimum_cash_reserve=Percentage(value="60"),
             first_run_maximum_invested=Percentage(value="50"),
         )
+
+
+def test_portfolio_settings_rejects_non_paper_mode() -> None:
+    with pytest.raises(ValidationError):
+        PortfolioSettings(paper_live_mode=PaperLiveMode.LIVE_READ_ONLY)

@@ -22,7 +22,10 @@ class PortfolioSettings(DomainBaseModel):
     simple_ui_enabled: bool = True
 
     @model_validator(mode="after")
-    def validate_percentages(self) -> "PortfolioSettings":
+    def validate_paper_mode_and_percentages(self) -> "PortfolioSettings":
+        if self.paper_live_mode is not PaperLiveMode.PAPER:
+            raise ValueError("Version 1 is paper-only. paper_live_mode must be 'paper'.")
+
         first_run_total = (
             self.first_run_minimum_cash_reserve.value + self.first_run_maximum_invested.value
         )

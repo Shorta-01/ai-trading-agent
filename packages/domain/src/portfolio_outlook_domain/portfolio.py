@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from pydantic import model_validator
+
 from .enums import AdviceAction, PaperLiveMode, RiskLevel
 from .identifiers import InstrumentId, PortfolioId
 from .primitives import CurrencyCode, DomainBaseModel, Money, Quantity
@@ -15,6 +17,12 @@ class PortfolioSummary(DomainBaseModel):
     invested_value: Money | None = None
     current_value: Money | None = None
     created_at: datetime
+
+    @model_validator(mode="after")
+    def validate_mode(self) -> "PortfolioSummary":
+        if self.mode is not PaperLiveMode.PAPER:
+            raise ValueError("Version 1 is paper-only. PortfolioSummary.mode must be 'paper'.")
+        return self
 
 
 class PositionSnapshot(DomainBaseModel):
