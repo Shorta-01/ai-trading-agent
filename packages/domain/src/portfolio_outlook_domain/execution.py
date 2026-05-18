@@ -12,7 +12,13 @@ from .enums import (
     ExecutionModeStatus,
     ExecutionTargetKind,
 )
-from .identifiers import ExecutionIntentId, ExecutionTargetId, InstrumentId, PortfolioId, SuggestionId
+from .identifiers import (
+    ExecutionIntentId,
+    ExecutionTargetId,
+    InstrumentId,
+    PortfolioId,
+    SuggestionId,
+)
 from .primitives import DomainBaseModel, Money, Quantity
 
 
@@ -39,17 +45,34 @@ class ExecutionTarget(DomainBaseModel):
 
     @model_validator(mode="after")
     def validate_rules(self) -> "ExecutionTarget":
-        if self.mode in {ExecutionMode.INTERNAL_PAPER, ExecutionMode.IBKR_PAPER, ExecutionMode.IBKR_LIVE_MANUAL} and self.approval_requirement != ApprovalRequirement.ALWAYS_REQUIRED:
+        if self.mode in {
+            ExecutionMode.INTERNAL_PAPER,
+            ExecutionMode.IBKR_PAPER,
+            ExecutionMode.IBKR_LIVE_MANUAL,
+        } and self.approval_requirement != ApprovalRequirement.ALWAYS_REQUIRED:
             raise ValueError("approval_requirement must be always_required")
         if self.mode == ExecutionMode.BLOCKED_AUTO:
-            if self.status != ExecutionModeStatus.BLOCKED or self.can_submit_orders or self.can_submit_real_money_orders:
+            if (
+                self.status != ExecutionModeStatus.BLOCKED
+                or self.can_submit_orders
+                or self.can_submit_real_money_orders
+            ):
                 raise ValueError("blocked_auto mode must stay blocked and non-submittable")
         if self.mode == ExecutionMode.IBKR_LIVE_READ_ONLY and self.can_submit_orders:
             raise ValueError("ibkr_live_read_only cannot submit orders")
-        if self.mode in {ExecutionMode.INTERNAL_PAPER, ExecutionMode.IBKR_PAPER} and self.can_submit_real_money_orders:
+        if self.mode in {
+            ExecutionMode.INTERNAL_PAPER,
+            ExecutionMode.IBKR_PAPER,
+        } and self.can_submit_real_money_orders:
             raise ValueError("paper execution modes cannot submit real-money orders")
-        if self.mode == ExecutionMode.IBKR_LIVE_MANUAL and self.can_submit_real_money_orders and self.status == ExecutionModeStatus.AVAILABLE:
-            raise ValueError("ibkr_live_manual real-money capability cannot be available by default")
+        if (
+            self.mode == ExecutionMode.IBKR_LIVE_MANUAL
+            and self.can_submit_real_money_orders
+            and self.status == ExecutionModeStatus.AVAILABLE
+        ):
+            raise ValueError(
+                "ibkr_live_manual real-money capability cannot be available by default"
+            )
         return self
 
 
@@ -101,8 +124,14 @@ class ExecutionModeSettings(DomainBaseModel):
             raise ValueError("default_execution_mode cannot be blocked_auto")
         if self.default_execution_mode == ExecutionMode.IBKR_PAPER and not self.allow_ibkr_paper:
             raise ValueError("ibkr_paper default requires allow_ibkr_paper")
-        if self.default_execution_mode == ExecutionMode.IBKR_LIVE_READ_ONLY and not self.allow_ibkr_live_read_only:
+        if (
+            self.default_execution_mode == ExecutionMode.IBKR_LIVE_READ_ONLY
+            and not self.allow_ibkr_live_read_only
+        ):
             raise ValueError("ibkr_live_read_only default requires allow_ibkr_live_read_only")
-        if self.default_execution_mode == ExecutionMode.IBKR_LIVE_MANUAL and not self.allow_ibkr_live_manual:
+        if (
+            self.default_execution_mode == ExecutionMode.IBKR_LIVE_MANUAL
+            and not self.allow_ibkr_live_manual
+        ):
             raise ValueError("ibkr_live_manual default requires allow_ibkr_live_manual")
         return self
