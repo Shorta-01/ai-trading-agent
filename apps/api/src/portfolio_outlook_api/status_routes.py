@@ -15,7 +15,6 @@ from portfolio_outlook_api.status_builders import (
     build_settings_summary,
     build_system_status_summary,
 )
-from portfolio_outlook_api.storage_status import StorageStatusResponse, build_storage_status
 from portfolio_outlook_api.status_models import (
     AiUsageSummary,
     DutchLabelsSummary,
@@ -23,6 +22,7 @@ from portfolio_outlook_api.status_models import (
     SettingsSummary,
     SystemStatusSummary,
 )
+from portfolio_outlook_api.storage_status import StorageStatusResponse, build_storage_status
 
 router = APIRouter()
 

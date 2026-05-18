@@ -42,11 +42,25 @@ def build_storage_status() -> StorageStatusResponse:
         block_reasons=["backend_not_configured", "audit_storage_missing"],
         warning_reasons=["preview_only", "backup_not_tested"],
         backends=[
-            StorageBackendStatusCard(label_nl="PostgreSQL", status_nl="Gepland, niet ingesteld", mode="not_configured"),
-            StorageBackendStatusCard(label_nl="TimescaleDB", status_nl="Gepland, niet ingesteld", mode="not_configured"),
-            StorageBackendStatusCard(label_nl="Auditlog", status_nl="Gepland, niet ingesteld", mode="not_configured"),
-            StorageBackendStatusCard(label_nl="Research archief", status_nl="Gepland, niet ingesteld", mode="not_configured"),
-            StorageBackendStatusCard(label_nl="Raw data archief", status_nl="Gepland, niet ingesteld", mode="not_configured"),
+            StorageBackendStatusCard(
+                label_nl="PostgreSQL", status_nl="Gepland, niet ingesteld", mode="not_configured"
+            ),
+            StorageBackendStatusCard(
+                label_nl="TimescaleDB", status_nl="Gepland, niet ingesteld", mode="not_configured"
+            ),
+            StorageBackendStatusCard(
+                label_nl="Auditlog", status_nl="Gepland, niet ingesteld", mode="not_configured"
+            ),
+            StorageBackendStatusCard(
+                label_nl="Research archief",
+                status_nl="Gepland, niet ingesteld",
+                mode="not_configured",
+            ),
+            StorageBackendStatusCard(
+                label_nl="Raw data archief",
+                status_nl="Gepland, niet ingesteld",
+                mode="not_configured",
+            ),
         ],
         backup=StorageBackupStatus(
             status="not_configured",
