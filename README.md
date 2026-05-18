@@ -76,3 +76,5 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 
 ## Task 17 update
 De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-samenvattingsendpoints voor de toekomstige web-UI, zonder secrets of externe runtime-calls.
+
+- Nieuw: de webapp bevat nu een modern Nederlandstalig dashboard als veilige paper-only foundation.

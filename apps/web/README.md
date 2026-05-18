@@ -1,11 +1,14 @@
-# Web (Next.js skeleton)
+# Web (Next.js)
 
-Eenvoudige Nederlandstalige frontend voor de technische startversie.
+Moderne, snelle en eenvoudige Nederlandstalige webinterface voor AI-Trading-Agent.
 
-- Geen echte tradingdata
-- Geen koop/verkoopadvies
-- Geen brokerkoppeling
-- Alleen papergeldmodus
+## Dashboard foundation (Task 18)
+- Modern Nederlandstalig dashboard met veilige read-only secties.
+- Data komt uit read-only endpoints: `/system/status`, `/settings/summary`, `/usage/ai/summary`, `/integrations/summary`.
+- Bij backend-uitval toont de UI duidelijk: **API niet bereikbaar**.
+- Geen fake portefeuilledata, geen fake prijzen, geen fake actiesuggesties.
+- Geen instellingen bewerken in deze stap.
+- Geen orderplaatsing, geen live trading, paper-only.
 
 ## Lokaal starten
 
@@ -22,6 +25,3 @@ cd apps/web
 npm run lint
 npm run build
 ```
-
-## Task 16 foundation update
-Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
