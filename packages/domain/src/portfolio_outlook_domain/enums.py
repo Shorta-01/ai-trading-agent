@@ -354,9 +354,134 @@ class BrokerProvider(StrEnum):
 
 
 class BrokerAccountMode(StrEnum):
+    UNKNOWN = "unknown"
+    PAPER = "paper"
+    LIVE = "live"
+    SIMULATED = "simulated"
+    DISABLED = "disabled"
     INTERNAL_PAPER = "internal_paper"
     IBKR_PAPER = "ibkr_paper"
     IBKR_LIVE = "ibkr_live"
+
+
+class BrokerSystem(StrEnum):
+    IBKR = "ibkr"
+
+
+class BrokerConnectionStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    CONFIGURED = "configured"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    DEGRADED = "degraded"
+    MAINTENANCE = "maintenance"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class BrokerSourceOfTruthStatus(StrEnum):
+    NOT_AVAILABLE = "not_available"
+    BROKER_AUTHORITATIVE = "broker_authoritative"
+    LOCAL_PREVIEW_ONLY = "local_preview_only"
+    RECONCILIATION_REQUIRED = "reconciliation_required"
+    RECONCILIATION_FAILED = "reconciliation_failed"
+    BLOCKED = "blocked"
+
+
+class BrokerSyncMode(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    MANUAL_CHECK = "manual_check"
+    BOOTSTRAP_FROM_IBKR = "bootstrap_from_ibkr"
+    PERIODIC_SNAPSHOT = "periodic_snapshot"
+    EVENT_UPDATE = "event_update"
+    HISTORY_BACKFILL = "history_backfill"
+    RECONCILIATION_ONLY = "reconciliation_only"
+
+
+class BrokerSyncStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    PLANNED = "planned"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    COMPLETED_WITH_WARNINGS = "completed_with_warnings"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class BrokerDataKind(StrEnum):
+    ACCOUNT_IDENTITY = "account_identity"
+    CASH_BALANCE = "cash_balance"
+    POSITION = "position"
+    EXECUTION = "execution"
+    COMMISSION = "commission"
+    ORDER_STATUS = "order_status"
+    DIVIDEND = "dividend"
+    INTEREST = "interest"
+    WITHHOLDING_TAX = "withholding_tax"
+    STATEMENT = "statement"
+    CORPORATE_ACTION = "corporate_action"
+    OTHER = "other"
+
+
+class BrokerActivityOrigin(StrEnum):
+    AI_TRADING_AGENT_SUGGESTION = "ai_trading_agent_suggestion"
+    USER_APPROVED_AI_ORDER = "user_approved_ai_order"
+    DIRECT_IBKR_ORDER = "direct_ibkr_order"
+    IMPORTED_IBKR_HISTORY = "imported_ibkr_history"
+    IMPORTED_IBKR_POSITION = "imported_ibkr_position"
+    IMPORTED_IBKR_CASH = "imported_ibkr_cash"
+    MANUAL_ADJUSTMENT = "manual_adjustment"
+    UNKNOWN = "unknown"
+
+
+class ReconciliationStatus(StrEnum):
+    NOT_AVAILABLE = "not_available"
+    CLEAN = "clean"
+    DIFFERENCES_FOUND = "differences_found"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+    MANUAL_REVIEW_REQUIRED = "manual_review_required"
+
+
+class ReconciliationDifferenceKind(StrEnum):
+    MISSING_LOCAL_POSITION = "missing_local_position"
+    MISSING_BROKER_POSITION = "missing_broker_position"
+    POSITION_QUANTITY_MISMATCH = "position_quantity_mismatch"
+    AVERAGE_COST_MISMATCH = "average_cost_mismatch"
+    CASH_BALANCE_MISMATCH = "cash_balance_mismatch"
+    MISSING_LOCAL_EXECUTION = "missing_local_execution"
+    DIRECT_BROKER_EXECUTION = "direct_broker_execution"
+    COMMISSION_MISMATCH = "commission_mismatch"
+    CURRENCY_BALANCE_MISMATCH = "currency_balance_mismatch"
+    UNSUPPORTED_ASSET_TYPE = "unsupported_asset_type"
+    STALE_BROKER_SNAPSHOT = "stale_broker_snapshot"
+    STALE_LOCAL_MIRROR = "stale_local_mirror"
+    UNKNOWN = "unknown"
+
+
+class ReconciliationSeverity(StrEnum):
+    INFO = "info"
+    WARNING = "warning"
+    BLOCKING = "blocking"
+    CRITICAL = "critical"
+
+
+class BrokerSuggestionPolicy(StrEnum):
+    ALLOW = "allow"
+    ALLOW_WITH_WARNING = "allow_with_warning"
+    BLOCK_UNTIL_RECONCILED = "block_until_reconciled"
+    BLOCK_UNTIL_IBKR_CONFIGURED = "block_until_ibkr_configured"
+    BLOCK_UNTIL_MANUAL_REVIEW = "block_until_manual_review"
+
+
+class IBKRDataSourceType(StrEnum):
+    WEB_API_PORTFOLIO = "web_api_portfolio"
+    TWS_POSITIONS = "tws_positions"
+    TWS_EXECUTIONS = "tws_executions"
+    TWS_COMMISSIONS = "tws_commissions"
+    FLEX_STATEMENT = "flex_statement"
+    MANUAL_PLACEHOLDER = "manual_placeholder"
+    NOT_CONFIGURED = "not_configured"
 
 
 class IBKRSecurityType(StrEnum):

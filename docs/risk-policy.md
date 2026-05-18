@@ -75,3 +75,4 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Het bestaan van schema/migraties betekent niet dat persistence al veilig of operationeel is.
 - Writes blijven geblokkeerd tot repositorylaag, audit-persistence, migratie-uitvoering en backup/restore-checks bestaan en groen zijn.
 - Huidige cashbalans mag niet worden verzonnen vanuit alleen setup-startkapitaal; dit volgt later via ledger/accounting.
+\n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.

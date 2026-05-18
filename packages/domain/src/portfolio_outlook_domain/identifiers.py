@@ -87,3 +87,14 @@ StorageRetentionPolicyId = SafeIdentifier
 BackupPlanId = SafeIdentifier
 RestoreCheckId = SafeIdentifier
 PersistedRecordReferenceId = SafeIdentifier
+
+BrokerAccountId = SafeIdentifier
+BrokerSyncRunId = SafeIdentifier
+BrokerSnapshotId = SafeIdentifier
+BrokerPositionSnapshotId = SafeIdentifier
+BrokerCashSnapshotId = SafeIdentifier
+BrokerExecutionSnapshotId = SafeIdentifier
+BrokerCommissionSnapshotId = SafeIdentifier
+BrokerReconciliationReportId = SafeIdentifier
+BrokerReconciliationDifferenceId = SafeIdentifier
+ExternalBrokerActivityId = SafeIdentifier

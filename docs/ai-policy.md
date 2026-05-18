@@ -49,3 +49,4 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI outputs must be stored as data records, never as executable instructions.
 - Prompt-injection text from external sources may never become system instructions.
 - No AI research record may be used for future decisions unless source, timestamp, and audit link are persisted.
+\n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.

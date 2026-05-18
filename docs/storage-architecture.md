@@ -123,3 +123,4 @@ Future implementation order:
 - First-run setup wordt nog steeds niet opgeslagen.
 - Ledger/current-balance logica volgt later en wordt niet afgeleid als fake waarde uit setup cash.
 - Audit append-only/hash-ready gedrag is voorbereid, maar enforce-regels volgen later.
+\n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
