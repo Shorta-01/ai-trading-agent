@@ -10,6 +10,7 @@ from portfolio_outlook_domain import (
     SuggestionConfidenceLevel,
     SuggestionDraftStatus,
 )
+from pydantic import ValidationError
 
 from portfolio_outlook_portfolio import (
     check_candidate_ready_for_suggestion,
@@ -62,21 +63,29 @@ def _draft(**overrides: object) -> ActionSuggestionDraft:
 def test_candidate_and_draft_guards() -> None:
     assert check_candidate_ready_for_suggestion(_candidate())
     assert not check_candidate_ready_for_suggestion(_candidate(status=CandidateStatus.BLOCKED))
-    assert not check_candidate_ready_for_suggestion(_candidate(audit_event_ids=[]))
-    assert not check_candidate_ready_for_suggestion(_candidate(source_reference_ids=[]))
-    assert check_candidate_ready_for_suggestion(
+    with pytest.raises(ValidationError):
+        _candidate(audit_event_ids=[])
+
+    with pytest.raises(ValidationError):
+        _candidate(source_reference_ids=[])
+    with pytest.raises(ValidationError):
         _candidate(source=CandidateSource.MANUAL_USER_INPUT, source_reference_ids=[])
-    )
 
     assert check_suggestion_draft_ready(_draft())
     assert not check_suggestion_draft_ready(_draft(status=SuggestionDraftStatus.BLOCKED))
-    assert not check_suggestion_draft_ready(_draft(gate_result_ids=[]))
-    assert not check_suggestion_draft_ready(_draft(source_reference_ids=[]))
+    with pytest.raises(ValidationError):
+        _draft(gate_result_ids=[])
+
+    with pytest.raises(ValidationError):
+        _draft(source_reference_ids=[])
 
 
 def test_require_helpers_raise() -> None:
     with pytest.raises(InvalidAccountingInputError):
         require_candidate_ready_for_suggestion(_candidate(status=CandidateStatus.BLOCKED))
 
+    with pytest.raises(ValidationError):
+        _draft(gate_result_ids=[])
+
     with pytest.raises(InvalidAccountingInputError):
-        require_suggestion_draft_ready(_draft(gate_result_ids=[]))
+        require_suggestion_draft_ready(_draft(status=SuggestionDraftStatus.BLOCKED))
