@@ -638,3 +638,83 @@ class RuntimeHealthSeverity(StrEnum):
     WARNING = "warning"
     ERROR = "error"
     CRITICAL = "critical"
+
+
+class DataQualityGateStatus(StrEnum):
+    PASSED = "passed"
+    WARNING = "warning"
+    SKIPPED = "skipped"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+    UNKNOWN = "unknown"
+
+
+class DataQualityIssueType(StrEnum):
+    MISSING_DATA = "missing_data"
+    STALE_DATA = "stale_data"
+    DELAYED_DATA = "delayed_data"
+    PARTIAL_DATA = "partial_data"
+    INCONSISTENT_DATA = "inconsistent_data"
+    SOURCE_NOT_ALLOWED = "source_not_allowed"
+    SOURCE_NOT_TRACEABLE = "source_not_traceable"
+    PERMISSION_MISSING = "permission_missing"
+    SERVICE_UNHEALTHY = "service_unhealthy"
+    CALCULATION_FAILED = "calculation_failed"
+    PROMPT_INJECTION_RISK = "prompt_injection_risk"
+    MANUAL_REVIEW_REQUIRED = "manual_review_required"
+    UNKNOWN = "unknown"
+
+
+class SuggestionEligibilityStatus(StrEnum):
+    ELIGIBLE = "eligible"
+    ELIGIBLE_WITH_WARNINGS = "eligible_with_warnings"
+    SKIPPED = "skipped"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class SuggestionEligibilityBlockReason(StrEnum):
+    DATA_QUALITY_FAILED = "data_quality_failed"
+    REQUIRED_DATA_MISSING = "required_data_missing"
+    DATA_TOO_STALE = "data_too_stale"
+    SOURCE_NOT_ALLOWED = "source_not_allowed"
+    SOURCE_NOT_TRACEABLE = "source_not_traceable"
+    REQUIRED_SERVICE_UNHEALTHY = "required_service_unhealthy"
+    CAPABILITY_BLOCKED = "capability_blocked"
+    RISK_POLICY_BLOCKED = "risk_policy_blocked"
+    EXECUTION_MODE_BLOCKED = "execution_mode_blocked"
+    AI_RESEARCH_BLOCKED = "ai_research_blocked"
+    MANUAL_REVIEW_REQUIRED = "manual_review_required"
+    AUDIT_LINK_MISSING = "audit_link_missing"
+    UNKNOWN = "unknown"
+
+
+class SuggestionEligibilityWarningReason(StrEnum):
+    DELAYED_DATA = "delayed_data"
+    PARTIAL_DATA = "partial_data"
+    NON_CRITICAL_SOURCE_MISSING = "non_critical_source_missing"
+    STALE_BUT_ACCEPTABLE = "stale_but_acceptable"
+    RESEARCH_ONLY_SOURCE_USED = "research_only_source_used"
+    MANUAL_INPUT_USED = "manual_input_used"
+    LOW_CONFIDENCE = "low_confidence"
+    UNKNOWN = "unknown"
+
+
+class FreshnessRequirement(StrEnum):
+    IMMEDIATE = "immediate"
+    SAME_DAY = "same_day"
+    PREVIOUS_CLOSE = "previous_close"
+    LAST_7_DAYS = "last_7_days"
+    LAST_30_DAYS = "last_30_days"
+    LAST_QUARTER = "last_quarter"
+    LATEST_AVAILABLE = "latest_available"
+    STATIC_REFERENCE = "static_reference"
+    MANUAL_REVIEW = "manual_review"
+
+
+class DataGateDecision(StrEnum):
+    CONTINUE_ALLOWED = "continue_allowed"
+    CONTINUE_WITH_WARNING = "continue_with_warning"
+    SKIP_JOB = "skip_job"
+    BLOCK_SUGGESTION = "block_suggestion"
+    FAIL_JOB = "fail_job"

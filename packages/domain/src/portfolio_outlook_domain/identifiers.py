@@ -53,3 +53,8 @@ ScheduledJobId = SafeIdentifier
 JobRunId = SafeIdentifier
 RetryPolicyId = SafeIdentifier
 JobEligibilityCheckId = SafeIdentifier
+
+DataQualityGateId = SafeIdentifier
+SuggestionEligibilityCheckId = SafeIdentifier
+SuggestionEligibilityPolicyId = SafeIdentifier
+DataFreshnessCheckId = SafeIdentifier
