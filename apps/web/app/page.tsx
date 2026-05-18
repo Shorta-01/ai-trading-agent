@@ -6,7 +6,7 @@ import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusCard } from "@/components/StatusCard";
-import { apiClient, AiUsageSummary, IntegrationsSummary, SettingsSummary, SystemStatusSummary } from "@/lib/apiClient";
+import { apiClient, AiUsageSummary, IntegrationsSummary, SettingsSummary, StorageStatusSummary, SystemStatusSummary } from "@/lib/apiClient";
 import { uiText } from "@/lib/uiText";
 
 export default function HomePage() {
@@ -14,25 +14,28 @@ export default function HomePage() {
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
   const [usage, setUsage] = useState<AiUsageSummary | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationsSummary | null>(null);
+  const [storage, setStorage] = useState<StorageStatusSummary | null>(null);
   const [apiNotReachable, setApiNotReachable] = useState(false);
 
   useEffect(() => {
     async function loadDashboardData() {
-      const [systemResponse, settingsResponse, usageResponse, integrationsResponse] = await Promise.all([
+      const [systemResponse, settingsResponse, usageResponse, integrationsResponse, storageResponse] = await Promise.all([
         apiClient.getSystemStatus(),
         apiClient.getSettingsSummary(),
         apiClient.getAiUsageSummary(),
         apiClient.getIntegrationsSummary(),
+        apiClient.getStorageStatus(),
       ]);
 
       const hasError =
-        !systemResponse.ok || !settingsResponse.ok || !usageResponse.ok || !integrationsResponse.ok;
+        !systemResponse.ok || !settingsResponse.ok || !usageResponse.ok || !integrationsResponse.ok || !storageResponse.ok;
 
       setApiNotReachable(hasError);
       setSystemStatus(systemResponse.ok ? systemResponse.data : null);
       setSettings(settingsResponse.ok ? settingsResponse.data : null);
       setUsage(usageResponse.ok ? usageResponse.data : null);
       setIntegrations(integrationsResponse.ok ? integrationsResponse.data : null);
+      setStorage(storageResponse.ok ? storageResponse.data : null);
     }
 
     void loadDashboardData();
@@ -128,6 +131,24 @@ export default function HomePage() {
               ]}
             />
           ))}
+        </div>
+      </section>
+
+
+      <section>
+        <SectionHeader title="Opslag" helpText="Geplande database-status in eenvoudige Nederlandse taal." />
+        <div className="grid one-column">
+          <StatusCard
+            titel="Database nog niet actief"
+            status={storage?.implementation_status_nl ?? "Nog niet geïmplementeerd"}
+            statusType="waarschuwing"
+            hulptekst={storage?.help_nl ?? "De database is nog niet actief. Daarom kan de app je paper portefeuille nog niet echt bewaren."}
+            extraRegels={[
+              `Database: ${storage?.selected_database_nl ?? "PostgreSQL gepland"}`,
+              `Migraties: ${storage?.migration_tool_nl ?? "Alembic gepland"}`,
+              `Opslaan: ${storage?.can_persist_paper_setup ? "Mogelijk" : "Kan nog niet opslaan"}`,
+            ]}
+          />
         </div>
       </section>
 

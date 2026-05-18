@@ -51,3 +51,11 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Ontbrekende IBKR- of OpenAI-configuratie moet gerelateerde jobs blokkeren.
 - API-responses mogen geen geheimen of geheime waardes blootstellen.
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## Storage and migration risk gates (Task 21)
+- Storage not ready blocks first-run setup creation writes.
+- Storage not ready blocks paper transaction persistence.
+- Missing audit storage blocks future suggestion/approval persistence.
+- Migration-required status must block writes until resolved.
+- Backup not tested must be visible as warning or blocker based on operation context.

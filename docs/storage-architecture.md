@@ -51,3 +51,42 @@ Data-quality gate en suggestion eligibility foundations toegevoegd. Deze stap ma
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+
+## Selected storage direction (Task 21)
+- Primary structured storage direction: **PostgreSQL first**.
+- Time-series expansion direction: **TimescaleDB-compatible later**, after baseline PostgreSQL tables exist.
+- Planned migrations framework: **Alembic later** (not implemented in this PR).
+
+## Repository layer boundaries
+- Domain and portfolio packages keep business rules and financial calculations.
+- Repository interfaces must be explicit and typed.
+- SQL mapping, adapters, and migrations may not become the source of truth for domain rules.
+- API routes stay orchestration-only and must not contain business calculations.
+
+## First entities to persist
+1. First-run paper setup configuration.
+2. Initial paper cash account state.
+3. Initial audit event linked to that setup.
+
+Market data, AI research archives, and broader time-series persistence are later phases.
+
+## Secret handling
+- Secrets are never stored as plain values in normal application tables.
+- Only secret references and status metadata may be persisted.
+
+## Backup, restore, and trust readiness
+- Backup encryption is mandatory once persistence exists.
+- Restore testing is mandatory before persistence is marked trusted.
+- “Backup exists” alone is insufficient; restore validation must pass.
+
+## Point-in-time reconstruction
+- Stored records must remain suitable for point-in-time reconstruction of decisions and audits.
+- As-of and audit linkage fields remain required for later schema design.
+
+## What is still not implemented
+- Storage is still not implemented.
+- No setup is saved yet.
+- The API may show storage as planned, but not connected.
+- Migrations are not available yet.
+- Restore testing is required before storage can be considered trusted.

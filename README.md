@@ -79,3 +79,9 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 
 - Nieuw: de webapp bevat nu een modern Nederlandstalig dashboard als veilige paper-only foundation.
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## Database planning status (Task 21)
+- AI-Trading-Agent kiest **PostgreSQL** als geplande primaire gestructureerde database.
+- **Alembic** is gekozen als gepland migratiekader voor een latere implementatiefase.
+- Database-implementatie is nog niet gestart; de app bewaart nog geen paper-portefeuilledata.

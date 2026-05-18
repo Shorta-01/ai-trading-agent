@@ -21,3 +21,12 @@ Dagelijkse backups + periodieke restore-tests; een backup geldt pas als betrouwb
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+
+## Database deployment planning (Task 21)
+- PostgreSQL deployment is planned via Docker Compose in a later implementation task.
+- Raspberry Pi 5 deployments must use portable Linux ARM64 images where practical, while keeping Linux AMD64 compatibility.
+- No hardcoded local filesystem paths are allowed for persistence services.
+- Connection strings must come from environment variables or secret references, never hardcoded in code.
+- Database backups must be encrypted.
+- Trusted-backup status requires a successful restore test, not only a backup file.
