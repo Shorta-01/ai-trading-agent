@@ -42,3 +42,15 @@ python -m pytest -q
 - Geen aanbevelingen, geen AI en geen broker-executie.
 - Decimal-only accounting via domeinprimitives.
 - Blijft strikt paper-only voor versie 1.
+
+
+## Portfolio performance and net result helpers
+- Berekent totaalresultaat vanaf dag 1 op basis van aangeleverde paper-records.
+- Scheidt extra stortingen van beleggingswinst.
+- Scheidt opnames van beleggingsverlies.
+- Ondersteunt kosten en geschatte taksen in nettoresultaat.
+- `current_positions_value` wordt aangeleverd en niet opgehaald.
+- Geen database, geen market prices, geen valuation fetching.
+- Geen aanbevelingen, geen AI en geen broker-executie.
+- Decimal-only accounting via domeinprimitives.
+- Blijft strikt paper-only in versie 1.
