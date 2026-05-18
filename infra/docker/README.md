@@ -23,3 +23,4 @@ docker compose up --build
 - Geen AI-calls
 - Geen externe marktdata-calls
 - Database nog niet gekoppeld aan businessmodellen
+\n\n## Runtime update\nContract-only update for backend runtime/service topology added in domain models for coordinated startup, health gating, and queue-first heavy workloads (no runtime implementation in this PR).

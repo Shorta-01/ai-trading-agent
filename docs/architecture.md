@@ -37,3 +37,4 @@ Alle architectuurkeuzes ondersteunen eerst controleerbare paper workflows met vo
 - Publieke nieuws- en websitebronnen zijn standaard niet geschikt voor suggestion eligibility.
 - Geen data kwaliteit of traceerbaarheid betekent geen advies/suggestie.
 
+\n\n## Runtime update\nContract-only update for backend runtime/service topology added in domain models for coordinated startup, health gating, and queue-first heavy workloads (no runtime implementation in this PR).

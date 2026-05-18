@@ -15,3 +15,4 @@ Latere migratie naar mini PC/zwaardere server zonder code rewrite.
 
 ## Backups en restore
 Dagelijkse backups + periodieke restore-tests; een backup geldt pas als betrouwbaar na geslaagde restore-test.
+\n\n## Runtime update\nContract-only update for backend runtime/service topology added in domain models for coordinated startup, health gating, and queue-first heavy workloads (no runtime implementation in this PR).
