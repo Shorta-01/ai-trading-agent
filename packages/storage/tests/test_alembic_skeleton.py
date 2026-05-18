@@ -48,6 +48,11 @@ def test_revision_file_contains_required_upgrade_downgrade_and_table_ops() -> No
 def test_revision_file_has_no_runtime_package_imports() -> None:
     revision_path = ROOT / "alembic" / "versions" / "0001_paper_setup_audit_foundation.py"
     content = revision_path.read_text(encoding="utf-8")
-    forbidden = ["portfolio_outlook_domain", "portfolio_outlook_portfolio", "portfolio_outlook_api", "worker"]
+    forbidden = [
+        "portfolio_outlook_domain",
+        "portfolio_outlook_portfolio",
+        "portfolio_outlook_api",
+        "worker",
+    ]
     for token in forbidden:
         assert token not in content

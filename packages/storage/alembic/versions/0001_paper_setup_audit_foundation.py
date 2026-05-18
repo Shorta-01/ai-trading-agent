@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0001_paper_setup_audit_foundation"
@@ -33,15 +33,39 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("explanation_nl", sa.Text(), nullable=False),
-        sa.CheckConstraint("base_currency = 'eur'", name="ck_paper_portfolio_setups_base_currency_eur"),
-        sa.CheckConstraint("starting_cash_amount > 0", name="ck_paper_portfolio_setups_starting_cash_amount_gt_0"),
+        sa.CheckConstraint(
+            "base_currency = 'eur'",
+            name="ck_paper_portfolio_setups_base_currency_eur",
+        ),
+        sa.CheckConstraint(
+            "starting_cash_amount > 0",
+            name="ck_paper_portfolio_setups_starting_cash_amount_gt_0",
+        ),
         sa.CheckConstraint("paper_only IS TRUE", name="ck_paper_portfolio_setups_paper_only_true"),
-        sa.CheckConstraint("real_money_used IS FALSE", name="ck_paper_portfolio_setups_real_money_used_false"),
-        sa.CheckConstraint("broker_order_created IS FALSE", name="ck_paper_portfolio_setups_broker_order_created_false"),
-        sa.CheckConstraint("live_trading_enabled IS FALSE", name="ck_paper_portfolio_setups_live_trading_enabled_false"),
-        sa.CheckConstraint("user_confirmed_paper_only IS TRUE", name="ck_paper_portfolio_setups_user_confirmed_paper_only_true"),
-        sa.CheckConstraint("user_confirmed_no_real_money IS TRUE", name="ck_paper_portfolio_setups_user_confirmed_no_real_money_true"),
-        sa.CheckConstraint("user_confirmed_no_broker_order IS TRUE", name="ck_paper_portfolio_setups_user_confirmed_no_broker_order_true"),
+        sa.CheckConstraint(
+            "real_money_used IS FALSE",
+            name="ck_paper_portfolio_setups_real_money_used_false",
+        ),
+        sa.CheckConstraint(
+            "broker_order_created IS FALSE",
+            name="ck_paper_portfolio_setups_broker_order_created_false",
+        ),
+        sa.CheckConstraint(
+            "live_trading_enabled IS FALSE",
+            name="ck_paper_portfolio_setups_live_trading_enabled_false",
+        ),
+        sa.CheckConstraint(
+            "user_confirmed_paper_only IS TRUE",
+            name="ck_paper_portfolio_setups_user_confirmed_paper_only_true",
+        ),
+        sa.CheckConstraint(
+            "user_confirmed_no_real_money IS TRUE",
+            name="ck_paper_portfolio_setups_user_confirmed_no_real_money_true",
+        ),
+        sa.CheckConstraint(
+            "user_confirmed_no_broker_order IS TRUE",
+            name="ck_paper_portfolio_setups_user_confirmed_no_broker_order_true",
+        ),
         sa.PrimaryKeyConstraint("setup_id"),
     )
 
@@ -56,7 +80,10 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("explanation_nl", sa.Text(), nullable=False),
         sa.CheckConstraint("currency = 'eur'", name="ck_paper_cash_accounts_currency_eur"),
-        sa.CheckConstraint("initial_paper_cash_amount > 0", name="ck_paper_cash_accounts_initial_paper_cash_amount_gt_0"),
+        sa.CheckConstraint(
+            "initial_paper_cash_amount > 0",
+            name="ck_paper_cash_accounts_initial_paper_cash_amount_gt_0",
+        ),
         sa.CheckConstraint("paper_only IS TRUE", name="ck_paper_cash_accounts_paper_only_true"),
         sa.ForeignKeyConstraint(["setup_id"], ["paper_portfolio_setups.setup_id"]),
         sa.PrimaryKeyConstraint("paper_cash_account_id"),
