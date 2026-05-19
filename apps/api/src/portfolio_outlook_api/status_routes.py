@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, HTTPException
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.online_storage_status import (
     OnlineStorageStatusResponse,
     build_online_storage_status,
@@ -78,6 +79,12 @@ def read_integrations_summary() -> IntegrationsSummary:
 def read_dutch_labels() -> DutchLabelsSummary:
     return build_dutch_labels_summary()
 
+
+
+
+@router.get("/broker/ibkr/status")
+def read_ibkr_status() -> dict[str, object]:
+    return build_ibkr_status_placeholder()
 
 @router.get("/portfolio/setup/status")
 def read_portfolio_setup_status() -> dict[str, object]:
