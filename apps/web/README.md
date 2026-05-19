@@ -26,3 +26,9 @@ npm run lint
 npm run build
 ```
 \n## Storage foundation update\nOpslagreadiness-contracten toegevoegd; opslag is nog niet ingesteld en setup/transacties worden nog niet bewaard. Backup blijft onveilig tot hersteltest slaagt.
+
+## Task 45 instellingenbeheer
+- Nieuwe eenvoudige Nederlandstalige sectie `Instellingen - Trading` met laden en opslaan via API.
+- `Toegestane beleggingen` is harde veiligheidsfilter; `Mijn strategie` is voorkeurlaag.
+- Altijd geblokkeerde versie 1 asset types blijven read-only zichtbaar.
+- Geen IBKR/OpenAI/trading-uitvoering toegevoegd in deze taak.

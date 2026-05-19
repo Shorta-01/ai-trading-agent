@@ -40,7 +40,11 @@ from portfolio_outlook_api.system_event_reader import (
     ActiveSystemEventsResponse,
     list_active_system_events,
 )
-from portfolio_outlook_api.trading_settings import build_trading_settings_response
+from portfolio_outlook_api.trading_settings import (
+    TradingSettingsUpdateInput,
+    build_trading_settings_response,
+    update_trading_settings_response,
+)
 
 router = APIRouter()
 
@@ -140,3 +144,8 @@ def archive_system_event(
     if result.blocked:
         raise HTTPException(status_code=409, detail=result.response["message_nl"])
     return result.response
+
+
+@router.put("/settings/trading")
+def update_trading_settings(payload: TradingSettingsUpdateInput) -> dict[str, object]:
+    return update_trading_settings_response(payload, settings.storage)
