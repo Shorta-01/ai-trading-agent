@@ -288,3 +288,5 @@ Research inputs
 14. IBKR real connection status and account-mode verification
 15. Broker snapshots and reconciliation runtime
 16. IBKR acties and controlled order submission
+
+| 128 | AI Event Intelligence layer | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Voorbereiding loopt; nog geen runtime. |
