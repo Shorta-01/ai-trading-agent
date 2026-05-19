@@ -213,3 +213,11 @@ input, textarea {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
 }
+
+.upload-result-block {
+  margin-top: 1rem;
+}
+
+.hash-text {
+  word-break: break-all;
+}
