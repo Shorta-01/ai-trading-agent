@@ -109,3 +109,13 @@ Eigenschappen:
 - Credentials worden niet opgeslagen en orders blijven geblokkeerd (`can_submit_orders=false`, `blocks_orders=true`).
 - Er is in deze taak geen `PUT /broker/ibkr/settings`; opslaguitbreiding voor IBKR-configuratie volgt in een latere storage-taak.
 - Ai Trading Agent blijft een volledig tradingplatform met paper-only IBKR-account in versie 1.
+
+
+## Task 59 veilige onderzoeksbron-bestandupload API
+- `POST /research/sources/{library_source_id}/upload-file` toegevoegd als veilige upload-foundation.
+- Upload slaat raw bestand lokaal op in gecontroleerde archiefmap (`API_RESEARCH_UPLOAD__ARCHIVE_DIR`).
+- SHA-256 hash wordt berekend tijdens schrijven en als metadata opgeslagen.
+- Upload slaat bronmetadata + bestandsmetadata + processing-status op.
+- Geen parsing, OCR, tekstextractie, AI-analyse of samenvatting in deze stap.
+- Geen OpenAI-calls, geen IBKR-calls, geen suggesties/watchlist/orders.
+- Uploads zijn bewijs voor later onderzoek, geen handelsinstructie.

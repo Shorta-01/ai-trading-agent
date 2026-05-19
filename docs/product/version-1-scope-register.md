@@ -299,3 +299,5 @@ Research inputs
 - Geen OpenAI-calls, geen IBKR-calls, geen runtime ingestie, geen suggestie- of ordercreatie toegevoegd.
 
 - Research Source Archive: Storage foundation started / migration implemented
+
+- Task 59 update (2026-05-19): Safe Research Source Archive file upload API foundation is implemented (controlled local archive storage + SHA-256 + metadata). No parsing/OCR/text extraction/AI/IBKR/suggestions/watchlist/orders in this step.

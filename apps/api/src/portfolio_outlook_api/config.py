@@ -1,6 +1,6 @@
 """Configuration for the API service."""
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +11,48 @@ class StorageSettings(BaseModel):
     enabled: bool = False
     writes_enabled: bool = False
 
+
+
+
+class ResearchUploadSettings(BaseModel):
+    """Research source archive upload safety configuration."""
+
+    enabled: bool = False
+    archive_dir: str = "var/research-source-archive"
+    max_file_size_bytes: int = 20 * 1024 * 1024
+    allowed_extensions: tuple[str, ...] = (
+        ".pdf",
+        ".txt",
+        ".md",
+        ".csv",
+        ".docx",
+        ".xlsx",
+        ".pptx",
+    )
+    allowed_content_types: tuple[str, ...] = (
+        "application/pdf",
+        "text/plain",
+        "text/markdown",
+        "text/csv",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    )
+
+    @field_validator("archive_dir")
+    @classmethod
+    def _validate_archive_dir(cls, value: str) -> str:
+        cleaned = value.strip()
+        if cleaned == "":
+            raise ValueError("research upload archive_dir must be non-empty")
+        return cleaned
+
+    @field_validator("max_file_size_bytes")
+    @classmethod
+    def _validate_max_size(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("research upload max_file_size_bytes must be positive")
+        return value
 
 class Settings(BaseSettings):
     """Runtime settings loaded from environment variables."""
@@ -26,6 +68,7 @@ class Settings(BaseSettings):
     ibkr_gateway_url: str | None = None
     ibkr_connection_timeout_seconds: int = 10
     ibkr_status_check_enabled: bool = False
+    research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
 
     @field_validator("ibkr_expected_environment")
     @classmethod

@@ -1,6 +1,8 @@
 from collections import defaultdict
 from collections.abc import Iterator
 from contextlib import contextmanager
+from hashlib import sha256
+from pathlib import Path
 
 import pytest
 from ai_trading_agent_storage import (
@@ -19,7 +21,7 @@ from ai_trading_agent_storage import (
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import research_sources
-from portfolio_outlook_api.config import StorageSettings
+from portfolio_outlook_api.config import ResearchUploadSettings, StorageSettings
 from portfolio_outlook_api.main import app
 
 client = TestClient(app)
@@ -359,3 +361,95 @@ def test_document_set_links_and_processing(fake_storage: None) -> None:
     )
     assert processing_status_response.status_code == 200
     assert "geen analyse gestart" in processing_status_response.json()["message_nl"].lower()
+
+
+def _enable_uploads(tmp_path: Path, enabled: bool = True, max_bytes: int = 1024) -> None:
+    research_sources.settings.research_upload = ResearchUploadSettings(
+        enabled=enabled,
+        archive_dir=str(tmp_path / "archive"),
+        max_file_size_bytes=max_bytes,
+        allowed_extensions=(".txt", ".pdf"),
+        allowed_content_types=("text/plain", "application/pdf"),
+    )
+
+
+def test_upload_rejects_when_storage_disabled(tmp_path: Path) -> None:
+    research_sources.settings.storage = StorageSettings(enabled=False, database_url=None)
+    _enable_uploads(tmp_path)
+    response = client.post(
+        "/research/sources/src-a/upload-file",
+        files={"file": ("a.txt", b"abc", "text/plain")},
+    )
+    assert response.status_code == 503
+
+
+def test_upload_rejects_when_upload_feature_disabled(fake_storage: None, tmp_path: Path) -> None:
+    _enable_uploads(tmp_path, enabled=False)
+    response = client.post(
+        "/research/sources/src-a/upload-file",
+        files={"file": ("a.txt", b"abc", "text/plain")},
+    )
+    assert response.status_code == 503
+
+
+def test_upload_txt_success_and_metadata(fake_storage: None, tmp_path: Path) -> None:
+    _enable_uploads(tmp_path, max_bytes=10000)
+    payload = b"bewijs-inhoud"
+    response = client.post(
+        "/research/sources/src-upload/upload-file",
+        files={"file": ("../evil name.txt", payload, "text/plain")},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "nog niet gelezen" in body["message_nl"].lower()
+    assert body["sha256"] == sha256(payload).hexdigest()
+    assert "/archive/" in body["archive_storage_uri"]
+    assert "/" not in body["stored_file_name"] and "\\" not in body["stored_file_name"]
+
+    source = client.get("/research/sources/src-upload")
+    assert source.status_code == 200
+    assert source.json()["record"]["raw_source_available"] is True
+
+    file_meta = client.get("/research/sources/src-upload/uploaded-file-metadata")
+    assert file_meta.status_code == 200
+    assert file_meta.json()["record"]["file_hash_sha256"] == sha256(payload).hexdigest()
+
+    status = client.get("/research/sources/src-upload/processing-status")
+    assert status.status_code == 200
+    record = status.json()["record"]
+    assert record["blocks_suggestions"] is True
+    assert record["can_be_used_in_suggestions"] is False
+
+
+def test_upload_rejects_path_traversal_names(fake_storage: None, tmp_path: Path) -> None:
+    _enable_uploads(tmp_path)
+    for name in ("../evil.pdf", "folder/evil.pdf", "folder\\evil.pdf"):
+        response = client.post(
+            "/research/sources/src-path/upload-file",
+            files={"file": (name, b"x", "application/pdf")},
+        )
+        assert response.status_code == 400
+
+
+def test_upload_rejects_unsupported_extension_oversize_and_empty_name(
+    fake_storage: None,
+    tmp_path: Path,
+) -> None:
+    _enable_uploads(tmp_path, max_bytes=2)
+    unsupported = client.post(
+        "/research/sources/src-unsupported/upload-file",
+        files={"file": ("a.exe", b"abc", "application/octet-stream")},
+    )
+    assert unsupported.status_code == 400
+
+    oversized = client.post(
+        "/research/sources/src-big/upload-file",
+        files={"file": ("a.txt", b"abcd", "text/plain")},
+    )
+    assert oversized.status_code == 413
+
+    empty_name = client.post(
+        "/research/sources/src-empty/upload-file",
+        files={"file": ("", b"abc", "text/plain")},
+    )
+    assert empty_name.status_code == 400
