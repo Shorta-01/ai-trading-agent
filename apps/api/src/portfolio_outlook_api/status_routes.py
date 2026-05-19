@@ -40,6 +40,7 @@ from portfolio_outlook_api.system_event_reader import (
     ActiveSystemEventsResponse,
     list_active_system_events,
 )
+from portfolio_outlook_api.trading_settings import build_trading_settings_response
 
 router = APIRouter()
 
@@ -52,6 +53,11 @@ def read_system_status() -> SystemStatusSummary:
 @router.get("/settings/summary", response_model=SettingsSummary)
 def read_settings_summary() -> SettingsSummary:
     return build_settings_summary()
+
+
+@router.get("/settings/trading")
+def read_trading_settings() -> dict[str, object]:
+    return build_trading_settings_response()
 
 
 @router.get("/usage/ai/summary", response_model=AiUsageSummary)
