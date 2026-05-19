@@ -73,6 +73,33 @@ export type TradingSettingsUpdateInput = {
   reason_nl?: string;
 };
 
+export type SystemEventSummary = {
+  system_event_id: string;
+  severity: string;
+  category: string;
+  source_service: string;
+  source_component: string;
+  event_code: string;
+  title_nl: string;
+  message_nl: string;
+  help_nl: string;
+  created_at: string;
+  blocks_suggestions: boolean;
+  blocks_writes: boolean;
+  blocks_ai_explanation: boolean;
+  status: string;
+};
+
+export type ActiveSystemEventsResponse = {
+  events: SystemEventSummary[];
+  storage_available?: boolean;
+  summary_nl?: string;
+};
+
+export type SystemEventActionInput = {
+  reason_nl?: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 async function getJson<T>(path: string): Promise<FetchState<T>> { /* unchanged */
@@ -90,6 +117,20 @@ async function putJson<T>(path: string, body: object): Promise<FetchState<T>> {
   } catch { return { ok: false, reason: "not_reachable" }; }
 }
 
+async function postJson<T>(path: string, body?: object): Promise<FetchState<T>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    });
+    if (!response.ok) return { ok: false, reason: "not_reachable" };
+    return { ok: true, data: (await response.json()) as T };
+  } catch {
+    return { ok: false, reason: "not_reachable" };
+  }
+}
+
 export const apiClient = {
   getSystemStatus: () => getJson<SystemStatusSummary>("/system/status"),
   getSettingsSummary: () => getJson<SettingsSummary>("/settings/summary"),
@@ -98,4 +139,9 @@ export const apiClient = {
   getStorageStatus: () => getJson<StorageStatusSummary>("/storage/status"),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   updateTradingSettings: (payload: TradingSettingsUpdateInput) => putJson<TradingSettingsResponse>("/settings/trading", payload),
+  getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
+  resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
+    postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
+  archiveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
+    postJson<{ success: boolean }>(`/system/events/${systemEventId}/archive`, payload),
 };

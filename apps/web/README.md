@@ -32,3 +32,11 @@ npm run build
 - `Toegestane beleggingen` is harde veiligheidsfilter; `Mijn strategie` is voorkeurlaag.
 - Altijd geblokkeerde versie 1 asset types blijven read-only zichtbaar.
 - Geen IBKR/OpenAI/trading-uitvoering toegevoegd in deze taak.
+
+## Task 46 systeemmeldingen
+- Nieuwe pagina `Systeemmeldingen` voor actieve systeemfouten, waarschuwingen en blokkeringen.
+- Actieve meldingen kunnen worden bekeken, opgelost en gearchiveerd (archiveren is geen hard delete).
+- `Details kopiëren` kopieert alleen veilige zichtbare velden uit de actieve melding.
+- Bovenin staat een indicator met teller voor actieve systeemmeldingen.
+- Geen Codex-copy endpoint en geen globale exception middleware toegevoegd.
+- Geen IBKR/OpenAI/trading-gedrag toegevoegd in deze taak.
