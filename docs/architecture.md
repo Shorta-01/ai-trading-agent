@@ -99,3 +99,16 @@ No persistence module is implemented in this PR.
 - API en worker zijn nog niet aan PostgreSQL gekoppeld.
 - Repository-interfaces en persistence orchestration volgen in volgende taken.
 \n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
+
+
+## Task 24B broker sync storage flow
+Planned end-to-end storage flow once broker sync implementation starts:
+1. IBKR import source
+2. Raw source reference (later phase)
+3. Normalized broker snapshot records
+4. Reconciliation report and differences
+5. Local mirror update flow (later phase)
+6. Audit linkage
+7. Suggestion allowed/blocked based on reconciliation status
+
+This PR only designs the schema and does not implement migration, persistence runtime, or IBKR connectivity.
