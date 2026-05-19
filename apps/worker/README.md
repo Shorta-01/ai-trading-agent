@@ -25,3 +25,9 @@ mypy src
 
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
+
+## Task 31 storage configuration foundation
+- Worker settings now include typed `storage` fields (`database_url`, `enabled`, `writes_enabled`).
+- Safe default remains: no storage configured, no connection attempt, writes blocked.
+- This task does not add database runtime wiring, engine/session creation, or persistence.
+- Runtime readiness and write-path implementation will be added in a later task.

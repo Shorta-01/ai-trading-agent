@@ -49,3 +49,9 @@ Eigenschappen:
 - The API does not connect to PostgreSQL yet.
 - The storage status remains planned/not active.
 - Database connection and write-path implementation are later tasks.
+
+## Task 31 storage configuration foundation
+- API settings now include typed `storage` fields (`database_url`, `enabled`, `writes_enabled`).
+- Safe default remains: no storage configured, no connection attempt, writes blocked.
+- This task does not add database runtime wiring, engine/session creation, or persistence.
+- Runtime readiness and write-path implementation will be added in a later task.
