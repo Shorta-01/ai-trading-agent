@@ -414,7 +414,7 @@ def test_upload_txt_success_and_metadata(fake_storage: None, tmp_path: Path) -> 
     assert file_meta.status_code == 200
     assert file_meta.json()["record"]["file_hash_sha256"] == sha256(payload).hexdigest()
 
-    status = client.get("/research/sources/src-upload/processing-status")
+    status = client.get("/research/sources/src-upload/processing-status/latest")
     assert status.status_code == 200
     record = status.json()["record"]
     assert record["blocks_suggestions"] is True
