@@ -167,3 +167,18 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 
 - Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.
 \n\n## Task 25D update (2026-05-19)\n- Added broker_reconciliation_reports and broker_reconciliation_differences in storage schema slice 4.\n- Scope is status/difference storage only; no reconciliation engine, IBKR integration, runtime persistence, repositories, API/worker DB wiring, or order transmission yet.\n- external_broker_activities remains planned for a later migration.
+
+
+## Task 25E update (2026-05-19)
+Done now:
+- External broker activities schema migration (0006).
+- Broker sync schema foundation complete.
+
+Next:
+- Repository interfaces for broker snapshots and reconciliation.
+- Database readiness checks for migrations.
+- IBKR settings/status fields.
+- IBKR bootstrap preview.
+- Broker snapshot import adapter skeleton.
+- Reconciliation engine foundation.
+- External broker activity detection logic.

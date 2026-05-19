@@ -148,3 +148,9 @@ Future implementation order:
 
 - Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.
 \n\n## Task 25D update (2026-05-19)\n- Added broker_reconciliation_reports and broker_reconciliation_differences in storage schema slice 4.\n- Scope is status/difference storage only; no reconciliation engine, IBKR integration, runtime persistence, repositories, API/worker DB wiring, or order transmission yet.\n- external_broker_activities remains planned for a later migration.
+
+
+## Task 25E update (2026-05-19)
+- External broker activity table now exists (`external_broker_activities`).
+- Planned broker sync/reconciliation schema foundation is now complete at storage schema level.
+- Running app still persists no IBKR data; this table is storage-only and not detection logic.
