@@ -149,3 +149,8 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - API endpoint `/storage/status` gebruikt nu storage migration readiness contracts uit `packages/storage`.
 - Status meldt expliciet dat de database niet verbonden is en dat runtime writes geblokkeerd blijven.
 - Endpoint bevat nu migration readiness velden inclusief verwachte laatste revisie `0006`.
+
+## Task 47 update (2026-05-19)
+- IBKR integration foundation now includes official research notes and ADR 0003 for adapter-first architecture.
+- Added typed internal broker adapter contracts with Decimal-only financial fields; no credentials, no real IBKR calls, and no order submission.
+- Added read-only endpoint `GET /broker/ibkr/status` with Dutch placeholder status; orders remain blocked until future account-mode verification.
