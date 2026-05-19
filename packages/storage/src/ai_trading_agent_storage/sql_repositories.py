@@ -17,6 +17,7 @@ from ai_trading_agent_storage.metadata import (
     broker_reconciliation_reports,
     broker_sync_runs,
     external_broker_activities,
+    paper_portfolio_setups,
 )
 from ai_trading_agent_storage.migration_readiness import (
     MigrationReadinessReport,
@@ -31,7 +32,9 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerReconciliationDifferenceRecord,
     BrokerReconciliationReportRecord,
     BrokerSyncRunRecord,
+    CreatePaperPortfolioSetupRequest,
     ExternalBrokerActivityRecord,
+    PaperPortfolioSetupRecord,
     RepositoryHealthStatus,
     StorageListResult,
     StorageReadResult,
@@ -200,6 +203,76 @@ class SqlAlchemyBrokerSyncRunRepository(_Base):
             broker_sync_runs.name,
             True,
             "Synchronisatierun opgeslagen.",
+        )
+
+
+class SqlAlchemyPaperPortfolioSetupRepository(_Base):
+    def create_setup(self, request: CreatePaperPortfolioSetupRequest) -> StorageWriteResult:
+        self._insert(
+            paper_portfolio_setups,
+            {
+                "setup_id": request.setup_id,
+                "portfolio_name": request.portfolio_name,
+                "base_currency": request.base_currency,
+                "starting_cash_amount": request.starting_cash_amount,
+                "paper_only": True,
+                "real_money_used": False,
+                "broker_order_created": False,
+                "live_trading_enabled": False,
+                "user_confirmed_paper_only": True,
+                "user_confirmed_no_real_money": True,
+                "user_confirmed_no_broker_order": True,
+                "status": request.status,
+                "created_at": request.created_at,
+                "updated_at": None,
+                "explanation_nl": request.explanation_nl,
+            },
+        )
+        return StorageWriteResult(
+            True,
+            request.setup_id,
+            paper_portfolio_setups.name,
+            True,
+            "Papieren portfolio-opzet opgeslagen.",
+        )
+
+    def get_by_id(self, setup_id: str) -> StorageReadResult[PaperPortfolioSetupRecord]:
+        row = _read_one_by_column(self._connection, paper_portfolio_setups, "setup_id", setup_id)
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                paper_portfolio_setups.name,
+                "Papieren portfolio-opzet niet gevonden.",
+            )
+        values = dict(row)
+        values["starting_cash_amount"] = _to_decimal(values.get("starting_cash_amount"))
+        return StorageReadResult(
+            True,
+            PaperPortfolioSetupRecord(**values),
+            paper_portfolio_setups.name,
+            "Papieren portfolio-opzet gevonden.",
+        )
+
+    def get_latest(self) -> StorageReadResult[PaperPortfolioSetupRecord]:
+        statement = select(paper_portfolio_setups).order_by(
+            paper_portfolio_setups.c.created_at.desc()
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                paper_portfolio_setups.name,
+                "Geen papieren portfolio-opzet beschikbaar.",
+            )
+        values = dict(row)
+        values["starting_cash_amount"] = _to_decimal(values.get("starting_cash_amount"))
+        return StorageReadResult(
+            True,
+            PaperPortfolioSetupRecord(**values),
+            paper_portfolio_setups.name,
+            "Laatste papieren portfolio-opzet gevonden.",
         )
 
 

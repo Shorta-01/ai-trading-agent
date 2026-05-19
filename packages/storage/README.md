@@ -92,3 +92,10 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 
 ## Update Task 29
 SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.
+
+## Task 35 update (2026-05-19)
+- First-run paper portfolio setup persistence-contracten bestaan nu (`PaperPortfolioSetupRecord`, `CreatePaperPortfolioSetupRequest`, `PaperPortfolioSetupRepositoryProtocol`).
+- SQLAlchemy repository-skelet voor paper setup gebruikt expliciete `Connection` + migration-readiness report; writes blijven geblokkeerd als readiness niet veilig is.
+- Geldbedragen gebruiken `Decimal`-compatibele opslag en roundtrip-tests controleren dat geldwaarden als `Decimal` terugkomen.
+- Dit blijft strikt paper-only: geen broker sync runtime-wiring, geen IBKR, geen OpenAI, geen echte trading.
+- API/worker runtime persistence voor deze setup is nog niet aangesloten.

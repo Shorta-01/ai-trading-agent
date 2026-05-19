@@ -13,7 +13,10 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerSnapshotRepository,
     BrokerStorageUnitOfWork,
     BrokerSyncRunRepository,
+    CreatePaperPortfolioSetupRequest,
     ExternalBrokerActivityRepository,
+    PaperPortfolioSetupRecord,
+    PaperPortfolioSetupRepositoryProtocol,
     RepositoryHealthStatus,
     StorageListResult,
     StorageReadResult,
@@ -169,6 +172,40 @@ def test_protocols_expose_expected_method_names() -> None:
         ExternalBrokerActivityRepository.__dict__
     )
     assert {"health", "commit", "rollback"} <= set(BrokerStorageUnitOfWork.__dict__)
+    assert {"create_setup", "get_by_id", "get_latest"} <= set(
+        PaperPortfolioSetupRepositoryProtocol.__dict__
+    )
+
+
+def test_paper_portfolio_setup_dto_uses_decimal_for_money() -> None:
+    request = CreatePaperPortfolioSetupRequest(
+        setup_id="setup-1",
+        portfolio_name="Paper",
+        base_currency="eur",
+        starting_cash_amount=Decimal("1234.560000"),
+        status="active",
+        created_at=datetime.now(UTC),
+        explanation_nl="Opzet.",
+    )
+    record = PaperPortfolioSetupRecord(
+        setup_id=request.setup_id,
+        portfolio_name=request.portfolio_name,
+        base_currency=request.base_currency,
+        starting_cash_amount=request.starting_cash_amount,
+        paper_only=True,
+        real_money_used=False,
+        broker_order_created=False,
+        live_trading_enabled=False,
+        user_confirmed_paper_only=True,
+        user_confirmed_no_real_money=True,
+        user_confirmed_no_broker_order=True,
+        status=request.status,
+        created_at=request.created_at,
+        updated_at=None,
+        explanation_nl=request.explanation_nl,
+    )
+    assert isinstance(request.starting_cash_amount, Decimal)
+    assert isinstance(record.starting_cash_amount, Decimal)
 
 
 def test_result_contracts_behavior() -> None:
