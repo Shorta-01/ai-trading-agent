@@ -2,6 +2,11 @@ export type FetchState<T> =
   | { ok: true; data: T }
   | { ok: false; reason: "not_reachable" };
 
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; status: number; message: string }
+  | { ok: false; status: 0; message: string };
+
 export type ServiceStatusCard = {
   key: string;
   label_nl: string;
@@ -113,8 +118,23 @@ export type ActiveSystemEventsResponse = {
   summary_nl?: string;
 };
 
-export type SystemEventActionInput = {
-  reason_nl?: string;
+export type ResearchSourceRecord = {
+  library_source_id: string;
+  title: string;
+  source_kind: string;
+  document_type: string;
+  source_type: string;
+  status: string;
+  analysis_status: string;
+  classification_status: string;
+  extraction_status: string;
+  asset_symbol: string | null;
+  asset_name: string | null;
+  source_credibility_level: string | null;
+  prompt_injection_risk_level: string | null;
+  explanation_nl: string;
+  created_at: string;
+  updated_at: string;
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -148,6 +168,22 @@ async function postJson<T>(path: string, body?: object): Promise<FetchState<T>> 
   }
 }
 
+async function requestJson<T>(path: string, method: "GET" | "POST", body?: object): Promise<ApiResult<T>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
+      cache: method === "GET" ? "no-store" : undefined,
+    });
+    const payload = (await response.json().catch(() => ({}))) as { detail?: string } & T;
+    if (!response.ok) return { ok: false, status: response.status, message: typeof payload.detail === "string" ? payload.detail : "Onbekende fout." };
+    return { ok: true, data: payload as T };
+  } catch {
+    return { ok: false, status: 0, message: "API niet bereikbaar." };
+  }
+}
+
 export const apiClient = {
   getSystemStatus: () => getJson<SystemStatusSummary>("/system/status"),
   getSettingsSummary: () => getJson<SettingsSummary>("/settings/summary"),
@@ -162,4 +198,16 @@ export const apiClient = {
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
   archiveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/archive`, payload),
+  listResearchSources: () => requestJson<{ records: ResearchSourceRecord[] }>("/research/sources", "GET"),
+  getResearchSource: (librarySourceId: string) => requestJson<{ record: ResearchSourceRecord }>(`/research/sources/${librarySourceId}`, "GET"),
+  createResearchSource: (payload: Record<string, unknown>) => requestJson<{ message_nl: string }>("/research/sources", "POST", payload),
+  createUrlMetadata: (librarySourceId: string, payload: Record<string, unknown>) => requestJson<{ message_nl: string }>(`/research/sources/${librarySourceId}/url-metadata`, "POST", payload),
+  getUrlMetadata: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/url-metadata`, "GET"),
+  createUserNote: (librarySourceId: string, payload: Record<string, unknown>) => requestJson<{ message_nl: string }>(`/research/sources/${librarySourceId}/user-note`, "POST", payload),
+  getUserNote: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/user-note`, "GET"),
+  getLatestProcessingStatus: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/processing-status/latest`, "GET"),
+};
+
+type SystemEventActionInput = {
+  reason_nl?: string;
 };
