@@ -696,9 +696,11 @@ class SqlAlchemySystemEventRepository(_Base):
             )
 
         now = datetime.now(UTC)
+        cleaned_reason = reason_nl.strip() if reason_nl else ""
+        stored_explanation_nl = cleaned_reason or explanation_nl
         update_values: dict[str, Any] = {
             "status": status,
-            "explanation_nl": reason_nl.strip() if reason_nl and reason_nl.strip() else explanation_nl,
+            "explanation_nl": stored_explanation_nl,
         }
         if status == "resolved":
             update_values["resolved_at"] = now

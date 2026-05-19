@@ -1,6 +1,8 @@
 """Routes for read-only status/settings summaries."""
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Body, HTTPException
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.online_storage_status import (
@@ -29,14 +31,14 @@ from portfolio_outlook_api.status_models import (
     SystemStatusSummary,
 )
 from portfolio_outlook_api.storage_status import StorageStatusResponse, build_storage_status
-from portfolio_outlook_api.system_event_reader import (
-    ActiveSystemEventsResponse,
-    list_active_system_events,
-)
 from portfolio_outlook_api.system_event_mutations import (
     SystemEventMutationInput,
     mark_system_event_archived,
     mark_system_event_resolved,
+)
+from portfolio_outlook_api.system_event_reader import (
+    ActiveSystemEventsResponse,
+    list_active_system_events,
 )
 
 router = APIRouter()
@@ -109,9 +111,10 @@ def read_active_system_events() -> ActiveSystemEventsResponse:
 @router.post("/system/events/{system_event_id}/resolve")
 def resolve_system_event(
     system_event_id: str,
-    payload: SystemEventMutationInput = SystemEventMutationInput(),
+    payload: Annotated[SystemEventMutationInput | None, Body()] = None,
 ) -> dict[str, object]:
-    result = mark_system_event_resolved(system_event_id, settings.storage, payload)
+    mutation_payload = payload or SystemEventMutationInput()
+    result = mark_system_event_resolved(system_event_id, settings.storage, mutation_payload)
     if result.not_found:
         raise HTTPException(status_code=404, detail=result.response["message_nl"])
     if result.blocked:
@@ -122,9 +125,10 @@ def resolve_system_event(
 @router.post("/system/events/{system_event_id}/archive")
 def archive_system_event(
     system_event_id: str,
-    payload: SystemEventMutationInput = SystemEventMutationInput(),
+    payload: Annotated[SystemEventMutationInput | None, Body()] = None,
 ) -> dict[str, object]:
-    result = mark_system_event_archived(system_event_id, settings.storage, payload)
+    mutation_payload = payload or SystemEventMutationInput()
+    result = mark_system_event_archived(system_event_id, settings.storage, mutation_payload)
     if result.not_found:
         raise HTTPException(status_code=404, detail=result.response["message_nl"])
     if result.blocked:

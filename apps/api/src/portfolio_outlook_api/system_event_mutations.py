@@ -87,14 +87,22 @@ def _mutate_system_event_status(
 
     if not storage_settings.enabled:
         return SystemEventMutationResult(
-            response={'status_nl': 'Geblokkeerd', 'updated': False, 'message_nl': 'Opslag staat uit. Wijzigingen zijn geblokkeerd.'},
+            response={
+                'status_nl': 'Geblokkeerd',
+                'updated': False,
+                'message_nl': 'Opslag staat uit. Wijzigingen zijn geblokkeerd.',
+            },
             blocked=True,
         )
 
     database_url = storage_settings.database_url
     if database_url is None or database_url.strip() == '':
         return SystemEventMutationResult(
-            response={'status_nl': 'Geblokkeerd', 'updated': False, 'message_nl': 'Database-url ontbreekt. Wijzigingen zijn geblokkeerd.'},
+            response={
+                'status_nl': 'Geblokkeerd',
+                'updated': False,
+                'message_nl': 'Database-url ontbreekt. Wijzigingen zijn geblokkeerd.',
+            },
             blocked=True,
         )
 
@@ -112,7 +120,11 @@ def _mutate_system_event_status(
 
             if not result.accepted:
                 return SystemEventMutationResult(
-                    response={'status_nl': 'Niet gevonden', 'updated': False, 'message_nl': 'Systeemmelding niet gevonden.'},
+                    response={
+                        'status_nl': 'Niet gevonden',
+                        'updated': False,
+                        'message_nl': 'Systeemmelding niet gevonden.',
+                    },
                     blocked=False,
                     not_found=True,
                 )
@@ -123,11 +135,19 @@ def _mutate_system_event_status(
             )
     except StorageConnectionNotReadyError:
         return SystemEventMutationResult(
-            response={'status_nl': 'Geblokkeerd', 'updated': False, 'message_nl': 'Writes zijn geblokkeerd door migratie-readiness.'},
+            response={
+                'status_nl': 'Geblokkeerd',
+                'updated': False,
+                'message_nl': 'Writes zijn geblokkeerd door migratie-readiness.',
+            },
             blocked=True,
         )
     except StorageConnectionError:
         return SystemEventMutationResult(
-            response={'status_nl': 'Geblokkeerd', 'updated': False, 'message_nl': 'Databaseverbinding mislukt. Wijziging is geblokkeerd.'},
+            response={
+                'status_nl': 'Geblokkeerd',
+                'updated': False,
+                'message_nl': 'Databaseverbinding mislukt. Wijziging is geblokkeerd.',
+            },
             blocked=True,
         )
