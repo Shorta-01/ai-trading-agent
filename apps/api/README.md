@@ -87,3 +87,9 @@ Eigenschappen:
 - Endpoint doet geen writes: geen create/update/resolve/archive/delete.
 - Er is nog geen GUI-overzicht voor systeemmeldingen.
 - Er zijn nog geen resolve/archive-routes, geen hard delete en geen automatische globale exception middleware.
+
+## Task 44 trading instellingen read-only uit opslag
+- `GET /settings/trading` probeert opgeslagen trading instellingen te lezen als storage is ingeschakeld en `database_url` aanwezig is.
+- Endpoint gebruikt per request een expliciete checked connection met `require_writable=False` (geen writes).
+- Als opslag niet beschikbaar is, geen rij bestaat, of een veilige storagefout optreedt, valt de response terug op veilige domein-standaardinstellingen.
+- Dit blijft read-only: er is nog geen update-endpoint, geen UI-scherm, en geen IBKR/OpenAI-gedrag.
