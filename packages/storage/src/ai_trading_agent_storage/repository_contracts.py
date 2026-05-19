@@ -12,6 +12,35 @@ from decimal import Decimal
 from typing import Protocol
 
 
+def _require_non_empty(value: str, field_name: str) -> str:
+    if not value.strip():
+        raise ValueError(f"{field_name} must be non-empty.")
+    return value
+
+
+def _require_positive_int(value: int | None, field_name: str) -> int | None:
+    if value is not None and value <= 0:
+        raise ValueError(f"{field_name} must be positive when provided.")
+    return value
+
+
+def _require_non_negative_int(value: int | None, field_name: str) -> int | None:
+    if value is not None and value < 0:
+        raise ValueError(f"{field_name} must be non-negative when provided.")
+    return value
+
+
+def _require_ordered_datetimes(
+    earlier: datetime, later: datetime, earlier_name: str, later_name: str
+) -> None:
+    if later < earlier:
+        raise ValueError(f"{later_name} must not be before {earlier_name}.")
+
+
+def _normalize_value(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
 @dataclass(frozen=True)
 class StorageWriteResult:
     accepted: bool
@@ -354,6 +383,252 @@ class SourceConflictRecord:
 
 
 @dataclass(frozen=True)
+class ResearchSourceRecord:
+    library_source_id: str
+    source_kind: str
+    status: str
+    classification_status: str
+    extraction_status: str
+    analysis_status: str
+    asset_symbol: str | None
+    asset_name: str | None
+    title: str
+    document_type: str
+    source_type: str
+    source_credibility_level: str | None
+    prompt_injection_risk_level: str | None
+    content_hash_sha256: str | None
+    archive_storage_uri: str | None
+    raw_source_available: bool
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+    schema_version: str
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "library_source_id", "source_kind", "status", "classification_status",
+            "extraction_status", "analysis_status", "title", "document_type",
+            "source_type", "schema_version", "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        _require_ordered_datetimes(self.created_at, self.updated_at, "created_at", "updated_at")
+        if self.archived_at is not None:
+            _require_ordered_datetimes(
+                self.created_at, self.archived_at, "created_at", "archived_at"
+            )
+
+
+@dataclass(frozen=True)
+class ResearchUploadedFileMetadataRecord:
+    library_source_id: str
+    original_file_name: str
+    stored_file_name: str | None
+    content_type: str | None
+    file_size_bytes: int | None
+    file_hash_sha256: str | None
+    detected_language: str | None
+    page_count: int | None
+    uploaded_at: datetime
+    uploaded_by_user: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.library_source_id, "library_source_id")
+        _require_non_empty(self.original_file_name, "original_file_name")
+        _require_non_empty(self.explanation_nl, "explanation_nl")
+        _require_positive_int(self.file_size_bytes, "file_size_bytes")
+        _require_positive_int(self.page_count, "page_count")
+
+
+@dataclass(frozen=True)
+class ResearchUrlMetadataRecord:
+    library_source_id: str
+    url: str
+    normalized_url: str | None
+    domain: str | None
+    fetched_at: datetime | None
+    snapshot_hash_sha256: str | None
+    snapshot_storage_uri: str | None
+    http_status_code: int | None
+    content_type: str | None
+    user_supplied: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.library_source_id, "library_source_id")
+        _require_non_empty(self.url, "url")
+        _require_non_empty(self.explanation_nl, "explanation_nl")
+        if self.http_status_code is not None and not 100 <= self.http_status_code <= 599:
+            raise ValueError("http_status_code must be between 100 and 599 when provided.")
+
+
+@dataclass(frozen=True)
+class ResearchUserNoteRecord:
+    library_source_id: str
+    asset_symbol: str | None
+    title: str
+    note_nl: str
+    thesis_relevance_nl: str | None
+    user_confidence_nl: str | None
+    created_at: datetime
+    updated_at: datetime
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.library_source_id, "library_source_id")
+        _require_non_empty(self.title, "title")
+        _require_non_empty(self.note_nl, "note_nl")
+        _require_non_empty(self.explanation_nl, "explanation_nl")
+        _require_ordered_datetimes(self.created_at, self.updated_at, "created_at", "updated_at")
+
+
+@dataclass(frozen=True)
+class ResearchDocumentSetRecord:
+    document_set_id: str
+    asset_symbol: str
+    title: str
+    set_type: str
+    created_at: datetime
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "document_set_id",
+            "asset_symbol",
+            "title",
+            "set_type",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+
+
+@dataclass(frozen=True)
+class ResearchDocumentSetMemberRecord:
+    member_id: str
+    document_set_id: str
+    library_source_id: str
+    fiscal_year: int | None
+    reporting_period: str | None
+    sort_order: int | None
+    created_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.member_id, "member_id")
+        _require_non_empty(self.document_set_id, "document_set_id")
+        _require_non_empty(self.library_source_id, "library_source_id")
+        _require_non_negative_int(self.sort_order, "sort_order")
+        if self.fiscal_year is not None and not 1900 <= self.fiscal_year <= 2200:
+            raise ValueError("fiscal_year must be between 1900 and 2200 when provided.")
+
+
+@dataclass(frozen=True)
+class ResearchDocumentClassificationRecord:
+    classification_id: str
+    library_source_id: str
+    document_type: str
+    source_type: str
+    confidence: str
+    detected_asset_symbol: str | None
+    detected_asset_name: str | None
+    detected_fiscal_year: int | None
+    detected_reporting_period: str | None
+    detected_language: str | None
+    needs_user_review: bool
+    reason_nl: str
+    classified_at: datetime
+    schema_version: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "classification_id", "library_source_id", "document_type", "source_type",
+            "confidence", "reason_nl", "schema_version",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if (
+            _normalize_value(self.confidence) in {"low", "unknown", "unclear"}
+            and not self.needs_user_review
+        ):
+            raise ValueError("needs_user_review must be true for low-confidence classifications.")
+
+
+@dataclass(frozen=True)
+class ResearchSourceAssetLinkRecord:
+    link_id: str
+    library_source_id: str
+    asset_symbol: str | None
+    asset_name: str | None
+    conid: str | None
+    isin: str | None
+    link_type: str
+    mapping_confidence: str
+    auto_linked: bool
+    requires_user_confirmation: bool
+    confirmed_by_user: bool
+    reason_nl: str
+    created_at: datetime
+    confirmed_at: datetime | None
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "link_id",
+            "library_source_id",
+            "link_type",
+            "mapping_confidence",
+            "reason_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.confirmed_at is not None:
+            _require_ordered_datetimes(
+                self.created_at, self.confirmed_at, "created_at", "confirmed_at"
+            )
+        if (
+            _normalize_value(self.link_type) == "detected_new_asset"
+            and not self.requires_user_confirmation
+        ):
+            raise ValueError(
+                "requires_user_confirmation must be true for detected_new_asset links."
+            )
+
+
+@dataclass(frozen=True)
+class ResearchSourceProcessingStatusRecord:
+    processing_id: str
+    library_source_id: str
+    classification_status: str
+    extraction_status: str
+    analysis_status: str
+    readiness_status: str
+    can_be_used_in_research: bool
+    can_be_used_in_suggestions: bool
+    needs_user_review: bool
+    blocks_suggestions: bool
+    last_error_nl: str | None
+    checked_at: datetime
+    reason_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "processing_id", "library_source_id", "classification_status", "extraction_status",
+            "analysis_status", "readiness_status", "reason_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        blocked = {"blocked", "failed", "rejected", "prompt_injection_blocked"}
+        if self.blocks_suggestions and self.can_be_used_in_suggestions:
+            raise ValueError(
+                "can_be_used_in_suggestions must be false when blocks_suggestions is true."
+            )
+        if (
+            _normalize_value(self.readiness_status) in blocked
+            and self.can_be_used_in_suggestions
+        ):
+            raise ValueError(
+                "can_be_used_in_suggestions must be false for blocked readiness_status values."
+            )
+
+
+@dataclass(frozen=True)
 class SystemEventRecord:
     system_event_id: str
     created_at: datetime
@@ -688,5 +963,14 @@ def repository_interfaces_are_defined() -> bool:
         TradingSettingsRecord,
         SaveTradingSettingsRequest,
         TradingSettingsRepositoryProtocol,
+        ResearchSourceRecord,
+        ResearchUploadedFileMetadataRecord,
+        ResearchUrlMetadataRecord,
+        ResearchUserNoteRecord,
+        ResearchDocumentSetRecord,
+        ResearchDocumentSetMemberRecord,
+        ResearchDocumentClassificationRecord,
+        ResearchSourceAssetLinkRecord,
+        ResearchSourceProcessingStatusRecord,
     )
     return True
