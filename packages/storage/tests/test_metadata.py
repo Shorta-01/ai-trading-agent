@@ -19,6 +19,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "external_broker_activities",
         "system_events",
         "trading_settings",
+        "evidence_items",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
