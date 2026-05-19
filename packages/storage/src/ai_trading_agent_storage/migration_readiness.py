@@ -116,6 +116,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "blokkeringen."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0008",
+        previous_revision_id="0007",
+        filename="0008_trading_settings.py",
+        label_nl="Trading instellingen",
+        description_nl="Tabel voor Toegestane beleggingen en Mijn strategie.",
+    ),
 )
 
 

@@ -18,6 +18,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "broker_reconciliation_differences",
         "external_broker_activities",
         "system_events",
+        "trading_settings",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
@@ -57,6 +58,8 @@ def test_timestamp_columns_are_timezone_aware() -> None:
         metadata.tables["system_events"].c.resolved_at,
         metadata.tables["system_events"].c.archived_at,
         metadata.tables["system_events"].c.copied_for_codex_at,
+        metadata.tables["trading_settings"].c.created_at,
+        metadata.tables["trading_settings"].c.updated_at,
     ]
     for column in columns:
         assert isinstance(column.type, DateTime)
@@ -147,6 +150,21 @@ def test_no_secret_like_column_names_and_no_legacy_table_names() -> None:
         for column_name in table.c.keys():
             column_name_lower = column_name.lower()
             assert not any(token in column_name_lower for token in forbidden_columns)
+
+
+def test_trading_settings_table_has_expected_columns() -> None:
+    expected = {
+        "settings_id",
+        "created_at",
+        "updated_at",
+        "version",
+        "allowed_universe_json",
+        "user_strategy_json",
+        "source",
+        "status",
+        "explanation_nl",
+    }
+    assert set(metadata.tables["trading_settings"].c.keys()) == expected
 
 
 def test_broker_snapshot_tables_have_expected_columns() -> None:

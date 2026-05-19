@@ -11,6 +11,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Integer,
     MetaData,
     Numeric,
     Table,
@@ -153,6 +154,28 @@ system_events = Table(
     CheckConstraint("help_nl <> ''", name="ck_system_events_help_nl_not_empty"),
     CheckConstraint("status <> ''", name="ck_system_events_status_not_empty"),
     CheckConstraint("explanation_nl <> ''", name="ck_system_events_explanation_nl_not_empty"),
+)
+
+trading_settings = Table(
+    "trading_settings",
+    metadata,
+    Column("settings_id", Text, primary_key=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("version", Integer, nullable=False),
+    Column("allowed_universe_json", JSON, nullable=False),
+    Column("user_strategy_json", JSON, nullable=False),
+    Column("source", Text, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+    CheckConstraint("settings_id <> ''", name="ck_trading_settings_settings_id_not_empty"),
+    CheckConstraint("version > 0", name="ck_trading_settings_version_gt_0"),
+    CheckConstraint("source <> ''", name="ck_trading_settings_source_not_empty"),
+    CheckConstraint("status <> ''", name="ck_trading_settings_status_not_empty"),
+    CheckConstraint(
+        "explanation_nl <> ''",
+        name="ck_trading_settings_explanation_nl_not_empty",
+    ),
 )
 
 broker_accounts = Table(
