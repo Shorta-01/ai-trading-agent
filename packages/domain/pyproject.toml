@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "portfolio-outlook-domain"
 version = "0.1.0"
@@ -33,3 +37,6 @@ known-first-party = ["portfolio_outlook_domain"]
 python_version = "3.12"
 strict = true
 mypy_path = "src"
+
+[tool.setuptools.package-data]
+portfolio_outlook_domain = ["py.typed"]
