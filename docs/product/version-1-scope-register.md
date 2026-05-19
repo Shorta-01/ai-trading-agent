@@ -297,3 +297,5 @@ Research inputs
 - Event-signalen en evidence zijn audit-inputs, geen tradinginstructies en geen orders.
 - Source-conflict records kunnen nu worden opgeslagen voor latere confidence/blocking-logica.
 - Geen OpenAI-calls, geen IBKR-calls, geen runtime ingestie, geen suggestie- of ordercreatie toegevoegd.
+
+- Research Source Archive: Storage foundation started / migration implemented
