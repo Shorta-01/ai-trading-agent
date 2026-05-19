@@ -83,3 +83,6 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Deze stap voegt **geen** real-time beurs-, broker- of kalender-API-calls toe.
 - Vervolgimplementaties moeten officiële exchange/brokerdata gebruiken (geen hardcoded aannames).
 - Nederlandstalige labels en helpteksten zijn toegevoegd voor eenvoudige GUI-uitleg.
+
+## Task 54 planning note
+AI Event Intelligence en Deep Search contracts zijn gepland als volgende domain stap (nog geen runtime OpenAI/websearch/nieuws).
