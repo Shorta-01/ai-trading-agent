@@ -65,3 +65,10 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Planned broker sync schema foundation is now structurally complete.
 - This table stores external broker activity records only.
 - No external activity detection engine, no IBKR data import, no runtime persistence, no repositories, no API/worker DB writes, and no order transmission exist yet.
+
+## Task 26: repository interfaces foundation
+- Repository interfaces bestaan nu voor broker account/sync/snapshots/reconciliation/external activities en unit-of-work.
+- Deze interfaces definiëren de toekomstige persistence-boundary voor broker sync en reconciliation.
+- Er is nog geen concrete SQL repository implementatie.
+- Er is nog geen runtime DB-verbinding, geen runtime writes en geen API/worker wiring.
+- Er wordt nog geen IBKR-data geïmporteerd.

@@ -73,3 +73,8 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI may not infer external broker activity without broker sync/reconciliation records.
 - AI should cite future external broker activity records when explaining direct IBKR actions.
 - AI may not downplay direct broker activity that requires manual review.
+
+## AI en repository contracts (Task 26)
+- AI mag repository interfaces niet behandelen als bewijs dat brokerdata al gepersisteerd is.
+- AI mag pas broker-feiten uitleggen als concrete repository-implementaties geauditeerde records opleveren.
+- Er mag geen fake data worden gegenereerd om repository contracts te vullen.

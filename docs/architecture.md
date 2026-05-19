@@ -134,3 +134,8 @@ This PR only designs the schema and does not implement migration, persistence ru
 - Storage schema now includes external broker activity foundation (`external_broker_activities`).
 - API/worker are still not wired to DB writes and repository implementations come later.
 - External activity detection engine, reconciliation engine, and order transmission remain unimplemented.
+
+## Repository boundary voor storage
+- API/worker mogen SQLAlchemy-tabellen niet direct gebruiken voor broker sync opslag.
+- Toekomstige code moet afhankelijk zijn van repository interfaces of application services, niet van raw SQL tabellen.
+- Domain/portfolio packages blijven database-vrij.

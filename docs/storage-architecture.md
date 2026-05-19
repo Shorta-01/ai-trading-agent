@@ -154,3 +154,8 @@ Future implementation order:
 - External broker activity table now exists (`external_broker_activities`).
 - Planned broker sync/reconciliation schema foundation is now complete at storage schema level.
 - Running app still persists no IBKR data; this table is storage-only and not detection logic.
+
+## Repository interface boundary (Task 26)
+- Tussen application-lagen en SQL-tabellen is nu een repository-interface laag toegevoegd.
+- Toekomstige flow: IBKR-adapter -> domeinvalidatie -> repository interface -> latere SQL-implementatie -> audit trail.
+- De interfaces zijn alleen contracten; schema bestaat, maar persistence-implementatie ontbreekt nog bewust.

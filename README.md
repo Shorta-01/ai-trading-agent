@@ -125,3 +125,7 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 ## Task 25E update (2026-05-19)
 - Added `external_broker_activities` in storage schema slice 5; the planned broker sync/reconciliation schema foundation is now structurally complete.
 - No IBKR integration, runtime persistence, external activity detection engine, or order transmission exists yet.
+
+## Storage repository contracts update (Task 26)
+- Broker sync/reconciliation storage repository interfaces are now defined in the storage package.
+- This is contract-only: no concrete persistence implementation, no API/worker wiring, and no runtime database writes yet.
