@@ -79,3 +79,11 @@ Eigenschappen:
 - Er zijn nog geen GUI-overzichten, event-list endpoints, archive/resolve routes of hard delete gedrag toegevoegd.
 - Er is nog geen globale exception middleware en geen automatische logging door de hele API.
 - Er is geen broker/IBKR/OpenAI-gedrag toegevoegd in deze taak.
+
+## Task 39 actieve systeemmeldingen endpoint
+- `GET /system/events/active` toegevoegd als read-only endpoint voor open/actieve systeemmeldingen.
+- Endpoint is storage-readiness-aware en gebruikt alleen een expliciete tijdelijke checked connection per request (`require_writable=False`) als storage is ingeschakeld en `database_url` aanwezig is.
+- Geen startup databaseconnectie, geen globale engine/session en geen sessionmaker.
+- Endpoint doet geen writes: geen create/update/resolve/archive/delete.
+- Er is nog geen GUI-overzicht voor systeemmeldingen.
+- Er zijn nog geen resolve/archive-routes, geen hard delete en geen automatische globale exception middleware.

@@ -29,6 +29,10 @@ from portfolio_outlook_api.status_models import (
     SystemStatusSummary,
 )
 from portfolio_outlook_api.storage_status import StorageStatusResponse, build_storage_status
+from portfolio_outlook_api.system_event_reader import (
+    ActiveSystemEventsResponse,
+    list_active_system_events,
+)
 
 router = APIRouter()
 
@@ -90,3 +94,8 @@ def read_storage_status() -> StorageStatusResponse:
 @router.get("/storage/status/online", response_model=OnlineStorageStatusResponse)
 def read_storage_status_online() -> OnlineStorageStatusResponse:
     return build_online_storage_status(settings.storage)
+
+
+@router.get("/system/events/active", response_model=ActiveSystemEventsResponse)
+def read_active_system_events() -> ActiveSystemEventsResponse:
+    return list_active_system_events(settings.storage)
