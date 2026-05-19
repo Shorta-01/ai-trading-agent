@@ -113,3 +113,10 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - De opslag bewaart `Toegestane beleggingen` en `Mijn strategie` als gestructureerde JSON-data.
 - Domain/API-laag valideert settings later; storage doet geen strategievalidatie of advieslogica.
 - Geen update-endpoint, geen UI, geen IBKR/OpenAI gedrag, geen trading/recommendation gedrag en geen hard-delete toegevoegd.
+
+
+## Task 55 update (2026-05-19)
+- Evidence Ledger/Event Signal opslagfundament toegevoegd (migratie `0009_evidence_ledger`).
+- Opslag bevat links tussen evidence, bronnen, event-signalen, modeloutput en toekomstige suggestie-audit.
+- Deze records zijn audit-inputs, geen tradinginstructies, geen suggesties en geen orders.
+- Geen OpenAI/IBKR/runtime-ingestie is toegevoegd in deze taak.

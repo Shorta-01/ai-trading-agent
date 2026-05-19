@@ -123,6 +123,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Trading instellingen",
         description_nl="Tabel voor Toegestane beleggingen en Mijn strategie.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0009",
+        previous_revision_id="0008",
+        filename="0009_evidence_ledger.py",
+        label_nl="Evidence ledger en eventsignalen",
+        description_nl="Opslagfundament voor evidence-items, event-signalen en auditlinks.",
+    ),
 )
 
 

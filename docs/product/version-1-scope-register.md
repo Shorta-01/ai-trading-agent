@@ -60,9 +60,9 @@ Dit register is de source-of-truth voor alle vergrendelde Version 1-features en 
 | 8 | “Why not now?” explanations | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 9 | Shadow suggestion mode | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 10 | Outcome tracking | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
-| 11 | Evidence Ledger | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
+| 11 | Evidence Ledger | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | Planned | Planned | Planned | This register | In progress | Storagefundament toegevoegd; runtime/UI volgt. |
 | 12 | Source credibility scoring | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
-| 13 | Source conflict detection | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
+| 13 | Source conflict detection | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | Planned | Planned | Planned | This register | In progress | Conflict-opslag toegevoegd; detectielogica volgt. |
 | 14 | Prompt-injection defense | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
 | 15 | AI research output schema validation | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
 | 16 | AI research run tracking | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
@@ -290,3 +290,10 @@ Research inputs
 16. IBKR acties and controlled order submission
 
 | 128 | AI Event Intelligence layer | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Voorbereiding loopt; nog geen runtime. |
+
+
+## Task 55 update (2026-05-19)
+- Evidence Ledger storage foundation toegevoegd met tabellen voor evidence, event-signalen en auditlinks.
+- Event-signalen en evidence zijn audit-inputs, geen tradinginstructies en geen orders.
+- Source-conflict records kunnen nu worden opgeslagen voor latere confidence/blocking-logica.
+- Geen OpenAI-calls, geen IBKR-calls, geen runtime ingestie, geen suggestie- of ordercreatie toegevoegd.

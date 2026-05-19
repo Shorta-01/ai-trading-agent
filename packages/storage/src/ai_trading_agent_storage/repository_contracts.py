@@ -208,6 +208,149 @@ class ExternalBrokerActivityRecord:
     audit_event_ids_json: tuple[str, ...] | None
 
 
+@dataclass(frozen=True)
+class EvidenceItemRecord:
+    evidence_id: str
+    asset_symbol: str | None
+    evidence_type: str
+    evidence_direction: str
+    title_nl: str
+    summary_nl: str
+    claim_nl: str
+    source_credibility_level: str
+    freshness_status: str | None
+    prompt_injection_risk_level: str | None
+    supports_buy: bool
+    supports_hold: bool
+    supports_sell: bool
+    supports_avoid: bool
+    blocks_action: bool
+    confidence_score: Decimal | None
+    observed_at: datetime | None
+    created_at: datetime
+    valid_until: datetime | None
+    schema_version: str
+    metadata_json: dict[str, str] | None
+    explanation_nl: str
+
+
+@dataclass(frozen=True)
+class EvidenceSourceLinkRecord:
+    link_id: str
+    evidence_id: str
+    source_id: str
+    source_kind: str | None
+    source_title: str | None
+    source_reference_nl: str | None
+    source_excerpt_nl: str | None
+    source_url: str | None
+    page_number: int | None
+    section_label: str | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class EventSignalRecord:
+    event_signal_id: str
+    event_type: str
+    status: str
+    title_nl: str
+    summary_nl: str
+    impact_direction: str
+    impact_horizon: str
+    confidence: str
+    confidence_score: Decimal | None
+    source_credibility_level: str
+    prompt_injection_risk_level: str
+    market_reaction_check_required: bool
+    scenario_impact_id: str | None
+    market_reaction_check_id: str | None
+    extracted_at: datetime
+    valid_until: datetime | None
+    schema_version: str
+    metadata_json: dict[str, str] | None
+    explanation_nl: str
+
+
+@dataclass(frozen=True)
+class EventSignalSourceLinkRecord:
+    link_id: str
+    event_signal_id: str
+    source_candidate_id: str | None
+    source_id: str | None
+    source_kind: str | None
+    source_title: str | None
+    source_url: str | None
+    source_credibility_level: str | None
+    novelty_level: str | None
+    relevance_level: str | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class EventSignalAssetLinkRecord:
+    link_id: str
+    event_signal_id: str
+    entity_type: str
+    entity_name: str
+    asset_symbol: str | None
+    conid: str | None
+    isin: str | None
+    sector: str | None
+    region: str | None
+    mapping_confidence: str
+    direct_relevance: bool
+    reason_nl: str
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class ModelEvidenceLinkRecord:
+    link_id: str
+    evidence_id: str
+    model_result_id: str
+    model_run_id: str | None
+    model_id: str | None
+    model_version: str | None
+    model_family: str | None
+    link_reason_nl: str
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class SuggestionEvidenceLinkRecord:
+    link_id: str
+    suggestion_id: str
+    evidence_id: str | None
+    event_signal_id: str | None
+    model_result_id: str | None
+    freshness_assessment_id: str | None
+    source_conflict_id: str | None
+    link_type: str
+    supports_action: bool
+    limits_action: bool
+    blocks_action: bool
+    reason_nl: str
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class SourceConflictRecord:
+    source_conflict_id: str
+    asset_symbol: str | None
+    conflict_type: str
+    severity: str
+    title_nl: str
+    summary_nl: str
+    source_ids_json: tuple[str, ...] | None
+    evidence_ids_json: tuple[str, ...] | None
+    event_signal_ids_json: tuple[str, ...] | None
+    blocks_suggestions: bool
+    requires_user_review: bool
+    detected_at: datetime
+    resolved_at: datetime | None
+    resolution_nl: str | None
+    explanation_nl: str
 
 
 @dataclass(frozen=True)
