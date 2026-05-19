@@ -11,6 +11,7 @@ from portfolio_outlook_domain.broker_adapter import (
     BrokerConnectionStatus,
     BrokerDataFreshnessStatus,
     BrokerEnvironment,
+    BrokerOpenOrderSnapshot,
     BrokerPositionSnapshot,
     BrokerProvider,
 )
@@ -74,3 +75,20 @@ def test_account_mode_check_defaults_to_unknown() -> None:
     assert mode_check.environment == BrokerEnvironment.UNKNOWN
     assert mode_check.status == BrokerAccountModeStatus.UNKNOWN
     assert mode_check.can_submit_orders is False
+
+
+def test_open_order_snapshot_rejects_float_limit_price() -> None:
+    with pytest.raises(ValueError, match="Float values are not allowed"):
+        BrokerOpenOrderSnapshot(
+            broker_provider=BrokerProvider.IBKR,
+            account_id="U123",
+            order_id="1001",
+            symbol="IWDA",
+            action="BUY",
+            order_type="LMT",
+            quantity=Decimal("10"),
+            limit_price=89.5,
+            status="Submitted",
+            source_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
+        )

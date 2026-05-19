@@ -32,9 +32,12 @@
 - structured error handling and mapping
 
 ## Constraints and implementation notes
-- Session/auth requirements differ per API mode and must be validated in spike implementation.
+- Web API has two-tier session behavior: read-only session and brokerage session; `/iserver` trading and market-data features need brokerage session.
+- Web API status indicators include `connected`, `authenticated`, and `established`, each with different readiness meaning.
+- IBKR documentation notes one active brokerage session per username; session ownership and failover rules must be handled explicitly.
 - Market data access depends on account permissions/subscriptions.
-- Some values are snapshot-like and cadence/update timing must be verified endpoint-by-endpoint.
+- TWS `reqAccountSummary` returns initial data and changed values on a documented three-minute cadence (not configurable).
+- TWS account structures can have constraints (for example, limitations around some `group="All"` usages for certain introducing broker setups).
 - Account access can differ for individual vs advisor/introducing structures.
 - Version 1 safety boundary remains paper-only account usage.
 - Infrastructure dependency is explicit: Client Portal Gateway/TWS/IB Gateway may be required depending on final approach.

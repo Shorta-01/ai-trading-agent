@@ -129,27 +129,32 @@ class BrokerPositionSnapshot(_BrokerDecimalModel):
 class BrokerOpenOrderSnapshot(_BrokerDecimalModel):
     broker_provider: BrokerProvider
     account_id: str
-    order_reference: str
+    order_id: str
+    perm_id: str | None = None
+    client_id: str | None = None
     symbol: str
-    side: str
+    action: str
     quantity: Decimal
-    order_type: str
     limit_price: Decimal | None = None
-    submitted_at: datetime
     status: str
+    source_timestamp: datetime
+    received_at: datetime
 
 
 class BrokerExecutionSnapshot(_BrokerDecimalModel):
     broker_provider: BrokerProvider
     account_id: str
     execution_id: str
-    order_reference: str
+    order_id: str | None = None
+    perm_id: str | None = None
     symbol: str
+    side: str
     quantity: Decimal
     price: Decimal
     commission: Decimal | None = None
     currency: str
     executed_at: datetime
+    received_at: datetime
 
 
 class BrokerAdapterError(DomainBaseModel):
