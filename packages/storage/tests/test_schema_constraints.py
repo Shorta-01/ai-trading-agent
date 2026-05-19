@@ -70,3 +70,28 @@ def test_broker_sync_runs_constraints_exist_and_include_required_checks() -> Non
     }
     assert "completed_at" in constraints["ck_broker_sync_runs_completed_at_after_started_at"]
     assert "started_at" in constraints["ck_broker_sync_runs_completed_at_after_started_at"]
+
+
+def test_broker_position_snapshots_constraints_exist() -> None:
+    constraints = _check_constraints("broker_position_snapshots")
+    assert set(constraints) == {
+        "ck_broker_position_snapshots_broker_system_ibkr",
+        "ck_broker_position_snapshots_asset_identifier_not_empty",
+        "ck_broker_position_snapshots_asset_symbol_not_empty",
+        "ck_broker_position_snapshots_asset_type_not_empty",
+        "ck_broker_position_snapshots_currency_not_empty",
+        "ck_broker_position_snapshots_source_data_kind_not_empty",
+        "ck_broker_position_snapshots_origin_not_empty",
+        "ck_broker_position_snapshots_explanation_nl_not_empty",
+    }
+
+
+def test_broker_cash_snapshots_constraints_exist() -> None:
+    constraints = _check_constraints("broker_cash_snapshots")
+    assert set(constraints) == {
+        "ck_broker_cash_snapshots_broker_system_ibkr",
+        "ck_broker_cash_snapshots_currency_not_empty",
+        "ck_broker_cash_snapshots_source_data_kind_not_empty",
+        "ck_broker_cash_snapshots_origin_not_empty",
+        "ck_broker_cash_snapshots_explanation_nl_not_empty",
+    }

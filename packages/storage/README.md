@@ -43,3 +43,10 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Er wordt nog geen IBKR-data geïmporteerd door de draaiende app.
 - Runtime persistence bestaat nog niet: geen repositories, geen API/worker DB-writes.
 
+
+
+## Task 25B: broker sync schema slice 2
+- `broker_position_snapshots` en `broker_cash_snapshots` bestaan nu in metadata + Alembic migratie `0003_broker_position_and_cash_snapshots`.
+- Dit is bewust alleen broker schema slice 2.
+- Er wordt nog geen IBKR-data geïmporteerd.
+- Er is nog geen runtime persistence, repositorylaag of API/worker DB-writepad.

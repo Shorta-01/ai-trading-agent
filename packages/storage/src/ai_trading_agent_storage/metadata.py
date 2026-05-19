@@ -178,3 +178,87 @@ broker_sync_runs = Table(
         name="ck_broker_sync_runs_completed_at_after_started_at",
     ),
 )
+
+
+broker_position_snapshots = Table(
+    "broker_position_snapshots",
+    metadata,
+    Column("broker_position_snapshot_id", Text, primary_key=True),
+    Column(
+        "broker_sync_run_id",
+        Text,
+        ForeignKey("broker_sync_runs.broker_sync_run_id"),
+        nullable=False,
+    ),
+    Column(
+        "broker_account_id", Text, ForeignKey("broker_accounts.broker_account_id"), nullable=False
+    ),
+    Column("broker_system", Text, nullable=False),
+    Column("imported_at", DateTime(timezone=True), nullable=False),
+    Column("asset_identifier", Text, nullable=False),
+    Column("asset_symbol", Text, nullable=False),
+    Column("asset_type", Text, nullable=False),
+    Column("currency", Text, nullable=False),
+    Column("quantity", MONEY_NUMERIC, nullable=False),
+    Column("average_cost", MONEY_NUMERIC, nullable=True),
+    Column("market_value", MONEY_NUMERIC, nullable=True),
+    Column("source_data_kind", Text, nullable=False),
+    Column("origin", Text, nullable=False),
+    Column("source_reference_ids_json", JSON, nullable=True),
+    Column("explanation_nl", Text, nullable=False),
+    CheckConstraint(
+        "broker_system = 'ibkr'",
+        name="ck_broker_position_snapshots_broker_system_ibkr",
+    ),
+    CheckConstraint(
+        "asset_identifier <> ''",
+        name="ck_broker_position_snapshots_asset_identifier_not_empty",
+    ),
+    CheckConstraint(
+        "asset_symbol <> ''", name="ck_broker_position_snapshots_asset_symbol_not_empty"
+    ),
+    CheckConstraint("asset_type <> ''", name="ck_broker_position_snapshots_asset_type_not_empty"),
+    CheckConstraint("currency <> ''", name="ck_broker_position_snapshots_currency_not_empty"),
+    CheckConstraint(
+        "source_data_kind <> ''",
+        name="ck_broker_position_snapshots_source_data_kind_not_empty",
+    ),
+    CheckConstraint("origin <> ''", name="ck_broker_position_snapshots_origin_not_empty"),
+    CheckConstraint(
+        "explanation_nl <> ''",
+        name="ck_broker_position_snapshots_explanation_nl_not_empty",
+    ),
+)
+
+broker_cash_snapshots = Table(
+    "broker_cash_snapshots",
+    metadata,
+    Column("broker_cash_snapshot_id", Text, primary_key=True),
+    Column(
+        "broker_sync_run_id",
+        Text,
+        ForeignKey("broker_sync_runs.broker_sync_run_id"),
+        nullable=False,
+    ),
+    Column(
+        "broker_account_id", Text, ForeignKey("broker_accounts.broker_account_id"), nullable=False
+    ),
+    Column("broker_system", Text, nullable=False),
+    Column("imported_at", DateTime(timezone=True), nullable=False),
+    Column("currency", Text, nullable=False),
+    Column("cash_amount", MONEY_NUMERIC, nullable=False),
+    Column("source_data_kind", Text, nullable=False),
+    Column("origin", Text, nullable=False),
+    Column("source_reference_ids_json", JSON, nullable=True),
+    Column("explanation_nl", Text, nullable=False),
+    CheckConstraint("broker_system = 'ibkr'", name="ck_broker_cash_snapshots_broker_system_ibkr"),
+    CheckConstraint("currency <> ''", name="ck_broker_cash_snapshots_currency_not_empty"),
+    CheckConstraint(
+        "source_data_kind <> ''",
+        name="ck_broker_cash_snapshots_source_data_kind_not_empty",
+    ),
+    CheckConstraint("origin <> ''", name="ck_broker_cash_snapshots_origin_not_empty"),
+    CheckConstraint(
+        "explanation_nl <> ''", name="ck_broker_cash_snapshots_explanation_nl_not_empty"
+    ),
+)

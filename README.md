@@ -111,3 +111,8 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - Eerste broker sync schema slice is toegevoegd in storage (`broker_accounts`, `broker_sync_runs`).
 - Er is nog geen IBKR-integratie of runtime persistence actief.
 
+
+
+## Task 25B update
+- Broker snapshot schema slice 2 toegevoegd: `broker_position_snapshots` en `broker_cash_snapshots`.
+- Er is nog geen IBKR-integratie, geen runtime persistence en geen app DB-writepad actief.

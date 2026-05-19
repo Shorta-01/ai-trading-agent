@@ -10,6 +10,8 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "audit_events",
         "broker_accounts",
         "broker_sync_runs",
+        "broker_position_snapshots",
+        "broker_cash_snapshots",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
@@ -37,6 +39,8 @@ def test_timestamp_columns_are_timezone_aware() -> None:
         metadata.tables["broker_accounts"].c.updated_at,
         metadata.tables["broker_sync_runs"].c.started_at,
         metadata.tables["broker_sync_runs"].c.completed_at,
+        metadata.tables["broker_position_snapshots"].c.imported_at,
+        metadata.tables["broker_cash_snapshots"].c.imported_at,
     ]
     for column in columns:
         assert isinstance(column.type, DateTime)
@@ -128,3 +132,71 @@ def test_no_secret_like_column_names_and_no_legacy_table_names() -> None:
         for column_name in table.c.keys():
             column_name_lower = column_name.lower()
             assert not any(token in column_name_lower for token in forbidden_columns)
+
+
+def test_broker_snapshot_tables_have_expected_columns() -> None:
+    broker_position_expected = {
+        "broker_position_snapshot_id",
+        "broker_sync_run_id",
+        "broker_account_id",
+        "broker_system",
+        "imported_at",
+        "asset_identifier",
+        "asset_symbol",
+        "asset_type",
+        "currency",
+        "quantity",
+        "average_cost",
+        "market_value",
+        "source_data_kind",
+        "origin",
+        "source_reference_ids_json",
+        "explanation_nl",
+    }
+    broker_cash_expected = {
+        "broker_cash_snapshot_id",
+        "broker_sync_run_id",
+        "broker_account_id",
+        "broker_system",
+        "imported_at",
+        "currency",
+        "cash_amount",
+        "source_data_kind",
+        "origin",
+        "source_reference_ids_json",
+        "explanation_nl",
+    }
+    assert set(metadata.tables["broker_position_snapshots"].c.keys()) == broker_position_expected
+    assert set(metadata.tables["broker_cash_snapshots"].c.keys()) == broker_cash_expected
+
+
+def test_broker_snapshot_numeric_columns_are_numeric_and_not_float() -> None:
+    numeric_columns = [
+        metadata.tables["broker_position_snapshots"].c.quantity,
+        metadata.tables["broker_position_snapshots"].c.average_cost,
+        metadata.tables["broker_position_snapshots"].c.market_value,
+        metadata.tables["broker_cash_snapshots"].c.cash_amount,
+    ]
+    for column in numeric_columns:
+        assert isinstance(column.type, Numeric)
+        assert column.type.precision == 20
+        assert column.type.scale == 6
+
+
+def test_broker_snapshot_foreign_keys() -> None:
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_position_snapshots"].c.broker_sync_run_id.foreign_keys
+    } == {"broker_sync_runs.broker_sync_run_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_position_snapshots"].c.broker_account_id.foreign_keys
+    } == {"broker_accounts.broker_account_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_cash_snapshots"].c.broker_sync_run_id.foreign_keys
+    } == {"broker_sync_runs.broker_sync_run_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_cash_snapshots"].c.broker_account_id.foreign_keys
+    } == {"broker_accounts.broker_account_id"}

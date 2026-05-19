@@ -118,3 +118,9 @@ This PR only designs the schema and does not implement migration, persistence ru
 - API en worker zijn nog niet aan database writes gekoppeld.
 - Repository-interfaces/adapters voor broker snapshots volgen later.
 
+
+
+## Task 25B architectuurupdate
+- Storage-schema foundation bevat nu broker account/sync run/position snapshot/cash snapshot tabellen.
+- API en worker zijn nog niet aan DB-writes gekoppeld.
+- Repository-implementaties volgen later.
