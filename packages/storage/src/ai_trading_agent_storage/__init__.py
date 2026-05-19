@@ -4,6 +4,12 @@ from ai_trading_agent_storage.alembic_helpers import (
     get_target_metadata,
     is_migration_skeleton_ready,
 )
+from ai_trading_agent_storage.connection_provider import (
+    CheckedStorageConnection,
+    StorageConnectionError,
+    StorageConnectionNotReadyError,
+    StorageConnectionProvider,
+)
 from ai_trading_agent_storage.metadata import (
     audit_events,
     broker_accounts,
@@ -74,6 +80,10 @@ from ai_trading_agent_storage.sql_repositories import (
 )
 
 __all__ = [
+    "CheckedStorageConnection",
+    "StorageConnectionError",
+    "StorageConnectionNotReadyError",
+    "StorageConnectionProvider",
     "DatabaseConnectionSettings",
     "MigrationInventory",
     "MigrationReadinessReport",
