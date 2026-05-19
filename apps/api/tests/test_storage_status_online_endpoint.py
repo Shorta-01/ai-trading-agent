@@ -1,3 +1,4 @@
+from ai_trading_agent_storage import MigrationReadinessReport, MigrationReadinessStatus
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import status_routes
@@ -59,11 +60,26 @@ def test_online_storage_status_enabled_missing_url_no_engine(monkeypatch) -> Non
 
 def test_online_storage_status_success_connection_lifecycle(monkeypatch) -> None:
     created: list[FakeEngine] = []
+    checker_connections: list[FakeConnection] = []
 
     def fake_engine_factory(_: str) -> FakeEngine:
         engine = FakeEngine()
         created.append(engine)
         return engine
+
+    def fake_readiness_checker(connection: FakeConnection) -> MigrationReadinessReport:
+        checker_connections.append(connection)
+        return MigrationReadinessReport(
+            status=MigrationReadinessStatus.MIGRATIONS_CURRENT,
+            database_connected=True,
+            migrations_checked_against_database=True,
+            offline_inventory_valid=True,
+            latest_expected_revision_id="0006",
+            database_revision_id="0006",
+            persistence_allowed=True,
+            blocks_runtime_writes=False,
+            explanation_nl="Migraties klaar.",
+        )
 
     monkeypatch.setattr(
         status_routes.settings,
@@ -74,6 +90,10 @@ def test_online_storage_status_success_connection_lifecycle(monkeypatch) -> None
         "portfolio_outlook_api.online_storage_status.create_engine",
         fake_engine_factory,
     )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.online_storage_status.check_online_migration_readiness",
+        fake_readiness_checker,
+    )
 
     client = TestClient(app)
     response = client.get('/storage/status/online')
@@ -81,10 +101,13 @@ def test_online_storage_status_success_connection_lifecycle(monkeypatch) -> None
     data = response.json()
 
     assert len(created) == 1
+    assert len(checker_connections) == 1
+    assert checker_connections[0] is created[0].connection
     assert created[0].connection.closed is True
     assert created[0].disposed is True
     assert data['configured'] is True
-    assert data['connected'] in {True, False}
+    assert data['connected'] is True
+    assert data['safe_to_write'] is True
     assert 'postgresql://' not in str(data)
 
 
