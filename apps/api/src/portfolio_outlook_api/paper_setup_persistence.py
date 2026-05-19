@@ -44,11 +44,16 @@ IdProvider = Callable[[], str]
 def persist_first_run_paper_setup(
     payload: SetupPreviewInput,
     storage_settings: StorageSettings,
-    connection_provider_factory: ConnectionProviderFactory = StorageConnectionProvider,
-    repository_factory: RepositoryFactory = SqlAlchemyPaperPortfolioSetupRepository,
+    connection_provider_factory: ConnectionProviderFactory | None = None,
+    repository_factory: RepositoryFactory | None = None,
     now_provider: DateTimeProvider = lambda: datetime.now(UTC),
     id_provider: IdProvider = lambda: f"paper-setup-{uuid4()}",
 ) -> PaperSetupPersistenceResult:
+    if connection_provider_factory is None:
+        connection_provider_factory = StorageConnectionProvider
+    if repository_factory is None:
+        repository_factory = SqlAlchemyPaperPortfolioSetupRepository
+
     if not storage_settings.enabled:
         return PaperSetupPersistenceResult(
             response={
