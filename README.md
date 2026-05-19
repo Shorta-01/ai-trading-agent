@@ -62,6 +62,9 @@ docker compose up --build
 ## No-live-trading principe
 De applicatie mag in versie 1 geen echte broker-orders uitvoeren, geen live-accounts aansturen en geen real-money transacties automatiseren.
 
+## Product-governance documentatie
+- Version 1 scope register: `docs/product/version-1-scope-register.md`
+
 ## Eenvoudige Nederlandse UI-principe
 Alle hoofdschermen, labels, waarschuwingen en acties moeten begrijpelijk zijn voor niet-experts. Elke veldwaarde krijgt eenvoudige Nederlandse helptekst/tooltip.
 
