@@ -219,6 +219,51 @@ class BrokerAccountRepository(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class PaperPortfolioSetupRecord:
+    setup_id: str
+    portfolio_name: str
+    base_currency: str
+    starting_cash_amount: Decimal
+    paper_only: bool
+    real_money_used: bool
+    broker_order_created: bool
+    live_trading_enabled: bool
+    user_confirmed_paper_only: bool
+    user_confirmed_no_real_money: bool
+    user_confirmed_no_broker_order: bool
+    status: str
+    created_at: datetime
+    updated_at: datetime | None
+    explanation_nl: str
+
+
+@dataclass(frozen=True)
+class CreatePaperPortfolioSetupRequest:
+    setup_id: str
+    portfolio_name: str
+    base_currency: str
+    starting_cash_amount: Decimal
+    status: str
+    created_at: datetime
+    explanation_nl: str
+
+
+class PaperPortfolioSetupRepositoryProtocol(Protocol):
+    def create_setup(
+        self, request: CreatePaperPortfolioSetupRequest
+    ) -> StorageWriteResult:
+        ...
+
+    def get_by_id(
+        self, setup_id: str
+    ) -> StorageReadResult[PaperPortfolioSetupRecord]:
+        ...
+
+    def get_latest(self) -> StorageReadResult[PaperPortfolioSetupRecord]:
+        ...
+
+
 class BrokerSyncRunRepository(Protocol):
     def get_by_id(self, broker_sync_run_id: str) -> StorageReadResult[BrokerSyncRunRecord]:
         ...

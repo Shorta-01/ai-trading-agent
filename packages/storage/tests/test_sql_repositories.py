@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 
 from ai_trading_agent_storage.metadata import metadata
 from ai_trading_agent_storage.migration_readiness import (
@@ -11,11 +13,13 @@ from ai_trading_agent_storage.migration_readiness import (
 from ai_trading_agent_storage.repository_contracts import (
     BrokerAccountRecord,
     BrokerSyncRunRecord,
+    CreatePaperPortfolioSetupRequest,
 )
 from ai_trading_agent_storage.sql_repositories import (
     SqlAlchemyBrokerAccountRepository,
     SqlAlchemyBrokerStorageUnitOfWork,
     SqlAlchemyBrokerSyncRunRepository,
+    SqlAlchemyPaperPortfolioSetupRepository,
     StoragePersistenceBlockedError,
     ensure_persistence_allowed,
 )
@@ -123,3 +127,94 @@ def test_uow_health_and_noop_transaction_methods() -> None:
         assert uow.health().available
         uow.commit()
         uow.rollback()
+
+
+def test_paper_setup_roundtrip_decimal_and_latest() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyPaperPortfolioSetupRepository(conn, _report(True))
+        request = CreatePaperPortfolioSetupRequest(
+            setup_id="setup-1",
+            portfolio_name="Paper Start",
+            base_currency="eur",
+            starting_cash_amount=Decimal("1500.250000"),
+            status="active",
+            created_at=datetime.now(UTC),
+            explanation_nl="Eerste papieren portfolio-opzet.",
+        )
+
+        write_result = repo.create_setup(request)
+        assert write_result.accepted
+        by_id_result = repo.get_by_id("setup-1")
+        assert by_id_result.found
+        assert by_id_result.record is not None
+        assert isinstance(by_id_result.record.starting_cash_amount, Decimal)
+        assert by_id_result.record.starting_cash_amount == Decimal("1500.250000")
+
+        latest = repo.get_latest()
+        assert latest.found
+        assert latest.record is not None
+        assert latest.record.setup_id == "setup-1"
+
+
+def test_paper_setup_missing_record_returns_not_found() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyPaperPortfolioSetupRepository(conn, _report(True))
+        assert repo.get_by_id("missing").found is False
+        assert repo.get_latest().found is False
+
+
+def test_paper_setup_write_blocked_and_allowed_by_readiness() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        blocked = SqlAlchemyPaperPortfolioSetupRepository(conn, _report(False))
+        request = CreatePaperPortfolioSetupRequest(
+            setup_id="setup-blocked",
+            portfolio_name="Blocked",
+            base_currency="eur",
+            starting_cash_amount=Decimal("100.00"),
+            status="active",
+            created_at=datetime.now(UTC),
+            explanation_nl="Geblokkeerde schrijfactie test.",
+        )
+        with pytest.raises(StoragePersistenceBlockedError):
+            blocked.create_setup(request)
+
+        allowed = SqlAlchemyPaperPortfolioSetupRepository(conn, _report(True))
+        result = allowed.create_setup(request)
+        assert result.accepted is True
+
+
+def test_paper_setup_duplicate_and_invalid_writes_surface() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyPaperPortfolioSetupRepository(conn, _report(True))
+        base_request = CreatePaperPortfolioSetupRequest(
+            setup_id="setup-dup",
+            portfolio_name="Dup",
+            base_currency="eur",
+            starting_cash_amount=Decimal("100.00"),
+            status="active",
+            created_at=datetime.now(UTC),
+            explanation_nl="Duplicaat test.",
+        )
+        repo.create_setup(base_request)
+        with pytest.raises(IntegrityError):
+            repo.create_setup(base_request)
+
+        invalid_currency = CreatePaperPortfolioSetupRequest(
+            setup_id="setup-invalid",
+            portfolio_name="Invalid",
+            base_currency="usd",
+            starting_cash_amount=Decimal("100.00"),
+            status="active",
+            created_at=datetime.now(UTC),
+            explanation_nl="Constraint test.",
+        )
+        with pytest.raises(IntegrityError):
+            repo.create_setup(invalid_currency)
