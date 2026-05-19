@@ -12,6 +12,8 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "broker_sync_runs",
         "broker_position_snapshots",
         "broker_cash_snapshots",
+        "broker_execution_snapshots",
+        "broker_commission_snapshots",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
@@ -41,6 +43,9 @@ def test_timestamp_columns_are_timezone_aware() -> None:
         metadata.tables["broker_sync_runs"].c.completed_at,
         metadata.tables["broker_position_snapshots"].c.imported_at,
         metadata.tables["broker_cash_snapshots"].c.imported_at,
+        metadata.tables["broker_execution_snapshots"].c.imported_at,
+        metadata.tables["broker_execution_snapshots"].c.execution_time,
+        metadata.tables["broker_commission_snapshots"].c.imported_at,
     ]
     for column in columns:
         assert isinstance(column.type, DateTime)
@@ -49,8 +54,7 @@ def test_timestamp_columns_are_timezone_aware() -> None:
 
 def test_paper_cash_accounts_has_expected_setup_fk() -> None:
     setup_id_fk_targets = {
-        fk.target_fullname
-        for fk in metadata.tables["paper_cash_accounts"].c.setup_id.foreign_keys
+        fk.target_fullname for fk in metadata.tables["paper_cash_accounts"].c.setup_id.foreign_keys
     }
     assert setup_id_fk_targets == {"paper_portfolio_setups.setup_id"}
 
@@ -200,3 +204,71 @@ def test_broker_snapshot_foreign_keys() -> None:
         fk.target_fullname
         for fk in metadata.tables["broker_cash_snapshots"].c.broker_account_id.foreign_keys
     } == {"broker_accounts.broker_account_id"}
+
+
+def test_broker_execution_and_commission_tables_have_expected_columns() -> None:
+    assert set(metadata.tables["broker_execution_snapshots"].c.keys()) == {
+        "broker_execution_snapshot_id",
+        "broker_sync_run_id",
+        "broker_account_id",
+        "broker_system",
+        "imported_at",
+        "execution_time",
+        "execution_id",
+        "order_id",
+        "asset_identifier",
+        "asset_symbol",
+        "asset_type",
+        "side",
+        "quantity",
+        "price",
+        "currency",
+        "origin",
+        "source_reference_ids_json",
+        "explanation_nl",
+    }
+    assert set(metadata.tables["broker_commission_snapshots"].c.keys()) == {
+        "broker_commission_snapshot_id",
+        "broker_sync_run_id",
+        "broker_account_id",
+        "broker_system",
+        "imported_at",
+        "execution_id",
+        "commission_amount",
+        "currency",
+        "realized_pnl",
+        "source_reference_ids_json",
+        "explanation_nl",
+    }
+
+
+def test_broker_execution_and_commission_numeric_columns() -> None:
+    for col in [
+        metadata.tables["broker_execution_snapshots"].c.quantity,
+        metadata.tables["broker_execution_snapshots"].c.price,
+        metadata.tables["broker_commission_snapshots"].c.commission_amount,
+        metadata.tables["broker_commission_snapshots"].c.realized_pnl,
+    ]:
+        assert isinstance(col.type, Numeric)
+        assert col.type.precision == 20
+        assert col.type.scale == 6
+
+
+def test_broker_execution_and_commission_foreign_keys() -> None:
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_execution_snapshots"].c.broker_sync_run_id.foreign_keys
+    } == {"broker_sync_runs.broker_sync_run_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_execution_snapshots"].c.broker_account_id.foreign_keys
+    } == {"broker_accounts.broker_account_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_commission_snapshots"].c.broker_sync_run_id.foreign_keys
+    } == {"broker_sync_runs.broker_sync_run_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_commission_snapshots"].c.broker_account_id.foreign_keys
+    } == {"broker_accounts.broker_account_id"}
+    assert metadata.tables["broker_commission_snapshots"].c.execution_id.foreign_keys == set()

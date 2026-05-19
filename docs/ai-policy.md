@@ -62,3 +62,6 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI mag lege broker snapshot-tabellen niet interpreteren als succesvolle sync.
 - AI mag geen holdings of cash infereren uit lege schema-tabellen.
 - Broker-afhankelijke feiten moeten later verwijzen naar echte snapshot- en reconciliation-records.
+
+
+- Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.

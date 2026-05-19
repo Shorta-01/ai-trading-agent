@@ -144,3 +144,6 @@ Future implementation order:
 - Broker account, sync run, position snapshot en cash snapshot tabellen bestaan nu in storage schema-migraties.
 - Execution/commission/reconciliation/external activity tabellen blijven gepland voor volgende migraties.
 - De draaiende applicatie persisteert momenteel geen IBKR-data.
+
+
+- Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.

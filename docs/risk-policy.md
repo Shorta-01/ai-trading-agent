@@ -94,3 +94,6 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Het bestaan van broker snapshot-tabellen betekent niet dat broker sync actief is.
 - Lege broker snapshot-tabellen mogen nooit als succesvolle sync geïnterpreteerd worden.
 - Suggesties mogen niet vertrouwen op broker positie/cash-data tot echte sync en reconciliation bestaan.
+
+
+- Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.

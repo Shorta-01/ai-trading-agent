@@ -95,3 +95,28 @@ def test_broker_cash_snapshots_constraints_exist() -> None:
         "ck_broker_cash_snapshots_origin_not_empty",
         "ck_broker_cash_snapshots_explanation_nl_not_empty",
     }
+
+
+def test_broker_execution_snapshots_constraints_exist() -> None:
+    assert set(_check_constraints("broker_execution_snapshots")) == {
+        "ck_broker_execution_snapshots_broker_system_ibkr",
+        "ck_broker_execution_snapshots_execution_id_not_empty",
+        "ck_broker_execution_snapshots_asset_identifier_not_empty",
+        "ck_broker_execution_snapshots_asset_symbol_not_empty",
+        "ck_broker_execution_snapshots_asset_type_not_empty",
+        "ck_broker_execution_snapshots_side_not_empty",
+        "ck_broker_execution_snapshots_quantity_gt_0",
+        "ck_broker_execution_snapshots_price_gte_0",
+        "ck_broker_execution_snapshots_currency_not_empty",
+        "ck_broker_execution_snapshots_origin_not_empty",
+        "ck_broker_execution_snapshots_explanation_nl_not_empty",
+    }
+
+
+def test_broker_commission_snapshots_constraints_exist() -> None:
+    assert set(_check_constraints("broker_commission_snapshots")) == {
+        "ck_broker_commission_snapshots_broker_system_ibkr",
+        "ck_broker_commission_snapshots_execution_id_not_empty",
+        "ck_broker_commission_snapshots_currency_not_empty",
+        "ck_broker_commission_snapshots_explanation_nl_not_empty",
+    }

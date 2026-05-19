@@ -116,3 +116,6 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 ## Task 25B update
 - Broker snapshot schema slice 2 toegevoegd: `broker_position_snapshots` en `broker_cash_snapshots`.
 - Er is nog geen IBKR-integratie, geen runtime persistence en geen app DB-writepad actief.
+
+
+- Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.

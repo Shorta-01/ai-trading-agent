@@ -124,3 +124,6 @@ This PR only designs the schema and does not implement migration, persistence ru
 - Storage-schema foundation bevat nu broker account/sync run/position snapshot/cash snapshot tabellen.
 - API en worker zijn nog niet aan DB-writes gekoppeld.
 - Repository-implementaties volgen later.
+
+
+- Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.

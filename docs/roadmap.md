@@ -163,3 +163,6 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 3. Repository-interfaces voor broker snapshots.
 4. IBKR settings/status velden.
 5. IBKR bootstrap preview.
+
+
+- Task 25C update: broker execution/commission snapshot schema foundation exists (slice 3), imported facts only; no runtime IBKR sync wiring, no order transmission, reconciliation tables remain future work.
