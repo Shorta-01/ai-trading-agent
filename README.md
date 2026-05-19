@@ -135,3 +135,9 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - Migration readiness contracts bestaan nu in het storage package met verwachte revisies `0001` t/m `0006`.
 - Dit is alleen offline readiness-inventaris; er is nog geen echte database-readiness check.
 - Runtime persistence bestaat nog niet en writes blijven geblokkeerd.
+
+
+## Task 28 update
+- Online Alembic migration readiness check bestaat nu in het storage package via een expliciet aangeleverde SQLAlchemy `Connection`.
+- Deze check leest alleen `alembic_version`, maakt geen app-engine/sessie aan en leest geen environment-variabelen.
+- Er is nog geen app DB-wiring of runtime persistence in API/worker.

@@ -146,3 +146,9 @@ This PR only designs the schema and does not implement migration, persistence ru
 - API en worker mogen niet schrijven tenzij de readiness gate persistence expliciet toestaat.
 - In de huidige fase blijft writes-toestemming uit omdat geen database verbonden is en geen online migratiecheck bestaat.
 - Toekomstige SQL repository-implementaties moeten afhankelijk zijn van deze readiness status.
+
+
+## Task 28 readiness gate
+- Voor toekomstige repository writes geldt een database-readiness gate: alleen online status `migrations_current` op revisie `0006` kan writes vrijgeven.
+- API/worker zijn in deze taak niet aan DB gekoppeld; er is dus nog geen runtime writepad.
+- Domain en portfolio packages blijven database-vrij.

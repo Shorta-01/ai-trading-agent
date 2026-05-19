@@ -81,3 +81,11 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Dit bewijst niet dat een echte database gemigreerd is.
 - Runtime writes blijven geblokkeerd totdat een toekomstige online migratiecheck bestaat.
 - Er is nog steeds geen app-runtime databaseverbinding.
+
+
+## Task 28: online migration readiness check
+- Online readiness helpers bestaan nu met een expliciete SQLAlchemy `Connection` als vereiste input.
+- De check leest alleen `SELECT version_num FROM alembic_version`.
+- De check maakt geen engine aan, leest geen env vars, draait geen migraties en schrijft geen applicatiedata.
+- Laatste verwachte revisie blijft `0006`. Alleen DB-revisie `0006` kan `persistence_allowed=True` geven in het readiness report.
+- Er zijn nog geen concrete repositories en geen app-runtime DB-wiring.
