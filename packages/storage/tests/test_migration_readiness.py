@@ -21,7 +21,7 @@ def test_migration_readiness_imports_and_interfaces() -> None:
 def test_expected_revisions_match_known_migrations() -> None:
     revisions = expected_migration_revisions()
 
-    assert len(revisions) == 9
+    assert len(revisions) == 10
     assert [item.revision_id for item in revisions] == [
         "0001",
         "0002",
@@ -32,8 +32,9 @@ def test_expected_revisions_match_known_migrations() -> None:
         "0007",
         "0008",
         "0009",
+        "0010",
     ]
-    assert revisions[-1].revision_id == "0009"
+    assert revisions[-1].revision_id == "0010"
 
     migration_files = {path.name for path in Path("alembic/versions").glob("*.py")}
     for item in revisions:
@@ -47,8 +48,8 @@ def test_inventory_contract_is_deterministic_and_valid() -> None:
 
     assert isinstance(inventory, MigrationInventory)
     assert isinstance(inventory.expected_revisions, tuple)
-    assert inventory.revision_count == 9
-    assert inventory.latest_expected_revision_id == "0009"
+    assert inventory.revision_count == 10
+    assert inventory.latest_expected_revision_id == "0010"
     assert inventory.inventory_valid is True
 
 
@@ -73,7 +74,7 @@ def test_offline_inventory_report_stays_offline_and_blocking() -> None:
     assert report.migrations_checked_against_database is False
     assert report.persistence_allowed is False
     assert report.blocks_runtime_writes is True
-    assert report.latest_expected_revision_id == "0009"
+    assert report.latest_expected_revision_id == "0010"
     assert report.status.value == "offline_inventory_valid"
     assert "offline" in report.explanation_nl.lower()
     assert "geen bewijs" in report.explanation_nl.lower()

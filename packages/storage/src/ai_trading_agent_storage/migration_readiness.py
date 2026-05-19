@@ -130,6 +130,16 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Evidence ledger en eventsignalen",
         description_nl="Opslagfundament voor evidence-items, event-signalen en auditlinks.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0010",
+        previous_revision_id="0009",
+        filename="0010_research_source_archive.py",
+        label_nl="Research Source Archive opslagfundament",
+        description_nl=(
+            "Opslagfundament voor research-bronnen, documentsets, classificaties en "
+            "verwerkingsstatus."
+        ),
+    ),
 )
 
 

@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_nine_revision_files_exist_with_expected_names() -> None:
+def test_exactly_ten_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -45,6 +45,7 @@ def test_exactly_nine_revision_files_exist_with_expected_names() -> None:
         "0007_system_events.py",
         "0008_trading_settings.py",
         "0009_evidence_ledger.py",
+        "0010_research_source_archive.py",
     ]
 
 
@@ -235,3 +236,40 @@ def test_0006_revision_content_and_safety_guards() -> None:
     for token in ["domain", "portfolio", "api", "worker", "ibkr"]:
         assert f"import {token}" not in normalized
         assert f"from {token} import" not in normalized
+
+
+def test_0010_research_archive_migration_has_tables_and_downgrade_order() -> None:
+    revision_path = ROOT / "alembic" / "versions" / "0010_research_source_archive.py"
+    content = revision_path.read_text(encoding="utf-8")
+
+    assert 'revision = "0010_research_source_archive"' in content
+    assert 'down_revision = "0009_evidence_ledger"' in content
+
+    table_names = [
+        "research_sources",
+        "research_uploaded_file_metadata",
+        "research_url_metadata",
+        "research_user_notes",
+        "research_document_sets",
+        "research_document_set_members",
+        "research_document_classifications",
+        "research_source_asset_links",
+        "research_source_processing_status",
+    ]
+    for table_name in table_names:
+        assert f'"{table_name}"' in content
+
+    drop_order = [
+        "research_source_processing_status",
+        "research_source_asset_links",
+        "research_document_classifications",
+        "research_document_set_members",
+        "research_document_sets",
+        "research_user_notes",
+        "research_url_metadata",
+        "research_uploaded_file_metadata",
+        "research_sources",
+    ]
+    drop_positions = [content.find(f'op.drop_table("{name}")') for name in drop_order]
+    assert all(position >= 0 for position in drop_positions)
+    assert drop_positions == sorted(drop_positions)
