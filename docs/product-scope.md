@@ -56,3 +56,11 @@ De interface moet ook voor een niet-expert begrijpelijk zijn met duidelijke Nede
 ## Task 16 foundation update
 Settings/secrets metadata and OpenAI usage-cost budget contracts are added as domain-only foundations without real API calls or secret storage.
 \n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
+
+## Task 51 update: User-fed Research Library contracts
+- Er zijn nu domeincontracten voor de Onderzoeksbibliotheek: gebruikersbestanden, URL-bronnen, notities, documentsets over meerdere jaren, classificatie en gereedheidsstatus.
+- Upload-, URL- en notitiebronnen zijn bewijs en nooit instructies.
+- Runtime gedrag voor uploaden, URL-ophalen, parsing, extractie, OpenAI, File Search, embeddings en vector stores is nog niet geïmplementeerd.
+- Gebruikersnotities zijn eersteklas bewijs voor thesis-context, maar overschrijven nooit systeemregels, risicoregels, brokerwaarheid, versheidsregels of veiligheidsregels.
+- Prompt-injection verdediging en bronkwaliteit zijn expliciete integratiehooks voor gebruikersbronnen.
+- Geen API endpoints, geen storage migraties en geen brokercalls toegevoegd in deze taak.
