@@ -17,6 +17,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "broker_reconciliation_reports",
         "broker_reconciliation_differences",
         "external_broker_activities",
+        "system_events",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
@@ -52,6 +53,10 @@ def test_timestamp_columns_are_timezone_aware() -> None:
         metadata.tables["broker_reconciliation_reports"].c.checked_at,
         metadata.tables["broker_reconciliation_differences"].c.detected_at,
         metadata.tables["external_broker_activities"].c.detected_at,
+        metadata.tables["system_events"].c.created_at,
+        metadata.tables["system_events"].c.resolved_at,
+        metadata.tables["system_events"].c.archived_at,
+        metadata.tables["system_events"].c.copied_for_codex_at,
     ]
     for column in columns:
         assert isinstance(column.type, DateTime)

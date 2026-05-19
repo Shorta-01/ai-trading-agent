@@ -208,6 +208,68 @@ class ExternalBrokerActivityRecord:
     audit_event_ids_json: tuple[str, ...] | None
 
 
+
+
+@dataclass(frozen=True)
+class SystemEventRecord:
+    system_event_id: str
+    created_at: datetime
+    severity: str
+    category: str
+    source_service: str
+    source_component: str
+    event_code: str
+    title_nl: str
+    message_nl: str
+    help_nl: str
+    technical_summary: str | None
+    redacted_details_json: dict[str, str] | None
+    stack_trace_redacted: str | None
+    related_entity_type: str | None
+    related_entity_id: str | None
+    blocks_suggestions: bool
+    blocks_writes: bool
+    blocks_ai_explanation: bool
+    status: str
+    resolved_at: datetime | None
+    archived_at: datetime | None
+    copied_for_codex_at: datetime | None
+    explanation_nl: str
+
+
+@dataclass(frozen=True)
+class CreateSystemEventRequest:
+    system_event_id: str
+    created_at: datetime
+    severity: str
+    category: str
+    source_service: str
+    source_component: str
+    event_code: str
+    title_nl: str
+    message_nl: str
+    help_nl: str
+    technical_summary: str | None
+    redacted_details_json: dict[str, str] | None
+    stack_trace_redacted: str | None
+    related_entity_type: str | None
+    related_entity_id: str | None
+    blocks_suggestions: bool
+    blocks_writes: bool
+    blocks_ai_explanation: bool
+    status: str
+    explanation_nl: str
+
+
+class SystemEventRepositoryProtocol(Protocol):
+    def create_event(self, request: CreateSystemEventRequest) -> StorageWriteResult:
+        ...
+
+    def get_by_id(self, system_event_id: str) -> StorageReadResult[SystemEventRecord]:
+        ...
+
+    def list_open_events(self) -> StorageListResult[SystemEventRecord]:
+        ...
 class BrokerAccountRepository(Protocol):
     def get_by_id(self, broker_account_id: str) -> StorageReadResult[BrokerAccountRecord]:
         ...

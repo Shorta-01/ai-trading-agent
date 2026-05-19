@@ -16,6 +16,9 @@ from sqlalchemy import (
     Table,
     Text,
 )
+from sqlalchemy import (
+    false as sa_false,
+)
 
 MONEY_NUMERIC = Numeric(precision=20, scale=6)
 
@@ -110,6 +113,46 @@ audit_events = Table(
     CheckConstraint("actor_type <> ''", name="ck_audit_events_actor_type_not_empty"),
     CheckConstraint("entity_kind <> ''", name="ck_audit_events_entity_kind_not_empty"),
     CheckConstraint("summary_nl <> ''", name="ck_audit_events_summary_nl_not_empty"),
+)
+
+
+
+system_events = Table(
+    "system_events",
+    metadata,
+    Column("system_event_id", Text, primary_key=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("severity", Text, nullable=False),
+    Column("category", Text, nullable=False),
+    Column("source_service", Text, nullable=False),
+    Column("source_component", Text, nullable=False),
+    Column("event_code", Text, nullable=False),
+    Column("title_nl", Text, nullable=False),
+    Column("message_nl", Text, nullable=False),
+    Column("help_nl", Text, nullable=False),
+    Column("technical_summary", Text, nullable=True),
+    Column("redacted_details_json", JSON, nullable=True),
+    Column("stack_trace_redacted", Text, nullable=True),
+    Column("related_entity_type", Text, nullable=True),
+    Column("related_entity_id", Text, nullable=True),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_writes", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_ai_explanation", Boolean, nullable=False, server_default=sa_false()),
+    Column("status", Text, nullable=False),
+    Column("resolved_at", DateTime(timezone=True), nullable=True),
+    Column("archived_at", DateTime(timezone=True), nullable=True),
+    Column("copied_for_codex_at", DateTime(timezone=True), nullable=True),
+    Column("explanation_nl", Text, nullable=False),
+    CheckConstraint("severity <> ''", name="ck_system_events_severity_not_empty"),
+    CheckConstraint("category <> ''", name="ck_system_events_category_not_empty"),
+    CheckConstraint("source_service <> ''", name="ck_system_events_source_service_not_empty"),
+    CheckConstraint("source_component <> ''", name="ck_system_events_source_component_not_empty"),
+    CheckConstraint("event_code <> ''", name="ck_system_events_event_code_not_empty"),
+    CheckConstraint("title_nl <> ''", name="ck_system_events_title_nl_not_empty"),
+    CheckConstraint("message_nl <> ''", name="ck_system_events_message_nl_not_empty"),
+    CheckConstraint("help_nl <> ''", name="ck_system_events_help_nl_not_empty"),
+    CheckConstraint("status <> ''", name="ck_system_events_status_not_empty"),
+    CheckConstraint("explanation_nl <> ''", name="ck_system_events_explanation_nl_not_empty"),
 )
 
 broker_accounts = Table(

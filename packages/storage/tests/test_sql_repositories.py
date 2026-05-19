@@ -14,12 +14,14 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerAccountRecord,
     BrokerSyncRunRecord,
     CreatePaperPortfolioSetupRequest,
+    CreateSystemEventRequest,
 )
 from ai_trading_agent_storage.sql_repositories import (
     SqlAlchemyBrokerAccountRepository,
     SqlAlchemyBrokerStorageUnitOfWork,
     SqlAlchemyBrokerSyncRunRepository,
     SqlAlchemyPaperPortfolioSetupRepository,
+    SqlAlchemySystemEventRepository,
     StoragePersistenceBlockedError,
     ensure_persistence_allowed,
 )
@@ -35,8 +37,8 @@ def _report(allowed: bool) -> MigrationReadinessReport:
         database_connected=allowed,
         migrations_checked_against_database=allowed,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0006",
-        database_revision_id="0006" if allowed else None,
+        latest_expected_revision_id="0007",
+        database_revision_id="0007" if allowed else None,
         persistence_allowed=allowed,
         blocks_runtime_writes=(not allowed),
         explanation_nl="test",
@@ -218,3 +220,84 @@ def test_paper_setup_duplicate_and_invalid_writes_surface() -> None:
         )
         with pytest.raises(IntegrityError):
             repo.create_setup(invalid_currency)
+
+
+def test_system_event_create_read_list_and_flags() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemySystemEventRepository(conn, _report(True))
+        request = CreateSystemEventRequest(
+            system_event_id="se-1",
+            created_at=datetime.now(UTC),
+            severity="error",
+            category="storage",
+            source_service="api",
+            source_component="startup",
+            event_code="storage_blocked",
+            title_nl="Opslag geblokkeerd",
+            message_nl="Schrijven is geblokkeerd.",
+            help_nl="Controleer migraties.",
+            technical_summary="alembic mismatch",
+            redacted_details_json={"database_url": "***"},
+            stack_trace_redacted="trace",
+            related_entity_type="migration",
+            related_entity_id="0007",
+            blocks_suggestions=True,
+            blocks_writes=True,
+            blocks_ai_explanation=False,
+            status="open",
+            explanation_nl="Systeemmelding geregistreerd.",
+        )
+        repo.create_event(request)
+        by_id = repo.get_by_id("se-1")
+        assert by_id.found
+        assert by_id.record is not None
+        assert by_id.record.severity == "error"
+        assert by_id.record.category == "storage"
+        assert by_id.record.status == "open"
+        assert by_id.record.blocks_suggestions is True
+        assert by_id.record.blocks_writes is True
+        assert by_id.record.redacted_details_json == {"database_url": "***"}
+
+        second = CreateSystemEventRequest(
+            **{**request.__dict__, "system_event_id": "se-2", "status": "resolved"}
+        )
+        repo.create_event(second)
+        open_events = repo.list_open_events()
+        assert [item.system_event_id for item in open_events.records] == ["se-1"]
+
+
+def test_system_event_write_blocked_and_missing_and_no_delete() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        blocked_repo = SqlAlchemySystemEventRepository(conn, _report(False))
+        request = CreateSystemEventRequest(
+            system_event_id="se-blocked",
+            created_at=datetime.now(UTC),
+            severity="warning",
+            category="api",
+            source_service="api",
+            source_component="guard",
+            event_code="blocked",
+            title_nl="Geblokkeerd",
+            message_nl="Geen write",
+            help_nl="Wacht",
+            technical_summary=None,
+            redacted_details_json=None,
+            stack_trace_redacted=None,
+            related_entity_type=None,
+            related_entity_id=None,
+            blocks_suggestions=False,
+            blocks_writes=False,
+            blocks_ai_explanation=False,
+            status="open",
+            explanation_nl="Test",
+        )
+        with pytest.raises(StoragePersistenceBlockedError):
+            blocked_repo.create_event(request)
+
+        allowed_repo = SqlAlchemySystemEventRepository(conn, _report(True))
+        assert allowed_repo.get_by_id("missing").found is False
+        assert hasattr(allowed_repo, "delete") is False

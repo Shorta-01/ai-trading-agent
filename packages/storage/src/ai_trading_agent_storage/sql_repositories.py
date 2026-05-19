@@ -18,6 +18,7 @@ from ai_trading_agent_storage.metadata import (
     broker_sync_runs,
     external_broker_activities,
     paper_portfolio_setups,
+    system_events,
 )
 from ai_trading_agent_storage.migration_readiness import (
     MigrationReadinessReport,
@@ -33,12 +34,14 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerReconciliationReportRecord,
     BrokerSyncRunRecord,
     CreatePaperPortfolioSetupRequest,
+    CreateSystemEventRequest,
     ExternalBrokerActivityRecord,
     PaperPortfolioSetupRecord,
     RepositoryHealthStatus,
     StorageListResult,
     StorageReadResult,
     StorageWriteResult,
+    SystemEventRecord,
 )
 
 
@@ -576,3 +579,73 @@ class SqlAlchemyBrokerStorageUnitOfWork:
 
     def rollback(self) -> None:
         return None
+
+
+class SqlAlchemySystemEventRepository(_Base):
+    def create_event(self, request: CreateSystemEventRequest) -> StorageWriteResult:
+        self._insert(
+            system_events,
+            {
+                "system_event_id": request.system_event_id,
+                "created_at": request.created_at,
+                "severity": request.severity,
+                "category": request.category,
+                "source_service": request.source_service,
+                "source_component": request.source_component,
+                "event_code": request.event_code,
+                "title_nl": request.title_nl,
+                "message_nl": request.message_nl,
+                "help_nl": request.help_nl,
+                "technical_summary": request.technical_summary,
+                "redacted_details_json": request.redacted_details_json,
+                "stack_trace_redacted": request.stack_trace_redacted,
+                "related_entity_type": request.related_entity_type,
+                "related_entity_id": request.related_entity_id,
+                "blocks_suggestions": request.blocks_suggestions,
+                "blocks_writes": request.blocks_writes,
+                "blocks_ai_explanation": request.blocks_ai_explanation,
+                "status": request.status,
+                "resolved_at": None,
+                "archived_at": None,
+                "copied_for_codex_at": None,
+                "explanation_nl": request.explanation_nl,
+            },
+        )
+        return StorageWriteResult(
+            True,
+            request.system_event_id,
+            system_events.name,
+            True,
+            "Systeemmelding opgeslagen.",
+        )
+
+    def get_by_id(self, system_event_id: str) -> StorageReadResult[SystemEventRecord]:
+        row = _read_one_by_column(
+            self._connection,
+            system_events,
+            "system_event_id",
+            system_event_id,
+        )
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                system_events.name,
+                "Systeemmelding niet gevonden.",
+            )
+        return StorageReadResult(
+            True,
+            SystemEventRecord(**dict(row)),
+            system_events.name,
+            "Systeemmelding gevonden.",
+        )
+
+    def list_open_events(self) -> StorageListResult[SystemEventRecord]:
+        rows = self._connection.execute(
+            select(system_events).where(system_events.c.status == "open")
+        ).mappings().all()
+        return StorageListResult(
+            records=tuple(SystemEventRecord(**dict(row)) for row in rows),
+            table_name=system_events.name,
+            explanation_nl="Open systeemmeldingen opgehaald.",
+        )

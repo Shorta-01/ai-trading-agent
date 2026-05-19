@@ -24,6 +24,7 @@ from ai_trading_agent_storage.metadata import (
     metadata,
     paper_cash_accounts,
     paper_portfolio_setups,
+    system_events,
 )
 from ai_trading_agent_storage.migration_readiness import (
     MigrationInventory,
@@ -55,6 +56,7 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerSyncRunRecord,
     BrokerSyncRunRepository,
     CreatePaperPortfolioSetupRequest,
+    CreateSystemEventRequest,
     ExternalBrokerActivityRecord,
     ExternalBrokerActivityRepository,
     PaperPortfolioSetupRecord,
@@ -63,6 +65,8 @@ from ai_trading_agent_storage.repository_contracts import (
     StorageListResult,
     StorageReadResult,
     StorageWriteResult,
+    SystemEventRecord,
+    SystemEventRepositoryProtocol,
     build_repository_health_not_connected,
     repository_interfaces_are_defined,
 )
@@ -79,6 +83,7 @@ from ai_trading_agent_storage.sql_repositories import (
     SqlAlchemyBrokerSyncRunRepository,
     SqlAlchemyExternalBrokerActivityRepository,
     SqlAlchemyPaperPortfolioSetupRepository,
+    SqlAlchemySystemEventRepository,
     StoragePersistenceBlockedError,
     ensure_persistence_allowed,
 )
@@ -116,6 +121,11 @@ __all__ = [
     "BrokerStorageUnitOfWork",
     "BrokerSyncRunRecord",
     "BrokerSyncRunRepository",
+    "CreateSystemEventRequest",
+    "SystemEventRecord",
+    "SystemEventRepositoryProtocol",
+    "SqlAlchemySystemEventRepository",
+    "system_events",
     "CreatePaperPortfolioSetupRequest",
     "ExternalBrokerActivityRecord",
     "ExternalBrokerActivityRepository",
