@@ -31,3 +31,11 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Safe default remains: no storage configured, no connection attempt, writes blocked.
 - This task does not add database runtime wiring, engine/session creation, or persistence.
 - Runtime readiness and write-path implementation will be added in a later task.
+
+## Task 33 worker storage readiness helper
+- Worker heeft nu een expliciete read-only storage readiness helper (`build_worker_storage_readiness`).
+- Bij startup gebeurt geen databaseverbinding.
+- Er bestaat geen globale SQLAlchemy engine/session/sessionmaker in worker runtime.
+- Runtime persistence is nog niet geïmplementeerd.
+- Toekomstige worker-jobs moeten deze readiness eerst controleren voor storage writes.
+- Writes blijven geblokkeerd tenzij migration readiness veilig is voor writes.

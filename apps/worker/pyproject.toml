@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Worker skeleton for Portfolio Outlook Manager"
 requires-python = ">=3.12"
 dependencies = [
+  "ai-trading-agent-storage>=0.1.0",
   "pydantic>=2.9.0",
   "pydantic-settings>=2.6.0",
+  "sqlalchemy>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -16,7 +18,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "../../packages/storage/src"]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -29,4 +31,4 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-mypy_path = "src"
+mypy_path = "src:../../packages/storage/src"
