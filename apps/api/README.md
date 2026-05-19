@@ -70,3 +70,12 @@ Eigenschappen:
 - De API gebruikt een expliciete tijdelijke checked connection per request (geen startup connectie).
 - Er is geen globale engine/session/sessionmaker en geen databaseconnectie bij import of startup.
 - Bij blokkades geeft de endpoint een veilige, eenvoudige Nederlandse foutmelding.
+
+## Task 38 API system event recorder helper
+- De API bevat nu een helper om systeemmeldingen veilig op te slaan via het storage package.
+- Deze helper is strikt storage-readiness-gated: alleen write bij storage aan, database-url gezet en veilige migratie-readiness.
+- De helper gebruikt per call een expliciete checked connection (`require_writable=True`).
+- Er is nog steeds geen startup databaseconnectie, geen globale engine/session en geen sessionmaker.
+- Er zijn nog geen GUI-overzichten, event-list endpoints, archive/resolve routes of hard delete gedrag toegevoegd.
+- Er is nog geen globale exception middleware en geen automatische logging door de hele API.
+- Er is geen broker/IBKR/OpenAI-gedrag toegevoegd in deze taak.
