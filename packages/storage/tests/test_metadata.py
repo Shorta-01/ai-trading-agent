@@ -20,6 +20,15 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "system_events",
         "trading_settings",
         "evidence_items",
+        "research_sources",
+        "research_uploaded_file_metadata",
+        "research_url_metadata",
+        "research_user_notes",
+        "research_document_sets",
+        "research_document_set_members",
+        "research_document_classifications",
+        "research_source_asset_links",
+        "research_source_processing_status",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
