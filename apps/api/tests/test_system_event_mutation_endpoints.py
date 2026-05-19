@@ -18,7 +18,10 @@ def test_resolve_storage_disabled_no_provider(monkeypatch) -> None:
             called['provider'] = True
 
     monkeypatch.setattr(status_routes.settings, 'storage', StorageSettings(enabled=False))
-    monkeypatch.setattr('portfolio_outlook_api.system_event_mutations.StorageConnectionProvider', FakeProvider)
+    monkeypatch.setattr(
+        'portfolio_outlook_api.system_event_mutations.StorageConnectionProvider',
+        FakeProvider,
+    )
 
     res = client.post('/system/events/evt-1/resolve', json={'reason_nl': 'klaar'})
     assert res.status_code == 409
@@ -33,8 +36,15 @@ def test_archive_missing_database_url_no_provider(monkeypatch) -> None:
         def __init__(self, _settings) -> None:
             called['provider'] = True
 
-    monkeypatch.setattr(status_routes.settings, 'storage', StorageSettings(enabled=True, database_url='  '))
-    monkeypatch.setattr('portfolio_outlook_api.system_event_mutations.StorageConnectionProvider', FakeProvider)
+    monkeypatch.setattr(
+        status_routes.settings,
+        'storage',
+        StorageSettings(enabled=True, database_url='  '),
+    )
+    monkeypatch.setattr(
+        'portfolio_outlook_api.system_event_mutations.StorageConnectionProvider',
+        FakeProvider,
+    )
 
     res = client.post('/system/events/evt-1/archive', json={})
     assert res.status_code == 409
@@ -53,8 +63,15 @@ def test_resolve_not_ready_blocks_write(monkeypatch) -> None:
             raise StorageConnectionNotReadyError('not ready')
             yield
 
-    monkeypatch.setattr(status_routes.settings, 'storage', StorageSettings(enabled=True, database_url='postgresql://x/y'))
-    monkeypatch.setattr('portfolio_outlook_api.system_event_mutations.StorageConnectionProvider', FakeProvider)
+    monkeypatch.setattr(
+        status_routes.settings,
+        'storage',
+        StorageSettings(enabled=True, database_url='postgresql://x/y'),
+    )
+    monkeypatch.setattr(
+        'portfolio_outlook_api.system_event_mutations.StorageConnectionProvider',
+        FakeProvider,
+    )
 
     res = client.post('/system/events/evt-1/resolve', json={})
     assert res.status_code == 409
@@ -95,9 +112,19 @@ def test_mutation_success_and_not_found(monkeypatch) -> None:
             captured['archived_id'] = system_event_id
             return type('WriteResult', (), {'accepted': False})()
 
-    monkeypatch.setattr(status_routes.settings, 'storage', StorageSettings(enabled=True, database_url='postgresql://user:pass@db/app'))
-    monkeypatch.setattr('portfolio_outlook_api.system_event_mutations.StorageConnectionProvider', FakeProvider)
-    monkeypatch.setattr('portfolio_outlook_api.system_event_mutations.SqlAlchemySystemEventRepository', FakeRepo)
+    monkeypatch.setattr(
+        status_routes.settings,
+        'storage',
+        StorageSettings(enabled=True, database_url='postgresql://user:pass@db/app'),
+    )
+    monkeypatch.setattr(
+        'portfolio_outlook_api.system_event_mutations.StorageConnectionProvider',
+        FakeProvider,
+    )
+    monkeypatch.setattr(
+        'portfolio_outlook_api.system_event_mutations.SqlAlchemySystemEventRepository',
+        FakeRepo,
+    )
 
     ok = client.post('/system/events/evt-ok/resolve', json={'reason_nl': 'Handmatig opgelost'})
     assert ok.status_code == 200
