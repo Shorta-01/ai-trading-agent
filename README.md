@@ -141,3 +141,6 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - Online Alembic migration readiness check bestaat nu in het storage package via een expliciet aangeleverde SQLAlchemy `Connection`.
 - Deze check leest alleen `alembic_version`, maakt geen app-engine/sessie aan en leest geen environment-variabelen.
 - Er is nog geen app DB-wiring of runtime persistence in API/worker.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.

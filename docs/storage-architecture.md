@@ -174,3 +174,6 @@ Future implementation order:
 - Offline inventory controleert alleen verwachte migratiereeks/bestanden; online check valideert de echte DB-revisie via expliciete `Connection`.
 - Toekomstige repository-implementaties moeten deze readiness-gate respecteren vóór writes.
 - De app zelf heeft nog geen runtime DB-wiring.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.

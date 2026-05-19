@@ -57,6 +57,17 @@ from ai_trading_agent_storage.repository_contracts import (
     build_repository_health_not_connected,
     repository_interfaces_are_defined,
 )
+from ai_trading_agent_storage.sql_repositories import (
+    SqlAlchemyBrokerAccountRepository,
+    SqlAlchemyBrokerReconciliationRepository,
+    SqlAlchemyBrokerSnapshotRepository,
+    SqlAlchemyBrokerStorageUnitOfWork,
+    SqlAlchemyBrokerSyncRunRepository,
+    SqlAlchemyExternalBrokerActivityRepository,
+    StoragePersistenceBlockedError,
+    ensure_persistence_allowed,
+)
+
 from ai_trading_agent_storage.settings import (
     DatabaseConnectionSettings,
     build_database_connection_settings,
@@ -98,6 +109,14 @@ __all__ = [
     "StorageListResult",
     "StorageReadResult",
     "StorageWriteResult",
+    "ensure_persistence_allowed",
+    "StoragePersistenceBlockedError",
+    "SqlAlchemyExternalBrokerActivityRepository",
+    "SqlAlchemyBrokerSyncRunRepository",
+    "SqlAlchemyBrokerStorageUnitOfWork",
+    "SqlAlchemyBrokerSnapshotRepository",
+    "SqlAlchemyBrokerReconciliationRepository",
+    "SqlAlchemyBrokerAccountRepository",
     "build_repository_health_not_connected",
     "build_database_connection_settings",
     "build_database_not_connected_readiness_report",
