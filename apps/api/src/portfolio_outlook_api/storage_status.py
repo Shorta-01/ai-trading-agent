@@ -1,11 +1,10 @@
-from pydantic import BaseModel
-
 from ai_trading_agent_storage import (
     MigrationReadinessStatus,
     build_database_not_connected_readiness_report,
     build_expected_migration_inventory,
     migration_readiness_is_safe_to_write,
 )
+from pydantic import BaseModel
 
 
 class StorageBackendStatusCard(BaseModel):
@@ -113,7 +112,9 @@ def build_storage_status() -> StorageStatusResponse:
         ),
         backends=[
             StorageBackendStatusCard(
-                label_nl="PostgreSQL", status_nl="Niet verbonden, writes geblokkeerd", mode="blocked"
+                label_nl="PostgreSQL",
+                status_nl="Niet verbonden, writes geblokkeerd",
+                mode="blocked",
             ),
             StorageBackendStatusCard(
                 label_nl="TimescaleDB", status_nl="Gepland, niet ingesteld", mode="not_configured"
