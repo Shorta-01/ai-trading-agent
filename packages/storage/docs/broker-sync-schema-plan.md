@@ -384,3 +384,24 @@ Waarom opgesplitst:
 - audit- en source-of-truth guardrails blijven expliciet per stap.
 
 \n\n## Task 25D update (2026-05-19)\n- Added broker_reconciliation_reports and broker_reconciliation_differences in storage schema slice 4.\n- Scope is status/difference storage only; no reconciliation engine, IBKR integration, runtime persistence, repositories, API/worker DB wiring, or order transmission yet.\n- external_broker_activities remains planned for a later migration.
+
+
+## Task 25E implementation status (2026-05-19)
+Implemented migrations:
+- 0002: `broker_accounts`, `broker_sync_runs`
+- 0003: `broker_position_snapshots`, `broker_cash_snapshots`
+- 0004: `broker_execution_snapshots`, `broker_commission_snapshots`
+- 0005: `broker_reconciliation_reports`, `broker_reconciliation_differences`
+- 0006: `external_broker_activities`
+
+Status:
+- Planned broker sync schema foundation is now structurally complete.
+
+Future work remains:
+- repository interfaces
+- database readiness checks
+- IBKR settings/status fields
+- IBKR bootstrap preview
+- broker snapshot import adapter skeleton
+- reconciliation engine foundation
+- external broker activity detection logic

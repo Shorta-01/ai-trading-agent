@@ -417,3 +417,30 @@ broker_reconciliation_differences = Table(
     CheckConstraint("summary_nl <> ''", name="ck_brd_summary_nl_not_empty"),
     CheckConstraint("help_nl <> ''", name="ck_brd_help_nl_not_empty"),
 )
+
+external_broker_activities = Table(
+    "external_broker_activities",
+    metadata,
+    Column("external_broker_activity_id", Text, primary_key=True),
+    Column(
+        "broker_account_id", Text, ForeignKey("broker_accounts.broker_account_id"), nullable=False
+    ),
+    Column("broker_system", Text, nullable=False),
+    Column("detected_at", DateTime(timezone=True), nullable=False),
+    Column("origin", Text, nullable=False),
+    Column("data_kind", Text, nullable=False),
+    Column("related_execution_id", Text, nullable=True),
+    Column("related_asset_identifier", Text, nullable=True),
+    Column("summary_nl", Text, nullable=False),
+    Column("help_nl", Text, nullable=False),
+    Column("source_reference_ids_json", JSON, nullable=True),
+    Column("audit_event_ids_json", JSON, nullable=True),
+    CheckConstraint(
+        "broker_system = 'ibkr'",
+        name="ck_external_broker_activities_broker_system_ibkr",
+    ),
+    CheckConstraint("origin <> ''", name="ck_external_broker_activities_origin_not_empty"),
+    CheckConstraint("data_kind <> ''", name="ck_external_broker_activities_data_kind_not_empty"),
+    CheckConstraint("summary_nl <> ''", name="ck_external_broker_activities_summary_nl_not_empty"),
+    CheckConstraint("help_nl <> ''", name="ck_external_broker_activities_help_nl_not_empty"),
+)

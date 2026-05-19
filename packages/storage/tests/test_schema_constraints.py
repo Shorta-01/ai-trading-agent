@@ -143,3 +143,13 @@ def test_broker_reconciliation_differences_constraints_exist() -> None:
         "ck_brd_summary_nl_not_empty",
         "ck_brd_help_nl_not_empty",
     }
+
+
+def test_external_broker_activities_constraints_exist() -> None:
+    assert set(_check_constraints("external_broker_activities")) == {
+        "ck_external_broker_activities_broker_system_ibkr",
+        "ck_external_broker_activities_origin_not_empty",
+        "ck_external_broker_activities_data_kind_not_empty",
+        "ck_external_broker_activities_summary_nl_not_empty",
+        "ck_external_broker_activities_help_nl_not_empty",
+    }
