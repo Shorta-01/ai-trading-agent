@@ -19,6 +19,18 @@ from ai_trading_agent_storage.metadata import (
     paper_cash_accounts,
     paper_portfolio_setups,
 )
+from ai_trading_agent_storage.migration_readiness import (
+    MigrationInventory,
+    MigrationReadinessReport,
+    MigrationReadinessStatus,
+    MigrationRevisionInfo,
+    build_database_not_connected_readiness_report,
+    build_expected_migration_inventory,
+    check_offline_migration_inventory,
+    expected_migration_revisions,
+    migration_readiness_interfaces_are_defined,
+    migration_readiness_is_safe_to_write,
+)
 from ai_trading_agent_storage.repository_contracts import (
     BrokerAccountRecord,
     BrokerAccountRepository,
@@ -50,6 +62,10 @@ from ai_trading_agent_storage.settings import (
 
 __all__ = [
     "DatabaseConnectionSettings",
+    "MigrationInventory",
+    "MigrationReadinessReport",
+    "MigrationReadinessStatus",
+    "MigrationRevisionInfo",
     "audit_events",
     "broker_accounts",
     "broker_cash_snapshots",
@@ -81,6 +97,10 @@ __all__ = [
     "StorageWriteResult",
     "build_repository_health_not_connected",
     "build_database_connection_settings",
+    "build_database_not_connected_readiness_report",
+    "build_expected_migration_inventory",
+    "check_offline_migration_inventory",
+    "expected_migration_revisions",
     "get_target_metadata",
     "is_migration_skeleton_ready",
     "metadata",
@@ -88,4 +108,6 @@ __all__ = [
     "paper_portfolio_setups",
     "redact_database_url",
     "repository_interfaces_are_defined",
+    "migration_readiness_interfaces_are_defined",
+    "migration_readiness_is_safe_to_write",
 ]

@@ -193,3 +193,15 @@ Next:
 - IBKR bootstrap preview.
 - Broker snapshot import adapter skeleton.
 - Reconciliation engine foundation.
+
+
+## Task 27 status
+- ✅ Database migration readiness contracts en offline migration inventory afgerond.
+
+## Volgende storage taken
+1. Online database readiness check tegen Alembic version table.
+2. SQLAlchemy repository implementation skeleton.
+3. App storage configuratievelden.
+4. API storage readiness endpoint op basis van storage package.
+5. IBKR settings/status velden.
+6. IBKR bootstrap preview.

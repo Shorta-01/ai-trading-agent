@@ -111,3 +111,10 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Broker sync writes moeten later via repositories plus audit checks lopen.
 - Repository interfaces op zichzelf maken persistence nog niet veilig.
 - Suggesties mogen niet vertrouwen op lege of niet-verbonden repositories.
+
+
+## Task 27: storage readiness risicoregels
+- Runtime writes moeten geblokkeerd blijven wanneer de database niet verbonden is.
+- Runtime writes moeten geblokkeerd blijven wanneer migraties niet tegen de echte database zijn gecontroleerd.
+- Een offline migratie-inventaris is onvoldoende om persistence toe te laten.
+- Leeg schema of alleen geplande migraties telt niet als operationele storage-readiness.

@@ -72,3 +72,12 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Er is nog geen concrete SQL repository implementatie.
 - Er is nog geen runtime DB-verbinding, geen runtime writes en geen API/worker wiring.
 - Er wordt nog geen IBKR-data geïmporteerd.
+
+
+## Task 27: migration readiness contracts en offline inventaris
+- Migratie-readinesscontracten bestaan nu in `migration_readiness.py` (statussen, inventory en readiness report).
+- Verwachte migratiereeks is vastgelegd voor `0001` t/m `0006`; laatste verwachte revisie is `0006`.
+- Er is een offline migratie-inventarischeck die geen database verbindt en geen runtime secrets leest.
+- Dit bewijst niet dat een echte database gemigreerd is.
+- Runtime writes blijven geblokkeerd totdat een toekomstige online migratiecheck bestaat.
+- Er is nog steeds geen app-runtime databaseverbinding.
