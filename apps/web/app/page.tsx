@@ -6,7 +6,7 @@ import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusCard } from "@/components/StatusCard";
-import { apiClient, AiUsageSummary, IntegrationsSummary, SettingsSummary, StorageStatusSummary, SystemStatusSummary, TradingSettingsResponse } from "@/lib/apiClient";
+import { apiClient, AiUsageSummary, IbkrStatusResponse, IntegrationsSummary, SettingsSummary, StorageStatusSummary, SystemStatusSummary, TradingSettingsResponse } from "@/lib/apiClient";
 import { uiText } from "@/lib/uiText";
 
 export default function HomePage() {
@@ -18,23 +18,25 @@ export default function HomePage() {
   const [apiNotReachable, setApiNotReachable] = useState(false);
 
   const [tradingSettings, setTradingSettings] = useState<TradingSettingsResponse | null>(null);
+  const [ibkrStatus, setIbkrStatus] = useState<IbkrStatusResponse | null>(null);
   const [saveStatus, setSaveStatus] = useState<string>(""
   );
 
 
   useEffect(() => {
     async function loadDashboardData() {
-      const [systemResponse, settingsResponse, usageResponse, integrationsResponse, storageResponse, tradingResponse] = await Promise.all([
+      const [systemResponse, settingsResponse, usageResponse, integrationsResponse, storageResponse, tradingResponse, ibkrStatusResponse] = await Promise.all([
         apiClient.getSystemStatus(),
         apiClient.getSettingsSummary(),
         apiClient.getAiUsageSummary(),
         apiClient.getIntegrationsSummary(),
         apiClient.getStorageStatus(),
         apiClient.getTradingSettings(),
+        apiClient.getIbkrStatus(),
       ]);
 
       const hasError =
-        !systemResponse.ok || !settingsResponse.ok || !usageResponse.ok || !integrationsResponse.ok || !storageResponse.ok || !tradingResponse.ok;
+        !systemResponse.ok || !settingsResponse.ok || !usageResponse.ok || !integrationsResponse.ok || !storageResponse.ok || !tradingResponse.ok || !ibkrStatusResponse.ok;
 
       setApiNotReachable(hasError);
       setSystemStatus(systemResponse.ok ? systemResponse.data : null);
@@ -43,6 +45,7 @@ export default function HomePage() {
       setIntegrations(integrationsResponse.ok ? integrationsResponse.data : null);
       setStorage(storageResponse.ok ? storageResponse.data : null);
       setTradingSettings(tradingResponse.ok ? tradingResponse.data : null);
+      setIbkrStatus(ibkrStatusResponse.ok ? ibkrStatusResponse.data : null);
     }
 
     void loadDashboardData();
@@ -177,6 +180,31 @@ export default function HomePage() {
         </div>
       </section>
 
+
+
+      <section>
+        <SectionHeader title="IBKR koppeling" helpText="Hier stel je later de veilige koppeling met IBKR in." />
+        <div className="grid one-column">
+          <StatusCard
+            titel="Status"
+            status={ibkrStatus?.status_nl ?? "Status niet beschikbaar"}
+            statusType={ibkrStatus?.configured ? "actief" : "waarschuwing"}
+            hulptekst={ibkrStatus?.message_nl ?? "IBKR-status is nu niet beschikbaar."}
+            extraRegels={[
+              ibkrStatus?.help_nl ?? "In versie 1 moet het gekoppelde IBKR-account paper-only zijn.",
+              "Orders blijven geblokkeerd tot het account veilig is gecontroleerd.",
+              "Er worden in deze versie van de instelling nog geen echte IBKR API-calls uitgevoerd.",
+              "Sla hier geen wachtwoorden, tokens of API-sleutels op.",
+            ]}
+          />
+          <p>IBKR koppeling inschakelen: {ibkrStatus?.enabled ? "Ja" : "Nee"}</p>
+          <p>Verwachte accountmodus: {ibkrStatus?.expected_environment ?? "paper"}</p>
+          <p>IBKR account hint: {ibkrStatus?.account_id_hint_present ? "Ingesteld" : "Niet ingesteld"}</p>
+          <p>Gateway-adres: {ibkrStatus?.gateway_url_configured ? "Ingesteld" : "Niet ingesteld"}</p>
+          <p>Statuscontrole inschakelen: {ibkrStatus?.status_check_enabled ? "Ja" : "Nee"}</p>
+          <p>Orderblokkade: {ibkrStatus?.blocks_orders ? "Actief" : "Niet actief"}</p>
+        </div>
+      </section>
 
       <section>
         <SectionHeader title="Instellingen - Trading" helpText="Deze instellingen bepalen wat het systeem mag onderzoeken en wat bij je strategie past." />

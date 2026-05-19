@@ -84,7 +84,7 @@ def read_dutch_labels() -> DutchLabelsSummary:
 
 @router.get("/broker/ibkr/status")
 def read_ibkr_status() -> dict[str, object]:
-    return build_ibkr_status_placeholder()
+    return build_ibkr_status_placeholder(settings)
 
 @router.get("/portfolio/setup/status")
 def read_portfolio_setup_status() -> dict[str, object]:

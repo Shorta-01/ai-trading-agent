@@ -100,3 +100,12 @@ Eigenschappen:
 - `Mijn strategie` blijft voorkeur/ranking en kan veiligheidsblokkeringen niet opheffen.
 - Versie 1 geblokkeerde asset types blijven read-only zichtbaar.
 - Geen IBKR/OpenAI/trading-uitvoering toegevoegd in deze taak.
+
+## Task 48 IBKR status en non-secret configuratie
+- `GET /broker/ibkr/status` geeft nu een Nederlandstalige placeholder-status op basis van lokale API-configuratie.
+- Endpoint doet geen IBKR netwerkcalls, geen SDK-client creatie, geen databasewrites en geen credentialtoegang.
+- Nieuwe non-secret settings in API-configuratie: `ibkr_enabled`, `ibkr_expected_environment`, `ibkr_account_id_hint`, `ibkr_gateway_url`, `ibkr_connection_timeout_seconds`, `ibkr_status_check_enabled`.
+- Standaardwaarden blijven veilig: koppeling uit, verwacht `paper`, geen account/gateway hints, timeout 10 seconden, statuscheck uit.
+- Credentials worden niet opgeslagen en orders blijven geblokkeerd (`can_submit_orders=false`, `blocks_orders=true`).
+- Er is in deze taak geen `PUT /broker/ibkr/settings`; opslaguitbreiding voor IBKR-configuratie volgt in een latere storage-taak.
+- Ai Trading Agent blijft een volledig tradingplatform met paper-only IBKR-account in versie 1.
