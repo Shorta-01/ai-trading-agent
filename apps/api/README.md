@@ -62,3 +62,11 @@ Eigenschappen:
 - De API maakt nog geen databaseverbinding bij startup en heeft nog geen globale engine/session.
 - Deze check schrijft niets en zet writes niet aan.
 - Writes blijven geblokkeerd tenzij migratiereadiness veilig is.
+
+## Task 36 API first-run paper setup persistence
+- `POST /portfolio/setup/preview` valideert eerst de paper-only invoer en probeert daarna de eerste paper setup op te slaan.
+- Persistency blijft strikt paper-only; geen broker-sync, geen IBKR, geen OpenAI en geen echte trading.
+- Writes zijn alleen toegestaan als storage aan staat, `database_url` is gezet en migratie-readiness veilig is.
+- De API gebruikt een expliciete tijdelijke checked connection per request (geen startup connectie).
+- Er is geen globale engine/session/sessionmaker en geen databaseconnectie bij import of startup.
+- Bij blokkades geeft de endpoint een veilige, eenvoudige Nederlandse foutmelding.
