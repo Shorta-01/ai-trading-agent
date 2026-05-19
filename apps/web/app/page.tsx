@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { ApiUnavailableNotice } from "@/components/ApiUnavailableNotice";
 import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { StatusCard } from "@/components/StatusCard";
-import { apiClient, AiUsageSummary, IntegrationsSummary, SettingsSummary, StorageStatusSummary, SystemStatusSummary } from "@/lib/apiClient";
+import { apiClient, AiUsageSummary, IntegrationsSummary, SettingsSummary, StorageStatusSummary, SystemStatusSummary, TradingSettingsResponse } from "@/lib/apiClient";
 import { uiText } from "@/lib/uiText";
 
 export default function HomePage() {
@@ -17,18 +17,24 @@ export default function HomePage() {
   const [storage, setStorage] = useState<StorageStatusSummary | null>(null);
   const [apiNotReachable, setApiNotReachable] = useState(false);
 
+  const [tradingSettings, setTradingSettings] = useState<TradingSettingsResponse | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string>(""
+  );
+
+
   useEffect(() => {
     async function loadDashboardData() {
-      const [systemResponse, settingsResponse, usageResponse, integrationsResponse, storageResponse] = await Promise.all([
+      const [systemResponse, settingsResponse, usageResponse, integrationsResponse, storageResponse, tradingResponse] = await Promise.all([
         apiClient.getSystemStatus(),
         apiClient.getSettingsSummary(),
         apiClient.getAiUsageSummary(),
         apiClient.getIntegrationsSummary(),
         apiClient.getStorageStatus(),
+        apiClient.getTradingSettings(),
       ]);
 
       const hasError =
-        !systemResponse.ok || !settingsResponse.ok || !usageResponse.ok || !integrationsResponse.ok || !storageResponse.ok;
+        !systemResponse.ok || !settingsResponse.ok || !usageResponse.ok || !integrationsResponse.ok || !storageResponse.ok || !tradingResponse.ok;
 
       setApiNotReachable(hasError);
       setSystemStatus(systemResponse.ok ? systemResponse.data : null);
@@ -36,10 +42,29 @@ export default function HomePage() {
       setUsage(usageResponse.ok ? usageResponse.data : null);
       setIntegrations(integrationsResponse.ok ? integrationsResponse.data : null);
       setStorage(storageResponse.ok ? storageResponse.data : null);
+      setTradingSettings(tradingResponse.ok ? tradingResponse.data : null);
     }
 
     void loadDashboardData();
   }, []);
+
+
+  async function onSaveTradingSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!tradingSettings) return;
+    setSaveStatus("Bezig met opslaan...");
+    const response = await apiClient.updateTradingSettings({
+      allowed_universe: tradingSettings.allowed_universe,
+      user_strategy: tradingSettings.user_strategy,
+      reason_nl: "Instellingen aangepast door gebruiker.",
+    });
+    if (!response.ok) {
+      setSaveStatus("Instellingen niet opgeslagen. Controleer de melding.");
+      return;
+    }
+    setTradingSettings(response.data);
+    setSaveStatus(response.data.updated ? "Instellingen opgeslagen." : "Instellingen niet opgeslagen. Controleer de melding.");
+  }
 
   return (
     <main className="container">
@@ -150,6 +175,20 @@ export default function HomePage() {
             ]}
           />
         </div>
+      </section>
+
+
+      <section>
+        <SectionHeader title="Instellingen - Trading" helpText="Deze instellingen bepalen wat het systeem mag onderzoeken en wat bij je strategie past." />
+        <form onSubmit={onSaveTradingSettings} className="grid one-column">
+          <label><input type="checkbox" checked={Boolean(tradingSettings?.allowed_universe.allow_etfs)} onChange={(e)=>setTradingSettings((prev)=>prev?({...prev,allowed_universe:{...prev.allowed_universe,allow_etfs:e.target.checked}}):prev)} /> ETF’s toestaan</label>
+          <label><input type="checkbox" checked={Boolean(tradingSettings?.allowed_universe.allow_stocks)} onChange={(e)=>setTradingSettings((prev)=>prev?({...prev,allowed_universe:{...prev.allowed_universe,allow_stocks:e.target.checked}}):prev)} /> Aandelen toestaan</label>
+          <label><input type="checkbox" checked={Boolean(tradingSettings?.allowed_universe.allow_currencies_watch_only)} onChange={(e)=>setTradingSettings((prev)=>prev?({...prev,allowed_universe:{...prev.allowed_universe,allow_currencies_watch_only:e.target.checked}}):prev)} /> Valuta volgen, niet kopen</label>
+          <p>Altijd geblokkeerd in versie 1: {(tradingSettings?.always_blocked_asset_types ?? []).join(", ")}</p>
+          <p>{tradingSettings?.message_nl ?? "Laden..."}</p>
+          <p>{saveStatus}</p>
+          <button type="submit">Instellingen opslaan</button>
+        </form>
       </section>
 
       <section>

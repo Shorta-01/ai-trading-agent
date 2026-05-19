@@ -4,13 +4,18 @@ from contextlib import contextmanager
 
 from ai_trading_agent_storage import (
     StorageConnectionError,
+    StoragePersistenceBlockedError,
     build_database_not_connected_readiness_report,
 )
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.config import StorageSettings
 from portfolio_outlook_api.main import app
-from portfolio_outlook_api.trading_settings import build_trading_settings_response
+from portfolio_outlook_api.trading_settings import (
+    TradingSettingsUpdateInput,
+    build_trading_settings_response,
+    update_trading_settings_response,
+)
 
 client = TestClient(app)
 
@@ -50,88 +55,105 @@ class _Record:
         self.user_strategy = user_strategy
 
 
-def test_trading_settings_endpoint_storage_disabled_defaults() -> None:
-    response = build_trading_settings_response(StorageSettings(enabled=False, database_url=None))
+def _valid_payload() -> dict[str, object]:
+    return {
+        "allowed_universe": {
+            "allow_etfs": True,
+            "allow_stocks": True,
+            "allow_currencies_watch_only": False,
+            "allow_bond_etfs": False,
+            "allow_commodity_etfs": False,
+        },
+        "user_strategy": {
+            "portfolio_goal": "balanced_growth_risk",
+            "risk_level": "medium",
+            "asset_mix_preference": "etf_and_stock_mix",
+            "preferred_regions": ["global"],
+            "preferred_sectors": [],
+            "avoided_sectors": [],
+            "max_position_pct": "10",
+            "min_cash_reserve_pct": "5",
+            "currency_preference": "eur_preferred_usd_allowed",
+            "prefer_simple_belgian_tax_admin": True,
+        },
+    }
 
-    assert response["settings_source"] == "domain_defaults"
-    assert response["settings_loaded_from_storage"] is False
-    assert "Opslag staat uit" in str(response["message_nl"])
 
-
-def test_trading_settings_endpoint_database_url_missing_defaults() -> None:
-    response = build_trading_settings_response(StorageSettings(enabled=True, database_url=""))
-
-    assert response["settings_source"] == "domain_defaults"
-    assert response["settings_loaded_from_storage"] is False
-    assert "Database-url ontbreekt" in str(response["message_nl"])
-
-
-def test_trading_settings_endpoint_reads_persisted_settings() -> None:
-    tracker: dict[str, object] = {"provider_called": False, "repository_called": False}
+def test_put_trading_settings_valid_save_succeeds() -> None:
+    tracker: dict[str, object] = {}
     checked = _Checked()
 
     def provider_factory(_: object) -> _FakeProvider:
         tracker["provider_called"] = True
         return _FakeProvider(checked, tracker=tracker)
 
-    persisted_allowed_universe = {
-        "allow_etfs": False,
-        "allow_stocks": True,
-        "allow_currencies_watch_only": False,
-        "blocked_asset_types": ["options", "futures"],
-    }
-    persisted_user_strategy = {
-        "portfolio_goal": "income_focus",
-        "risk_level": "low",
-        "max_position_pct": "12.5",
-        "min_cash_reserve_pct": "7.5",
-        "currency_preference": "eur",
-    }
-
     class Repo:
         def __init__(self, connection: object, readiness: object) -> None:
-            tracker["repository_called"] = True
             tracker["connection"] = connection
             tracker["readiness"] = readiness
 
-        def get_settings(self, settings_id: str) -> _ReadResult:
-            tracker["settings_id"] = settings_id
-            return _ReadResult(
-                found=True,
-                record=_Record(persisted_allowed_universe, persisted_user_strategy),
-            )
+        def save_settings(self, request: object) -> None:
+            tracker["settings_id"] = request.settings_id
+            tracker["max_position_pct"] = request.user_strategy["max_position_pct"]
 
-    response = build_trading_settings_response(
+    payload = TradingSettingsUpdateInput.model_validate(_valid_payload())
+    response = update_trading_settings_response(
+        payload,
         StorageSettings(enabled=True, database_url="postgresql://db"),
         connection_provider_factory=provider_factory,
         repository_factory=Repo,
     )
 
+    assert response["updated"] is True
     assert tracker["provider_called"] is True
-    assert tracker["repository_called"] is True
-    assert tracker["require_writable"] is False
+    assert tracker["require_writable"] is True
     assert tracker["connection"] is checked.connection
     assert tracker["readiness"] is checked.readiness
     assert tracker["settings_id"] == "default"
-
-    assert response["settings_source"] == "storage"
-    assert response["settings_loaded_from_storage"] is True
-    assert response["allowed_universe"] == persisted_allowed_universe
-    assert response["user_strategy"] == persisted_user_strategy
-    assert response["always_blocked_asset_types"] == [
-        "options",
-        "futures",
-        "leverage",
-        "short_selling",
-        "crypto",
-        "penny_stocks",
-        "cfds",
-        "complex_derivatives",
-    ]
-    assert "Opgeslagen trading instellingen geladen" in str(response["message_nl"])
+    assert tracker["max_position_pct"] == "10"
 
 
-def test_trading_settings_endpoint_storage_enabled_but_no_row() -> None:
+def test_put_trading_settings_storage_disabled_blocked_and_no_provider() -> None:
+    called = False
+
+    def provider_factory(_: object) -> object:
+        nonlocal called
+        called = True
+        return object()
+
+    payload = TradingSettingsUpdateInput.model_validate(_valid_payload())
+    response = update_trading_settings_response(
+        payload,
+        StorageSettings(enabled=False, database_url="postgresql://db"),
+        connection_provider_factory=provider_factory,
+    )
+
+    assert response["updated"] is False
+    assert "opslag staat uit" in str(response["message_nl"]).lower()
+    assert called is False
+
+
+def test_put_trading_settings_database_url_missing_blocked_and_no_provider() -> None:
+    called = False
+
+    def provider_factory(_: object) -> object:
+        nonlocal called
+        called = True
+        return object()
+
+    payload = TradingSettingsUpdateInput.model_validate(_valid_payload())
+    response = update_trading_settings_response(
+        payload,
+        StorageSettings(enabled=True, database_url=""),
+        connection_provider_factory=provider_factory,
+    )
+
+    assert response["updated"] is False
+    assert "database-url ontbreekt" in str(response["message_nl"]).lower()
+    assert called is False
+
+
+def test_put_trading_settings_writes_blocked() -> None:
     checked = _Checked()
 
     def provider_factory(_: object) -> _FakeProvider:
@@ -141,57 +163,50 @@ def test_trading_settings_endpoint_storage_enabled_but_no_row() -> None:
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-        def get_settings(self, _settings_id: str) -> _ReadResult:
-            return _ReadResult(found=False, record=None)
+        def save_settings(self, _request: object) -> None:
+            raise StoragePersistenceBlockedError("blocked")
 
-    response = build_trading_settings_response(
+    payload = TradingSettingsUpdateInput.model_validate(_valid_payload())
+    response = update_trading_settings_response(
+        payload,
         StorageSettings(enabled=True, database_url="postgresql://db"),
         connection_provider_factory=provider_factory,
         repository_factory=Repo,
     )
-
-    assert response["settings_source"] == "domain_defaults"
-    assert response["settings_loaded_from_storage"] is False
-    assert response["storage_available"] is True
-    assert "geen opgeslagen instellingen" in str(response["message_nl"]).lower()
+    assert response["updated"] is False
+    assert "writes geblokkeerd" in str(response["message_nl"]).lower()
 
 
-def test_trading_settings_endpoint_connection_failure_safe_fallback() -> None:
+def test_put_trading_settings_connection_failure_safe() -> None:
     def provider_factory(_: object) -> _FakeProvider:
-        return _FakeProvider(StorageConnectionError("boom"), tracker={})
+        return _FakeProvider(StorageConnectionError("postgresql://secret"), tracker={})
 
-    class Repo:
-        def __init__(self, *_args: object, **_kwargs: object) -> None:
-            raise AssertionError("repo should not be constructed")
-
-    response = build_trading_settings_response(
+    payload = TradingSettingsUpdateInput.model_validate(_valid_payload())
+    response = update_trading_settings_response(
+        payload,
         StorageSettings(enabled=True, database_url="postgresql://db"),
         connection_provider_factory=provider_factory,
-        repository_factory=Repo,
     )
-
-    assert response["settings_source"] == "domain_defaults"
-    assert response["settings_loaded_from_storage"] is False
+    assert response["updated"] is False
     assert "veilige foutafhandeling" in str(response["message_nl"]).lower()
     assert "postgresql://" not in str(response)
 
 
-def test_trading_settings_endpoint_http_200_and_response_shape() -> None:
-    response = client.get('/settings/trading')
+def test_put_endpoint_rejects_float_percentages() -> None:
+    invalid = _valid_payload()
+    invalid["user_strategy"]["max_position_pct"] = 10.0
+    response = client.put("/settings/trading", json=invalid)
+    assert response.status_code == 422
 
+
+def test_get_trading_settings_endpoint_http_200_and_response_shape() -> None:
+    response = client.get("/settings/trading")
     assert response.status_code == 200
     body = response.json()
-    assert body['title_nl'] == 'Trading instellingen'
-    assert body['help_texts']
-    assert body['always_blocked_asset_types'] == [
-        'options',
-        'futures',
-        'leverage',
-        'short_selling',
-        'crypto',
-        'penny_stocks',
-        'cfds',
-        'complex_derivatives',
-    ]
-    assert isinstance(body['user_strategy']['max_position_pct'], str)
-    assert isinstance(body['user_strategy']['min_cash_reserve_pct'], str)
+    assert body["title_nl"] == "Trading instellingen"
+    assert isinstance(body["user_strategy"]["max_position_pct"], str)
+
+
+def test_get_trading_settings_is_read_only() -> None:
+    response = build_trading_settings_response(StorageSettings(enabled=False, database_url=None))
+    assert response["settings_source"] == "domain_defaults"

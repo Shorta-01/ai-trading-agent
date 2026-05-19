@@ -93,3 +93,10 @@ Eigenschappen:
 - Endpoint gebruikt per request een expliciete checked connection met `require_writable=False` (geen writes).
 - Als opslag niet beschikbaar is, geen rij bestaat, of een veilige storagefout optreedt, valt de response terug op veilige domein-standaardinstellingen.
 - Dit blijft read-only: er is nog geen update-endpoint, geen UI-scherm, en geen IBKR/OpenAI-gedrag.
+
+## Task 45 trading instellingen beheren
+- `GET /settings/trading` en `PUT /settings/trading` ondersteunen nu laden en veilig opslaan van trading instellingen.
+- `Toegestane beleggingen` blijft de harde veiligheidsfilter.
+- `Mijn strategie` blijft voorkeur/ranking en kan veiligheidsblokkeringen niet opheffen.
+- Versie 1 geblokkeerde asset types blijven read-only zichtbaar.
+- Geen IBKR/OpenAI/trading-uitvoering toegevoegd in deze taak.
