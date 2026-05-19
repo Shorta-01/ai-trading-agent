@@ -78,3 +78,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI mag repository interfaces niet behandelen als bewijs dat brokerdata al gepersisteerd is.
 - AI mag pas broker-feiten uitleggen als concrete repository-implementaties geauditeerde records opleveren.
 - Er mag geen fake data worden gegenereerd om repository contracts te vullen.
+
+
+## Task 27: AI en migration readiness
+- AI mag offline migratie-inventaris niet interpreteren als bewijs van echte persistente data.
+- AI mag pas claimen dat de database klaar is als een online readiness check dit bevestigt.
+- AI mag geen fake brokerdata genereren omdat schema's of repository-interfaces bestaan.

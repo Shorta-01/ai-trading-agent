@@ -159,3 +159,11 @@ Future implementation order:
 - Tussen application-lagen en SQL-tabellen is nu een repository-interface laag toegevoegd.
 - Toekomstige flow: IBKR-adapter -> domeinvalidatie -> repository interface -> latere SQL-implementatie -> audit trail.
 - De interfaces zijn alleen contracten; schema bestaat, maar persistence-implementatie ontbreekt nog bewust.
+
+
+## Task 27: migration readiness laag
+- Nieuwe migration-readiness laag in storage-contracten voegt een veilige readiness-gate toe zonder runtime DB-verbinding.
+- **Offline expected migration inventory**: controleert verwachte revisies (`0001` t/m `0006`) en lokale migratiebestanden, maar bewijst geen toegepaste DB-migraties.
+- **Online database migration check (toekomstig)**: moet later de echte Alembic-versiestaat in de database controleren.
+- Persistence blijft geblokkeerd tot echte databaseverbinding + geverifieerde migratiestatus beschikbaar zijn.
+- Repositorylaag blijft interface-only; er zijn nog geen concrete SQL repositories.

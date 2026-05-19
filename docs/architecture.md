@@ -139,3 +139,10 @@ This PR only designs the schema and does not implement migration, persistence ru
 - API/worker mogen SQLAlchemy-tabellen niet direct gebruiken voor broker sync opslag.
 - Toekomstige code moet afhankelijk zijn van repository interfaces of application services, niet van raw SQL tabellen.
 - Domain/portfolio packages blijven database-vrij.
+
+
+## Task 27: database readiness gate
+- Voor repository writes is nu een expliciete migration-readiness gate voorzien in de storage-boundary.
+- API en worker mogen niet schrijven tenzij de readiness gate persistence expliciet toestaat.
+- In de huidige fase blijft writes-toestemming uit omdat geen database verbonden is en geen online migratiecheck bestaat.
+- Toekomstige SQL repository-implementaties moeten afhankelijk zijn van deze readiness status.

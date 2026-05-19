@@ -129,3 +129,9 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 ## Storage repository contracts update (Task 26)
 - Broker sync/reconciliation storage repository interfaces are now defined in the storage package.
 - This is contract-only: no concrete persistence implementation, no API/worker wiring, and no runtime database writes yet.
+
+
+## Task 27 update
+- Migration readiness contracts bestaan nu in het storage package met verwachte revisies `0001` t/m `0006`.
+- Dit is alleen offline readiness-inventaris; er is nog geen echte database-readiness check.
+- Runtime persistence bestaat nog niet en writes blijven geblokkeerd.
