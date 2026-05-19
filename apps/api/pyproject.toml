@@ -5,6 +5,7 @@ description = "FastAPI skeleton for Portfolio Outlook Manager"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115.0",
+  "ai-trading-agent-storage>=0.1.0",
   "pydantic-settings>=2.6.0",
   "uvicorn>=0.30.0",
 ]

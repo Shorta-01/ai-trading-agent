@@ -144,3 +144,8 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 
 ## Update Task 29
 SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.
+
+## Task 30 update
+- API endpoint `/storage/status` gebruikt nu storage migration readiness contracts uit `packages/storage`.
+- Status meldt expliciet dat de database niet verbonden is en dat runtime writes geblokkeerd blijven.
+- Endpoint bevat nu migration readiness velden inclusief verwachte laatste revisie `0006`.

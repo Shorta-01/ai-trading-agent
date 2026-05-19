@@ -177,3 +177,8 @@ Future implementation order:
 
 ## Update Task 29
 SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.
+
+## Task 30 API status-koppeling
+- `GET /storage/status` in de API gebruikt de storage-readiness helpers `build_database_not_connected_readiness_report`, `build_expected_migration_inventory` en `migration_readiness_is_safe_to_write`.
+- De route blijft read-only: geen engine/session, geen env-lezen, geen databaseverbinding.
+- De response bevat migration-readiness details en expliciete write-blocking status zolang DB niet verbonden is.
