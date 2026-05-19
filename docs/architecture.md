@@ -112,3 +112,9 @@ Planned end-to-end storage flow once broker sync implementation starts:
 7. Suggestion allowed/blocked based on reconciliation status
 
 This PR only designs the schema and does not implement migration, persistence runtime, or IBKR connectivity.
+
+## Task 25A storage foundation update
+- Het storage schema bevat nu de eerste broker-sync foundation (`broker_accounts`, `broker_sync_runs`).
+- API en worker zijn nog niet aan database writes gekoppeld.
+- Repository-interfaces/adapters voor broker snapshots volgen later.
+

@@ -351,3 +351,22 @@ The next migration downgrade should drop tables in this exact order:
 - No IBKR API integration is added.
 - No credentials UI/settings form is added.
 - No broker sync worker or reconciliation engine logic is added.
+
+## 6. Implementatiestatus (Task 25A)
+- ✅ Geïmplementeerd in migratie `0002_broker_accounts_and_sync_runs`:
+  - `broker_accounts`
+  - `broker_sync_runs`
+- ⏳ Gepland voor latere migraties (veilig opgesplitst):
+  - `broker_position_snapshots`
+  - `broker_cash_snapshots`
+  - `broker_execution_snapshots`
+  - `broker_commission_snapshots`
+  - `broker_reconciliation_reports`
+  - `broker_reconciliation_differences`
+  - `external_broker_activities`
+
+Waarom opgesplitst:
+- kleinere PR's beperken migratierisico;
+- constraint/FK-validatie blijft beter reviewbaar;
+- audit- en source-of-truth guardrails blijven expliciet per stap.
+

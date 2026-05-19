@@ -6,6 +6,8 @@ from ai_trading_agent_storage.alembic_helpers import (
 )
 from ai_trading_agent_storage.metadata import (
     audit_events,
+    broker_accounts,
+    broker_sync_runs,
     metadata,
     paper_cash_accounts,
     paper_portfolio_setups,
@@ -19,6 +21,8 @@ from ai_trading_agent_storage.settings import (
 __all__ = [
     "DatabaseConnectionSettings",
     "audit_events",
+    "broker_accounts",
+    "broker_sync_runs",
     "build_database_connection_settings",
     "get_target_metadata",
     "is_migration_skeleton_ready",

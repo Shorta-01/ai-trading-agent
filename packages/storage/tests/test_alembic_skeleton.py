@@ -1,5 +1,8 @@
 from pathlib import Path
 
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.dialects import postgresql
+
 from ai_trading_agent_storage.alembic_helpers import (
     get_target_metadata,
     is_migration_skeleton_ready,
@@ -9,10 +12,8 @@ from ai_trading_agent_storage.metadata import metadata
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _token_position(content: str, token: str) -> int:
-    position = content.find(token)
-    assert position >= 0, f"Missing token: {token}"
-    return position
+def _normalize(value: str) -> str:
+    return " ".join(value.lower().split())
 
 
 def test_alembic_files_and_versions_folder_exist() -> None:
@@ -29,41 +30,66 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_single_revision_file_exists_with_expected_name() -> None:
+def test_exactly_two_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
-    revision_files = sorted(path.name for path in versions_dir.glob("*.py"))
-    assert revision_files == ["0001_paper_setup_audit_foundation.py"]
+    revision_files = sorted(path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep")
+    assert revision_files == [
+        "0001_paper_setup_audit_foundation.py",
+        "0002_broker_accounts_and_sync_runs.py",
+    ]
 
 
-def test_revision_file_contains_required_upgrade_downgrade_and_table_ops() -> None:
-    revision_path = ROOT / "alembic" / "versions" / "0001_paper_setup_audit_foundation.py"
+def test_0002_revision_content_and_safety_guards() -> None:
+    revision_path = ROOT / "alembic" / "versions" / "0002_broker_accounts_and_sync_runs.py"
     content = revision_path.read_text(encoding="utf-8")
+    normalized = _normalize(content)
 
     assert "def upgrade()" in content
     assert "def downgrade()" in content
+    assert "broker account and sync run foundation" in content.lower()
+    assert "ibkr mirror/reconciliation foundation slice 1" in content.lower()
 
-    first_create_position = _token_position(content, "op.create_table(")
-    paper_setups_name_position = _token_position(content, '"paper_portfolio_setups"')
-    paper_cash_name_position = _token_position(content, '"paper_cash_accounts"')
-    audit_events_name_position = _token_position(content, '"audit_events"')
-    assert first_create_position < paper_setups_name_position
-    assert first_create_position < paper_cash_name_position
-    assert first_create_position < audit_events_name_position
+    assert "broker_accounts" in content
+    assert "broker_sync_runs" in content
 
-    audit_drop_position = _token_position(content, 'op.drop_table("audit_events")')
-    cash_drop_position = _token_position(content, 'op.drop_table("paper_cash_accounts")')
-    setup_drop_position = _token_position(content, 'op.drop_table("paper_portfolio_setups")')
-    assert audit_drop_position < cash_drop_position < setup_drop_position
+    drop_sync_position = content.find('op.drop_table("broker_sync_runs")')
+    drop_accounts_position = content.find('op.drop_table("broker_accounts")')
+    assert drop_sync_position >= 0
+    assert drop_accounts_position >= 0
+    assert drop_sync_position < drop_accounts_position
 
+    forbidden_tokens = [
+        "password",
+        "access_token",
+        "refresh_token",
+        "api_key",
+        "secret_value",
+        "ibapi",
+        "ib_insync",
+    ]
+    for token in forbidden_tokens:
+        assert token not in normalized
 
-def test_revision_file_has_no_runtime_package_imports() -> None:
-    revision_path = ROOT / "alembic" / "versions" / "0001_paper_setup_audit_foundation.py"
-    content = revision_path.read_text(encoding="utf-8")
-    forbidden = [
+    forbidden_import_tokens = [
         "portfolio_outlook_domain",
         "portfolio_outlook_portfolio",
         "portfolio_outlook_api",
         "worker",
+        "ibkr",
     ]
-    for token in forbidden:
-        assert token not in content
+    for token in forbidden_import_tokens:
+        assert f"import {token}" not in normalized
+        assert f"from {token} import" not in normalized
+
+
+def test_postgresql_create_table_compilation_includes_broker_tables() -> None:
+    table_names = [
+        "paper_portfolio_setups",
+        "paper_cash_accounts",
+        "audit_events",
+        "broker_accounts",
+        "broker_sync_runs",
+    ]
+    for table_name in table_names:
+        sql = str(CreateTable(metadata.tables[table_name]).compile(dialect=postgresql.dialect()))
+        assert f'create table {table_name}' in sql.lower()

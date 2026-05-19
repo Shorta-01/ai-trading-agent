@@ -4,7 +4,13 @@ from ai_trading_agent_storage.metadata import metadata
 
 
 def test_metadata_imports_and_expected_tables_only() -> None:
-    expected = {"paper_portfolio_setups", "paper_cash_accounts", "audit_events"}
+    expected = {
+        "paper_portfolio_setups",
+        "paper_cash_accounts",
+        "audit_events",
+        "broker_accounts",
+        "broker_sync_runs",
+    }
     assert metadata is not None
     assert set(metadata.tables) == expected
 
@@ -27,6 +33,10 @@ def test_timestamp_columns_are_timezone_aware() -> None:
         metadata.tables["paper_cash_accounts"].c.created_at,
         metadata.tables["audit_events"].c.occurred_at,
         metadata.tables["audit_events"].c.created_at,
+        metadata.tables["broker_accounts"].c.created_at,
+        metadata.tables["broker_accounts"].c.updated_at,
+        metadata.tables["broker_sync_runs"].c.started_at,
+        metadata.tables["broker_sync_runs"].c.completed_at,
     ]
     for column in columns:
         assert isinstance(column.type, DateTime)
@@ -39,6 +49,14 @@ def test_paper_cash_accounts_has_expected_setup_fk() -> None:
         for fk in metadata.tables["paper_cash_accounts"].c.setup_id.foreign_keys
     }
     assert setup_id_fk_targets == {"paper_portfolio_setups.setup_id"}
+
+
+def test_broker_sync_runs_has_expected_broker_account_fk() -> None:
+    broker_account_fk_targets = {
+        fk.target_fullname
+        for fk in metadata.tables["broker_sync_runs"].c.broker_account_id.foreign_keys
+    }
+    assert broker_account_fk_targets == {"broker_accounts.broker_account_id"}
 
 
 def test_required_paper_only_columns_exist() -> None:
@@ -55,8 +73,52 @@ def test_required_paper_only_columns_exist() -> None:
         assert name in table.c
 
 
+def test_broker_tables_have_expected_columns() -> None:
+    broker_accounts_expected = {
+        "broker_account_id",
+        "broker_system",
+        "ibkr_account_ref",
+        "account_label",
+        "account_mode",
+        "connection_status",
+        "configured",
+        "paper_account",
+        "live_trading_allowed",
+        "source_of_truth_status",
+        "created_at",
+        "updated_at",
+        "explanation_nl",
+    }
+    broker_sync_runs_expected = {
+        "broker_sync_run_id",
+        "broker_account_id",
+        "broker_system",
+        "sync_mode",
+        "sync_status",
+        "started_at",
+        "completed_at",
+        "planned_data_kinds_json",
+        "data_source_types_json",
+        "requires_ibkr_configuration",
+        "requires_broker_session",
+        "blocks_suggestions_until_complete",
+        "summary_nl",
+        "help_nl",
+    }
+    assert set(metadata.tables["broker_accounts"].c.keys()) == broker_accounts_expected
+    assert set(metadata.tables["broker_sync_runs"].c.keys()) == broker_sync_runs_expected
+
+
 def test_no_secret_like_column_names_and_no_legacy_table_names() -> None:
-    forbidden_columns = {"password", "api_key", "secret_value", "access_token", "refresh_token"}
+    forbidden_columns = {
+        "password",
+        "api_key",
+        "token",
+        "access_token",
+        "refresh_token",
+        "secret",
+        "credential",
+    }
     forbidden_table_fragments = {"portfolio_outlook", "pom"}
 
     for table_name, table in metadata.tables.items():

@@ -35,3 +35,11 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Er bestaan momenteel nog geen broker sync tabellen in de database.
 - De volgende migratie zal de geplande tabellen implementeren.
 - Er wordt momenteel geen IBKR-data gepersisteerd.
+
+## Task 25A: broker sync schema slice 1
+- `broker_accounts` en `broker_sync_runs` bestaan nu in SQLAlchemy Core metadata + Alembic migratie `0002_broker_accounts_and_sync_runs`.
+- Dit is bewust alleen de **eerste** broker-sync schema slice.
+- De overige 7 broker/reconciliation-tabellen volgen in latere migraties.
+- Er wordt nog geen IBKR-data geïmporteerd door de draaiende app.
+- Runtime persistence bestaat nog niet: geen repositories, geen API/worker DB-writes.
+

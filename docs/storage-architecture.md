@@ -132,3 +132,9 @@ Future implementation order:
 - The next migration will add broker account, sync-run, snapshot, reconciliation, and external activity tables.
 - No IBKR data is currently persisted.
 - No app database write paths exist yet in API/worker runtime.
+
+## Task 25A broker schema update
+- Storage bevat nu broker foundation slice 1: `broker_accounts` en `broker_sync_runs`.
+- Broker snapshot- en reconciliation-tabellen zijn nog gepland (nog niet gemigreerd).
+- De draaiende applicatie persisteert nog geen IBKR-data.
+
