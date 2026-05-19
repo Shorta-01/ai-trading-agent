@@ -7,6 +7,7 @@ It intentionally does not open sessions, read environment variables, or connect 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -48,6 +49,7 @@ class RepositoryHealthStatus:
 class BrokerAccountRecord:
     broker_account_id: str
     broker_system: str
+    ibkr_account_ref: str | None
     account_label: str
     account_mode: str
     connection_status: str
@@ -55,6 +57,8 @@ class BrokerAccountRecord:
     paper_account: bool
     live_trading_allowed: bool
     source_of_truth_status: str
+    created_at: datetime
+    updated_at: datetime | None
     explanation_nl: str
 
 
@@ -65,11 +69,17 @@ class BrokerSyncRunRecord:
     broker_system: str
     sync_mode: str
     sync_status: str
+    started_at: datetime
+    completed_at: datetime | None
+    planned_data_kinds_json: tuple[str, ...] | None
+    data_source_types_json: tuple[str, ...] | None
     requires_ibkr_configuration: bool
     requires_broker_session: bool
     blocks_suggestions_until_complete: bool
     summary_nl: str
     help_nl: str
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_event_ids_json: tuple[str, ...] | None
 
 
 @dataclass(frozen=True)
@@ -78,6 +88,7 @@ class BrokerPositionSnapshotRecord:
     broker_sync_run_id: str
     broker_account_id: str
     broker_system: str
+    imported_at: datetime
     asset_identifier: str
     asset_symbol: str
     asset_type: str
@@ -87,6 +98,7 @@ class BrokerPositionSnapshotRecord:
     market_value: Decimal | None
     source_data_kind: str
     origin: str
+    source_reference_ids_json: tuple[str, ...] | None
     explanation_nl: str
 
 
@@ -96,10 +108,12 @@ class BrokerCashSnapshotRecord:
     broker_sync_run_id: str
     broker_account_id: str
     broker_system: str
+    imported_at: datetime
     currency: str
     cash_amount: Decimal
     source_data_kind: str
     origin: str
+    source_reference_ids_json: tuple[str, ...] | None
     explanation_nl: str
 
 
@@ -109,6 +123,8 @@ class BrokerExecutionSnapshotRecord:
     broker_sync_run_id: str
     broker_account_id: str
     broker_system: str
+    imported_at: datetime
+    execution_time: datetime
     execution_id: str
     order_id: str | None
     asset_identifier: str
@@ -119,6 +135,7 @@ class BrokerExecutionSnapshotRecord:
     price: Decimal
     currency: str
     origin: str
+    source_reference_ids_json: tuple[str, ...] | None
     explanation_nl: str
 
 
@@ -128,10 +145,13 @@ class BrokerCommissionSnapshotRecord:
     broker_sync_run_id: str
     broker_account_id: str
     broker_system: str
+    imported_at: datetime
+    execution_time: datetime
     execution_id: str
     commission_amount: Decimal
     currency: str
     realized_pnl: Decimal | None
+    source_reference_ids_json: tuple[str, ...] | None
     explanation_nl: str
 
 
@@ -145,6 +165,7 @@ class BrokerReconciliationReportRecord:
     suggestion_policy: str
     can_create_suggestions: bool
     can_create_orders: bool
+    checked_at: datetime
     title_nl: str
     summary_nl: str
     help_nl: str
@@ -158,6 +179,7 @@ class BrokerReconciliationDifferenceRecord:
     broker_system: str
     difference_kind: str
     severity: str
+    detected_at: datetime
     broker_value: str | None
     local_value: str | None
     asset_identifier: str | None
@@ -166,6 +188,8 @@ class BrokerReconciliationDifferenceRecord:
     requires_manual_review: bool
     summary_nl: str
     help_nl: str
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_event_ids_json: tuple[str, ...] | None
 
 
 @dataclass(frozen=True)
@@ -173,12 +197,15 @@ class ExternalBrokerActivityRecord:
     external_broker_activity_id: str
     broker_account_id: str
     broker_system: str
+    detected_at: datetime
     origin: str
     data_kind: str
     related_execution_id: str | None
     related_asset_identifier: str | None
     summary_nl: str
     help_nl: str
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_event_ids_json: tuple[str, ...] | None
 
 
 class BrokerAccountRepository(Protocol):

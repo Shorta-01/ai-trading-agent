@@ -152,3 +152,6 @@ This PR only designs the schema and does not implement migration, persistence ru
 - Voor toekomstige repository writes geldt een database-readiness gate: alleen online status `migrations_current` op revisie `0006` kan writes vrijgeven.
 - API/worker zijn in deze taak niet aan DB gekoppeld; er is dus nog geen runtime writepad.
 - Domain en portfolio packages blijven database-vrij.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.

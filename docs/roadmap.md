@@ -218,3 +218,6 @@ Next:
 5. IBKR bootstrap preview.
 6. Broker snapshot import adapter skeleton.
 7. Reconciliation engine foundation.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.

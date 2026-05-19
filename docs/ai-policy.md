@@ -90,3 +90,6 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI mag database-readiness niet claimen op basis van offline migratie-inventaris alleen.
 - AI mag DB-readiness alleen benoemen wanneer online readiness de laatste revisie bevestigt (`0006`).
 - AI mag geen broker holdings/cash/trades/reconciliation afleiden uit alleen schema of readiness-signalen.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.

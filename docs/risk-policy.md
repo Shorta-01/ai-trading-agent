@@ -124,3 +124,6 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Runtime writes blijven geblokkeerd bij: geen DB-verbinding, missende/lege Alembic table, achterlopende revisie, onbekende revisie, of mislukte check.
 - Alleen een actuele online readiness-report mag toekomstige repository-writes toelaten.
 - Lege tabellen zijn geen bewijs van broker sync of reconciliatie.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.

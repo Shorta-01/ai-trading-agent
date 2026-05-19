@@ -89,3 +89,6 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - De check maakt geen engine aan, leest geen env vars, draait geen migraties en schrijft geen applicatiedata.
 - Laatste verwachte revisie blijft `0006`. Alleen DB-revisie `0006` kan `persistence_allowed=True` geven in het readiness report.
 - Er zijn nog geen concrete repositories en geen app-runtime DB-wiring.
+
+## Update Task 29
+SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + migration readiness report. Geen app-engine/session, geen DATABASE_URL/env wiring, geen API/worker runtime persistence, geen IBKR-import.
