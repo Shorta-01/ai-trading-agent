@@ -82,3 +82,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Broker sync schema must support stale snapshot detection through explicit point-in-time timestamps.
 - Direct IBKR activity must trigger warning/blocking behavior until reviewed and reconciled.
 - When broker sync is active, local portfolio suggestions must depend on reconciliation state before becoming eligible.
+
+## Task 25A broker sync risk clarification
+- Het bestaan van broker-tabellen betekent niet dat broker sync actief is.
+- Lege broker-tabellen mogen nooit als succesvolle sync geïnterpreteerd worden.
+- Suggesties mogen niet op brokerdata steunen totdat echte sync + reconciliation operationeel zijn.
+

@@ -106,3 +106,8 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - Broker sync schema is now planned in detail for the next storage migration.
 - No IBKR broker data is stored yet in the current application runtime.
 - IBKR integration is not implemented yet.
+
+## Task 25A update
+- Eerste broker sync schema slice is toegevoegd in storage (`broker_accounts`, `broker_sync_runs`).
+- Er is nog geen IBKR-integratie of runtime persistence actief.
+

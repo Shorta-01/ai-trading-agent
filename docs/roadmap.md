@@ -141,3 +141,14 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 4. IBKR bootstrap preview flow toevoegen.
 5. Broker snapshot import adapter skeleton toevoegen.
 6. Reconciliation engine foundation toevoegen.
+
+## Task 25A status
+- ✅ Broker account + broker sync run schema migratie afgerond (`0002`).
+
+## Volgende broker-storage taken
+1. Broker snapshot schema migratie.
+2. Broker reconciliation schema migratie.
+3. Repository-interfaces voor broker snapshots/reconciliation.
+4. IBKR settings/status velden (zonder secrets).
+5. IBKR bootstrap preview.
+
