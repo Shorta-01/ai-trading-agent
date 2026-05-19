@@ -99,3 +99,11 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - Geldbedragen gebruiken `Decimal`-compatibele opslag en roundtrip-tests controleren dat geldwaarden als `Decimal` terugkomen.
 - Dit blijft strikt paper-only: geen broker sync runtime-wiring, geen IBKR, geen OpenAI, geen echte trading.
 - API/worker runtime persistence voor deze setup is nog niet aangesloten.
+
+## Task 37 update (2026-05-19)
+- Storage-foundation voor centrale `system_events` (Systeemmeldingen/Foutenlogboek) is toegevoegd via migratie `0007_system_events`.
+- Events ondersteunen fouten, waarschuwingen en blokkeringen met Nederlandse gebruikersvelden en redacted technische details.
+- Geen hard delete-contract of delete-repositorymethode: geschiedenis blijft auditvriendelijk bewaard.
+- Open/resolved/archived status kan later actieve meldingen verbergen zonder fysieke verwijdering.
+- Codex-kopie-details moeten redacted zijn; secrets horen niet in `redacted_details_json`.
+- Dit is alleen storage-foundation: geen API-runtime wiring, geen GUI, geen broker/IBKR/OpenAI/trading gedrag toegevoegd.

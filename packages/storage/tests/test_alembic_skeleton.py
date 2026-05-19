@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_six_revision_files_exist_with_expected_names() -> None:
+def test_exactly_seven_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -42,6 +42,7 @@ def test_exactly_six_revision_files_exist_with_expected_names() -> None:
         "0004_broker_execution_and_commission_snapshots.py",
         "0005_broker_reconciliation_schema.py",
         "0006_external_broker_activities.py",
+        "0007_system_events.py",
     ]
 
 
@@ -102,6 +103,7 @@ def test_postgresql_create_table_compilation_includes_broker_tables() -> None:
         "broker_reconciliation_reports",
         "broker_reconciliation_differences",
         "external_broker_activities",
+        "system_events",
     ]
     for table_name in table_names:
         sql = str(CreateTable(metadata.tables[table_name]).compile(dialect=postgresql.dialect()))

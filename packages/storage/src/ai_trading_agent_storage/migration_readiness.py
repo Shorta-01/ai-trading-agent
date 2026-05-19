@@ -106,6 +106,16 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Externe brokeractiviteiten",
         description_nl="Tabel voor toekomstige directe IBKR-activiteiten buiten AI-Trading-Agent.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0007",
+        previous_revision_id="0006",
+        filename="0007_system_events.py",
+        label_nl="Systeemmeldingen",
+        description_nl=(
+            "Tabellen voor centrale systeemmeldingen, fouten, waarschuwingen en "
+            "blokkeringen."
+        ),
+    ),
 )
 
 
