@@ -119,7 +119,7 @@ def test_setup_preview_storage_ready_persists(monkeypatch) -> None:
         def create_setup(self, request):
             captured['request_cash_type'] = type(request.starting_cash_amount)
             captured['request_cash_value'] = request.starting_cash_amount
-            return type('WriteResult', (), {'success': True})()
+            return type('WriteResult', (), {'accepted': True})()
 
     monkeypatch.setattr(
         status_routes.settings,
