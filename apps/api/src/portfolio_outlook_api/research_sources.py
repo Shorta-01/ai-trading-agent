@@ -1,8 +1,12 @@
 """Metadata-only Research Source Archive API routes."""
 
+import re
 from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
+from hashlib import sha256
+from pathlib import Path
+from typing import Annotated
 
 from ai_trading_agent_storage import (
     DatabaseConnectionSettings,
@@ -22,11 +26,11 @@ from ai_trading_agent_storage import (
     StoragePersistenceBlockedError,
     build_database_connection_settings,
 )
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
-from portfolio_outlook_api.config import StorageSettings, settings
+from portfolio_outlook_api.config import ResearchUploadSettings, StorageSettings, settings
 
 ConnectionProviderFactory = Callable[[DatabaseConnectionSettings], StorageConnectionProvider]
 RepositoryFactory = Callable[
@@ -169,6 +173,69 @@ class ResearchProcessingStatusInput(BaseModel):
     reason_nl: str
 
 
+
+
+def _sanitize_upload_filename(filename: str) -> str:
+    cleaned = filename.strip()
+    if cleaned == "":
+        raise HTTPException(status_code=400, detail="Bestandsnaam ontbreekt.")
+    if any(sep in cleaned for sep in ("/", "\\")) or ".." in cleaned:
+        raise HTTPException(status_code=400, detail="Ongeldige bestandsnaam.")
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", cleaned).strip("._")
+    if safe == "":
+        raise HTTPException(status_code=400, detail="Bestandsnaam is ongeldig.")
+    return safe
+
+
+def _default_document_type(original_name: str) -> str:
+    suffix = Path(original_name).suffix.lower()
+    if suffix == "":
+        return "unknown_document"
+    return suffix.lstrip(".")
+
+
+def _archive_uploaded_file(
+    *,
+    upload: UploadFile,
+    library_source_id: str,
+    upload_settings: ResearchUploadSettings,
+) -> tuple[str, str, int, str, str]:
+    original_name = _sanitize_upload_filename(upload.filename or "")
+    extension = Path(original_name).suffix.lower()
+    if extension not in {ext.lower() for ext in upload_settings.allowed_extensions}:
+        raise HTTPException(status_code=400, detail="Bestandstype is niet toegestaan.")
+    content_type = (upload.content_type or "").strip().lower()
+    if content_type not in {ct.lower() for ct in upload_settings.allowed_content_types}:
+        raise HTTPException(status_code=400, detail="Content-Type is niet toegestaan.")
+
+    archive_dir = Path(upload_settings.archive_dir).resolve()
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    hasher = sha256()
+    size = 0
+    chunks: list[bytes] = []
+    while True:
+        chunk = upload.file.read(1024 * 1024)
+        if not chunk:
+            break
+        size += len(chunk)
+        if size > upload_settings.max_file_size_bytes:
+            raise HTTPException(status_code=413, detail="Bestand is te groot.")
+        hasher.update(chunk)
+        chunks.append(chunk)
+    file_hash = hasher.hexdigest()
+    stored_name = f"{library_source_id}-{file_hash[:16]}-{original_name}"
+    if any(sep in stored_name for sep in ("/", "\\")) or stored_name.strip()=="":
+        raise HTTPException(status_code=400, detail="Opslagbestandsnaam is ongeldig.")
+    target = (archive_dir / stored_name).resolve()
+    if archive_dir not in target.parents:
+        raise HTTPException(status_code=400, detail="Bestandspad is ongeldig.")
+    if target.exists():
+        raise HTTPException(status_code=409, detail="Bestand bestaat al in archief.")
+    with target.open("wb") as fh:
+        for chunk in chunks:
+            fh.write(chunk)
+    return original_name, stored_name, size, file_hash, f"file://{target}"
+
 def _with_repo(
     storage_settings: StorageSettings,
     operation: Callable[[SqlAlchemyResearchSourceArchiveRepository], dict[str, object]],
@@ -281,6 +348,112 @@ def create_uploaded_file_metadata(
             asdict(saved),
             "Geen upload of parsing in deze endpoint.",
         )
+
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.post("/research/sources/{library_source_id}/upload-file")
+def upload_research_source_file(
+    library_source_id: str,
+    file: Annotated[UploadFile, File(...)],
+    title: str | None = Form(default=None),
+    asset_symbol: str | None = Form(default=None),
+    asset_name: str | None = Form(default=None),
+    document_type: str | None = Form(default=None),
+    source_kind: str | None = Form(default=None),
+    source_type: str | None = Form(default=None),
+    explanation_nl: str | None = Form(default=None),
+) -> dict[str, object]:
+    if not settings.research_upload.enabled:
+        raise HTTPException(status_code=503, detail="Bestand uploaden staat uit.")
+
+    source_id = _require_id(library_source_id, "library_source_id")
+
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        now = datetime.now(UTC)
+        original_name, stored_name, file_size, hash_sha256, storage_uri = _archive_uploaded_file(
+            upload=file,
+            library_source_id=source_id,
+            upload_settings=settings.research_upload,
+        )
+        source_record = ResearchSourceRecord(
+            library_source_id=source_id,
+            source_kind=source_kind or "user_uploaded_document",
+            status="active",
+            classification_status="pending",
+            extraction_status="pending",
+            analysis_status="pending",
+            asset_symbol=asset_symbol,
+            asset_name=asset_name,
+            title=title or original_name,
+            document_type=document_type or _default_document_type(original_name),
+            source_type=source_type or "user_uploaded",
+            source_credibility_level=None,
+            prompt_injection_risk_level=None,
+            content_hash_sha256=hash_sha256,
+            archive_storage_uri=storage_uri,
+            raw_source_available=True,
+            created_at=now,
+            updated_at=now,
+            archived_at=None,
+            schema_version="v1",
+            explanation_nl=(
+                explanation_nl
+                or "Door gebruiker geüpload bestand voor later onderzoek."
+            ),
+        )
+        uploaded_record = ResearchUploadedFileMetadataRecord(
+            library_source_id=source_id,
+            original_file_name=original_name,
+            stored_file_name=stored_name,
+            content_type=file.content_type,
+            file_size_bytes=file_size,
+            file_hash_sha256=hash_sha256,
+            detected_language=None,
+            page_count=None,
+            uploaded_at=now,
+            uploaded_by_user=True,
+            explanation_nl="Bestand veilig gearchiveerd zonder parsing of analyse.",
+        )
+        processing_record = ResearchSourceProcessingStatusRecord(
+            processing_id=f"upload-{source_id}-{int(now.timestamp())}",
+            library_source_id=source_id,
+            classification_status="pending",
+            extraction_status="pending",
+            analysis_status="pending",
+            readiness_status="uploaded_metadata_only",
+            can_be_used_in_research=False,
+            can_be_used_in_suggestions=False,
+            needs_user_review=True,
+            blocks_suggestions=True,
+            last_error_nl=None,
+            checked_at=now,
+            reason_nl=(
+                "Bestand is geüpload, maar nog niet geclassificeerd, "
+                "gelezen of geanalyseerd."
+            ),
+        )
+        repo.save_research_source(source_record)
+        repo.save_uploaded_file_metadata(uploaded_record)
+        repo.save_processing_status(processing_record)
+        return {
+            "status_nl": "OK",
+            "message_nl": (
+                "Bestand veilig opgeslagen als onderzoeksbron. Het bestand is nog "
+                "niet gelezen, geparseerd of geanalyseerd."
+            ),
+            "help_nl": (
+                "Dit bestand is bewijs voor later onderzoek. "
+                "Het maakt geen koop- of verkoopactie aan."
+            ),
+            "library_source_id": source_id,
+            "original_file_name": original_name,
+            "stored_file_name": stored_name,
+            "file_size_bytes": file_size,
+            "sha256": hash_sha256,
+            "archive_storage_uri": storage_uri,
+            "record": asdict(source_record),
+        }
 
     return _with_repo(settings.storage, op, require_writable=True)
 
