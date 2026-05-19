@@ -55,3 +55,10 @@ Eigenschappen:
 - Safe default remains: no storage configured, no connection attempt, writes blocked.
 - This task does not add database runtime wiring, engine/session creation, or persistence.
 - Runtime readiness and write-path implementation will be added in a later task.
+
+## Online opslagreadiness (Task 32)
+- `GET /storage/status` blijft een offline/contract-check zonder databaseverbinding.
+- `GET /storage/status/online` doet een expliciete, tijdelijke read-only databasecheck als storage is ingeschakeld én een database-url is ingesteld.
+- De API maakt nog geen databaseverbinding bij startup en heeft nog geen globale engine/session.
+- Deze check schrijft niets en zet writes niet aan.
+- Writes blijven geblokkeerd tenzij migratiereadiness veilig is.

@@ -2,6 +2,11 @@
 
 from fastapi import APIRouter, HTTPException
 
+from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.online_storage_status import (
+    OnlineStorageStatusResponse,
+    build_online_storage_status,
+)
 from portfolio_outlook_api.paper_setup import (
     SetupPreviewInput,
     create_setup_preview,
@@ -73,3 +78,8 @@ def preview_portfolio_setup(payload: SetupPreviewInput) -> dict[str, object]:
 @router.get("/storage/status", response_model=StorageStatusResponse)
 def read_storage_status() -> StorageStatusResponse:
     return build_storage_status()
+
+
+@router.get("/storage/status/online", response_model=OnlineStorageStatusResponse)
+def read_storage_status_online() -> OnlineStorageStatusResponse:
+    return build_online_storage_status(settings.storage)
