@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 
-from ai_trading_agent_storage import MigrationReadinessReport, StorageConnectionError
+from ai_trading_agent_storage import (
+    StorageConnectionError,
+    build_database_not_connected_readiness_report,
+)
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.config import StorageSettings
@@ -28,15 +31,7 @@ class _FakeProvider:
 class _Checked:
     def __init__(self) -> None:
         self.connection = object()
-        self.readiness = MigrationReadinessReport(
-            current_revision="0008",
-            expected_revision="0008",
-            is_current=True,
-            has_revision_table=True,
-            safe_to_write=True,
-            status_nl="OK",
-            detail_nl="OK",
-        )
+        self.readiness = build_database_not_connected_readiness_report()
 
 
 class _ReadResult:
@@ -94,7 +89,7 @@ def test_trading_settings_endpoint_reads_persisted_settings() -> None:
     }
 
     class Repo:
-        def __init__(self, connection: object, readiness: MigrationReadinessReport) -> None:
+        def __init__(self, connection: object, readiness: object) -> None:
             tracker["repository_called"] = True
             tracker["connection"] = connection
             tracker["readiness"] = readiness
