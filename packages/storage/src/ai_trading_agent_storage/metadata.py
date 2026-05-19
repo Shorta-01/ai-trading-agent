@@ -347,3 +347,73 @@ broker_commission_snapshots = Table(
         "explanation_nl <> ''", name="ck_broker_commission_snapshots_explanation_nl_not_empty"
     ),
 )
+
+
+broker_reconciliation_reports = Table(
+    "broker_reconciliation_reports",
+    metadata,
+    Column("broker_reconciliation_report_id", Text, primary_key=True),
+    Column(
+        "broker_sync_run_id",
+        Text,
+        ForeignKey("broker_sync_runs.broker_sync_run_id"),
+        nullable=False,
+    ),
+    Column(
+        "broker_account_id", Text, ForeignKey("broker_accounts.broker_account_id"), nullable=True
+    ),
+    Column("broker_system", Text, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("suggestion_policy", Text, nullable=False),
+    Column("can_create_suggestions", Boolean, nullable=False),
+    Column("can_create_orders", Boolean, nullable=False),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("title_nl", Text, nullable=False),
+    Column("summary_nl", Text, nullable=False),
+    Column("help_nl", Text, nullable=False),
+    CheckConstraint("broker_system = 'ibkr'", name="ck_brr_broker_system_ibkr"),
+    CheckConstraint("can_create_orders IS FALSE", name="ck_brr_can_create_orders_false"),
+    CheckConstraint("status <> ''", name="ck_brr_status_not_empty"),
+    CheckConstraint("suggestion_policy <> ''", name="ck_brr_suggestion_policy_not_empty"),
+    CheckConstraint("title_nl <> ''", name="ck_brr_title_nl_not_empty"),
+    CheckConstraint("summary_nl <> ''", name="ck_brr_summary_nl_not_empty"),
+    CheckConstraint("help_nl <> ''", name="ck_brr_help_nl_not_empty"),
+)
+
+broker_reconciliation_differences = Table(
+    "broker_reconciliation_differences",
+    metadata,
+    Column("broker_reconciliation_difference_id", Text, primary_key=True),
+    Column(
+        "broker_reconciliation_report_id",
+        Text,
+        ForeignKey("broker_reconciliation_reports.broker_reconciliation_report_id"),
+        nullable=False,
+    ),
+    Column(
+        "broker_account_id", Text, ForeignKey("broker_accounts.broker_account_id"), nullable=False
+    ),
+    Column("broker_system", Text, nullable=False),
+    Column("difference_kind", Text, nullable=False),
+    Column("severity", Text, nullable=False),
+    Column("detected_at", DateTime(timezone=True), nullable=False),
+    Column("broker_value", Text, nullable=True),
+    Column("local_value", Text, nullable=True),
+    Column("asset_identifier", Text, nullable=True),
+    Column("currency", Text, nullable=True),
+    Column("blocks_suggestions", Boolean, nullable=False),
+    Column("requires_manual_review", Boolean, nullable=False),
+    Column("summary_nl", Text, nullable=False),
+    Column("help_nl", Text, nullable=False),
+    Column("source_reference_ids_json", JSON, nullable=True),
+    Column("audit_event_ids_json", JSON, nullable=True),
+    CheckConstraint("broker_system = 'ibkr'", name="ck_brd_broker_system_ibkr"),
+    CheckConstraint("difference_kind <> ''", name="ck_brd_difference_kind_not_empty"),
+    CheckConstraint("severity <> ''", name="ck_brd_severity_not_empty"),
+    CheckConstraint(
+        "severity NOT IN ('blocking', 'critical') OR blocks_suggestions IS TRUE",
+        name="ck_brd_blocking_or_critical_requires_block",
+    ),
+    CheckConstraint("summary_nl <> ''", name="ck_brd_summary_nl_not_empty"),
+    CheckConstraint("help_nl <> ''", name="ck_brd_help_nl_not_empty"),
+)

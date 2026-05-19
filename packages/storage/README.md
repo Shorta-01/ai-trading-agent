@@ -57,3 +57,4 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Dit zijn uitsluitend imported broker facts tabellen (executions/commissions), geen ordertransmissie.
 - Er wordt nog geen IBKR-data geïmporteerd door runtime.
 - Er is nog geen runtime persistence, geen repositories, en geen API/worker DB writes.
+\n\n## Task 25D update (2026-05-19)\n- Added broker_reconciliation_reports and broker_reconciliation_differences in storage schema slice 4.\n- Scope is status/difference storage only; no reconciliation engine, IBKR integration, runtime persistence, repositories, API/worker DB wiring, or order transmission yet.\n- external_broker_activities remains planned for a later migration.
