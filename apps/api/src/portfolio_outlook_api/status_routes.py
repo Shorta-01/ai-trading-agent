@@ -13,6 +13,7 @@ from portfolio_outlook_api.paper_setup import (
     get_setup_defaults,
     get_setup_status,
 )
+from portfolio_outlook_api.paper_setup_persistence import persist_first_run_paper_setup
 from portfolio_outlook_api.status_builders import (
     build_ai_usage_summary,
     build_dutch_labels_summary,
@@ -70,7 +71,13 @@ def read_portfolio_setup_defaults() -> dict[str, object]:
 @router.post("/portfolio/setup/preview")
 def preview_portfolio_setup(payload: SetupPreviewInput) -> dict[str, object]:
     try:
-        return create_setup_preview(payload)
+        create_setup_preview(payload)
+        result = persist_first_run_paper_setup(payload, settings.storage)
+        if result.blocked:
+            raise HTTPException(status_code=409, detail=result.response["message_nl"])
+        return result.response
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
