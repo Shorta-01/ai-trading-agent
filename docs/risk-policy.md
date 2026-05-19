@@ -105,3 +105,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - An empty `external_broker_activities` table is not proof that no direct IBKR activity happened.
 - Direct IBKR actions must later be detected and reconciled before broker-dependent suggestions are trusted.
 - Local state must never silently absorb external broker activity.
+
+## Storage write-risico regels (Task 26)
+- Directe table writes vanuit API/worker zijn niet toegestaan.
+- Broker sync writes moeten later via repositories plus audit checks lopen.
+- Repository interfaces op zichzelf maken persistence nog niet veilig.
+- Suggesties mogen niet vertrouwen op lege of niet-verbonden repositories.

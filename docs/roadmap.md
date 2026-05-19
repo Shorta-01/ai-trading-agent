@@ -182,3 +182,14 @@ Next:
 - Broker snapshot import adapter skeleton.
 - Reconciliation engine foundation.
 - External broker activity detection logic.
+
+## Task 26 afgerond
+- Repository interfaces voor broker sync en reconciliation storage boundary toegevoegd.
+
+## Next
+- Database readiness check voor migrations.
+- SQLAlchemy repository implementation skeleton.
+- IBKR settings/status velden.
+- IBKR bootstrap preview.
+- Broker snapshot import adapter skeleton.
+- Reconciliation engine foundation.
