@@ -383,3 +383,4 @@ Waarom opgesplitst:
 - constraint/FK-validatie blijft beter reviewbaar;
 - audit- en source-of-truth guardrails blijven expliciet per stap.
 
+\n\n## Task 25D update (2026-05-19)\n- Added broker_reconciliation_reports and broker_reconciliation_differences in storage schema slice 4.\n- Scope is status/difference storage only; no reconciliation engine, IBKR integration, runtime persistence, repositories, API/worker DB wiring, or order transmission yet.\n- external_broker_activities remains planned for a later migration.

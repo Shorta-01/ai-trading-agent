@@ -120,3 +120,26 @@ def test_broker_commission_snapshots_constraints_exist() -> None:
         "ck_broker_commission_snapshots_currency_not_empty",
         "ck_broker_commission_snapshots_explanation_nl_not_empty",
     }
+
+
+def test_broker_reconciliation_reports_constraints_exist() -> None:
+    assert set(_check_constraints("broker_reconciliation_reports")) == {
+        "ck_brr_broker_system_ibkr",
+        "ck_brr_can_create_orders_false",
+        "ck_brr_status_not_empty",
+        "ck_brr_suggestion_policy_not_empty",
+        "ck_brr_title_nl_not_empty",
+        "ck_brr_summary_nl_not_empty",
+        "ck_brr_help_nl_not_empty",
+    }
+
+
+def test_broker_reconciliation_differences_constraints_exist() -> None:
+    assert set(_check_constraints("broker_reconciliation_differences")) == {
+        "ck_brd_broker_system_ibkr",
+        "ck_brd_difference_kind_not_empty",
+        "ck_brd_severity_not_empty",
+        "ck_brd_blocking_or_critical_requires_block",
+        "ck_brd_summary_nl_not_empty",
+        "ck_brd_help_nl_not_empty",
+    }

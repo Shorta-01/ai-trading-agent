@@ -14,6 +14,8 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "broker_cash_snapshots",
         "broker_execution_snapshots",
         "broker_commission_snapshots",
+        "broker_reconciliation_reports",
+        "broker_reconciliation_differences",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
@@ -46,6 +48,8 @@ def test_timestamp_columns_are_timezone_aware() -> None:
         metadata.tables["broker_execution_snapshots"].c.imported_at,
         metadata.tables["broker_execution_snapshots"].c.execution_time,
         metadata.tables["broker_commission_snapshots"].c.imported_at,
+        metadata.tables["broker_reconciliation_reports"].c.checked_at,
+        metadata.tables["broker_reconciliation_differences"].c.detected_at,
     ]
     for column in columns:
         assert isinstance(column.type, DateTime)
@@ -272,3 +276,40 @@ def test_broker_execution_and_commission_foreign_keys() -> None:
         for fk in metadata.tables["broker_commission_snapshots"].c.broker_account_id.foreign_keys
     } == {"broker_accounts.broker_account_id"}
     assert metadata.tables["broker_commission_snapshots"].c.execution_id.foreign_keys == set()
+
+
+def test_broker_reconciliation_tables_have_expected_columns() -> None:
+    assert set(metadata.tables["broker_reconciliation_reports"].c.keys()) == {
+        "broker_reconciliation_report_id", "broker_sync_run_id", "broker_account_id",
+        "broker_system", "status", "suggestion_policy", "can_create_suggestions",
+        "can_create_orders", "checked_at", "title_nl", "summary_nl", "help_nl",
+    }
+    assert set(metadata.tables["broker_reconciliation_differences"].c.keys()) == {
+        "broker_reconciliation_difference_id", "broker_reconciliation_report_id",
+        "broker_account_id", "broker_system", "difference_kind", "severity",
+        "detected_at", "broker_value", "local_value", "asset_identifier", "currency",
+        "blocks_suggestions", "requires_manual_review", "summary_nl", "help_nl",
+        "source_reference_ids_json", "audit_event_ids_json",
+    }
+
+def test_broker_reconciliation_foreign_keys() -> None:
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_reconciliation_reports"].c.broker_sync_run_id.foreign_keys
+    } == {"broker_sync_runs.broker_sync_run_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables["broker_reconciliation_reports"].c.broker_account_id.foreign_keys
+    } == {"broker_accounts.broker_account_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables[
+            "broker_reconciliation_differences"
+        ].c.broker_reconciliation_report_id.foreign_keys
+    } == {"broker_reconciliation_reports.broker_reconciliation_report_id"}
+    assert {
+        fk.target_fullname
+        for fk in metadata.tables[
+            "broker_reconciliation_differences"
+        ].c.broker_account_id.foreign_keys
+    } == {"broker_accounts.broker_account_id"}
