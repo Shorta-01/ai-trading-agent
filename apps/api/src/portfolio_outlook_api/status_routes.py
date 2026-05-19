@@ -33,6 +33,11 @@ from portfolio_outlook_api.system_event_reader import (
     ActiveSystemEventsResponse,
     list_active_system_events,
 )
+from portfolio_outlook_api.system_event_mutations import (
+    SystemEventMutationInput,
+    mark_system_event_archived,
+    mark_system_event_resolved,
+)
 
 router = APIRouter()
 
@@ -99,3 +104,29 @@ def read_storage_status_online() -> OnlineStorageStatusResponse:
 @router.get("/system/events/active", response_model=ActiveSystemEventsResponse)
 def read_active_system_events() -> ActiveSystemEventsResponse:
     return list_active_system_events(settings.storage)
+
+
+@router.post("/system/events/{system_event_id}/resolve")
+def resolve_system_event(
+    system_event_id: str,
+    payload: SystemEventMutationInput = SystemEventMutationInput(),
+) -> dict[str, object]:
+    result = mark_system_event_resolved(system_event_id, settings.storage, payload)
+    if result.not_found:
+        raise HTTPException(status_code=404, detail=result.response["message_nl"])
+    if result.blocked:
+        raise HTTPException(status_code=409, detail=result.response["message_nl"])
+    return result.response
+
+
+@router.post("/system/events/{system_event_id}/archive")
+def archive_system_event(
+    system_event_id: str,
+    payload: SystemEventMutationInput = SystemEventMutationInput(),
+) -> dict[str, object]:
+    result = mark_system_event_archived(system_event_id, settings.storage, payload)
+    if result.not_found:
+        raise HTTPException(status_code=404, detail=result.response["message_nl"])
+    if result.blocked:
+        raise HTTPException(status_code=409, detail=result.response["message_nl"])
+    return result.response

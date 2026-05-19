@@ -270,6 +270,16 @@ class SystemEventRepositoryProtocol(Protocol):
 
     def list_open_events(self) -> StorageListResult[SystemEventRecord]:
         ...
+
+    def mark_resolved(
+        self, system_event_id: str, *, reason_nl: str | None = None
+    ) -> StorageWriteResult:
+        ...
+
+    def mark_archived(
+        self, system_event_id: str, *, reason_nl: str | None = None
+    ) -> StorageWriteResult:
+        ...
 class BrokerAccountRepository(Protocol):
     def get_by_id(self, broker_account_id: str) -> StorageReadResult[BrokerAccountRecord]:
         ...
