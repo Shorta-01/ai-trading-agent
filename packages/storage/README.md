@@ -107,3 +107,9 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - Open/resolved/archived status kan later actieve meldingen verbergen zonder fysieke verwijdering.
 - Codex-kopie-details moeten redacted zijn; secrets horen niet in `redacted_details_json`.
 - Dit is alleen storage-foundation: geen API-runtime wiring, geen GUI, geen broker/IBKR/OpenAI/trading gedrag toegevoegd.
+
+## Task 43 update (2026-05-19)
+- Storage-foundation voor `trading_settings` is toegevoegd via migratie `0008_trading_settings`.
+- De opslag bewaart `Toegestane beleggingen` en `Mijn strategie` als gestructureerde JSON-data.
+- Domain/API-laag valideert settings later; storage doet geen strategievalidatie of advieslogica.
+- Geen update-endpoint, geen UI, geen IBKR/OpenAI gedrag, geen trading/recommendation gedrag en geen hard-delete toegevoegd.

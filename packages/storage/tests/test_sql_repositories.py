@@ -15,6 +15,7 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerSyncRunRecord,
     CreatePaperPortfolioSetupRequest,
     CreateSystemEventRequest,
+    SaveTradingSettingsRequest,
 )
 from ai_trading_agent_storage.sql_repositories import (
     SqlAlchemyBrokerAccountRepository,
@@ -22,6 +23,7 @@ from ai_trading_agent_storage.sql_repositories import (
     SqlAlchemyBrokerSyncRunRepository,
     SqlAlchemyPaperPortfolioSetupRepository,
     SqlAlchemySystemEventRepository,
+    SqlAlchemyTradingSettingsRepository,
     StoragePersistenceBlockedError,
     ensure_persistence_allowed,
 )
@@ -37,8 +39,8 @@ def _report(allowed: bool) -> MigrationReadinessReport:
         database_connected=allowed,
         migrations_checked_against_database=allowed,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0007",
-        database_revision_id="0007" if allowed else None,
+        latest_expected_revision_id="0008",
+        database_revision_id="0008" if allowed else None,
         persistence_allowed=allowed,
         blocks_runtime_writes=(not allowed),
         explanation_nl="test",
@@ -352,3 +354,63 @@ def test_system_event_resolve_and_archive_hide_from_open_list() -> None:
         assert after_archive.record.status == "archived"
         assert after_archive.record.archived_at is not None
         assert repo.list_open_events().records == ()
+
+
+def test_trading_settings_save_read_update_and_not_found() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyTradingSettingsRepository(conn, _report(True))
+        missing = repo.get_settings("missing")
+        assert missing.found is False
+
+        first = SaveTradingSettingsRequest(
+            settings_id="default",
+            allowed_universe={"max_pct_per_sector": "10"},
+            user_strategy={"max_pct_per_positie": "5"},
+            source="instellingen",
+            status="actief",
+            explanation_nl="Eerste instellingen opgeslagen.",
+            updated_at=datetime.now(UTC),
+        )
+        repo.save_settings(first)
+        saved = repo.get_settings()
+        assert saved.found is True
+        assert saved.record is not None
+        assert saved.record.version == 1
+        assert saved.record.allowed_universe["max_pct_per_sector"] == "10"
+        assert saved.record.user_strategy["max_pct_per_positie"] == "5"
+
+        second = SaveTradingSettingsRequest(
+            settings_id="default",
+            allowed_universe={"max_pct_per_sector": "15"},
+            user_strategy={"max_pct_per_positie": "6"},
+            source="instellingen",
+            status="actief",
+            explanation_nl="Instellingen bijgewerkt.",
+            updated_at=datetime.now(UTC),
+        )
+        repo.save_settings(second)
+        updated = repo.get_settings()
+        assert updated.record is not None
+        assert updated.record.version == 2
+        assert updated.record.allowed_universe["max_pct_per_sector"] == "15"
+
+
+def test_trading_settings_write_blocked_until_readiness_safe() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        blocked = SqlAlchemyTradingSettingsRepository(conn, _report(False))
+        with pytest.raises(StoragePersistenceBlockedError):
+            blocked.save_settings(
+                SaveTradingSettingsRequest(
+                    settings_id="default",
+                    allowed_universe={"a": "10"},
+                    user_strategy={"b": "5"},
+                    source="instellingen",
+                    status="actief",
+                    explanation_nl="Geblokkeerd.",
+                    updated_at=datetime.now(UTC),
+                )
+            )

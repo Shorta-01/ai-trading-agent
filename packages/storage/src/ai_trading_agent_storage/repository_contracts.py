@@ -321,6 +321,40 @@ class CreatePaperPortfolioSetupRequest:
     explanation_nl: str
 
 
+@dataclass(frozen=True)
+class TradingSettingsRecord:
+    settings_id: str
+    created_at: datetime
+    updated_at: datetime
+    version: int
+    allowed_universe: dict[str, object]
+    user_strategy: dict[str, object]
+    source: str
+    status: str
+    explanation_nl: str
+
+
+@dataclass(frozen=True)
+class SaveTradingSettingsRequest:
+    settings_id: str
+    allowed_universe: dict[str, object]
+    user_strategy: dict[str, object]
+    source: str
+    status: str
+    explanation_nl: str
+    updated_at: datetime
+
+
+class TradingSettingsRepositoryProtocol(Protocol):
+    def save_settings(self, request: SaveTradingSettingsRequest) -> StorageWriteResult:
+        ...
+
+    def get_settings(
+        self, settings_id: str = "default"
+    ) -> StorageReadResult[TradingSettingsRecord]:
+        ...
+
+
 class PaperPortfolioSetupRepositoryProtocol(Protocol):
     def create_setup(
         self, request: CreatePaperPortfolioSetupRequest
@@ -508,5 +542,8 @@ def repository_interfaces_are_defined() -> bool:
         StorageReadResult,
         StorageListResult,
         RepositoryHealthStatus,
+        TradingSettingsRecord,
+        SaveTradingSettingsRequest,
+        TradingSettingsRepositoryProtocol,
     )
     return True

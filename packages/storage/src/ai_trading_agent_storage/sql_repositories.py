@@ -20,6 +20,7 @@ from ai_trading_agent_storage.metadata import (
     external_broker_activities,
     paper_portfolio_setups,
     system_events,
+    trading_settings,
 )
 from ai_trading_agent_storage.migration_readiness import (
     MigrationReadinessReport,
@@ -39,10 +40,12 @@ from ai_trading_agent_storage.repository_contracts import (
     ExternalBrokerActivityRecord,
     PaperPortfolioSetupRecord,
     RepositoryHealthStatus,
+    SaveTradingSettingsRequest,
     StorageListResult,
     StorageReadResult,
     StorageWriteResult,
     SystemEventRecord,
+    TradingSettingsRecord,
 )
 
 
@@ -277,6 +280,87 @@ class SqlAlchemyPaperPortfolioSetupRepository(_Base):
             PaperPortfolioSetupRecord(**values),
             paper_portfolio_setups.name,
             "Laatste papieren portfolio-opzet gevonden.",
+        )
+
+
+class SqlAlchemyTradingSettingsRepository(_Base):
+    def save_settings(self, request: SaveTradingSettingsRequest) -> StorageWriteResult:
+        ensure_persistence_allowed(self._readiness_report)
+        existing = _read_one_by_column(
+            self._connection,
+            trading_settings,
+            "settings_id",
+            request.settings_id,
+        )
+        if existing is None:
+            values = {
+                "settings_id": request.settings_id,
+                "created_at": request.updated_at,
+                "updated_at": request.updated_at,
+                "version": 1,
+                "allowed_universe_json": request.allowed_universe,
+                "user_strategy_json": request.user_strategy,
+                "source": request.source,
+                "status": request.status,
+                "explanation_nl": request.explanation_nl,
+            }
+            self._connection.execute(trading_settings.insert().values(**values))
+            return StorageWriteResult(
+                True,
+                request.settings_id,
+                trading_settings.name,
+                True,
+                "Trading instellingen opgeslagen.",
+            )
+
+        new_version = int(existing["version"]) + 1
+        self._connection.execute(
+            trading_settings.update()
+            .where(trading_settings.c.settings_id == request.settings_id)
+            .values(
+                updated_at=request.updated_at,
+                version=new_version,
+                allowed_universe_json=request.allowed_universe,
+                user_strategy_json=request.user_strategy,
+                source=request.source,
+                status=request.status,
+                explanation_nl=request.explanation_nl,
+            )
+        )
+        return StorageWriteResult(
+            True,
+            request.settings_id,
+            trading_settings.name,
+            True,
+            "Trading instellingen bijgewerkt.",
+        )
+
+    def get_settings(
+        self, settings_id: str = "default"
+    ) -> StorageReadResult[TradingSettingsRecord]:
+        row = _read_one_by_column(self._connection, trading_settings, "settings_id", settings_id)
+        if row is None:
+            return StorageReadResult(
+                found=False,
+                record=None,
+                table_name=trading_settings.name,
+                explanation_nl="Trading instellingen niet gevonden.",
+            )
+        return StorageReadResult(
+            found=True,
+            record=TradingSettingsRecord(
+                settings_id=row["settings_id"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+                version=row["version"],
+                allowed_universe=dict(row["allowed_universe_json"]),
+                user_strategy=dict(row["user_strategy_json"]),
+                source=row["source"],
+                status=row["status"],
+                explanation_nl=row["explanation_nl"],
+            ),
+            table_name=trading_settings.name,
+            explanation_nl="Trading instellingen gevonden.",
         )
 
 
