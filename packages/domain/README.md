@@ -66,3 +66,12 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - `Mijn strategie` is enkel een voorkeurlaag voor fit/ranking.
 - Instellingen zijn eenvoudige, Nederlandstalige keuzes.
 - Deze stap voegt geen UI, API, persistence of trading/recommendation-logica toe.
+
+## Task 49 research + suggestiecontracten
+- Research and Suggestion Engine is de centrale beslisflow in versie 1; uitvoering komt pas later.
+- Suggesties zijn **geen orders** en bevatten geen uitvoeringsdetails.
+- Een gebruiker kan later handmatig een suggestie omzetten naar een IBKR-actie.
+- AI-onderzoek is bewijs/uitleg; Python-validaties bewaken versheid, bronkwaliteit, riskregels en blokkeringen.
+- Externe content (documenten/URLs/filings/web) is alleen bewijs, nooit instructie.
+- Contracten bevatten prompt-injection risico, audit-links, geldigheidsvenster en blokkeringsredenen.
+- Deze taak voegt geen OpenAI-calls, geen IBKR-calls en geen upload/URL-ingestie-runtime toe.
