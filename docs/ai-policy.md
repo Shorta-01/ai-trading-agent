@@ -56,3 +56,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI may not describe broker/local differences as harmless unless reconciliation status explicitly allows that interpretation.
 - Broker-dependent AI suggestions must later cite the latest broker sync and reconciliation records.
 - Missing broker snapshots must block or clearly caveat broker-dependent suggestions.
+
+
+## Task 25B AI gedrag rond broker snapshots
+- AI mag lege broker snapshot-tabellen niet interpreteren als succesvolle sync.
+- AI mag geen holdings of cash infereren uit lege schema-tabellen.
+- Broker-afhankelijke feiten moeten later verwijzen naar echte snapshot- en reconciliation-records.

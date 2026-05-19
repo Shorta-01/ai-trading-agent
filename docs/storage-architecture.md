@@ -138,3 +138,9 @@ Future implementation order:
 - Broker snapshot- en reconciliation-tabellen zijn nog gepland (nog niet gemigreerd).
 - De draaiende applicatie persisteert nog geen IBKR-data.
 
+
+
+## Task 25B storage update
+- Broker account, sync run, position snapshot en cash snapshot tabellen bestaan nu in storage schema-migraties.
+- Execution/commission/reconciliation/external activity tabellen blijven gepland voor volgende migraties.
+- De draaiende applicatie persisteert momenteel geen IBKR-data.

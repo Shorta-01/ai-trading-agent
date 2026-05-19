@@ -152,3 +152,14 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 4. IBKR settings/status velden (zonder secrets).
 5. IBKR bootstrap preview.
 
+
+
+## Task 25B status
+- ✅ Broker position and cash snapshot schema migration afgerond.
+
+## Volgende broker taken
+1. Broker execution en commission snapshot schema migration.
+2. Broker reconciliation schema migration.
+3. Repository-interfaces voor broker snapshots.
+4. IBKR settings/status velden.
+5. IBKR bootstrap preview.

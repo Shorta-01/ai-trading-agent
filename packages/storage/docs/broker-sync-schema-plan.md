@@ -18,7 +18,21 @@ This document is a planning artifact for the **next** migration PR.
 - Local records may not silently override imported IBKR facts.
 
 ## 4. Future tables
-The next migration should add these tables in this exact set:
+Schema rollout is split into smaller safe PR slices.
+
+Implemented now:
+- `broker_accounts` and `broker_sync_runs` in migration `0002_broker_accounts_and_sync_runs`
+- `broker_position_snapshots` and `broker_cash_snapshots` in migration `0003_broker_position_and_cash_snapshots`
+
+Future migrations still planned:
+- `broker_execution_snapshots`
+- `broker_commission_snapshots`
+- `broker_reconciliation_reports`
+- `broker_reconciliation_differences`
+- `external_broker_activities`
+
+Original full target set:
+
 1. `broker_accounts`
 2. `broker_sync_runs`
 3. `broker_position_snapshots`

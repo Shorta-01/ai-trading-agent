@@ -88,3 +88,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Lege broker-tabellen mogen nooit als succesvolle sync geïnterpreteerd worden.
 - Suggesties mogen niet op brokerdata steunen totdat echte sync + reconciliation operationeel zijn.
 
+
+
+## Task 25B risiconota
+- Het bestaan van broker snapshot-tabellen betekent niet dat broker sync actief is.
+- Lege broker snapshot-tabellen mogen nooit als succesvolle sync geïnterpreteerd worden.
+- Suggesties mogen niet vertrouwen op broker positie/cash-data tot echte sync en reconciliation bestaan.
