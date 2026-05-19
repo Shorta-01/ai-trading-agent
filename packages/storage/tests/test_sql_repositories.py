@@ -300,4 +300,55 @@ def test_system_event_write_blocked_and_missing_and_no_delete() -> None:
 
         allowed_repo = SqlAlchemySystemEventRepository(conn, _report(True))
         assert allowed_repo.get_by_id("missing").found is False
+        assert allowed_repo.mark_resolved("missing").accepted is False
+        assert allowed_repo.mark_archived("missing").accepted is False
         assert hasattr(allowed_repo, "delete") is False
+
+
+def test_system_event_resolve_and_archive_hide_from_open_list() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemySystemEventRepository(conn, _report(True))
+        create = CreateSystemEventRequest(
+            system_event_id="se-open",
+            created_at=datetime.now(UTC),
+            severity="warning",
+            category="api",
+            source_service="api",
+            source_component="events",
+            event_code="open_event",
+            title_nl="Open event",
+            message_nl="Open event message",
+            help_nl="Help",
+            technical_summary=None,
+            redacted_details_json=None,
+            stack_trace_redacted=None,
+            related_entity_type=None,
+            related_entity_id=None,
+            blocks_suggestions=False,
+            blocks_writes=False,
+            blocks_ai_explanation=False,
+            status="open",
+            explanation_nl="Open",
+        )
+        repo.create_event(create)
+        assert [item.system_event_id for item in repo.list_open_events().records] == ["se-open"]
+
+        resolved = repo.mark_resolved("se-open", reason_nl="Handmatig opgelost")
+        assert resolved.accepted is True
+        after_resolve = repo.get_by_id("se-open")
+        assert after_resolve.record is not None
+        assert after_resolve.record.status == "resolved"
+        assert after_resolve.record.resolved_at is not None
+        assert repo.list_open_events().records == ()
+
+        second = CreateSystemEventRequest(**{**create.__dict__, "system_event_id": "se-open-2"})
+        repo.create_event(second)
+        archived = repo.mark_archived("se-open-2", reason_nl="Niet meer relevant")
+        assert archived.accepted is True
+        after_archive = repo.get_by_id("se-open-2")
+        assert after_archive.record is not None
+        assert after_archive.record.status == "archived"
+        assert after_archive.record.archived_at is not None
+        assert repo.list_open_events().records == ()

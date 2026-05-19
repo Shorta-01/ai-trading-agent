@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -648,4 +649,71 @@ class SqlAlchemySystemEventRepository(_Base):
             records=tuple(SystemEventRecord(**dict(row)) for row in rows),
             table_name=system_events.name,
             explanation_nl="Open systeemmeldingen opgehaald.",
+        )
+
+    def mark_resolved(
+        self, system_event_id: str, *, reason_nl: str | None = None
+    ) -> StorageWriteResult:
+        return self._mark_event_status(
+            system_event_id=system_event_id,
+            status="resolved",
+            reason_nl=reason_nl,
+            explanation_nl="Systeemmelding gemarkeerd als opgelost.",
+        )
+
+    def mark_archived(
+        self, system_event_id: str, *, reason_nl: str | None = None
+    ) -> StorageWriteResult:
+        return self._mark_event_status(
+            system_event_id=system_event_id,
+            status="archived",
+            reason_nl=reason_nl,
+            explanation_nl="Systeemmelding gearchiveerd.",
+        )
+
+    def _mark_event_status(
+        self,
+        *,
+        system_event_id: str,
+        status: str,
+        reason_nl: str | None,
+        explanation_nl: str,
+    ) -> StorageWriteResult:
+        ensure_persistence_allowed(self._readiness_report)
+        row = _read_one_by_column(
+            self._connection,
+            system_events,
+            "system_event_id",
+            system_event_id,
+        )
+        if row is None:
+            return StorageWriteResult(
+                accepted=False,
+                record_id=None,
+                table_name=system_events.name,
+                audit_required=True,
+                explanation_nl="Systeemmelding niet gevonden.",
+            )
+
+        now = datetime.now(UTC)
+        update_values: dict[str, Any] = {
+            "status": status,
+            "explanation_nl": reason_nl.strip() if reason_nl and reason_nl.strip() else explanation_nl,
+        }
+        if status == "resolved":
+            update_values["resolved_at"] = now
+        if status == "archived":
+            update_values["archived_at"] = now
+
+        self._connection.execute(
+            system_events.update()
+            .where(system_events.c.system_event_id == system_event_id)
+            .values(**update_values)
+        )
+        return StorageWriteResult(
+            accepted=True,
+            record_id=system_event_id,
+            table_name=system_events.name,
+            audit_required=True,
+            explanation_nl=explanation_nl,
         )
