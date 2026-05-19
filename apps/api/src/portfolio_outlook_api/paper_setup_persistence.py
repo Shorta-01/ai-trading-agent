@@ -8,12 +8,14 @@ from uuid import uuid4
 
 from ai_trading_agent_storage import (
     CreatePaperPortfolioSetupRequest,
+    DatabaseConnectionSettings,
+    MigrationReadinessReport,
     SqlAlchemyPaperPortfolioSetupRepository,
     StorageConnectionError,
     StorageConnectionNotReadyError,
     StorageConnectionProvider,
+    build_database_connection_settings,
 )
-from ai_trading_agent_storage.settings import DatabaseConnectionSettings
 from sqlalchemy.engine import Connection
 
 from portfolio_outlook_api.config import StorageSettings
@@ -31,7 +33,10 @@ class PaperSetupPersistenceResult:
 
 
 ConnectionProviderFactory = Callable[[DatabaseConnectionSettings], StorageConnectionProvider]
-RepositoryFactory = Callable[[Connection, object], SqlAlchemyPaperPortfolioSetupRepository]
+RepositoryFactory = Callable[
+    [Connection, MigrationReadinessReport],
+    SqlAlchemyPaperPortfolioSetupRepository,
+]
 DateTimeProvider = Callable[[], datetime]
 IdProvider = Callable[[], str]
 
@@ -65,7 +70,7 @@ def persist_first_run_paper_setup(
             blocked=True,
         )
 
-    provider = connection_provider_factory(DatabaseConnectionSettings(database_url=database_url))
+    provider = connection_provider_factory(build_database_connection_settings(database_url))
 
     try:
         with provider.checked_connection(require_writable=True) as checked:
@@ -88,7 +93,7 @@ def persist_first_run_paper_setup(
                 response={
                     "setup_status": SETUP_STATUS_PREVIEW_READY,
                     "setup_mode": SETUP_STATUS_FIRST_RUN,
-                    "persisted": write_result.success,
+                    "persisted": write_result.accepted,
                     "setup_id": setup_id,
                     "title_nl": "Paper setup opgeslagen",
                     "summary_nl": "Je paper setup is veilig opgeslagen.",
