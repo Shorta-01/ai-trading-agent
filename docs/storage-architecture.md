@@ -124,3 +124,11 @@ Future implementation order:
 - Ledger/current-balance logica volgt later en wordt niet afgeleid als fake waarde uit setup cash.
 - Audit append-only/hash-ready gedrag is voorbereid, maar enforce-regels volgen later.
 \n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
+
+
+## Task 24B broker sync storage planning
+- Broker sync/reconciliation schema is now documented as implementation-ready design in `packages/storage/docs/broker-sync-schema-plan.md`.
+- Planned tables are not implemented yet; current schema still only contains paper setup/cash/audit foundation tables.
+- The next migration will add broker account, sync-run, snapshot, reconciliation, and external activity tables.
+- No IBKR data is currently persisted.
+- No app database write paths exist yet in API/worker runtime.

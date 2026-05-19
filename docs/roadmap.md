@@ -127,3 +127,17 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 5. Setup audit event persisteren.
 6. Dashboard status met opgeslagen portfolioinformatie tonen (zonder fake data).
 \n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
+
+
+## Task 24B status
+### Reeds afgerond
+- IBKR source-of-truth en reconciliation architectuurbeslissing vastgelegd.
+- Broker sync schema planning en migration design vastgelegd.
+
+### Eerstvolgende taken
+1. Broker sync schema migration implementeren.
+2. Repository interfaces voor broker snapshots en reconciliation records toevoegen.
+3. IBKR settings/status velden toevoegen (zonder secrets op te slaan).
+4. IBKR bootstrap preview flow toevoegen.
+5. Broker snapshot import adapter skeleton toevoegen.
+6. Reconciliation engine foundation toevoegen.

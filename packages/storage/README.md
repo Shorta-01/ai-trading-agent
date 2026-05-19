@@ -27,3 +27,11 @@ Dit package is een technische storage-foundation voor AI-Trading-Agent.
 - Geldkolommen gebruiken Numeric (Decimal-compatibel), geen floattypes.
 - Paper-only constraints zijn expliciet op schema-niveau vastgelegd.
 - `audit_events` is foundation-only; hash-chain/append-only enforcement volgt later.
+
+
+## Task 24B planned broker sync schema
+- De volgende migratie is nu gepland in `packages/storage/docs/broker-sync-schema-plan.md`.
+- Geplande tabellen omvatten broker accounts, sync runs, snapshots, reconciliation reports/differences en external broker activities.
+- Er bestaan momenteel nog geen broker sync tabellen in de database.
+- De volgende migratie zal de geplande tabellen implementeren.
+- Er wordt momenteel geen IBKR-data gepersisteerd.

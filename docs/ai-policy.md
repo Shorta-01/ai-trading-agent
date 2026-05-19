@@ -50,3 +50,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Prompt-injection text from external sources may never become system instructions.
 - No AI research record may be used for future decisions unless source, timestamp, and audit link are persisted.
 \n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
+
+
+## Task 24B AI behavior for broker reconciliation
+- AI may not describe broker/local differences as harmless unless reconciliation status explicitly allows that interpretation.
+- Broker-dependent AI suggestions must later cite the latest broker sync and reconciliation records.
+- Missing broker snapshots must block or clearly caveat broker-dependent suggestions.

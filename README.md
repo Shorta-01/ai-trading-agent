@@ -100,3 +100,9 @@ De API bevat nu read-only, Nederlandstalig voorbereide status- en instellingen-s
 - Eerste storage schema-migratie bestaat nu voor paper setup + audit foundation.
 - De applicatie persisteert nog steeds geen portfolio- of setupdata in runtime.
 \n\n## Task 24A update\nIBKR wordt na koppeling de bron van waarheid voor brokerfeiten; lokale data blijft een spiegel voor analyse en audit. Er is nog geen echte IBKR-integratie in deze versie.
+
+
+## Task 24B update
+- Broker sync schema is now planned in detail for the next storage migration.
+- No IBKR broker data is stored yet in the current application runtime.
+- IBKR integration is not implemented yet.
