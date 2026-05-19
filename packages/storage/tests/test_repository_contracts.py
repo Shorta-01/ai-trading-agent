@@ -1,4 +1,5 @@
 from dataclasses import fields
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -44,6 +45,7 @@ def test_broker_dto_decimal_fields_use_decimal_not_float() -> None:
         broker_sync_run_id="sr-1",
         broker_account_id="ba-1",
         broker_system="ibkr",
+        imported_at=datetime.now(UTC),
         asset_identifier="US0378331005",
         asset_symbol="AAPL",
         asset_type="stock",
@@ -53,6 +55,7 @@ def test_broker_dto_decimal_fields_use_decimal_not_float() -> None:
         market_value=Decimal("1020.55"),
         source_data_kind="snapshot",
         origin="broker",
+        source_reference_ids_json=None,
         explanation_nl="Positie import.",
     )
     cash = BrokerCashSnapshotRecord(
@@ -60,10 +63,12 @@ def test_broker_dto_decimal_fields_use_decimal_not_float() -> None:
         broker_sync_run_id="sr-1",
         broker_account_id="ba-1",
         broker_system="ibkr",
+        imported_at=datetime.now(UTC),
         currency="USD",
         cash_amount=Decimal("1000.00"),
         source_data_kind="snapshot",
         origin="broker",
+        source_reference_ids_json=None,
         explanation_nl="Cash import.",
     )
     execution = BrokerExecutionSnapshotRecord(
@@ -71,6 +76,8 @@ def test_broker_dto_decimal_fields_use_decimal_not_float() -> None:
         broker_sync_run_id="sr-1",
         broker_account_id="ba-1",
         broker_system="ibkr",
+        imported_at=datetime.now(UTC),
+        execution_time=datetime.now(UTC),
         execution_id="ex-1",
         order_id=None,
         asset_identifier="US0378331005",
@@ -81,6 +88,7 @@ def test_broker_dto_decimal_fields_use_decimal_not_float() -> None:
         price=Decimal("150.50"),
         currency="USD",
         origin="broker",
+        source_reference_ids_json=None,
         explanation_nl="Execution import.",
     )
     commission = BrokerCommissionSnapshotRecord(
@@ -88,10 +96,13 @@ def test_broker_dto_decimal_fields_use_decimal_not_float() -> None:
         broker_sync_run_id="sr-1",
         broker_account_id="ba-1",
         broker_system="ibkr",
+        imported_at=datetime.now(UTC),
+        execution_time=datetime.now(UTC),
         execution_id="ex-1",
         commission_amount=Decimal("1.25"),
         currency="USD",
         realized_pnl=Decimal("5.00"),
+        source_reference_ids_json=None,
         explanation_nl="Commissie import.",
     )
 
