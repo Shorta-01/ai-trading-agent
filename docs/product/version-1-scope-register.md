@@ -75,10 +75,10 @@ Dit register is de source-of-truth voor alle vergrendelde Version 1-features en 
 | 23 | Research source archive | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 24 | Document extraction pipeline | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 25 | OpenAI File Search / retrieval integration later | V1 governance en betrouwbaarheid | Deferred | Deferred | Deferred | Deferred | Deferred | This register | Deferred | Bewust later; geen V1 runtime verplichting nu. |
-| 26 | Market calendar | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
-| 27 | Trading hours | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
-| 28 | Half-day and holiday handling | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
-| 29 | Auction/pre-market/post-market states | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
+| 26 | Market calendar | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Marktkalender-contracten aanwezig; runtime koppeling volgt met officiële brondata. |
+| 27 | Trading hours | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Handelssessie-contracten aanwezig; geen live broker/beurs-calls. |
+| 28 | Half-day and holiday handling | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Half-day/holiday-contracten aanwezig; kalenderdata-runtime volgt later. |
+| 29 | Auction/pre-market/post-market states | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Sessiestaten voor auction/voorbeurs/nabeurs gecontracteerd als safety input. |
 | 30 | Catalyst calendar | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 31 | Earnings calendar | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 32 | Annual report / quarterly report calendar | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
@@ -90,7 +90,7 @@ Dit register is de source-of-truth voor alle vergrendelde Version 1-features en 
 | 38 | FX source tracking | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 39 | FX freshness handling | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 40 | Data freshness SLAs | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
-| 41 | No-stale-advice wall | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
+| 41 | No-stale-advice wall | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Stale/unknown marktstatus blokkeert order-readiness op contractniveau. |
 | 42 | Broker truth as source of truth | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 43 | IBKR connection | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
 | 44 | IBKR paper-only account verification | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
