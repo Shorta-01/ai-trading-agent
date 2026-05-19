@@ -42,5 +42,16 @@ def test_trading_settings_endpoint_returns_read_only_defaults() -> None:
     assert body['always_blocked_asset_types'] == allowed_universe['blocked_asset_types']
 
     help_text_keys = {item['key'] for item in body['help_texts']}
-    assert {'allow_etfs', 'allow_stocks', 'allow_currencies_watch_only'}.issubset(help_text_keys)
-    assert {'max_position_pct', 'min_cash_reserve_pct', 'currency_preference'}.issubset(help_text_keys)
+    expected_universe_help_keys = {
+        'allow_etfs',
+        'allow_stocks',
+        'allow_currencies_watch_only',
+    }
+    expected_strategy_help_keys = {
+        'max_position_pct',
+        'min_cash_reserve_pct',
+        'currency_preference',
+    }
+
+    assert expected_universe_help_keys.issubset(help_text_keys)
+    assert expected_strategy_help_keys.issubset(help_text_keys)
