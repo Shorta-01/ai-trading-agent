@@ -42,3 +42,6 @@ mypy_path = "src"
 [[tool.mypy.overrides]]
 module = ["sqlalchemy", "sqlalchemy.*", "alembic", "alembic.*"]
 ignore_missing_imports = true
+
+[tool.setuptools.package-data]
+ai_trading_agent_storage = ["py.typed"]
