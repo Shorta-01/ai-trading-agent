@@ -10,6 +10,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
+from sqlalchemy.exc import SQLAlchemyError
+
 
 class MigrationReadinessStatus(StrEnum):
     NOT_CONNECTED = "not_connected"
@@ -202,6 +206,122 @@ def check_offline_migration_inventory() -> MigrationReadinessReport:
 
 def migration_readiness_is_safe_to_write(report: MigrationReadinessReport) -> bool:
     return report.persistence_allowed and not report.blocks_runtime_writes
+
+
+def read_database_alembic_revision(connection: Connection) -> str | None:
+    rows = connection.execute(text("SELECT version_num FROM alembic_version")).fetchall()
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise ValueError("Expected exactly one alembic_version row.")
+    row = rows[0]
+    value = row[0]
+    return str(value) if value is not None else None
+
+
+def check_online_migration_readiness(connection: Connection) -> MigrationReadinessReport:
+    inventory = build_expected_migration_inventory()
+
+    try:
+        database_revision_id = read_database_alembic_revision(connection)
+    except ValueError:
+        return MigrationReadinessReport(
+            status=MigrationReadinessStatus.FAILED,
+            database_connected=True,
+            migrations_checked_against_database=True,
+            offline_inventory_valid=inventory.inventory_valid,
+            latest_expected_revision_id=inventory.latest_expected_revision_id,
+            database_revision_id=None,
+            persistence_allowed=False,
+            blocks_runtime_writes=True,
+            explanation_nl=(
+                "De database-readiness check is mislukt. Runtime writes blijven geblokkeerd."
+            ),
+        )
+    except SQLAlchemyError:
+        return MigrationReadinessReport(
+            status=MigrationReadinessStatus.FAILED,
+            database_connected=False,
+            migrations_checked_against_database=False,
+            offline_inventory_valid=inventory.inventory_valid,
+            latest_expected_revision_id=inventory.latest_expected_revision_id,
+            database_revision_id=None,
+            persistence_allowed=False,
+            blocks_runtime_writes=True,
+            explanation_nl=(
+                "De database-readiness check is mislukt. Runtime writes blijven geblokkeerd."
+            ),
+        )
+
+    if database_revision_id is None:
+        return MigrationReadinessReport(
+            status=MigrationReadinessStatus.MIGRATIONS_UNKNOWN,
+            database_connected=True,
+            migrations_checked_against_database=True,
+            offline_inventory_valid=inventory.inventory_valid,
+            latest_expected_revision_id=inventory.latest_expected_revision_id,
+            database_revision_id=None,
+            persistence_allowed=False,
+            blocks_runtime_writes=True,
+            explanation_nl=(
+                "De Alembic version table kon niet veilig worden gelezen. "
+                "Runtime writes blijven geblokkeerd."
+            ),
+        )
+
+    known_revisions = {revision.revision_id for revision in inventory.expected_revisions}
+    if database_revision_id == inventory.latest_expected_revision_id and inventory.inventory_valid:
+        return MigrationReadinessReport(
+            status=MigrationReadinessStatus.MIGRATIONS_CURRENT,
+            database_connected=True,
+            migrations_checked_against_database=True,
+            offline_inventory_valid=True,
+            latest_expected_revision_id=inventory.latest_expected_revision_id,
+            database_revision_id=database_revision_id,
+            persistence_allowed=True,
+            blocks_runtime_writes=False,
+            explanation_nl=(
+                "De database is verbonden en staat op de verwachte migratie 0006. "
+                "Persistence mag pas gebruikt worden door toekomstige repository-implementaties."
+            ),
+        )
+
+    if database_revision_id in known_revisions:
+        return MigrationReadinessReport(
+            status=MigrationReadinessStatus.MIGRATIONS_BEHIND,
+            database_connected=True,
+            migrations_checked_against_database=True,
+            offline_inventory_valid=inventory.inventory_valid,
+            latest_expected_revision_id=inventory.latest_expected_revision_id,
+            database_revision_id=database_revision_id,
+            persistence_allowed=False,
+            blocks_runtime_writes=True,
+            explanation_nl=(
+                "De database is verbonden, maar de migraties lopen achter. "
+                "Runtime writes blijven geblokkeerd."
+            ),
+        )
+
+    return MigrationReadinessReport(
+        status=MigrationReadinessStatus.MIGRATIONS_UNKNOWN,
+        database_connected=True,
+        migrations_checked_against_database=True,
+        offline_inventory_valid=inventory.inventory_valid,
+        latest_expected_revision_id=inventory.latest_expected_revision_id,
+        database_revision_id=database_revision_id,
+        persistence_allowed=False,
+        blocks_runtime_writes=True,
+        explanation_nl=(
+            "De database is verbonden, maar de migratiestatus is onbekend. "
+            "Runtime writes blijven geblokkeerd."
+        ),
+    )
+
+
+def online_migration_readiness_interfaces_are_defined() -> bool:
+    _ = read_database_alembic_revision
+    _ = check_online_migration_readiness
+    return True
 
 
 def migration_readiness_interfaces_are_defined() -> bool:

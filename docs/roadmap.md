@@ -205,3 +205,16 @@ Next:
 4. API storage readiness endpoint op basis van storage package.
 5. IBKR settings/status velden.
 6. IBKR bootstrap preview.
+
+
+## Task 28 status
+- ✅ Online database readiness check tegen Alembic version table afgerond.
+
+## Volgende taken na Task 28
+1. SQLAlchemy repository implementation skeleton.
+2. App storage configuratievelden.
+3. API storage readiness endpoint op basis van storage package.
+4. IBKR settings/status velden.
+5. IBKR bootstrap preview.
+6. Broker snapshot import adapter skeleton.
+7. Reconciliation engine foundation.

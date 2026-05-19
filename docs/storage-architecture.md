@@ -167,3 +167,10 @@ Future implementation order:
 - **Online database migration check (toekomstig)**: moet later de echte Alembic-versiestaat in de database controleren.
 - Persistence blijft geblokkeerd tot echte databaseverbinding + geverifieerde migratiestatus beschikbaar zijn.
 - Repositorylaag blijft interface-only; er zijn nog geen concrete SQL repositories.
+
+
+## Task 28 online migration readiness
+- Storage heeft nu naast offline inventaris ook een online readiness check tegen de Alembic version table.
+- Offline inventory controleert alleen verwachte migratiereeks/bestanden; online check valideert de echte DB-revisie via expliciete `Connection`.
+- Toekomstige repository-implementaties moeten deze readiness-gate respecteren vóór writes.
+- De app zelf heeft nog geen runtime DB-wiring.

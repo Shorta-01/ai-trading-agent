@@ -118,3 +118,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Runtime writes moeten geblokkeerd blijven wanneer migraties niet tegen de echte database zijn gecontroleerd.
 - Een offline migratie-inventaris is onvoldoende om persistence toe te laten.
 - Leeg schema of alleen geplande migraties telt niet als operationele storage-readiness.
+
+
+## Task 28 storage write blocking
+- Runtime writes blijven geblokkeerd bij: geen DB-verbinding, missende/lege Alembic table, achterlopende revisie, onbekende revisie, of mislukte check.
+- Alleen een actuele online readiness-report mag toekomstige repository-writes toelaten.
+- Lege tabellen zijn geen bewijs van broker sync of reconciliatie.

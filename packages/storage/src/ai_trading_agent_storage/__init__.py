@@ -27,9 +27,12 @@ from ai_trading_agent_storage.migration_readiness import (
     build_database_not_connected_readiness_report,
     build_expected_migration_inventory,
     check_offline_migration_inventory,
+    check_online_migration_readiness,
     expected_migration_revisions,
     migration_readiness_interfaces_are_defined,
     migration_readiness_is_safe_to_write,
+    online_migration_readiness_interfaces_are_defined,
+    read_database_alembic_revision,
 )
 from ai_trading_agent_storage.repository_contracts import (
     BrokerAccountRecord,
@@ -100,6 +103,7 @@ __all__ = [
     "build_database_not_connected_readiness_report",
     "build_expected_migration_inventory",
     "check_offline_migration_inventory",
+    "check_online_migration_readiness",
     "expected_migration_revisions",
     "get_target_metadata",
     "is_migration_skeleton_ready",
@@ -109,5 +113,7 @@ __all__ = [
     "redact_database_url",
     "repository_interfaces_are_defined",
     "migration_readiness_interfaces_are_defined",
+    "online_migration_readiness_interfaces_are_defined",
+    "read_database_alembic_revision",
     "migration_readiness_is_safe_to_write",
 ]

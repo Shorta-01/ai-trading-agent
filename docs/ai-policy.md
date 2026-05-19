@@ -84,3 +84,9 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - AI mag offline migratie-inventaris niet interpreteren als bewijs van echte persistente data.
 - AI mag pas claimen dat de database klaar is als een online readiness check dit bevestigt.
 - AI mag geen fake brokerdata genereren omdat schema's of repository-interfaces bestaan.
+
+
+## Task 28 AI en database-readiness
+- AI mag database-readiness niet claimen op basis van offline migratie-inventaris alleen.
+- AI mag DB-readiness alleen benoemen wanneer online readiness de laatste revisie bevestigt (`0006`).
+- AI mag geen broker holdings/cash/trades/reconciliation afleiden uit alleen schema of readiness-signalen.
