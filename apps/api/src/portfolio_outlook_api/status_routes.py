@@ -57,7 +57,7 @@ def read_settings_summary() -> SettingsSummary:
 
 @router.get("/settings/trading")
 def read_trading_settings() -> dict[str, object]:
-    return build_trading_settings_response()
+    return build_trading_settings_response(settings.storage)
 
 
 @router.get("/usage/ai/summary", response_model=AiUsageSummary)
