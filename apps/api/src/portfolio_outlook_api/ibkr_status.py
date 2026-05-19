@@ -11,7 +11,6 @@ def build_ibkr_status_placeholder(runtime_settings: Settings) -> dict[str, objec
     )
 
     expected_environment = runtime_settings.ibkr_expected_environment
-    account_mode_known = expected_environment == "paper"
     if not runtime_settings.ibkr_enabled:
         status_nl = "Niet gekoppeld"
         message_nl = (
@@ -33,7 +32,7 @@ def build_ibkr_status_placeholder(runtime_settings: Settings) -> dict[str, objec
         "enabled": runtime_settings.ibkr_enabled,
         "configured": configured,
         "connection_status": "not_connected",
-        "account_mode_status": "unknown" if not account_mode_known else "paper_expected",
+        "account_mode_status": "unknown",
         "expected_environment": expected_environment,
         "account_id_hint_present": runtime_settings.ibkr_account_id_hint is not None,
         "gateway_url_configured": runtime_settings.ibkr_gateway_url is not None,
