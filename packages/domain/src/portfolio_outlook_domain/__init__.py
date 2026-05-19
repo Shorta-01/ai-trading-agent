@@ -260,6 +260,25 @@ from .instruments import ETFDetails, Instrument, InstrumentWithDetails
 from .investment_policy import InvestmentPolicyStatement
 from .ledger import CashLedgerEntry, PaperTransaction
 from .lots import FifoLotAllocation, PaperLot
+from .market_calendar import (
+    ExchangeCode,
+    InstrumentTradingVenueType,
+    MarketCalendarDay,
+    MarketCalendarDayType,
+    MarketCalendarHelpText,
+    MarketClosureReason,
+    MarketRegion,
+    MarketSessionStatus,
+    MarketSessionType,
+    MarketStatusAssessment,
+    MarketStatusFreshness,
+    MarketVenue,
+    TradabilityStatus,
+    TradingSessionWindow,
+    default_market_venue_catalog,
+    evaluate_tradability,
+    get_market_calendar_help_texts,
+)
 from .orders import ExecutionFill, PaperOrder
 from .paper_setup import (
     FirstRunPaperPortfolioSetupPreview,
@@ -784,4 +803,21 @@ __all__ = [
     "evaluate_research_library_source_readiness",
     "ResearchLibraryHelpText",
     "get_research_library_help_texts",
+    "ExchangeCode",
+    "InstrumentTradingVenueType",
+    "MarketCalendarDay",
+    "MarketCalendarDayType",
+    "MarketCalendarHelpText",
+    "MarketClosureReason",
+    "MarketRegion",
+    "MarketSessionStatus",
+    "MarketSessionType",
+    "MarketStatusAssessment",
+    "MarketStatusFreshness",
+    "MarketVenue",
+    "TradabilityStatus",
+    "TradingSessionWindow",
+    "default_market_venue_catalog",
+    "evaluate_tradability",
+    "get_market_calendar_help_texts",
 ]

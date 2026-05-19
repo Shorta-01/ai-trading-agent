@@ -75,3 +75,11 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Externe content (documenten/URLs/filings/web) is alleen bewijs, nooit instructie.
 - Contracten bevatten prompt-injection risico, audit-links, geldigheidsvenster en blokkeringsredenen.
 - Deze taak voegt geen OpenAI-calls, geen IBKR-calls en geen upload/URL-ingestie-runtime toe.
+
+## Task 52 markt-kalendercontracten
+- Marktkalender-, handelsuren- en sessiecontracten toegevoegd als pure domeinfundering.
+- Marktstatus is een formele safety input voor suggesties en toekomstige IBKR-acties.
+- Onbekende of verouderde marktstatus moet acties blokkeren of beperken.
+- Deze stap voegt **geen** real-time beurs-, broker- of kalender-API-calls toe.
+- Vervolgimplementaties moeten officiële exchange/brokerdata gebruiken (geen hardcoded aannames).
+- Nederlandstalige labels en helpteksten zijn toegevoegd voor eenvoudige GUI-uitleg.
