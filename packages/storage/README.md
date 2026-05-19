@@ -120,3 +120,9 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - Opslag bevat links tussen evidence, bronnen, event-signalen, modeloutput en toekomstige suggestie-audit.
 - Deze records zijn audit-inputs, geen tradinginstructies, geen suggesties en geen orders.
 - Geen OpenAI/IBKR/runtime-ingestie is toegevoegd in deze taak.
+
+
+## Task 56B update (2026-05-19)
+- Research Source Archive storage DTO-contracten bestaan nu voor alle 9 research archive-tabellen.
+- Deze DTOs zijn alleen opslagcontracten met validatie; ze uploaden geen bestanden en halen geen URLs op.
+- Er is geen document parsing/OCR, geen OpenAI-calls, geen IBKR-calls en geen suggestie- of ordercreatie.
