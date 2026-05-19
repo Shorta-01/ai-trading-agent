@@ -1,9 +1,22 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { SectionHeader } from "@/components/SectionHeader";
 import { apiClient, ResearchSourceRecord } from "@/lib/apiClient";
+
+const ALLOWED_EXTENSIONS = [".pdf", ".txt", ".md", ".csv", ".docx", ".xlsx", ".pptx"];
+
+type UploadResult = {
+  library_source_id: string;
+  status: string;
+  original_filename: string;
+  stored_filename: string;
+  file_size_bytes: number;
+  sha256_hash: string;
+  explanation_nl: string;
+  archive_storage_uri?: string | null;
+};
 
 function f(value?: string | null) {
   return value && value.trim() !== "" ? value : "Niet ingevuld";
@@ -17,6 +30,10 @@ export default function ResearchSourcesPage() {
   const [urlMeta, setUrlMeta] = useState<Record<string, unknown> | null>(null);
   const [note, setNote] = useState<Record<string, unknown> | null>(null);
   const [processing, setProcessing] = useState<Record<string, unknown> | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const selectedSourceId = useMemo(() => selected?.library_source_id ?? "", [selected]);
 
   async function loadSources() {
     const response = await apiClient.listResearchSources();
@@ -61,6 +78,72 @@ export default function ResearchSourcesPage() {
     setProcessing(processingResponse.ok ? processingResponse.data.record : null);
   }
 
+  async function onUploadFile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setUploadError("");
+    setUploadSuccess("");
+    setUploadResult(null);
+
+    const form = new FormData(event.currentTarget);
+    const librarySourceId = String(form.get("upload_library_source_id") ?? "").trim();
+    const fileInput = form.get("file");
+
+    if (!librarySourceId) {
+      setUploadError("Bron-ID is verplicht.");
+      return;
+    }
+    if (!(fileInput instanceof File) || fileInput.size === 0) {
+      setUploadError("Kies eerst een bestand om te uploaden.");
+      return;
+    }
+
+    const filename = fileInput.name;
+    if (filename.includes("/") || filename.includes("\\") || filename.includes("..")) {
+      setUploadError("De bestandsnaam is onveilig. Kies een veilige bestandsnaam zonder mappen of punt-punt.");
+      return;
+    }
+    const lowerName = filename.toLowerCase();
+    const isAllowed = ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+    if (!isAllowed) {
+      setUploadError("Dit bestandstype is niet toegestaan voor onderzoeksbronnen.");
+      return;
+    }
+
+    const response = await apiClient.uploadResearchSourceFile(librarySourceId, fileInput, {
+      title: String(form.get("upload_title") ?? "").trim() || undefined,
+      assetSymbol: String(form.get("upload_asset_symbol") ?? "").trim() || undefined,
+      assetName: String(form.get("upload_asset_name") ?? "").trim() || undefined,
+      documentType: String(form.get("upload_document_type") ?? "").trim() || undefined,
+      sourceKind: "file_upload",
+      sourceType: "document",
+      explanationNl: String(form.get("upload_explanation_nl") ?? "").trim() || undefined,
+    });
+
+    if (!response.ok) {
+      if (response.status === 400) {
+        setUploadError("Het bestand werd geweigerd. Controleer de bestandsnaam en het bestandstype.");
+      } else if (response.status === 413) {
+        setUploadError("Het bestand is te groot volgens de huidige uploadlimiet.");
+      } else if (response.status === 503) {
+        setUploadError("De opslag is nog niet verbonden. Het bestand kan niet worden opgeslagen.");
+      } else if (response.status === 409 || response.message.toLowerCase().includes("disabled")) {
+        setUploadError("Bestand uploaden staat momenteel uit.");
+      } else {
+        setUploadError("Upload mislukt. Probeer opnieuw of controleer de instellingen.");
+      }
+      return;
+    }
+
+    setUploadSuccess("Bestand veilig opgeslagen als onderzoeksbron. Het bestand is nog niet gelezen, geparseerd of geanalyseerd.");
+    setUploadResult(response.data);
+
+    await loadSources();
+    const updated = await apiClient.getResearchSource(librarySourceId);
+    if (updated.ok) {
+      await loadSelectedDetails(updated.data.record);
+    }
+  }
+
   return (
     <main className="container">
       <h1>Onderzoeksbibliotheek</h1>
@@ -84,6 +167,44 @@ export default function ResearchSourcesPage() {
           <label>Uitleg<textarea name="explanation_nl" required /><span className="help-text">Leg kort uit waarom je deze bron toevoegt.</span></label>
           <button type="submit">Bronmetadata bewaren</button>
         </form>
+      </section>
+
+      <section className="dashboard-card">
+        <SectionHeader title="Bestand uploaden" helpText="Bestanden worden veilig bewaard als onderzoeksbron. Er wordt nog geen analyse uitgevoerd." />
+        <form className="grid one-column" onSubmit={onUploadFile}>
+          <label>Bron-ID<input name="upload_library_source_id" defaultValue={selectedSourceId} required /><span className="help-text">Kies de Bron-ID waar dit bestand bij hoort.</span></label>
+          <label>Bestand<input name="file" type="file" accept={ALLOWED_EXTENSIONS.join(",")} required /><span className="help-text">Selecteer een toegestaan bestandstype.</span></label>
+          <label>Titel<input name="upload_title" /><span className="help-text">Optioneel. Duidelijke titel van het bestand.</span></label>
+          <label>Asset symbool<input name="upload_asset_symbol" /><span className="help-text">Optioneel. Symbool van het bijbehorende asset.</span></label>
+          <label>Asset naam<input name="upload_asset_name" /><span className="help-text">Optioneel. Naam van het bijbehorende asset.</span></label>
+          <label>Documenttype<input name="upload_document_type" /><span className="help-text">Optioneel. Bijvoorbeeld jaarverslag of factsheet.</span></label>
+          <label>Uitleg<textarea name="upload_explanation_nl" /><span className="help-text">Optioneel. Leg uit waarom dit bestand relevant is.</span></label>
+          <button type="submit">Bestand veilig uploaden</button>
+        </form>
+        <p className="help-text">Het bestand wordt alleen veilig bewaard met metadata en SHA-256 hash. Het systeem gebruikt dit bestand nog niet voor suggesties.</p>
+        <ul>
+          <li>Toegelaten bestandstypes: PDF, TXT, Markdown, CSV, DOCX, XLSX en PPTX.</li>
+          <li>Bestanden worden veilig opgeslagen, maar nog niet gelezen of geanalyseerd.</li>
+          <li>Een upload maakt geen koop- of verkoopactie aan.</li>
+          <li>Een upload maakt geen IBKR-actie aan.</li>
+          <li>Een upload maakt geen automatische suggestie aan.</li>
+          <li>Een upload wordt eerst geblokkeerd voor suggesties tot latere controles klaar zijn.</li>
+          <li>Maximale bestandsgrootte hangt af van de API-instelling. Grote bestanden kunnen geweigerd worden.</li>
+        </ul>
+        {uploadError ? <p>{uploadError}</p> : null}
+        {uploadSuccess ? <p>{uploadSuccess}</p> : null}
+        {uploadResult ? <div className="dashboard-card upload-result-block">
+          <p>Status: Geblokkeerd voor suggesties</p>
+          <p>Bestandsnaam: {uploadResult.original_filename}</p>
+          <p>Opgeslagen naam: {uploadResult.stored_filename}</p>
+          <p>Bestandsgrootte: {uploadResult.file_size_bytes} bytes</p>
+          <p>SHA-256 hash: <span className="hash-text">{uploadResult.sha256_hash}</span></p>
+          <p>Bron-ID: {uploadResult.library_source_id}</p>
+          <p>Uitleg: {f(uploadResult.explanation_nl)}</p>
+          <p>Nog geen analyse uitgevoerd</p>
+          {uploadResult.archive_storage_uri ? <p>Interne archiefreferentie: {uploadResult.archive_storage_uri}</p> : null}
+          <p className="help-text">De SHA-256 hash is een technische vingerafdruk van het bestand. Zo kan het systeem later controleren of hetzelfde bestand opnieuw werd gebruikt of gewijzigd.</p>
+        </div> : null}
       </section>
 
       <section>
@@ -117,13 +238,13 @@ export default function ResearchSourcesPage() {
       </section> : null}
 
       {selected ? <section className="dashboard-card"><SectionHeader title="Verwerkingsstatus" helpText="Deze status toont alleen of de bron later gebruikt mag worden. Er wordt in deze versie nog geen automatische analyse gestart." />
-        {processing ? <><p>Classificatie: {String(processing.classification_status ?? "-")}</p><p>Extractie: {String(processing.extraction_status ?? "-")}</p><p>Analyse: {String(processing.analysis_status ?? "-")}</p><p>Klaar voor onderzoek: {processing.can_be_used_in_research ? "Ja" : "Nee"}</p><p>Klaar voor suggesties: {processing.can_be_used_in_suggestions ? "Ja" : "Nee"}</p><p>Gebruikerscontrole nodig: {processing.needs_user_review ? "Ja" : "Nee"}</p><p>Blokkeert suggesties: {processing.blocks_suggestions ? "Ja" : "Nee"}</p><p>Reden: {String(processing.reason_nl ?? "-")}</p></> : <p>Nog geen verwerkingsstatus beschikbaar.</p>}
+        {processing ? <><p>Classificatie: {String(processing.classification_status ?? "-")}</p><p>Extractie: {String(processing.extraction_status ?? "-")}</p><p>Analyse: {String(processing.analysis_status ?? "-")}</p><p>Klaar voor onderzoek: {processing.can_be_used_in_research ? "Ja" : "Nee"}</p><p>Klaar voor suggesties: {processing.can_be_used_in_suggestions ? "Ja" : "Nee"}</p><p>Gebruikerscontrole nodig: {processing.needs_user_review ? "Ja" : "Nee"}</p><p>Blokkeert suggesties: {processing.blocks_suggestions ? "Ja" : "Nee"}</p><p>Reden: {String(processing.reason_nl ?? "-")}</p><p className="help-text">Dit bestand is bewaard, maar nog niet gecontroleerd of geanalyseerd. Daarom mag het nog geen invloed hebben op suggesties.</p></> : <p>Nog geen verwerkingsstatus beschikbaar.</p>}
       </section> : null}
 
       <section className="dashboard-card">
         <h2>Veiligheid en hulp</h2>
         <p>De onderzoeksbibliotheek bewaart bronnen voor later onderzoek. Een bron kan later helpen om een asset beter te begrijpen, maar een bron is nooit rechtstreeks een koop- of verkoopopdracht. Het systeem moet bronnen eerst controleren op kwaliteit, actualiteit en prompt-injectierisico voordat ze invloed mogen hebben op een suggestie.</p>
-        <ul><li>Geen bestandupload in deze versie</li><li>Geen URL-ophaling in deze versie</li><li>Geen AI-analyse in deze versie</li><li>Geen IBKR-actie in deze versie</li><li>Geen automatische suggestie in deze versie</li></ul>
+        <ul><li>Bestandupload is beschikbaar als veilige opslag</li><li>Geen URL-ophaling in deze versie</li><li>Geen AI-analyse in deze versie</li><li>Geen IBKR-actie in deze versie</li><li>Geen automatische suggestie in deze versie</li></ul>
       </section>
     </main>
   );

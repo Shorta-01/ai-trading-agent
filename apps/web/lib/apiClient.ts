@@ -168,6 +168,28 @@ async function postJson<T>(path: string, body?: object): Promise<FetchState<T>> 
   }
 }
 
+
+
+async function postFormData<T>(path: string, formData: FormData): Promise<ApiResult<T>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      body: formData,
+    });
+    const payload = (await response.json().catch(() => ({}))) as { detail?: string } & T;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        message: typeof payload.detail === "string" ? payload.detail : "Onbekende fout.",
+      };
+    }
+    return { ok: true, data: payload as T };
+  } catch {
+    return { ok: false, status: 0, message: "API niet bereikbaar." };
+  }
+}
+
 async function requestJson<T>(path: string, method: "GET" | "POST", body?: object): Promise<ApiResult<T>> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -206,6 +228,41 @@ export const apiClient = {
   createUserNote: (librarySourceId: string, payload: Record<string, unknown>) => requestJson<{ message_nl: string }>(`/research/sources/${librarySourceId}/user-note`, "POST", payload),
   getUserNote: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/user-note`, "GET"),
   getLatestProcessingStatus: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/processing-status/latest`, "GET"),
+  uploadResearchSourceFile: (
+    librarySourceId: string,
+    file: File,
+    metadata?: {
+      title?: string;
+      assetSymbol?: string;
+      assetName?: string;
+      documentType?: string;
+      sourceKind?: string;
+      sourceType?: string;
+      explanationNl?: string;
+    },
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    if (metadata?.title) formData.append("title", metadata.title);
+    if (metadata?.assetSymbol) formData.append("asset_symbol", metadata.assetSymbol);
+    if (metadata?.assetName) formData.append("asset_name", metadata.assetName);
+    if (metadata?.documentType) formData.append("document_type", metadata.documentType);
+    if (metadata?.sourceKind) formData.append("source_kind", metadata.sourceKind);
+    if (metadata?.sourceType) formData.append("source_type", metadata.sourceType);
+    if (metadata?.explanationNl) formData.append("explanation_nl", metadata.explanationNl);
+
+    return postFormData<{
+      library_source_id: string;
+      status: string;
+      original_filename: string;
+      stored_filename: string;
+      file_size_bytes: number;
+      sha256_hash: string;
+      explanation_nl: string;
+      archive_storage_uri?: string | null;
+    }>(`/research/sources/${librarySourceId}/upload-file`, formData);
+  },
 };
 
 type SystemEventActionInput = {
