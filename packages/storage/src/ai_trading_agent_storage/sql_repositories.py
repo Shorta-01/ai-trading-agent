@@ -19,6 +19,15 @@ from ai_trading_agent_storage.metadata import (
     broker_sync_runs,
     external_broker_activities,
     paper_portfolio_setups,
+    research_document_classifications,
+    research_document_set_members,
+    research_document_sets,
+    research_source_asset_links,
+    research_source_processing_status,
+    research_sources,
+    research_uploaded_file_metadata,
+    research_url_metadata,
+    research_user_notes,
     system_events,
     trading_settings,
 )
@@ -40,6 +49,15 @@ from ai_trading_agent_storage.repository_contracts import (
     ExternalBrokerActivityRecord,
     PaperPortfolioSetupRecord,
     RepositoryHealthStatus,
+    ResearchDocumentClassificationRecord,
+    ResearchDocumentSetMemberRecord,
+    ResearchDocumentSetRecord,
+    ResearchSourceAssetLinkRecord,
+    ResearchSourceProcessingStatusRecord,
+    ResearchSourceRecord,
+    ResearchUploadedFileMetadataRecord,
+    ResearchUrlMetadataRecord,
+    ResearchUserNoteRecord,
     SaveTradingSettingsRequest,
     StorageListResult,
     StorageReadResult,
@@ -292,6 +310,7 @@ class SqlAlchemyTradingSettingsRepository(_Base):
             "settings_id",
             request.settings_id,
         )
+
         if existing is None:
             values = {
                 "settings_id": request.settings_id,
@@ -634,6 +653,163 @@ class SqlAlchemyExternalBrokerActivityRepository(_Base):
         )
 
 
+class SqlAlchemyResearchSourceArchiveRepository(_Base):
+    def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
+        self._insert(research_sources, asdict(record))
+        return record
+
+    def get_research_source(self, library_source_id: str) -> ResearchSourceRecord | None:
+        row = _read_one_by_column(
+            self._connection, research_sources, "library_source_id", library_source_id
+        )
+        return None if row is None else ResearchSourceRecord(**dict(row))
+
+    def list_research_sources_for_asset(
+        self, asset_symbol: str
+    ) -> tuple[ResearchSourceRecord, ...]:
+        rows = _read_many_by_column(
+            self._connection, research_sources, "asset_symbol", asset_symbol
+        )
+        return tuple(ResearchSourceRecord(**dict(row)) for row in rows)
+
+    def list_active_research_sources(self) -> tuple[ResearchSourceRecord, ...]:
+        statement = select(research_sources).where(research_sources.c.archived_at.is_(None))
+        rows = self._connection.execute(statement).mappings().all()
+        return tuple(ResearchSourceRecord(**dict(row)) for row in rows)
+
+    def save_uploaded_file_metadata(
+        self, record: ResearchUploadedFileMetadataRecord
+    ) -> ResearchUploadedFileMetadataRecord:
+        self._insert(research_uploaded_file_metadata, asdict(record))
+        return record
+
+    def get_uploaded_file_metadata(
+        self, library_source_id: str
+    ) -> ResearchUploadedFileMetadataRecord | None:
+        row = _read_one_by_column(
+            self._connection,
+            research_uploaded_file_metadata,
+            "library_source_id",
+            library_source_id,
+        )
+        return None if row is None else ResearchUploadedFileMetadataRecord(**dict(row))
+
+    def save_url_metadata(self, record: ResearchUrlMetadataRecord) -> ResearchUrlMetadataRecord:
+        self._insert(research_url_metadata, asdict(record))
+        return record
+
+    def get_url_metadata(self, library_source_id: str) -> ResearchUrlMetadataRecord | None:
+        row = _read_one_by_column(
+            self._connection, research_url_metadata, "library_source_id", library_source_id
+        )
+        return None if row is None else ResearchUrlMetadataRecord(**dict(row))
+
+    def save_user_note(self, record: ResearchUserNoteRecord) -> ResearchUserNoteRecord:
+        self._insert(research_user_notes, asdict(record))
+        return record
+
+    def get_user_note(self, library_source_id: str) -> ResearchUserNoteRecord | None:
+        row = _read_one_by_column(
+            self._connection, research_user_notes, "library_source_id", library_source_id
+        )
+        return None if row is None else ResearchUserNoteRecord(**dict(row))
+
+    def save_document_set(self, record: ResearchDocumentSetRecord) -> ResearchDocumentSetRecord:
+        self._insert(research_document_sets, asdict(record))
+        return record
+
+    def get_document_set(self, document_set_id: str) -> ResearchDocumentSetRecord | None:
+        row = _read_one_by_column(
+            self._connection, research_document_sets, "document_set_id", document_set_id
+        )
+        return None if row is None else ResearchDocumentSetRecord(**dict(row))
+
+    def save_document_set_member(
+        self, record: ResearchDocumentSetMemberRecord
+    ) -> ResearchDocumentSetMemberRecord:
+        self._insert(research_document_set_members, asdict(record))
+        return record
+
+    def list_document_set_members(
+        self, document_set_id: str
+    ) -> tuple[ResearchDocumentSetMemberRecord, ...]:
+        statement = (
+            select(research_document_set_members)
+            .where(research_document_set_members.c.document_set_id == document_set_id)
+            .order_by(
+                research_document_set_members.c.sort_order.asc(),
+                research_document_set_members.c.created_at.asc(),
+            )
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        return tuple(ResearchDocumentSetMemberRecord(**dict(row)) for row in rows)
+
+    def save_document_classification(
+        self, record: ResearchDocumentClassificationRecord
+    ) -> ResearchDocumentClassificationRecord:
+        self._insert(research_document_classifications, asdict(record))
+        return record
+
+    def get_latest_classification(
+        self, library_source_id: str
+    ) -> ResearchDocumentClassificationRecord | None:
+        statement = (
+            select(research_document_classifications)
+            .where(research_document_classifications.c.library_source_id == library_source_id)
+            .order_by(
+                research_document_classifications.c.classified_at.desc(),
+                research_document_classifications.c.classification_id.desc(),
+            )
+        )
+        row = self._connection.execute(statement).mappings().first()
+        return None if row is None else ResearchDocumentClassificationRecord(**dict(row))
+
+    def save_source_asset_link(
+        self, record: ResearchSourceAssetLinkRecord
+    ) -> ResearchSourceAssetLinkRecord:
+        self._insert(research_source_asset_links, asdict(record))
+        return record
+
+    def list_asset_links_for_source(
+        self, library_source_id: str
+    ) -> tuple[ResearchSourceAssetLinkRecord, ...]:
+        rows = _read_many_by_column(
+            self._connection, research_source_asset_links, "library_source_id", library_source_id
+        )
+        return tuple(ResearchSourceAssetLinkRecord(**dict(row)) for row in rows)
+
+    def list_unconfirmed_detected_asset_links(
+        self,
+    ) -> tuple[ResearchSourceAssetLinkRecord, ...]:
+        statement = select(research_source_asset_links).where(
+            research_source_asset_links.c.link_type == "detected_new_asset",
+            research_source_asset_links.c.requires_user_confirmation.is_(True),
+            research_source_asset_links.c.confirmed_by_user.is_(False),
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        return tuple(ResearchSourceAssetLinkRecord(**dict(row)) for row in rows)
+
+    def save_processing_status(
+        self, record: ResearchSourceProcessingStatusRecord
+    ) -> ResearchSourceProcessingStatusRecord:
+        self._insert(research_source_processing_status, asdict(record))
+        return record
+
+    def get_latest_processing_status(
+        self, library_source_id: str
+    ) -> ResearchSourceProcessingStatusRecord | None:
+        statement = (
+            select(research_source_processing_status)
+            .where(research_source_processing_status.c.library_source_id == library_source_id)
+            .order_by(
+                research_source_processing_status.c.checked_at.desc(),
+                research_source_processing_status.c.processing_id.desc(),
+            )
+        )
+        row = self._connection.execute(statement).mappings().first()
+        return None if row is None else ResearchSourceProcessingStatusRecord(**dict(row))
+
+
 class SqlAlchemyBrokerStorageUnitOfWork:
     def __init__(self, connection: Connection, readiness_report: MigrationReadinessReport) -> None:
         self._connection = connection
@@ -726,9 +902,11 @@ class SqlAlchemySystemEventRepository(_Base):
         )
 
     def list_open_events(self) -> StorageListResult[SystemEventRecord]:
-        rows = self._connection.execute(
-            select(system_events).where(system_events.c.status == "open")
-        ).mappings().all()
+        rows = (
+            self._connection.execute(select(system_events).where(system_events.c.status == "open"))
+            .mappings()
+            .all()
+        )
         return StorageListResult(
             records=tuple(SystemEventRecord(**dict(row)) for row in rows),
             table_name=system_events.name,

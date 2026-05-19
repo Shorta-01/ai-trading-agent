@@ -117,7 +117,6 @@ audit_events = Table(
 )
 
 
-
 system_events = Table(
     "system_events",
     metadata,
@@ -412,6 +411,185 @@ broker_commission_snapshots = Table(
     CheckConstraint(
         "explanation_nl <> ''", name="ck_broker_commission_snapshots_explanation_nl_not_empty"
     ),
+)
+
+research_sources = Table(
+    "research_sources",
+    metadata,
+    Column("library_source_id", Text, primary_key=True),
+    Column("source_kind", Text, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("classification_status", Text, nullable=False),
+    Column("extraction_status", Text, nullable=False),
+    Column("analysis_status", Text, nullable=False),
+    Column("asset_symbol", Text, nullable=True),
+    Column("asset_name", Text, nullable=True),
+    Column("title", Text, nullable=False),
+    Column("document_type", Text, nullable=False),
+    Column("source_type", Text, nullable=False),
+    Column("source_credibility_level", Text, nullable=True),
+    Column("prompt_injection_risk_level", Text, nullable=True),
+    Column("content_hash_sha256", Text, nullable=True),
+    Column("archive_storage_uri", Text, nullable=True),
+    Column("raw_source_available", Boolean, nullable=False, server_default=sa_false()),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("archived_at", DateTime(timezone=True), nullable=True),
+    Column("schema_version", Text, nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
+research_uploaded_file_metadata = Table(
+    "research_uploaded_file_metadata",
+    metadata,
+    Column(
+        "library_source_id",
+        Text,
+        ForeignKey("research_sources.library_source_id"),
+        primary_key=True,
+    ),
+    Column("original_file_name", Text, nullable=False),
+    Column("stored_file_name", Text, nullable=True),
+    Column("content_type", Text, nullable=True),
+    Column("file_size_bytes", Integer, nullable=True),
+    Column("file_hash_sha256", Text, nullable=True),
+    Column("detected_language", Text, nullable=True),
+    Column("page_count", Integer, nullable=True),
+    Column("uploaded_at", DateTime(timezone=True), nullable=False),
+    Column("uploaded_by_user", Boolean, nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
+research_url_metadata = Table(
+    "research_url_metadata",
+    metadata,
+    Column(
+        "library_source_id",
+        Text,
+        ForeignKey("research_sources.library_source_id"),
+        primary_key=True,
+    ),
+    Column("url", Text, nullable=False),
+    Column("normalized_url", Text, nullable=True),
+    Column("domain", Text, nullable=True),
+    Column("fetched_at", DateTime(timezone=True), nullable=True),
+    Column("snapshot_hash_sha256", Text, nullable=True),
+    Column("snapshot_storage_uri", Text, nullable=True),
+    Column("http_status_code", Integer, nullable=True),
+    Column("content_type", Text, nullable=True),
+    Column("user_supplied", Boolean, nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
+research_user_notes = Table(
+    "research_user_notes",
+    metadata,
+    Column(
+        "library_source_id",
+        Text,
+        ForeignKey("research_sources.library_source_id"),
+        primary_key=True,
+    ),
+    Column("asset_symbol", Text, nullable=True),
+    Column("title", Text, nullable=False),
+    Column("note_nl", Text, nullable=False),
+    Column("thesis_relevance_nl", Text, nullable=True),
+    Column("user_confidence_nl", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
+research_document_sets = Table(
+    "research_document_sets",
+    metadata,
+    Column("document_set_id", Text, primary_key=True),
+    Column("asset_symbol", Text, nullable=False),
+    Column("title", Text, nullable=False),
+    Column("set_type", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
+research_document_set_members = Table(
+    "research_document_set_members",
+    metadata,
+    Column("member_id", Text, primary_key=True),
+    Column(
+        "document_set_id",
+        Text,
+        ForeignKey("research_document_sets.document_set_id"),
+        nullable=False,
+    ),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("fiscal_year", Integer, nullable=True),
+    Column("reporting_period", Text, nullable=True),
+    Column("sort_order", Integer, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+)
+
+research_document_classifications = Table(
+    "research_document_classifications",
+    metadata,
+    Column("classification_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("document_type", Text, nullable=False),
+    Column("source_type", Text, nullable=False),
+    Column("confidence", Text, nullable=False),
+    Column("detected_asset_symbol", Text, nullable=True),
+    Column("detected_asset_name", Text, nullable=True),
+    Column("detected_fiscal_year", Integer, nullable=True),
+    Column("detected_reporting_period", Text, nullable=True),
+    Column("detected_language", Text, nullable=True),
+    Column("needs_user_review", Boolean, nullable=False),
+    Column("reason_nl", Text, nullable=False),
+    Column("classified_at", DateTime(timezone=True), nullable=False),
+    Column("schema_version", Text, nullable=False),
+)
+
+research_source_asset_links = Table(
+    "research_source_asset_links",
+    metadata,
+    Column("link_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("asset_symbol", Text, nullable=True),
+    Column("asset_name", Text, nullable=True),
+    Column("conid", Text, nullable=True),
+    Column("isin", Text, nullable=True),
+    Column("link_type", Text, nullable=False),
+    Column("mapping_confidence", Text, nullable=False),
+    Column("auto_linked", Boolean, nullable=False),
+    Column("requires_user_confirmation", Boolean, nullable=False),
+    Column("confirmed_by_user", Boolean, nullable=False),
+    Column("reason_nl", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("confirmed_at", DateTime(timezone=True), nullable=True),
+)
+
+research_source_processing_status = Table(
+    "research_source_processing_status",
+    metadata,
+    Column("processing_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("classification_status", Text, nullable=False),
+    Column("extraction_status", Text, nullable=False),
+    Column("analysis_status", Text, nullable=False),
+    Column("readiness_status", Text, nullable=False),
+    Column("can_be_used_in_research", Boolean, nullable=False),
+    Column("can_be_used_in_suggestions", Boolean, nullable=False),
+    Column("needs_user_review", Boolean, nullable=False),
+    Column("blocks_suggestions", Boolean, nullable=False),
+    Column("last_error_nl", Text, nullable=True),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("reason_nl", Text, nullable=False),
 )
 
 
