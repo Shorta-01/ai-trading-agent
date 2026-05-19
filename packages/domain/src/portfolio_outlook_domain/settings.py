@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 
 from pydantic import Field, field_validator, model_validator
 
@@ -34,6 +35,248 @@ from .primitives import CurrencyCode, DomainBaseModel, Money, Percentage
 
 _MILLION = Decimal("1000000")
 _ENV_VAR_PATTERN = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+
+_VERSION_1_BLOCKED_ASSET_TYPES = (
+    "options",
+    "futures",
+    "leverage",
+    "short_selling",
+    "crypto",
+    "penny_stocks",
+    "cfds",
+    "complex_derivatives",
+)
+
+
+class AllowedAssetType(StrEnum):
+    ETF = "etf"
+    STOCK = "stock"
+    CURRENCY = "currency"
+    BOND_ETF = "bond_etf"
+    COMMODITY_ETF = "commodity_etf"
+
+
+class BlockedAssetType(StrEnum):
+    OPTIONS = "options"
+    FUTURES = "futures"
+    LEVERAGE = "leverage"
+    SHORT_SELLING = "short_selling"
+    CRYPTO = "crypto"
+    PENNY_STOCKS = "penny_stocks"
+    CFDS = "cfds"
+    COMPLEX_DERIVATIVES = "complex_derivatives"
+
+
+class PortfolioGoal(StrEnum):
+    BALANCED_GROWTH_RISK = "balanced_growth_risk"
+    STABLE_INCOME = "stable_income"
+    LONG_TERM_GROWTH = "long_term_growth"
+
+
+class StrategyRiskLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class AssetMixPreference(StrEnum):
+    ETF_AND_STOCK_MIX = "etf_and_stock_mix"
+    MOSTLY_ETFS = "mostly_etfs"
+    MOSTLY_STOCKS = "mostly_stocks"
+
+
+class RegionPreference(StrEnum):
+    GLOBAL = "global"
+    EUROPE = "europe"
+    USA = "usa"
+    EMERGING = "emerging"
+
+
+class SectorPreference(StrEnum):
+    TECHNOLOGY = "technology"
+    HEALTHCARE = "healthcare"
+    INDUSTRIALS = "industrials"
+    FINANCIALS = "financials"
+    CONSUMER = "consumer"
+    ENERGY = "energy"
+    UTILITIES = "utilities"
+
+
+class CurrencyPreference(StrEnum):
+    EUR_PREFERRED_USD_ALLOWED = "eur_preferred_usd_allowed"
+    EUR_ONLY = "eur_only"
+    USD_ONLY = "usd_only"
+
+
+class AssetPermissionStatus(StrEnum):
+    ALLOWED = "allowed"
+    WATCH_ONLY = "watch_only"
+    BLOCKED = "blocked"
+
+
+class SettingHelpText(DomainBaseModel):
+    key: str
+    label_nl: str
+    help_nl: str
+
+    @field_validator("key", "label_nl", "help_nl")
+    @classmethod
+    def validate_required_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Veld is verplicht.")
+        return value
+
+
+class AllowedUniverseSettings(DomainBaseModel):
+    allow_etfs: bool = True
+    allow_stocks: bool = True
+    allow_currencies_watch_only: bool = False
+    allow_bond_etfs: bool = False
+    allow_commodity_etfs: bool = False
+    blocked_asset_types: tuple[BlockedAssetType, ...] = tuple(
+        BlockedAssetType(value) for value in _VERSION_1_BLOCKED_ASSET_TYPES
+    )
+    explanation_nl: str = "Dit is de harde veiligheidsfilter voor toegestane beleggingen."
+
+
+class UserStrategySettings(DomainBaseModel):
+    portfolio_goal: PortfolioGoal = PortfolioGoal.BALANCED_GROWTH_RISK
+    risk_level: StrategyRiskLevel = StrategyRiskLevel.MEDIUM
+    asset_mix_preference: AssetMixPreference = AssetMixPreference.ETF_AND_STOCK_MIX
+    preferred_regions: tuple[RegionPreference, ...] = (RegionPreference.GLOBAL,)
+    preferred_sectors: tuple[SectorPreference, ...] = ()
+    avoided_sectors: tuple[SectorPreference, ...] = ()
+    max_position_pct: Decimal = Decimal("10")
+    min_cash_reserve_pct: Decimal = Decimal("5")
+    currency_preference: CurrencyPreference = CurrencyPreference.EUR_PREFERRED_USD_ALLOWED
+    prefer_simple_belgian_tax_admin: bool = True
+    explanation_nl: str = (
+        "Dit is je voorkeurlaag voor ranking en fit, niet voor harde blokkeringen."
+    )
+
+    @field_validator("max_position_pct", "min_cash_reserve_pct", mode="before")
+    @classmethod
+    def reject_float(cls, value: object) -> object:
+        if isinstance(value, float):
+            raise ValueError("Float is niet toegestaan.")
+        return value
+
+    @field_validator("max_position_pct", "min_cash_reserve_pct")
+    @classmethod
+    def validate_percentage_range(cls, value: Decimal) -> Decimal:
+        if value < Decimal("0") or value > Decimal("100"):
+            raise ValueError("Percentage moet tussen 0 en 100 liggen.")
+        return value
+
+
+class AssetPermission(DomainBaseModel):
+    allowed: bool
+    status: AssetPermissionStatus
+    reason_nl: str
+
+
+def evaluate_asset_permission(
+    asset_type: AllowedAssetType | BlockedAssetType | str,
+    settings: AllowedUniverseSettings,
+) -> AssetPermission:
+    if isinstance(asset_type, BlockedAssetType) or (
+        str(asset_type) in _VERSION_1_BLOCKED_ASSET_TYPES
+    ):
+        return AssetPermission(
+            allowed=False,
+            status=AssetPermissionStatus.BLOCKED,
+            reason_nl="Geblokkeerd in versie 1.",
+        )
+    if asset_type is AllowedAssetType.ETF:
+        if settings.allow_etfs:
+            return AssetPermission(
+                allowed=True,
+                status=AssetPermissionStatus.ALLOWED,
+                reason_nl="Toegestaan volgens je instellingen.",
+            )
+    if asset_type is AllowedAssetType.STOCK:
+        if settings.allow_stocks:
+            return AssetPermission(
+                allowed=True,
+                status=AssetPermissionStatus.ALLOWED,
+                reason_nl="Toegestaan volgens je instellingen.",
+            )
+    if asset_type is AllowedAssetType.BOND_ETF and settings.allow_bond_etfs:
+        return AssetPermission(
+            allowed=True,
+            status=AssetPermissionStatus.ALLOWED,
+            reason_nl="Toegestaan volgens je instellingen.",
+        )
+    if asset_type is AllowedAssetType.COMMODITY_ETF and settings.allow_commodity_etfs:
+        return AssetPermission(
+            allowed=True,
+            status=AssetPermissionStatus.ALLOWED,
+            reason_nl="Toegestaan volgens je instellingen.",
+        )
+    if asset_type is AllowedAssetType.CURRENCY and settings.allow_currencies_watch_only:
+        return AssetPermission(
+            allowed=False,
+            status=AssetPermissionStatus.WATCH_ONLY,
+            reason_nl="Alleen volgen, niet kopen.",
+        )
+    return AssetPermission(
+        allowed=False,
+        status=AssetPermissionStatus.BLOCKED,
+        reason_nl="Niet toegestaan volgens Toegestane beleggingen.",
+    )
+
+
+def get_allowed_universe_help_texts() -> tuple[SettingHelpText, ...]:
+    return (
+        SettingHelpText(
+            key="allow_etfs",
+            label_nl="ETF’s toestaan",
+            help_nl="Het systeem mag ETF’s onderzoeken en gebruiken voor IBKR paper-acties.",
+        ),
+        SettingHelpText(
+            key="allow_stocks",
+            label_nl="Aandelen toestaan",
+            help_nl="Het systeem mag gewone aandelen onderzoeken en gebruiken voor paper-acties.",
+        ),
+        SettingHelpText(
+            key="allow_currencies_watch_only",
+            label_nl="Valuta alleen volgen",
+            help_nl="Valuta mogen gevolgd worden, maar niet gekocht of verkocht.",
+        ),
+    )
+
+
+def get_user_strategy_help_texts() -> tuple[SettingHelpText, ...]:
+    return (
+        SettingHelpText(
+            key="max_position_pct",
+            label_nl="Maximum positie per asset",
+            help_nl=(
+                "Dit beperkt hoeveel één belegging maximaal van de paper portefeuille "
+                "mag worden."
+            ),
+        ),
+        SettingHelpText(
+            key="min_cash_reserve_pct",
+            label_nl="Minimale cashreserve",
+            help_nl="Dit bepaalt welk minimum deel van de portefeuille cash moet blijven.",
+        ),
+        SettingHelpText(
+            key="currency_preference",
+            label_nl="Valutavoorkeur",
+            help_nl="Dit stuurt de voorkeur voor euro en het toelaten van dollarposities.",
+        ),
+    )
+
+
+def strategy_settings_summary_nl(settings: UserStrategySettings) -> str:
+    return (
+        "Strategie: "
+        f"doel={settings.portfolio_goal.value}, "
+        f"risico={settings.risk_level.value}, "
+        f"max positie={settings.max_position_pct}% en "
+        f"min cash={settings.min_cash_reserve_pct}%."
+    )
 
 
 class PortfolioSettings(DomainBaseModel):
