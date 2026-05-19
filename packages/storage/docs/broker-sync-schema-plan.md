@@ -23,10 +23,9 @@ Schema rollout is split into smaller safe PR slices.
 Implemented now:
 - `broker_accounts` and `broker_sync_runs` in migration `0002_broker_accounts_and_sync_runs`
 - `broker_position_snapshots` and `broker_cash_snapshots` in migration `0003_broker_position_and_cash_snapshots`
+- `broker_execution_snapshots` and `broker_commission_snapshots` in migration `0004_broker_execution_and_commission_snapshots`
 
 Future migrations still planned:
-- `broker_execution_snapshots`
-- `broker_commission_snapshots`
 - `broker_reconciliation_reports`
 - `broker_reconciliation_differences`
 - `external_broker_activities`
