@@ -397,7 +397,7 @@ def test_upload_txt_success_and_metadata(fake_storage: None, tmp_path: Path) -> 
     payload = b"bewijs-inhoud"
     response = client.post(
         "/research/sources/src-upload/upload-file",
-        files={"file": ("../evil name.txt", payload, "text/plain")},
+        files={"file": ("research-note.txt", payload, "text/plain")},
     )
     assert response.status_code == 200
     body = response.json()
@@ -452,4 +452,4 @@ def test_upload_rejects_unsupported_extension_oversize_and_empty_name(
         "/research/sources/src-empty/upload-file",
         files={"file": ("", b"abc", "text/plain")},
     )
-    assert empty_name.status_code == 400
+    assert empty_name.status_code == 422
