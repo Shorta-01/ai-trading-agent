@@ -40,3 +40,11 @@ npm run build
 - Bovenin staat een indicator met teller voor actieve systeemmeldingen.
 - Geen Codex-copy endpoint en geen globale exception middleware toegevoegd.
 - Geen IBKR/OpenAI/trading-gedrag toegevoegd in deze taak.
+
+## Task 48 IBKR koppeling sectie
+- Nieuwe Nederlandstalige sectie `IBKR koppeling` op de pagina `Instellingen`.
+- De sectie toont alleen veilige status/configuratievelden zonder geheimen.
+- Er worden geen gebruikersnaam/wachtwoord/token/API-key/secret velden getoond.
+- UI meldt expliciet dat echte IBKR API-calls nog niet actief zijn en dat orders geblokkeerd blijven.
+- Geen connect-knop, geen orderknop en geen orderuitvoering.
+- Versie 1 blijft paper-only voor het gekoppelde IBKR-account, binnen een volledig tradingplatform.

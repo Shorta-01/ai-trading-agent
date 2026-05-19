@@ -73,6 +73,23 @@ export type TradingSettingsUpdateInput = {
   reason_nl?: string;
 };
 
+export type IbkrStatusResponse = {
+  provider: "ibkr";
+  enabled: boolean;
+  configured: boolean;
+  connection_status: string;
+  account_mode_status: string;
+  expected_environment: string;
+  account_id_hint_present: boolean;
+  gateway_url_configured: boolean;
+  status_check_enabled: boolean;
+  can_submit_orders: boolean;
+  blocks_orders: boolean;
+  status_nl: string;
+  message_nl: string;
+  help_nl: string;
+};
+
 export type SystemEventSummary = {
   system_event_id: string;
   severity: string;
@@ -138,6 +155,7 @@ export const apiClient = {
   getIntegrationsSummary: () => getJson<IntegrationsSummary>("/integrations/summary"),
   getStorageStatus: () => getJson<StorageStatusSummary>("/storage/status"),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
+  getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   updateTradingSettings: (payload: TradingSettingsUpdateInput) => putJson<TradingSettingsResponse>("/settings/trading", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
