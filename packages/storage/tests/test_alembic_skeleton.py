@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from sqlalchemy.schema import CreateTable
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.schema import CreateTable
 
 from ai_trading_agent_storage.alembic_helpers import (
     get_target_metadata,
@@ -32,7 +32,11 @@ def test_skeleton_ready_without_database_connection() -> None:
 
 def test_exactly_two_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
-    revision_files = sorted(path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep")
+    revision_files = sorted(
+        path.name
+        for path in versions_dir.glob("*.py")
+        if path.name != ".gitkeep"
+    )
     assert revision_files == [
         "0001_paper_setup_audit_foundation.py",
         "0002_broker_accounts_and_sync_runs.py",
