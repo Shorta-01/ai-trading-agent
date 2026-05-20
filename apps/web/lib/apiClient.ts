@@ -78,6 +78,18 @@ export type TradingSettingsUpdateInput = {
   reason_nl?: string;
 };
 
+
+export type IbkrSyncStatusResponse = {
+  configured: boolean;
+  status_nl: string;
+  help_nl: string;
+  positions_count: number;
+  cash_available: boolean;
+  open_orders_count: number;
+  executions_count: number;
+  last_sync_at?: string;
+};
+
 export type IbkrStatusResponse = {
   provider: "ibkr";
   enabled: boolean;
@@ -241,6 +253,7 @@ export const apiClient = {
   getStorageStatus: () => getJson<StorageStatusSummary>("/storage/status"),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
+  getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),
   updateTradingSettings: (payload: TradingSettingsUpdateInput) => putJson<TradingSettingsResponse>("/settings/trading", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>

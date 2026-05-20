@@ -1,8 +1,8 @@
-# Current State (na Task 74)
+# Current State (na Task 76)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 74**.
+- Huidige toestand: **na Task 76**.
 - CI-status: groen na Task 72C repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -93,3 +93,6 @@
 - Task 74: **completed** — moderne GUI shell en dashboard foundation toegevoegd (apps/web) met Nederlandse navigatie, statusbadges, icon-tooltips, dashboardpanelen en veilige empty states. Geen IBKR runtime, geen market-data runtime, geen suggestion runtime, geen AI runtime, geen ordergedrag en geen fake portfolio/broker/suggestiedata toegevoegd.
 
 - Task 75: **completed** — read-only IBKR portfolio sync foundation toegevoegd met veilige status/endpoints voor sync-run, posities en cash snapshots. Geen ordersubmission, geen action drafts, geen suggestions, geen Decision Packages, geen AI/market-data/forecast runtime en geen fake broker/portfolio data.
+
+
+- Task 76: **completed** — read-only IBKR sync foundation uitgebreid met open-orders en executions/fills snapshots + endpoints. Geen ordersubmission, orderwijziging, ordercancel, action drafts, suggesties, Decision Packages, AI/market-data/forecast runtime en geen fake broker/order/execution data.

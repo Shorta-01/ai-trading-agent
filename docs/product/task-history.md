@@ -74,3 +74,13 @@
 - Status: completed.
 - Read-only IBKR sync foundation toegevoegd voor status, sync-run trigger, posities en cash snapshot API basis.
 - Geen ordersubmission, geen action drafts, geen suggestions, geen Decision Packages en geen AI/market-data/forecast runtime toegevoegd.
+
+
+## Task 76 — IBKR executions and open-orders sync foundation
+
+- Status: completed.
+- Task 75 read-only sync uitgebreid met open-orders snapshots en execution/fill snapshots.
+- Read-only API endpoints toegevoegd voor `/ibkr/orders/open`, `/ibkr/executions` en uitgebreide `/ibkr/sync/status` tellers.
+- Geen ordersubmission, orderwijziging of ordercancel toegevoegd.
+- Geen action drafts, suggesties, Decision Packages, AI runtime, market-data runtime of forecast runtime toegevoegd.
+- Tests blijven adapter-fake gebaseerd; geen echte IBKR connectie vereist.

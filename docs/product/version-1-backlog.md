@@ -56,7 +56,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - portfolio grid
 - watchlist grid
 - action badges + explanation panel
-- IBKR read-only integration
+- IBKR read-only integration (positions/cash/open orders/executions snapshots foundation toegevoegd in Task 75/76; echte connectieruntime pending)
 - account mode verification
 - broker snapshots
 - reconciliation
@@ -134,4 +134,5 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - Navigatie-shell voor Release 1 workflow bestaat (Dashboard, Portefeuille, Volglijst, Suggesties, IBKR Acties, Onderzoek, Historiek, Instellingen).
 - Geen IBKR runtime, market-data runtime, suggestion runtime, AI runtime of ordergedrag toegevoegd.
 
-- [x] Task 75 — IBKR portfolio sync engine foundation (read-only status + snapshots + API basis; geen orders/suggesties/AI runtime).
+- [x] Task 75 — IBKR portfolio sync engine foundation (read-only status + portfolio snapshots + API basis).
+- [x] Task 76 — IBKR executions/open-orders sync foundation (read-only snapshots + API; geen ordersubmission/-wijziging/-cancel, geen action drafts/suggesties/Decision Packages/AI/market-data/forecast runtime, geen fake broker/order/execution data).

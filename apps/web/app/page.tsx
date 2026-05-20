@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusCard } from "@/components/StatusCard";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
-import { apiClient, IbkrStatusResponse, SystemStatusSummary } from "@/lib/apiClient";
+import { apiClient, IbkrStatusResponse, IbkrSyncStatusResponse, SystemStatusSummary } from "@/lib/apiClient";
 
 const metrics = [
   "Totale portefeuillewaarde",
@@ -22,12 +22,14 @@ const metrics = [
 export default function HomePage() {
   const [systemStatus, setSystemStatus] = useState<SystemStatusSummary | null>(null);
   const [ibkrStatus, setIbkrStatus] = useState<IbkrStatusResponse | null>(null);
+  const [ibkrSyncStatus, setIbkrSyncStatus] = useState<IbkrSyncStatusResponse | null>(null);
 
   useEffect(() => {
     async function load() {
-      const [system, ibkr] = await Promise.all([apiClient.getSystemStatus(), apiClient.getIbkrStatus()]);
+      const [system, ibkr, ibkrSync] = await Promise.all([apiClient.getSystemStatus(), apiClient.getIbkrStatus(), apiClient.getIbkrSyncStatus()]);
       setSystemStatus(system.ok ? system.data : null);
       setIbkrStatus(ibkr.ok ? ibkr.data : null);
+      setIbkrSyncStatus(ibkrSync.ok ? ibkrSync.data : null);
     }
     void load();
   }, []);
@@ -52,7 +54,7 @@ export default function HomePage() {
         </DashboardPanel>
 
         <DashboardPanel title="Synchronisatie en status" help="Toont actuele status zonder fake succesmeldingen.">
-          <StatusCard title="IBKR synchronisatie" description={syncLabel.help} statusLabel={syncLabel.label} status={syncLabel.status} />
+          <StatusCard title="IBKR synchronisatie" description={ibkrSyncStatus ? `Posities: ${ibkrSyncStatus.positions_count} · Open orders: ${ibkrSyncStatus.open_orders_count} · Executies: ${ibkrSyncStatus.executions_count}` : syncLabel.help} statusLabel={syncLabel.label} status={syncLabel.status} />
           <div className="sync-badges">
             <SyncStatusBadge label="Accountmodus" status="vergrendeld" help="Alleen paper-modus is toegestaan." />
             <SyncStatusBadge label="Marktdata" status="niet-beschikbaar" help="Runtime nog niet geïmplementeerd." />
