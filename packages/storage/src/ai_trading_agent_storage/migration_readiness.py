@@ -210,6 +210,16 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Watchlist foundation",
         description_nl="Opslagfundament voor lokaal beheerde handmatige volglijst-items.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0021_market_data_storage_foundation",
+        previous_revision_id="0020_watchlist_foundation",
+        filename="0021_market_data_storage_foundation.py",
+        label_nl="Market data opslag/freshness foundation",
+        description_nl=(
+            "Conservatief opslagfundament voor conid-gebaseerde market-data snapshotmetadata "
+            "en freshness/readinessblokkade-info (zonder runtime fetch)."
+        ),
+    ),
 )
 
 

@@ -84,3 +84,11 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 
 - Task 84: IBKR-watchlist import foundation toegevoegd (identity/reference/sync-only, read-only richting IBKR).
 - Task 84C: API pytest-repair na PR #163 afgerond als test-setup fix (Pydantic `Settings` correct gepatcht; configured-path test kreeg expliciete IBKR configuratiepatch). Geen runtime behavior toegevoegd, geen productscope uitgebreid en geen toevoeging van market-data runtime, historical fetching, schedulers, suggestions, Decision Packages, action drafts, IBKR order behavior, AI runtime, forecast runtime of fake data.
+
+
+## Task 85 update
+
+- Task 85 voltooid: conservatieve market-data storage/freshness foundation toegevoegd (schema + status-only API readiness endpoint).
+- Geen market-data runtime toegevoegd, geen historical fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag.
+- Geen fake market prices of fake broker/recommendation data toegevoegd.
+- Ongevalideerde of onopgeloste identiteiten blijven geblokkeerd voor market data en latere analyse/suggesties/actie-drafts.

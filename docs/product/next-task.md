@@ -1,5 +1,5 @@
 # Next Task
 
-## Task 85 — Market data storage and freshness foundation
+## Task 86 — Market data readiness persistence wiring
 
-Na Task 84 zijn handmatige Volglijst-activering en IBKR-watchlist-import conid-gebaseerd. De volgende veilige stap is opslag/freshness-metadata voor market data, zonder suggesties, forecasts, AI-runtime, action drafts of ordergedrag.
+Na Task 85 bestaat een conservatieve opslag/API foundation voor market-data snapshotmetadata en conid-gated readinessstatus. De volgende stap is beperkte persistence-wiring/read-only detail-endpoints, nog steeds zonder market-data fetch/runtime/scheduler/suggesties.
