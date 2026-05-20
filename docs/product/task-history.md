@@ -1,0 +1,43 @@
+# Task History (concise)
+
+> Opmerking: waar PR-nummers niet betrouwbaar lokaal bevestigd zijn, worden taaknamen gebruikt zonder nummergok.
+
+## Foundation and governance era
+
+- Product scope/guardrails foundations vastgelegd (paper-only, safety boundaries, simple Dutch UI).
+- API/worker/web/Docker/CI skeletons opgezet.
+- Shared domain/storage package foundations toegevoegd.
+- Decimal-first financiële contracten en paper-only constraints vastgelegd.
+- Settings/system events/status foundations toegevoegd.
+
+## Storage and broker planning era
+
+- Storage/migratie foundations met Alembic-planning en readiness checks toegevoegd.
+- IBKR source-of-truth doctrine en architectuur-ADR’s toegevoegd.
+- IBKR adapter-first contract foundations toegevoegd.
+- Broker sync/reconciliatie schema slices in opeenvolgende migratiefases voorbereid.
+
+## Research/suggestion architecture era
+
+- Research Engine en Suggestion Engine contracts toegevoegd.
+- Suggestion lifecycle en validity-window contract foundations toegevoegd.
+- Data freshness, source credibility, prompt-injection defense contracts toegevoegd.
+- Market calendar/trading-hours contracts toegevoegd.
+- Quant model contract foundations toegevoegd.
+- AI Event Intelligence/deep-search contract foundations toegevoegd.
+- Evidence Ledger storage foundations toegevoegd.
+- Event Signal storage foundations toegevoegd.
+
+## Research Library implementation era
+
+- **Task 56A/56B/56C:** Research Source Archive storage foundations.
+- **Task 57:** API foundation + repairs.
+- **Task 58:** Nederlandse UI foundation.
+- **Task 59:** veilige file upload API + repairs.
+- **Task 60:** file upload UI.
+- **Task 61A:** extracted text storage foundation.
+- **Task 61B:** deterministische TXT/MD/CSV extractie-runtime + repairs voor green CI.
+
+## Current task
+
+- **Task 62:** gedetailleerde project handover en Version 1 backlog source-of-truth docs.

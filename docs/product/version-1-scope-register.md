@@ -13,6 +13,16 @@ Dit register is de source-of-truth voor alle vergrendelde Version 1-features en 
 - Belangrijk gedrag moet configureerbaar zijn in **Instellingen**.
 - Dit register moet worden bijgewerkt bij lock, implementatie, wijziging of bewuste defer.
 
+
+## Source-of-truth docs
+
+Voor projectcontinuïteit tussen ChatGPT/Codex sessies:
+
+- `docs/product/project-handover.md` is het instappunt voor nieuwe sessies.
+- `docs/product/locked-decisions.md` bevat niet-onderhandelbare productbeslissingen.
+- `docs/product/version-1-backlog.md` bevat resterend Version 1 werk.
+- `docs/product/next-task.md` bevat de volgende aanbevolen taak.
+
 ## Traceability rules
 
 ### Statusdefinities
