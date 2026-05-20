@@ -133,3 +133,5 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - Dashboard gebruikt veilige empty states: geen fake portfolio-/broker-/suggestiedata en geen fake chartwaarden.
 - Navigatie-shell voor Release 1 workflow bestaat (Dashboard, Portefeuille, Volglijst, Suggesties, IBKR Acties, Onderzoek, Historiek, Instellingen).
 - Geen IBKR runtime, market-data runtime, suggestion runtime, AI runtime of ordergedrag toegevoegd.
+
+- [x] Task 75 — IBKR portfolio sync engine foundation (read-only status + snapshots + API basis; geen orders/suggesties/AI runtime).

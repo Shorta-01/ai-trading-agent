@@ -68,3 +68,9 @@
 - Herbruikbare UI-componenten toegevoegd (status badges, panelen, empty states, tooltips, placeholders).
 - Alle dashboardwaarden blijven eerlijk: geen fake cijfers, geen fake brokerdata, geen fake suggesties, geen fake chartdata.
 - Geen runtime-engine toegevoegd voor IBKR, market data, suggestions, AI of orders.
+
+## Task 75 — IBKR portfolio sync engine foundation
+
+- Status: completed.
+- Read-only IBKR sync foundation toegevoegd voor status, sync-run trigger, posities en cash snapshot API basis.
+- Geen ordersubmission, geen action drafts, geen suggestions, geen Decision Packages en geen AI/market-data/forecast runtime toegevoegd.
