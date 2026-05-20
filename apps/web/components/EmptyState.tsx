@@ -1,17 +1,8 @@
-import { HelpText } from "@/components/HelpText";
-
-type EmptyStateProps = {
-  titel: string;
-  melding: string;
-  hulptekst: string;
-};
-
-export function EmptyState({ titel, melding, hulptekst }: EmptyStateProps) {
+export function EmptyState({ title, message }: { title: string; message: string }) {
   return (
-    <article className="dashboard-card">
-      <h3>{titel}</h3>
-      <p>{melding}</p>
-      <HelpText text={hulptekst} />
-    </article>
+    <div className="empty-state">
+      <p className="empty-title">{title}</p>
+      <p>{message}</p>
+    </div>
   );
 }

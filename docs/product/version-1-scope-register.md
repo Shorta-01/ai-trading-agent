@@ -49,3 +49,6 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 - Geen automatische orders.
 - Geen IBKR live order flow.
 - Suggesties blijven geblokkeerd tot alle gates/runtime engines bestaan.
+
+
+| Moderne GUI shell + dashboard foundation (Task 74) | Contracted | N/A | N/A | UI implemented | Runtime pending | UI-only foundation; geen IBKR/market-data/suggestion/AI/order runtime; gebruikt veilige empty states zonder fake data |

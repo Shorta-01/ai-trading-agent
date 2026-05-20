@@ -58,3 +58,13 @@
 - Geen runtimecode gewijzigd.
 - Geen migraties, API’s, UI, tests of tradinggedrag toegevoegd.
 - Task 73 asset detection implementatie is niet gestart in deze taak.
+
+
+## Task 74 — Modern GUI shell and dashboard foundation
+
+- Status: completed.
+- Moderne app shell toegevoegd met duidelijke navigatie en top-statusgebied.
+- Dashboard foundation toegevoegd met metric cards, grafiek-placeholder, samenstelling/suggesties/briefingpanelen en sync-statuspaneel.
+- Herbruikbare UI-componenten toegevoegd (status badges, panelen, empty states, tooltips, placeholders).
+- Alle dashboardwaarden blijven eerlijk: geen fake cijfers, geen fake brokerdata, geen fake suggesties, geen fake chartdata.
+- Geen runtime-engine toegevoegd voor IBKR, market data, suggestions, AI of orders.
