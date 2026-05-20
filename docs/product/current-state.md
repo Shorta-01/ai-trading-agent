@@ -1,11 +1,12 @@
-# Current State (na Task 61B + fixes)
+# Current State (na Task 63)
 
 ## 1) Current status summary
 
-- Repository-status: green na Task 61B fixes.
+- Repository-status: green na Task 63.
 - Projectstatus: nog foundation-heavy, geen complete Version 1 applicatie.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Source Archive.
-- Echte Suggestion Engine runtime en IBKR runtime zijn nog niet voltooid.
+- Echte Suggestion Engine runtime, probabilistische forecast-runtime en IBKR runtime zijn nog niet voltooid.
+- De probabilistische asset-outlook doctrine is nu vastgelegd in `docs/product/probabilistic-asset-outlook-doctrine.md`.
 
 ## 2) Implemented foundations
 
@@ -47,6 +48,7 @@
 - Market calendar/trading-hours contracts aanwezig.
 - AI Event Intelligence contracts aanwezig.
 - Quant research/model contracts aanwezig.
+- Probabilistische asset-outlook doctrine is productmatig vastgelegd, maar nog niet als runtime geïmplementeerd.
 
 ### Onderzoeksbibliotheek / Research Source Archive
 
@@ -72,6 +74,8 @@
 - Deterministische TXT/Markdown/CSV extractie-runtime bestaat.
 - Extracted text archive storage bestaat.
 - Extracted text hash/preview/metadata bestaat.
+- Onderzoeksbibliotheek UI kan tekstextractie starten voor ondersteunde TXT/MD/CSV uploads.
+- UI toont extractiestatus en metadata, inclusief ondersteuning, karakters, regels, preview en tijdstip indien beschikbaar.
 - Extracted text blijft geblokkeerd voor suggesties.
 - Geen PDF/DOCX/XLSX/PPTX extractie.
 - Geen OCR.
@@ -83,6 +87,13 @@
 Nog niet compleet / runtime pending:
 
 - geen echte Suggestion Engine runtime
+- geen probabilistische forecast-runtime
+- geen asset-master runtime
+- geen market-data ingestie
+- geen feature-store runtime
+- geen forecast target engine
+- geen backtesting/walk-forward runtime
+- geen probability calibration runtime
 - geen echte OpenAI/AI research runtime
 - geen AI Event Intelligence runtime
 - geen deep search agent
@@ -94,7 +105,6 @@ Nog niet compleet / runtime pending:
 - geen IBKR read-only verbinding
 - geen IBKR order submission
 - geen reconciliatie-runtime
-- geen market data ingestie
 - geen quant model execution-runtime
 - geen Belgische tax/compliance runtime
 - geen production backup/restore systeem
@@ -104,4 +114,5 @@ Nog niet compleet / runtime pending:
 - Geüploade bestanden zijn evidence, geen instructies.
 - Extracted text is evidence, geen instructies.
 - Alles blijft geblokkeerd voor suggesties tot toekomstige validatiegates bestaan.
-- Upload/extractie mag geen watchlist-entry, suggestie, IBKR actie of order aanmaken.
+- Upload/extractie/classificatie mag geen watchlist-entry, suggestie, IBKR actie of order aanmaken.
+- Toekomstige forecasts zijn probability/range outputs, geen zekere prijsvoorspellingen en geen orders.
