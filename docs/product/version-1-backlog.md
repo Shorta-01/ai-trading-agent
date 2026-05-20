@@ -176,3 +176,5 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 86 — Market data readiness persistence wiring (read-only snapshotmetadata, conid-gated readiness blijft actief).
 
 - [x] Task 86B — API CI-repair na Task 86 (mypy typing boundary fix in market-data readiness detail endpoint; geen runtime features toegevoegd, geen market-data runtime/historical/scheduler/AI/suggesties/action drafts/IBKR-ordergedrag/fake data).
+
+- [x] Task 87 — Conservatieve watchlist/readiness inspectieverbetering (read-only): duidelijkere Nederlandse blocked/missing-snapshot statusuitleg en auditvelden toegevoegd; geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data.

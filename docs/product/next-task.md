@@ -1,3 +1,3 @@
 # Next Task
 
-Task 87 — Conservatieve watchlist/readiness inspectieverbetering (zonder market-data runtime): verbeter statusuitleg en auditdetails voor blocked/missing snapshot paden, inclusief aanvullende read-only tests.
+Task 88 — Conservatieve readiness-contract consolidatie: centraliseer typed readiness responsemodellen/helpers (API-only, read-only), inclusief regressietests en documentatie-update.

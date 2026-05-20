@@ -96,3 +96,5 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Market-data readiness persistence wiring (Task 86) | Contracted | Storage read-contracten geïmplementeerd | API read-only detail endpoints geïmplementeerd | UI pending | Runtime pending | Geen market-data runtime/historical/scheduler/AI/suggesties/orders; unresolved identities blijven blocked. |
 
 | Task 86B API CI-repair (post-Task 86) | Contracted | N/A | API type-boundary repair uitgevoerd | UI N/A | Runtime onveranderd | Root cause: mypy iteratie op `dict[str, object]["items"]`; fix is type cleanup only. Geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data; unresolved identities blijven blocked voor market data/analysis/suggesties/action drafts. |
+
+| Task 87 readiness inspectieverbetering | Contracted | Bestaande storage-read contracten hergebruikt | API read-only readiness/auditvelden uitgebreid + tests bijgewerkt | UI optioneel/pending | Runtime onveranderd | Duidelijkere blocked/missing-snapshot uitleg in NL; geen market-data runtime/historical/scheduler/AI/suggesties/orders; unresolved identities blijven blocked. |
