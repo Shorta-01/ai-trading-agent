@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from portfolio_outlook_domain.research_library import (
+    DeterministicDocumentCategory,
     DocumentClassificationConfidence,
     ResearchAnalysisStatus,
     ResearchDocumentClassification,
@@ -17,6 +18,7 @@ from portfolio_outlook_domain.research_library import (
     ResearchUrlMetadata,
     UploadedResearchFileMetadata,
     UserResearchNote,
+    classify_document_deterministically,
     evaluate_research_library_source_readiness,
     get_research_library_help_texts,
 )
@@ -243,3 +245,44 @@ def _build_classification(**overrides: object) -> ResearchDocumentClassification
     }
     payload.update(overrides)
     return ResearchDocumentClassification(**payload)
+
+
+def test_deterministic_classification_for_user_note_is_blocked_for_suggestions() -> None:
+    result = classify_document_deterministically(
+        library_source_id="src-note",
+        source_kind=ResearchLibrarySourceKind.USER_NOTE,
+        title="Eigen notitie",
+        original_file_name=None,
+        extracted_text="",
+        classified_at=NOW,
+    )
+    assert result.category == DeterministicDocumentCategory.USER_NOTE
+    assert result.can_be_used_in_suggestions is False
+    assert result.blocks_suggestions is True
+
+
+def test_deterministic_classification_unknown_fallback_stays_blocked() -> None:
+    result = classify_document_deterministically(
+        library_source_id="src-unknown",
+        source_kind=ResearchLibrarySourceKind.UPLOADED_FILE,
+        title="Bestand zonder duidelijk type",
+        original_file_name="input.txt",
+        extracted_text="willekeurige tekst",
+        classified_at=NOW,
+    )
+    assert result.category == DeterministicDocumentCategory.UNKNOWN
+    assert "fallback:unknown" in result.matched_signals
+    assert result.can_be_used_in_research is False
+    assert result.can_be_used_in_suggestions is False
+
+
+def test_deterministic_classification_detects_annual_report_keywords() -> None:
+    result = classify_document_deterministically(
+        library_source_id="src-annual",
+        source_kind=ResearchLibrarySourceKind.UPLOADED_FILE,
+        title="ASML Annual Report 2025",
+        original_file_name="asml-annual-report-2025.md",
+        extracted_text="",
+        classified_at=NOW,
+    )
+    assert result.category == DeterministicDocumentCategory.ANNUAL_REPORT
