@@ -112,10 +112,14 @@ def _json_list_or_none(value: tuple[str, ...] | list[str] | None) -> list[str] |
 def _row_to_gate_outcome_record(row: Any) -> ResearchGateOutcomeRecord:
     values = dict(row)
     values["source_reference_ids_json"] = _json_tuple_or_none(
-        None if values.get("source_reference_ids_json") is None else json.loads(values["source_reference_ids_json"])
+        None
+        if values.get("source_reference_ids_json") is None
+        else json.loads(values["source_reference_ids_json"])
     )
     values["audit_context_json"] = (
-        None if values.get("audit_context_json") is None else dict(json.loads(values["audit_context_json"]))
+        None
+        if values.get("audit_context_json") is None
+        else dict(json.loads(values["audit_context_json"]))
     )
     return ResearchGateOutcomeRecord(**values)
 
@@ -950,10 +954,14 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         rows = self._connection.execute(statement).mappings().all()
         return tuple(ResearchSourceEvidenceLedgerLinkRecord(**dict(row)) for row in rows)
 
-    def save_research_gate_outcome(self, record: ResearchGateOutcomeRecord) -> ResearchGateOutcomeRecord:
+    def save_research_gate_outcome(
+        self, record: ResearchGateOutcomeRecord
+    ) -> ResearchGateOutcomeRecord:
         values = asdict(record)
         values["source_reference_ids_json"] = (
-            None if record.source_reference_ids_json is None else json.dumps(list(record.source_reference_ids_json))
+            None
+            if record.source_reference_ids_json is None
+            else json.dumps(list(record.source_reference_ids_json))
         )
         values["audit_context_json"] = (
             None if record.audit_context_json is None else json.dumps(record.audit_context_json)
@@ -961,19 +969,29 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         self._insert(research_gate_outcomes, values)
         return record
 
-    def list_research_gate_outcomes_by_source(self, library_source_id: str) -> tuple[ResearchGateOutcomeRecord, ...]:
+    def list_research_gate_outcomes_by_source(
+        self, library_source_id: str
+    ) -> tuple[ResearchGateOutcomeRecord, ...]:
         rows = self._connection.execute(
             select(research_gate_outcomes)
             .where(research_gate_outcomes.c.library_source_id == library_source_id)
-            .order_by(research_gate_outcomes.c.checked_at.desc(), research_gate_outcomes.c.gate_outcome_id.desc())
+            .order_by(
+                research_gate_outcomes.c.checked_at.desc(),
+                research_gate_outcomes.c.gate_outcome_id.desc(),
+            )
         ).mappings().all()
         return tuple(_row_to_gate_outcome_record(row) for row in rows)
 
-    def list_research_gate_outcomes_by_evidence_item(self, evidence_item_id: str) -> tuple[ResearchGateOutcomeRecord, ...]:
+    def list_research_gate_outcomes_by_evidence_item(
+        self, evidence_item_id: str
+    ) -> tuple[ResearchGateOutcomeRecord, ...]:
         rows = self._connection.execute(
             select(research_gate_outcomes)
             .where(research_gate_outcomes.c.evidence_item_id == evidence_item_id)
-            .order_by(research_gate_outcomes.c.checked_at.desc(), research_gate_outcomes.c.gate_outcome_id.desc())
+            .order_by(
+                research_gate_outcomes.c.checked_at.desc(),
+                research_gate_outcomes.c.gate_outcome_id.desc(),
+            )
         ).mappings().all()
         return tuple(_row_to_gate_outcome_record(row) for row in rows)
 

@@ -4,8 +4,8 @@ Revision ID: 0016
 Revises: 0015
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "0016"
 down_revision = "0015"
@@ -34,16 +34,30 @@ def upgrade() -> None:
         sa.Column("data_age_seconds", sa.Integer(), nullable=True),
         sa.Column("blocking_reason_code", sa.Text(), nullable=True),
         sa.Column("blocks_suggestions", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("safe_to_use_as_evidence", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("safe_to_use_for_suggestions", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "safe_to_use_as_evidence",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
+        sa.Column(
+            "safe_to_use_for_suggestions",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
         sa.Column("explanation_nl", sa.Text(), nullable=False),
         sa.Column("source_reference_ids_json", sa.Text(), nullable=True),
         sa.Column("audit_context_json", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(["library_source_id"], ["research_sources.library_source_id"]),
-        sa.ForeignKeyConstraint(["evidence_item_id"], ["research_source_evidence_items.evidence_item_id"]),
+        sa.ForeignKeyConstraint(
+            ["evidence_item_id"],
+            ["research_source_evidence_items.evidence_item_id"],
+        ),
         sa.ForeignKeyConstraint(["evidence_ledger_item_id"], ["evidence_items.evidence_id"]),
         sa.PrimaryKeyConstraint("gate_outcome_id"),
     )
+
 
 def downgrade() -> None:
     op.drop_table("research_gate_outcomes")

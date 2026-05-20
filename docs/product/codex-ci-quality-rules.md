@@ -63,3 +63,17 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
 9. **PR mag niet ready/mergebaar zonder API pytest na migratiewijzigingen**  
    - Als een taak een Alembic migratie toevoegt of wijzigt, moet API `pytest` nadien lokaal uitgevoerd zijn.
    - Alleen storage-tests groen is onvoldoende wanneer de API migratiestatus exposeert.
+
+10. **No PR may be merged with known failing local checks**  
+   - If a task reports that `ruff`, `mypy`, or `pytest` failed locally, the PR must remain draft/unready.
+   - A follow-up repair should happen before merge, not after merge.
+   - A PR body that says checks are failing is a blocker, not a warning.
+   - For any new storage record imported by API, the public export smoke test must include that record before the PR is marked ready.
+   - For any new migration, storage `ruff`, storage `mypy`, storage `pytest`, API `mypy` and API `pytest` must all pass before merge.
+
+**Versterking van regel 6 (public exports)**  
+- When adding a storage record/dataclass that API imports from `ai_trading_agent_storage`, update all of:
+  - `__init__.py`
+  - `__all__`
+  - public-export smoke test
+  - API `mypy src`
