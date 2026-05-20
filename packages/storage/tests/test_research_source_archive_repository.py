@@ -14,6 +14,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourceEvidenceItemRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -263,6 +264,34 @@ def test_archive_repository_roundtrips_and_filters() -> None:
         latest_extracted = repo.get_latest_extracted_text_for_source("src-1")
         assert latest_extracted is not None
         assert latest_extracted.extracted_text_id == "ext-2"
+
+        ev = ResearchSourceEvidenceItemRecord(
+            evidence_item_id="evidence-1",
+            library_source_id="src-1",
+            evidence_type="financial_statement_fact",
+            evidence_status="registered",
+            extracted_from_kind="manual",
+            source_reference_text="Omzet steeg 5%",
+            normalized_evidence_text="omzet steeg 5 procent",
+            evidence_summary_nl="Omzetgroei",
+            asset_symbol="ASML",
+            reporting_period="Q4",
+            fiscal_year=2025,
+            confidence_level="medium",
+            extraction_method="deterministic_manual_payload",
+            source_text_hash_sha256=None,
+            extraction_run_id=None,
+            created_at=datetime(2026, 1, 4, tzinfo=UTC),
+            extracted_at=datetime(2026, 1, 3, tzinfo=UTC),
+            safe_to_use_as_evidence=True,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl="Alleen bewijs",
+        )
+        repo.save_source_evidence_item(ev)
+        evidence = repo.list_source_evidence_items("src-1")
+        assert len(evidence) == 1
+        assert evidence[0].safe_to_use_for_suggestions is False
 
 
 def test_source_credibility_assessment_roundtrip_latest() -> None:

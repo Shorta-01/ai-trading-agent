@@ -635,6 +635,38 @@ research_source_credibility_assessments = Table(
     Column("explanation_nl", Text, nullable=False),
 )
 
+
+
+research_source_evidence_items = Table(
+    "research_source_evidence_items",
+    metadata,
+    Column("evidence_item_id", Text, primary_key=True),
+    Column(
+        "library_source_id",
+        Text,
+        ForeignKey("research_sources.library_source_id"),
+        nullable=False,
+    ),
+    Column("evidence_type", Text, nullable=False),
+    Column("evidence_status", Text, nullable=False),
+    Column("extracted_from_kind", Text, nullable=False),
+    Column("source_reference_text", Text, nullable=False),
+    Column("normalized_evidence_text", Text, nullable=False),
+    Column("evidence_summary_nl", Text, nullable=False),
+    Column("asset_symbol", Text, nullable=True),
+    Column("reporting_period", Text, nullable=True),
+    Column("fiscal_year", Integer, nullable=True),
+    Column("confidence_level", Text, nullable=False),
+    Column("extraction_method", Text, nullable=False),
+    Column("source_text_hash_sha256", Text, nullable=True),
+    Column("extraction_run_id", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("extracted_at", DateTime(timezone=True), nullable=False),
+    Column("safe_to_use_as_evidence", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("explanation_nl", Text, nullable=False),
+)
 research_extracted_texts = Table(
     "research_extracted_texts",
     metadata,

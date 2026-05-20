@@ -56,3 +56,7 @@
 
 - Task 66 afgerond: source credibility assessment status wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade: safe_to_use_for_suggestions blijft false en blocks_suggestions blijft true.
 - Task 66B afgerond: CI-reparatie na Task 66 (storage ruff formatting + API testverwachtingen bijgewerkt voor credibility-woordkeuze en migratie `0013`), zonder runtime-gedragswijziging; bronnen blijven geblokkeerd voor suggesties.
+
+
+- Task 67: evidence extraction foundation toegevoegd (storage + API + tests), met `safe_to_use_for_suggestions=false` en `blocks_suggestions=true` afgedwongen.
+

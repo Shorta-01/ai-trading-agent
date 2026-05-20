@@ -338,3 +338,5 @@ Research inputs
 
 - Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
 - Task 66 afgerond: source credibility assessment status wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
+
+| 128 | Research source evidence item opslag + listing foundation | Auditbare evidence-link per bron | Implemented | Implemented | Planned | Planned | Planned | Task 67 | Locked | Bewijs blijft geblokkeerd voor suggesties. |

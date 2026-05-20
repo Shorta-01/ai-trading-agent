@@ -681,6 +681,52 @@ class ResearchSourceCredibilityAssessmentRecord:
 
 
 @dataclass(frozen=True)
+class ResearchSourceEvidenceItemRecord:
+    evidence_item_id: str
+    library_source_id: str
+    evidence_type: str
+    evidence_status: str
+    extracted_from_kind: str
+    source_reference_text: str
+    normalized_evidence_text: str
+    evidence_summary_nl: str
+    asset_symbol: str | None
+    reporting_period: str | None
+    fiscal_year: int | None
+    confidence_level: str
+    extraction_method: str
+    source_text_hash_sha256: str | None
+    extraction_run_id: str | None
+    created_at: datetime
+    extracted_at: datetime
+    safe_to_use_as_evidence: bool
+    safe_to_use_for_suggestions: bool
+    blocks_suggestions: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "evidence_item_id",
+            "library_source_id",
+            "evidence_type",
+            "evidence_status",
+            "extracted_from_kind",
+            "source_reference_text",
+            "normalized_evidence_text",
+            "evidence_summary_nl",
+            "confidence_level",
+            "extraction_method",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        _require_ordered_datetimes(self.extracted_at, self.created_at, "extracted_at", "created_at")
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in version 1 foundation.")
+        if not self.blocks_suggestions:
+            raise ValueError("blocks_suggestions must remain true in version 1 foundation.")
+
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str

@@ -135,3 +135,5 @@ Nog niet compleet / runtime pending:
 
 - Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
 - Task 66 afgerond: source credibility assessment status wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
+
+Task 67 afgerond: evidence extraction foundation toegevoegd (opslag + API). Evidence-items blijven geblokkeerd voor suggesties; geen AI-analyse, geen watchlist/IBKR/order-gedrag.
