@@ -10,6 +10,8 @@ Portfolio Outlook Manager is een professionele AI-ondersteunde **paper portfolio
 
 ## 2) Final user workflow (target state)
 
+De gedetailleerde en vergrendelde Release 1 workflowblauwdruk staat in `docs/product/release-1-functional-workflow-blueprint.md`. Die blueprint is leidend voor implementatievolgorde en afbakening van Decision Packages, Suggestions-grid, IBKR Action Center, sync/recompute en AI-analytics.
+
 IBKR/paper account data  
 → market data en FX data  
 → market calendar/trading-hours/freshness checks  
