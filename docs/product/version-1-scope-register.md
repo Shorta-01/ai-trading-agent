@@ -301,3 +301,12 @@ Research inputs
 - Research Source Archive: Storage foundation started / migration implemented
 
 - Task 59 update (2026-05-19): Safe Research Source Archive file upload API foundation is implemented (controlled local archive storage + SHA-256 + metadata). No parsing/OCR/text extraction/AI/IBKR/suggestions/watchlist/orders in this step.
+
+
+## Task 61A update (2026-05-20)
+- Document extraction pipeline: storage foundation implemented (`research_extracted_texts` metadata/archive-reference storage only); runtime parsing/OCR/extraction remains planned.
+- Research extracted text archive: storage foundation implemented; extracted text remains evidence and blocked for suggestions by default.
+- Research archive: storage foundation expanded with extracted-text metadata records and safe archive URI pointers.
+- Prompt-injection protection for external content: runtime checks still planned.
+- Source credibility/evidence pipeline: runtime evaluation and gating still planned.
+- No OpenAI/IBKR/runtime suggestion/order behavior added by this slice.

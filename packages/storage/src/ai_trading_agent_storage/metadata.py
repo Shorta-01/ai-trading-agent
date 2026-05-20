@@ -20,6 +20,9 @@ from sqlalchemy import (
 from sqlalchemy import (
     false as sa_false,
 )
+from sqlalchemy import (
+    true as sa_true,
+)
 
 MONEY_NUMERIC = Numeric(precision=20, scale=6)
 
@@ -589,6 +592,33 @@ research_source_processing_status = Table(
     Column("blocks_suggestions", Boolean, nullable=False),
     Column("last_error_nl", Text, nullable=True),
     Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("reason_nl", Text, nullable=False),
+)
+
+research_extracted_texts = Table(
+    "research_extracted_texts",
+    metadata,
+    Column("extracted_text_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("source_file_hash_sha256", Text, nullable=True),
+    Column("extraction_status", Text, nullable=False),
+    Column("extraction_method", Text, nullable=False),
+    Column("detected_content_type", Text, nullable=True),
+    Column("detected_language", Text, nullable=True),
+    Column("character_count", Integer, nullable=True),
+    Column("line_count", Integer, nullable=True),
+    Column("text_hash_sha256", Text, nullable=True),
+    Column("extracted_text_storage_uri", Text, nullable=True),
+    Column("preview_text_nl", Text, nullable=True),
+    Column("can_be_used_in_research", Boolean, nullable=False, server_default=sa_false()),
+    Column("can_be_used_in_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("needs_user_review", Boolean, nullable=False, server_default=sa_true()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("extracted_at", DateTime(timezone=True), nullable=True),
+    Column("schema_version", Text, nullable=False),
     Column("reason_nl", Text, nullable=False),
 )
 

@@ -71,7 +71,7 @@ def test_provider_allows_writable_when_ready(tmp_path: Path) -> None:
             text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
         )
         checked.connection.execute(
-            text("INSERT INTO alembic_version (version_num) VALUES ('0010')")
+            text("INSERT INTO alembic_version (version_num) VALUES ('0011')")
         )
         checked.connection.commit()
 
