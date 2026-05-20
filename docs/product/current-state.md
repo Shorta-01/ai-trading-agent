@@ -1,9 +1,9 @@
-# Current State (na Task 77)
+# Current State (na Task 78B)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 77**.
-- CI-status: groen na Task 72C repair.
+- Huidige toestand: **na Task 78B**.
+- CI-status: groen na Task 78B repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
@@ -98,3 +98,6 @@
 - Task 76: **completed** — read-only IBKR sync foundation uitgebreid met open-orders en executions/fills snapshots + endpoints. Geen ordersubmission, orderwijziging, ordercancel, action drafts, suggesties, Decision Packages, AI/market-data/forecast runtime en geen fake broker/order/execution data.
 - Task 76B / PR #153: **completed** — API mypy repair op sync run count typing (`int`) met CI terug groen; geen runtimegedrag gewijzigd.
 - Task 77: **completed** — read-only Portefeuille-grid toegevoegd op basis van opgeslagen IBKR snapshots (posities, cash, open orders, executions/fills) met Nederlandse empty/error/loading states. Geen echte IBKR connectieruntime, geen ordersubmission/-wijziging/-cancel, geen action drafts, geen suggesties, geen Decision Packages, geen AI/market-data/forecast runtime en geen fake broker/portfolio/order/execution data.
+
+- Task 78: **completed** — watchlist foundation + Volglijst-pagina toegevoegd (lokaal/manueel, gescheiden van IBKR-portefeuille).
+- Task 78B: **completed** — CI-repair na Task 78. Root causes: API ruff-formattingfouten in `watchlist.py` en `test_watchlist_endpoints.py`, plus stale storage testverwachtingen voor migratie-inventaris en metadata na `0020_watchlist_foundation.py` / `watchlist_items`. Geen runtimegedrag gewijzigd, geen nieuwe features toegevoegd; watchlist blijft lokaal/manueel en gescheiden van IBKR-posities. Geen suggesties, action drafts, IBKR-ordergedrag, AI runtime, market-data runtime, forecast runtime of fake data toegevoegd.

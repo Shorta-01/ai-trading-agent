@@ -58,3 +58,5 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | IBKR open-orders + executions snapshots foundation (Task 76) | Contracted | Storage foundation aanwezig (in-memory foundation) | API implemented | UI implemented (dashboard tellers minimaal) | Runtime pending (echte IBKR connectie) | Read-only; geen ordersubmission/wijziging/cancel, geen action drafts/suggesties/Decision Packages/AI/market-data/forecast runtime |
 
 | Portefeuille read-only snapshot grid (Task 77) | Contracted | N/A | API hergebruikt (Task 75/76) | UI implemented | Runtime pending (echte IBKR connectie) | Read-only; toont opgeslagen snapshots voor posities/cash/open orders/executions; geen ordersubmission/-wijziging/-cancel, geen action drafts/suggesties/Decision Packages/AI/market-data/forecast runtime en geen fake data |
+
+| Watchlist foundation + Volglijst page (Task 78, CI repaired in Task 78B) | Contracted | Storage implemented | API implemented | UI implemented | Runtime pending | Lokaal/manueel, gescheiden van IBKR-portfolio; geen suggesties/action drafts/IBKR-ordergedrag/AI/market-data/forecast runtime; geen fake data |
