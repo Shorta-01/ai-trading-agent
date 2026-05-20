@@ -1,9 +1,9 @@
-# Current State (na Task 70B)
+# Current State (na Task 71B)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 70B**.
-- CI-status: groen na Task 70B repair.
+- Huidige toestand: **na Task 71B**.
+- CI-status: groen na Task 71B repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime en IBKR runtime bestaan nog niet.
@@ -32,6 +32,7 @@
 - Evidence Ledger linking foundation.
 - Gate outcome/freshness foundation.
 - Source conflict detection foundation.
+- Asset master identity foundation (storage/API) bestaat als referentie/status-only basis.
 
 ## 3) Safety and behavior state now
 
@@ -39,9 +40,12 @@
 - Source conflict findings zijn **audit/status-only**.
 - Conflict findings blijven **blocked for suggestions**.
 - Geen runtime suggestions.
-- Geen AI analysis runtime.
+- Geen AI runtime.
 - Geen watchlist insertion behavior.
+- Geen portfolio positions behavior.
 - Geen IBKR runtime action behavior.
+- Geen market-data runtime.
+- Geen forecast runtime.
 - Geen order behavior.
 
 ## 4) Current non-complete areas (accurate)
@@ -55,7 +59,6 @@
 - Source conflict detection runtime engine: pending.
 - Source freshness/runtime validation: pending.
 - Asset detection + source-to-asset linking: pending.
-- Asset master identity foundation: pending.
 - Market data/freshness runtime validation: pending.
 - Watchlist proposal/user-confirm flow: pending.
 - Suggestion engine runtime: pending.
@@ -75,4 +78,5 @@
 - Task 69B: **completed** — repair afgerond; CI opnieuw groen zonder runtimewijzigingen.
 - Task 70: **completed** — source conflict detection foundation toegevoegd (storage/API), audit/status-only; suggesties blijven geblokkeerd.
 - Task 70B: **completed** — API/storage pytest issues gerepareerd; CI groen; geen runtimegedrag gewijzigd.
-\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
+- Task 71: **completed** — asset master identity foundation toegevoegd (storage/API), identity blijft referentie/status-only en geblokkeerd voor suggesties; geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
+- Task 71B: **completed** — API mypy repair afgerond; CI opnieuw groen; geen runtimegedrag gewijzigd.

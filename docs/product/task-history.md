@@ -30,14 +30,17 @@
 - **Task 70B:** repair na Task 70-merge voor CI-fouten. Root causes: (1) API pytest faalde omdat conflict-finding test een niet-bestaande top-level `data` key verwachtte terwijl het endpoint het bestaande `record`-contract gebruikt; (2) storage pytest faalde omdat migration-readiness tests nog stale revision-assumpties (`14` en `0014`) hardcodeden na migratie `0017_research_source_conflict_findings`. Herstel: tests gealigneerd met bestaand API response-contract en migration inventory helper voor latest revision/count. Preventieregels in CI-quality-rules zijn verder aangescherpt. Geen runtimegedrag gewijzigd; conflict findings blijven audit/status-only en geblokkeerd voor suggesties.
 
 
-## Task 70/70B status lock
+## Task 70/70B/71/71B status lock
 
 - **Task 70:** source conflict detection foundation toegevoegd (storage/API), audit/status-only.
 - **Task 70B:** API response-shape test en stale migration-readiness tests gerepareerd.
 - **CI-status na Task 70B:** groen op main.
 - **Runtime-impact van Task 70B:** geen runtimegedrag gewijzigd.
 - **Suggestion-status:** conflict findings blijven geblokkeerd voor suggesties.
-\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
-
-
-- **Task 71B:** repair na Task 71-merge voor API mypy failure. Root cause: `asset_master.py` importeerde private helper `_get_repository` uit `research_sources.py`, waardoor mypy faalde met `attr-defined`. Fix: dependency boundary hersteld door repository-toegang lokaal en expliciet binnen `asset_master.py` af te handelen zonder private cross-route import. Runtimegedrag niet gewijzigd; asset identity records blijven referentie/status-only en geblokkeerd voor suggesties.
+- **Task 71:** asset master identity foundation toegevoegd (storage/API).
+- **Task 71 impact:** asset identities blijven referentie/status-only; geen watchlist insertion, geen portfolio positions, geen suggestions, geen AI runtime, geen market-data runtime, geen forecast runtime, geen IBKR gedrag en geen ordergedrag.
+- **Task 71B:** repair na Task 71-merge voor API mypy failure. Root cause: `asset_master.py` importeerde private helper `_get_repository` uit `research_sources.py`, waardoor mypy faalde met `attr-defined`.
+- **Task 71B fix:** dependency boundary hersteld door repository-toegang lokaal en expliciet binnen `asset_master.py` af te handelen zonder private cross-route import.
+- **Runtime-impact van Task 71B:** geen runtimegedrag gewijzigd.
+- **CI-status na Task 71B:** groen op main.
+- **Suggestion-status na Task 71/71B:** asset identity blijft referentie/status-only en geblokkeerd voor suggesties.
