@@ -38,3 +38,6 @@
 - **Runtime-impact van Task 70B:** geen runtimegedrag gewijzigd.
 - **Suggestion-status:** conflict findings blijven geblokkeerd voor suggesties.
 \n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
+
+
+- **Task 71B:** repair na Task 71-merge voor API mypy failure. Root cause: `asset_master.py` importeerde private helper `_get_repository` uit `research_sources.py`, waardoor mypy faalde met `attr-defined`. Fix: dependency boundary hersteld door repository-toegang lokaal en expliciet binnen `asset_master.py` af te handelen zonder private cross-route import. Runtimegedrag niet gewijzigd; asset identity records blijven referentie/status-only en geblokkeerd voor suggesties.
