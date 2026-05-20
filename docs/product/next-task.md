@@ -1,28 +1,23 @@
-## Task 75: IBKR portfolio sync engine foundation (recommended)
+# Next Task
 
-Doel: na de UI-foundation van Task 74 een conservatieve, read-only IBKR portfolio sync-basis bouwen met audit-first gedrag.
+## Task 77 — Portfolio read-only grid from IBKR snapshots (recommended)
+
+Bouw een read-only portefeuillegrid die uitsluitend de opgeslagen IBKR snapshots toont (posities, cash, open orders, executions/fills), met eenvoudige Nederlandse UI en auditvriendelijke timestamps.
 
 ### Waarom nu
 
-- Task 74 leverde een moderne dashboard-shell met veilige empty states, maar runtime-data ontbreekt nog.
-- Release 1 blueprint vereist IBKR als operationele waarheid voor posities/cash/orders/executions.
-- Zonder sync-engine blijft dashboardinformatie terecht “niet beschikbaar”.
+- Task 75 en Task 76 leveren read-only broker snapshots maar de gebruikerswaarde in de portefeuilleweergave is nog beperkt.
+- Een conservatieve read-only grid levert zichtbare waarde zonder ordergedrag of suggestion-runtime.
 
-### Scope voor Task 75 (toekomstig)
+### Scope voor Task 77
 
-- Read-only IBKR sync foundation voor posities/cash/accountwaarden en sync-timestamps.
-- Audit logging en zichtbare foutstatussen voor mislukte sync-runs.
-- Geen orderflow, geen submissions, geen live trading, geen automatische acties.
+- Read-only portefeuille-overzicht vanuit bestaande snapshot-opslag.
+- Duidelijke empty/error states en sync-timestamp weergave.
+- Geen bewerkbare rijen en geen orderknoppen.
 
-### Niet doen in Task 75
+### Niet doen in Task 77
 
-- Geen market-data runtime.
-- Geen suggestion/AI runtime.
-- Geen Decision Packages.
-- Geen ordergedrag of action drafts.
-
-# Next Task
-
-## Task 76 — IBKR executions/open-orders sync foundation (read-only)
-
-Bouw de volgende conservatieve stap: read-only opslag en API voor executions/fills + open-orders status, zonder order submission.
+- Geen ordersubmission, orderwijziging of ordercancel.
+- Geen action drafts of IBKR Action Center runtime.
+- Geen suggesties, Decision Packages, AI runtime, market-data runtime of forecast runtime.
+- Geen fake broker/order/execution data.

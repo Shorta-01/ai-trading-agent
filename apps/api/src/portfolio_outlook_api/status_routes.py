@@ -32,7 +32,10 @@ from portfolio_outlook_api.status_models import (
     SettingsSummary,
     SystemStatusSummary,
 )
-from portfolio_outlook_api.storage_status import StorageStatusResponse, build_storage_status
+from portfolio_outlook_api.storage_status import (
+    StorageStatusResponse,
+    build_storage_status,
+)
 from portfolio_outlook_api.system_event_mutations import (
     SystemEventMutationInput,
     mark_system_event_archived,
@@ -81,11 +84,10 @@ def read_dutch_labels() -> DutchLabelsSummary:
     return build_dutch_labels_summary()
 
 
-
-
 @router.get("/broker/ibkr/status")
 def read_ibkr_status() -> dict[str, object]:
     return build_ibkr_status_placeholder(settings)
+
 
 @router.get("/portfolio/setup/status")
 def read_portfolio_setup_status() -> dict[str, object]:
@@ -132,7 +134,9 @@ def resolve_system_event(
     payload: Annotated[SystemEventMutationInput | None, Body()] = None,
 ) -> dict[str, object]:
     mutation_payload = payload or SystemEventMutationInput()
-    result = mark_system_event_resolved(system_event_id, settings.storage, mutation_payload)
+    result = mark_system_event_resolved(
+        system_event_id, settings.storage, mutation_payload
+    )
     if result.not_found:
         raise HTTPException(status_code=404, detail=result.response["message_nl"])
     if result.blocked:
@@ -146,7 +150,9 @@ def archive_system_event(
     payload: Annotated[SystemEventMutationInput | None, Body()] = None,
 ) -> dict[str, object]:
     mutation_payload = payload or SystemEventMutationInput()
-    result = mark_system_event_archived(system_event_id, settings.storage, mutation_payload)
+    result = mark_system_event_archived(
+        system_event_id, settings.storage, mutation_payload
+    )
     if result.not_found:
         raise HTTPException(status_code=404, detail=result.response["message_nl"])
     if result.blocked:
@@ -163,16 +169,47 @@ def update_trading_settings(payload: TradingSettingsUpdateInput) -> dict[str, ob
 def read_ibkr_sync_status() -> dict[str, object]:
     return read_status(settings)
 
+
 @router.post("/ibkr/sync/run")
 def start_ibkr_sync_run() -> dict[str, object]:
     return run_sync(settings)
 
+
 @router.get("/ibkr/portfolio/positions")
 def read_ibkr_positions() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
-    return {"items": STORE.positions, "help_nl": "Alleen gesynchroniseerde IBKR-posities."}
+
+    return {
+        "items": STORE.positions,
+        "help_nl": "Alleen gesynchroniseerde IBKR-posities.",
+    }
+
 
 @router.get("/ibkr/account/cash")
 def read_ibkr_cash() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
-    return {"items": STORE.cash, "help_nl": "Alleen gesynchroniseerde IBKR-cashgegevens."}
+
+    return {
+        "items": STORE.cash,
+        "help_nl": "Alleen gesynchroniseerde IBKR-cashgegevens.",
+    }
+
+
+@router.get("/ibkr/orders/open")
+def read_ibkr_open_orders() -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync import STORE
+
+    return {
+        "items": STORE.open_orders,
+        "help_nl": "Alleen read-only open-order snapshots uit IBKR-sync.",
+    }
+
+
+@router.get("/ibkr/executions")
+def read_ibkr_executions() -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync import STORE
+
+    return {
+        "items": STORE.executions,
+        "help_nl": "Alleen read-only execution/fill snapshots uit IBKR-sync.",
+    }
