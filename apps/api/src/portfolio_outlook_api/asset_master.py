@@ -100,6 +100,79 @@ def create_asset(request: AssetCreateRequest) -> dict[str, object]:
     return _with_repository(op, require_writable=True)
 
 
+
+
+class AssetMasterSearchRecord(BaseModel):
+    asset_id: str
+    canonical_symbol: str
+    asset_name: str
+    primary_exchange: str | None
+    primary_currency: str | None
+    asset_type: str
+    status: str
+    identifier_summary_nl: str
+
+
+def _identifier_summary(record: AssetMasterRecord) -> str:
+    identifiers: list[str] = []
+    if record.isin:
+        identifiers.append(f"ISIN: {record.isin}")
+    if record.figi:
+        identifiers.append(f"FIGI: {record.figi}")
+    if record.cusip:
+        identifiers.append(f"CUSIP: {record.cusip}")
+    if record.ibkr_contract_id is not None:
+        identifiers.append(f"IBKR contract: {record.ibkr_contract_id}")
+    return ", ".join(identifiers) if identifiers else "Geen extra identifiers beschikbaar."
+
+
+@router.get("/assets/master/search")
+def search_assets(q: str = "") -> dict[str, object]:
+    query = q.strip().lower()
+
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        records = repo.list_asset_master_records()
+        matches: list[AssetMasterSearchRecord] = []
+        for rec in records:
+            haystack_values = [
+                rec.asset_id,
+                rec.canonical_symbol,
+                rec.asset_name,
+                rec.primary_exchange or "",
+                rec.primary_currency or "",
+                rec.asset_type,
+                rec.status,
+                rec.isin or "",
+                rec.figi or "",
+                rec.cusip or "",
+            ]
+            if query and not any(query in value.lower() for value in haystack_values):
+                continue
+            matches.append(
+                AssetMasterSearchRecord(
+                    asset_id=rec.asset_id,
+                    canonical_symbol=rec.canonical_symbol,
+                    asset_name=rec.asset_name,
+                    primary_exchange=rec.primary_exchange,
+                    primary_currency=rec.primary_currency,
+                    asset_type=rec.asset_type,
+                    status=rec.status,
+                    identifier_summary_nl=_identifier_summary(rec),
+                )
+            )
+            if len(matches) >= 20:
+                break
+
+        return {
+            "records": matches,
+            "help_nl": (
+                "Kies een bestaande asset-identiteit. "
+                "Dit maakt geen suggestie, order of portfolio-positie aan."
+            ),
+        }
+
+    return _with_repository(op, require_writable=False)
+
 @router.get("/assets/master/{asset_id}")
 def get_asset(asset_id: str) -> dict[str, object]:
     def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:

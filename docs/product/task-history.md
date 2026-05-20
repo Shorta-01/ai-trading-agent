@@ -117,3 +117,14 @@
 - Watchlist-item `asset_id` link/unlink flow uitgewerkt op API-niveau met validatie tegen bestaande Asset Master identiteit wanneer beschikbaar.
 - Volglijst UI toont nu veilige linked/unlinked status + canonieke identiteitssamenvatting als die beschikbaar is.
 - Scope guard: reference/status-only; geen suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, market-data runtime, forecast runtime of fake data.
+
+
+## Task 80 — Asset Master search/picker UI foundation
+
+- Read-only Asset Master zoekendpoint toegevoegd/hergebruikt voor veilige selectie van bestaande canonical identiteiten in de Volglijst-flow.
+- Reusable picker-UI toegevoegd met Nederlandse zoek-, loading-, empty- en foutstatussen.
+- Volglijst laat nu expliciet zoeken/selecteren/koppelen/ontkoppelen van bestaande Asset Master identiteiten toe zonder runtime-uitbreidingen buiten reference/status.
+- Geen auto-creatie van Asset Master records.
+- Geen portfoliopositiecreatie.
+- Geen suggesties, Decision Packages, action drafts of IBKR-ordergedrag.
+- Geen AI/market-data/forecast runtime en geen fake data.

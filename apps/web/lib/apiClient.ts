@@ -363,6 +363,23 @@ type SystemEventActionInput = {
   reason_nl?: string;
 };
 
+
+export type AssetMasterSearchRecord = {
+  asset_id: string;
+  canonical_symbol: string;
+  asset_name: string;
+  primary_exchange: string | null;
+  primary_currency: string | null;
+  asset_type: string;
+  status: string;
+  identifier_summary_nl: string;
+};
+
+export async function searchAssetMasterIdentities(query: string): Promise<FetchState<{records: AssetMasterSearchRecord[]}>> {
+  const encoded = encodeURIComponent(query);
+  return getJson(`/assets/master/search?q=${encoded}`);
+}
+
 export type WatchlistItem = {
   watchlist_item_id: string;
   asset_id: string | null;
