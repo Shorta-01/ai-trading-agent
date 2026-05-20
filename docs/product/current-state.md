@@ -1,12 +1,12 @@
-# Current State (na Task 71B)
+# Current State (na Task 72C)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 71B**.
-- CI-status: groen na Task 71B repair.
+- Huidige toestand: **na Task 72C**.
+- CI-status: groen na Task 72C repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
-- Suggestion runtime, probabilistische forecast runtime en IBKR runtime bestaan nog niet.
+- Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
 
 ## 2) Implemented foundations
 
@@ -33,6 +33,7 @@
 - Gate outcome/freshness foundation.
 - Source conflict detection foundation.
 - Asset master identity foundation (storage/API) bestaat als referentie/status-only basis.
+- Source-to-asset linking foundation (storage/API) bestaat als audit/reference/status-only basis.
 
 ## 3) Safety and behavior state now
 
@@ -58,7 +59,8 @@
 - URL fetch + veilige snapshotting: pending.
 - Source conflict detection runtime engine: pending.
 - Source freshness/runtime validation: pending.
-- Asset detection + source-to-asset linking: pending.
+- Asset detection from sources: pending.
+- Source-to-asset linking runtime/detection/matching beyond foundation: pending.
 - Market data/freshness runtime validation: pending.
 - Watchlist proposal/user-confirm flow: pending.
 - Suggestion engine runtime: pending.
@@ -82,3 +84,6 @@
 - Task 71B: **completed** — API mypy repair afgerond; CI opnieuw groen; geen runtimegedrag gewijzigd.
 
 - Task 72: **completed** — source-to-asset linking foundation toegevoegd (storage/API), audit/reference-only naar canonical asset identities; blijft geblokkeerd voor suggesties en voegt geen watchlist/portfolio/AI/market-data/forecast/IBKR/order runtime toe.
+
+- Task 72B: **completed** — storage mypy row-to-record typing en API pytest 503 failures gerepareerd; CI groen; geen runtimegedrag gewijzigd.
+- Task 72C: **completed** — resterende API pytest source-link create→list fixture persistence failure gerepareerd; CI opnieuw groen; geen runtimegedrag gewijzigd.
