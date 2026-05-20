@@ -116,3 +116,14 @@ Version 1:
 - AI Cost Dashboard
 - Belgian Tax/Compliance module
 - Deployment/backup/restore hardening
+
+## 8) Version 1 prediction-engine scope lock (Task 88J)
+
+Version 1 bevat nu expliciet de **volledige Asset-Value Prediction Engine roadmap** (Must/Should/Could) in interne V1.0–V1.8 fasen, vastgelegd in `docs/product/asset-value-prediction-engine-roadmap.md`.
+
+Kernarchitectuur: data layer → feature layer → model layer → ensemble/orchestration → evaluatie/calibratie → Decision Package/translation → AI feature/explanation/dissent layers → audit layer → latere paper action layer.
+
+Hard lock blijft:
+- eenvoudige Nederlandse UI;
+- paper-only, user-approved IBKR simulatieacties;
+- AI is kerncapability maar **berekent geen financiële kerngetallen** en beslist geen labels/orders.

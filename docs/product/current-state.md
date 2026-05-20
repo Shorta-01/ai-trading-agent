@@ -156,3 +156,11 @@
 - Task 86B: **completed** — API CI-repair na Task 86. Root cause: mypy type issue in market-data readiness detail endpoint waar `dict[str, object]["items"]` als iterabel gebruikt werd. Fix: type/boundary cleanup met interne typed row-builder; geen runtimegedrag toegevoegd. Geen market-data fetch/runtime, geen historical fetching, geen scheduler, geen AI runtime/suggesties/Decision Packages/action drafts, geen IBKR-ordergedrag en geen fake market/broker/recommendation data. Ongevalideerde/onopgeloste identiteiten blijven geblokkeerd voor market data, analyse, suggesties en action drafts.
 
 - Task 87: **completed** — conservatieve watchlist/readiness inspectieverbetering toegevoegd met duidelijke Nederlandse blocker/missing-snapshot uitleg, auditvelden (`evaluated_at`, `missing_identity_fields`, `validation_status`, `next_step_nl`) en read-only snapshotmetadata-status in readiness responses. Geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake data toegevoegd. Ongevalideerde/onopgeloste identiteiten blijven geblokkeerd voor market data, analyse, suggesties en action drafts.
+
+## Task 88J update (documentation-only)
+
+- Task 88J uitgevoerd als documentatie-only roadmapuitbreiding.
+- Geen runtimegedrag gewijzigd.
+- Geen applicatiecode/tests/migraties/package metadata/workflows gewijzigd door functionele implementatie.
+- CI blijft rood door bekende GitHub Actions execution/logging blocker.
+- Task 89 blijft geblokkeerd tot CI-herstel.

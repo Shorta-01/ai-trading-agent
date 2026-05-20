@@ -25,3 +25,9 @@ Task 89 — Conservatieve API-readiness contract hardening: kleine vervolgstap m
 - Claude architecture-audit bevindingen zijn geaccepteerd en als roadmap/lock-updates gedocumenteerd.
 - Volgorde na CI-herstel: eerst conservatieve identity/gateway/readiness hardening (AssetListing-model, IBKR gateway skeleton, market-data freshness/pacing gates, usable-cash contract, AI enforcement foundation, Decision Package/state-machine ontwerp) vóór runtime-uitbreiding.
 - Task 89 blijft geblokkeerd tot CI groen is; Task 89 start niet binnen Task 88I.
+
+## Nota na Task 88J
+
+- De volledige prediction-engine roadmap staat nu gedocumenteerd en is leidend voor vervolgtaken na CI-herstel.
+- Prioriteit blijft ongewijzigd: eerst CI execution/logging herstellen.
+- Task 89 blijft geblokkeerd zolang CI rood is.
