@@ -60,3 +60,10 @@
 
 - Task 67: evidence extraction foundation toegevoegd (storage + API + tests), met `safe_to_use_for_suggestions=false` en `blocks_suggestions=true` afgedwongen.
 
+
+## Task 67B — Repair Task 67 API mypy failure
+
+- API CI-fout hersteld door `ResearchSourceEvidenceItemRecord` te exporteren vanuit `ai_trading_agent_storage` package-root (`__init__.py`).
+- Preventiechecklist in `docs/product/codex-ci-quality-rules.md` aangescherpt voor storage package-exports en cross-package mypy-verificatie.
+- Geen runtime-gedrag gewijzigd; enkel import/typecheck-herstel en procesversterking.
+- Evidence blijft geblokkeerd voor suggesties.
