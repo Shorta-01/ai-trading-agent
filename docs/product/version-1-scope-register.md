@@ -34,3 +34,6 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 - Geen automatische orders.
 - Geen IBKR live order flow.
 - Suggesties blijven geblokkeerd tot alle gates/runtime engines bestaan.
+
+
+| Source conflict findings (Task 70) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending | Blocked for suggestions; audit/status-only; geen watchlist/IBKR/order gedrag |

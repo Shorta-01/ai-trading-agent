@@ -65,3 +65,7 @@
 
 - Task 69 gate outcome/freshness foundation toegevoegd als storage/API basis (audit/status-only).
 - Task 69B repair afgerond; CI opnieuw groen zonder runtimewijzigingen.
+
+
+- Task 70: source conflict detection foundation toegevoegd (storage/API), audit/status-only; suggesties blijven geblokkeerd.
+- Geen AI runtime, watchlistgedrag, IBKR-gedrag of ordergedrag toegevoegd in Task 70.

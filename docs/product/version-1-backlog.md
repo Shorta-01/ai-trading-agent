@@ -84,3 +84,6 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Task 68 completed: Evidence Ledger API/linking foundation voor research source evidence (audit-only, geen suggestion unlock).
 - Task 69 completed: gate outcome + freshness policy foundation als storage/API basis (audit/status-only, geen suggestion unlock).
 - Task 69B completed: repair op Task 69 met CI terug groen en zonder runtimegedrag te wijzigen.
+
+
+- Task 70 completed: source conflict detection foundation (storage/API) als audit/status records; geen suggestion unlock.
