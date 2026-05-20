@@ -200,3 +200,10 @@
 - **Task 86B:** API CI-repair na Task 86. Root cause: `status_routes.py` gebruikte `payload = read_market_data_readiness()` gevolgd door iteratie over `payload["items"]`, waarbij mypy `dict[str, object]`-toegang als `object` typeerde. Fix: boundary cleanup door readiness-rows via een interne typed helper op te bouwen en direct te hergebruiken in detail endpoint. Geen runtimegedrag gewijzigd en geen scope-uitbreiding (geen market-data runtime/fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts, geen IBKR-ordergedrag, geen fake data). CI moet groen blijven vóór de volgende featuretaak start.
 
 - **Task 87:** conservatieve watchlist/readiness inspectieverbetering afgerond. Read-only readiness-responses geven nu expliciete Nederlandse audit/statusuitleg voor blocked en missing-snapshot paden (incl. `blocker_reason_nl`, `required_identity_fields`, `missing_identity_fields`, `validation_status`, `evaluated_at`, `next_step_nl`, `audit_help_nl`) en tonen snapshotmetadata alleen als read-only statusdetail. Geen market-data runtime, historical fetching, scheduler, AI runtime, suggesties, Decision Packages, action drafts of IBKR-ordergedrag toegevoegd; unresolved/unvalidated identities blijven geblokkeerd.
+
+## Task 88J — Documentation-only Asset-Value Prediction Engine roadmap
+
+- Status: completed (documentation-only).
+- Nieuwe roadmapbron toegevoegd: `docs/product/asset-value-prediction-engine-roadmap.md` met volledige V1.0–V1.8 plan, model/AI/validatie/risk-gates/monitoring en Must-Should-Could scopeacceptatie.
+- Geen runtimecode, tests, migraties, package metadata of GitHub workflows aangepast.
+- CI-context ongewijzigd: bekende GitHub Actions blocker blijft; Task 89 blijft geblokkeerd.

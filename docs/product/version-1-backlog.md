@@ -203,3 +203,20 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - **Eerste paper action flow blijft conservatief**: roadmap noteert LMT-only start; geen market orders, geen brackets/stops/trailing in eerste flow, DAY/GTC alleen als later expliciet ondersteund, user approval + backend safety recheck + IBKR confirmation handshake verplicht.
 - **IBKR reply-handshake state machine vóór paper submission**: minimaal states Draft → Safety checked → User approved → Submitted → Awaiting IBKR reply → Reply confirmed → Working → Filled/Cancelled/Rejected → Reconciled.
 - Scope in deze taak blijft documentatie-only; geen runtime-/productcodewijzigingen.
+
+## H) Task 88J roadmap backlog expansion (documentation-only)
+
+Toegevoegd als verplichte implementatieblokken (nog runtime pending):
+- data foundation: point-in-time opslag, provider adapters, identity links, freshness/pacing gates;
+- feature store: market/macro/event/liquidity/microstructure/ETF features;
+- model registry + immutable run/version lineage;
+- baseline models: ARIMA/ETS/GARCH/HAR-RV + LightGBM/XGBoost quantile stack;
+- quantile+conformal: p10/p50/p90 + CQR + coverage diary;
+- AI text-to-feature: FinBERT/FinGPT/structured event tagging;
+- AI explanation/RAG: Dutch schema-based uitleg met evidence-only numerics;
+- AI dissent challenger: confidence modulation only;
+- validation spine: walk-forward, purged CV, CPCV, DSR, PBO, holdout;
+- monitoring/drift: PSI/KS, IC decay, CRPS, pinball, retraining triggers;
+- Decision Package: immutable evidence/model/gate bundle;
+- deterministic suggestion translator (Python rules, AI never decides label);
+- paper action workflow: future, LMT-only, user-approved, paper-only.

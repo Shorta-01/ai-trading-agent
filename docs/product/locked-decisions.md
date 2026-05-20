@@ -227,3 +227,14 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 - Eerste uitvoerbare paper action flow blijft LMT-only (geen market, geen bracket/stop/trailing in eerste flow).
 - AI mag geen financiële kerngetallen origineren voor beslissingen; AI structureert/verklaart evidence binnen schema- en safety-gates.
 - IBKR reply-handshake en order-state-machine is verplicht vóór toekomstige paper submission flow.
+
+## Task 88J hard locks — Asset-Value Prediction Engine
+
+- All Must/Should/Could items uit specialist roadmap zijn geaccepteerd in Version 1 scope (gefaseerd).
+- Python/model code blijft enige bron voor financiële getallen.
+- AI is kerncapability in V1 maar nooit de financiële calculator.
+- AI mag geen financiële nummers, labels of orders origineren.
+- Decision Package is verplicht vóór suggestion output.
+- Geen suggestion zonder gevalideerde data/model/evidence/freshness/risk gates.
+- Could-items blijven experimentele/challenger modules tot promotie via validatie.
+- Eerste paper action flow blijft LMT-only, user-approved, paper-only.

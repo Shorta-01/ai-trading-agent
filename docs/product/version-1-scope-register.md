@@ -115,3 +115,20 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | AI enforcement foundation | Planned | Schema-validatie + evidence-linking + safety gates vóór AI-impact op beslissingen. |
 | Decision Package storage/API/UI | Planned | Verplicht vóór suggestions; immutable/auditable beslissingscontext. |
 | Paper action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft paper-only. |
+
+## Prediction-engine capabilities register addendum (Task 88J)
+
+| Capability | Status |
+|---|---|
+| Asset-Value Prediction Engine roadmap document | Contracted (documentation) |
+| V1.0 foundations set | Planned / Runtime pending |
+| V1.1 baseline forecasting stack | Planned / Runtime pending |
+| V1.2 AI text-to-feature layer | Planned / Runtime pending |
+| V1.3 challenger TSFM stack | Planned / Runtime pending |
+| V1.4 Dutch explanation RAG layer | Planned / Runtime pending |
+| V1.5 dissent challenger layer | Planned / Runtime pending |
+| V1.6 monitoring/drift/calibration diary | Planned / Runtime pending |
+| V1.7 immutable Decision Package + deterministic labels | Planned / **Blocked for suggestions until validated gates** |
+| V1.8 paper action workflow | Planned / **Paper-only future** |
+
+Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/freshness/risk gates + approved modelversion actief zijn.

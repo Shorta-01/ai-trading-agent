@@ -47,3 +47,8 @@ Recommended order:
 - Forecasts do not create IBKR actions by themselves.
 - AI may explain and structure evidence, but Python/model code calculates probabilities, ranges and financial values.
 - Any user-facing forecast must show uncertainty, horizon and expiry.
+
+## Task 88J implementation-order update
+
+Volgorde is nu vergrendeld op V1.0–V1.8 interne fasering uit `asset-value-prediction-engine-roadmap.md`.
+Alle Must/Should/Could componenten zitten binnen Version 1-scope; Could blijft challenger/experimenteel en mag output niet beïnvloeden zonder promotiegates.

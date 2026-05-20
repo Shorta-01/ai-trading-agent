@@ -222,3 +222,9 @@ A forecast may later feed a suggestion only after all required gates exist and p
 - user review
 
 Even then, Version 1 remains IBKR paper-only and the user decides.
+
+## Task 88J doctrine expansion (algorithm and validation spine)
+
+De probabilistische doctrine wordt uitgevoerd via expliciete modelstack: ARIMA/ETS, GARCH(1,1), HAR-RV, LightGBM/XGBoost quantile models, CQR-calibratie, HMM regime gating en challenger TSFM’s onder promotion controls.
+
+Verplichte validatiespine: walk-forward expanding windows, purged CV + embargo, CPCV, DSR, PBO, untouched holdout, ablations, reliability/coverage monitoring.

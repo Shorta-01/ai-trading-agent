@@ -364,3 +364,9 @@ Deze blueprint beschrijft vergrendelde functionele ontwerpwaarheid voor Release 
 - Dit document claimt niet dat deze runtime-functionaliteit al bestaat.
 - Deze workflowonderdelen blijven implementatiewerk voor toekomstige taken.
 - Task 73 in deze PR is documentatie-only en start geen runtime-implementatie.
+
+## 16) Staged internal execution path (Task 88J, documentation-only)
+
+Release 1 workflow wordt intern gefaseerd: V1.0 foundations → V1.1 baseline forecasting → V1.2 AI text-to-feature → V1.3 challengers → V1.4 AI uitleg/RAG → V1.5 dissent challenger → V1.6 monitoring/drift → V1.7 Decision Package + deterministic translator → V1.8 paper action workflow.
+
+Runtime-regel: suggestions, action drafts en paper actions blijven geblokkeerd tot V1.7 gates + Decision Package bestaan en gevalideerd zijn. Zie `docs/product/asset-value-prediction-engine-roadmap.md`.
