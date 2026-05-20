@@ -119,3 +119,11 @@ Eigenschappen:
 - Geen parsing, OCR, tekstextractie, AI-analyse of samenvatting in deze stap.
 - Geen OpenAI-calls, geen IBKR-calls, geen suggesties/watchlist/orders.
 - Uploads zijn bewijs voor later onderzoek, geen handelsinstructie.
+
+## Task 61B deterministische tekstextractie (TXT/MD/CSV)
+- `POST /research/sources/{library_source_id}/extract-text` extraheert deterministisch tekst uit alleen `.txt`, `.md`, `.csv`.
+- Extractie gebruikt UTF-8/UTF-8-SIG, normaliseert regeleinden naar `\n`, berekent SHA-256, en slaat genormaliseerde tekst op in gecontroleerde archiefmap (`API_RESEARCH_EXTRACTION__EXTRACTED_TEXT_ARCHIVE_DIR`).
+- Metadata (hash, preview, karakter- en regeltelling, status) wordt opgeslagen in `research_extracted_texts`.
+- Extractie blijft metadata-only: geen AI-analyse, geen credibility scoring, geen prompt-injection scanning, geen suggesties/watchlist/orders.
+- PDF/DOCX/XLSX/PPTX parsing en OCR zijn nog niet geïmplementeerd.
+- Geëxtraheerde tekst blijft geblokkeerd voor suggesties tot latere veiligheidscontroles bestaan.

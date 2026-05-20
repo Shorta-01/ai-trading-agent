@@ -11,6 +11,7 @@ from ai_trading_agent_storage import (
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
     ResearchDocumentSetRecord,
+    ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -21,7 +22,11 @@ from ai_trading_agent_storage import (
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import research_sources
-from portfolio_outlook_api.config import ResearchUploadSettings, StorageSettings
+from portfolio_outlook_api.config import (
+    ResearchExtractionSettings,
+    ResearchUploadSettings,
+    StorageSettings,
+)
 from portfolio_outlook_api.main import app
 
 client = TestClient(app)
@@ -151,6 +156,7 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self.processing: dict[
                 str, list[ResearchSourceProcessingStatusRecord]
             ] = defaultdict(list)
+            self.extracted_texts: dict[str, list[ResearchExtractedTextRecord]] = defaultdict(list)
 
         def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
             self.sources[record.library_source_id] = record
@@ -253,6 +259,18 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self, library_source_id: str
         ) -> ResearchSourceProcessingStatusRecord | None:
             records = self.processing.get(library_source_id, [])
+            return records[-1] if records else None
+
+        def save_extracted_text(
+            self, record: ResearchExtractedTextRecord
+        ) -> ResearchExtractedTextRecord:
+            self.extracted_texts[record.library_source_id].append(record)
+            return record
+
+        def get_latest_extracted_text_for_source(
+            self, library_source_id: str
+        ) -> ResearchExtractedTextRecord | None:
+            records = self.extracted_texts.get(library_source_id, [])
             return records[-1] if records else None
 
     repo = FakeRepository(None, None)
@@ -373,6 +391,17 @@ def _enable_uploads(tmp_path: Path, enabled: bool = True, max_bytes: int = 1024)
     )
 
 
+def _enable_extraction(tmp_path: Path, enabled: bool = True, max_bytes: int = 1024) -> None:
+    research_sources.settings.research_extraction = ResearchExtractionSettings(
+        enabled=enabled,
+        extracted_text_archive_dir=str(tmp_path / "extracted"),
+        max_input_file_size_bytes=max_bytes,
+        max_output_characters=1000,
+        preview_max_characters=10,
+        allowed_extensions=(".txt", ".md", ".csv"),
+    )
+
+
 def test_upload_rejects_when_storage_disabled(tmp_path: Path) -> None:
     research_sources.settings.storage = StorageSettings(enabled=False, database_url=None)
     _enable_uploads(tmp_path)
@@ -453,3 +482,66 @@ def test_upload_rejects_unsupported_extension_oversize_and_empty_name(
         files={"file": ("", b"abc", "text/plain")},
     )
     assert empty_name.status_code == 422
+
+
+def test_extract_text_requires_feature_enabled(fake_storage: None, tmp_path: Path) -> None:
+    _enable_uploads(tmp_path, max_bytes=10000)
+    _enable_extraction(tmp_path, enabled=False)
+    client.post(
+        "/research/sources/src-ext/upload-file",
+        files={"file": ("a.txt", b"abc\nx", "text/plain")},
+    )
+    response = client.post("/research/sources/src-ext/extract-text")
+    assert response.status_code == 503
+
+
+def test_extract_text_txt_success_and_blocks_suggestions(
+    fake_storage: None, tmp_path: Path
+) -> None:
+    _enable_uploads(tmp_path, max_bytes=10000)
+    _enable_extraction(tmp_path, max_bytes=10000)
+    payload = b"regel1\r\nregel2\r\n"
+    client.post(
+        "/research/sources/src-ext2/upload-file",
+        files={"file": ("note.txt", payload, "text/plain")},
+    )
+    response = client.post("/research/sources/src-ext2/extract-text")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["character_count"] == len("regel1\nregel2\n")
+    assert body["line_count"] == 3
+    assert len(body["preview_text_nl"]) <= 10
+    assert "/extracted/" in body["extracted_text_storage_uri"]
+    status = client.get("/research/sources/src-ext2/processing-status/latest").json()["record"]
+    assert status["blocks_suggestions"] is True
+    assert status["can_be_used_in_suggestions"] is False
+
+
+@pytest.mark.parametrize("name", ["note.md", "data.csv"])
+def test_extract_text_md_csv_supported(fake_storage: None, tmp_path: Path, name: str) -> None:
+    _enable_uploads(tmp_path, max_bytes=10000)
+    _enable_extraction(tmp_path, max_bytes=10000)
+    client.post(
+        "/research/sources/src-ext3/upload-file",
+        files={"file": (name, b"a,b\n1,2\n", "text/plain")},
+    )
+    response = client.post("/research/sources/src-ext3/extract-text")
+    assert response.status_code == 200
+
+
+def test_extract_text_rejects_unsupported_and_binary(fake_storage: None, tmp_path: Path) -> None:
+    _enable_uploads(tmp_path, max_bytes=10000)
+    _enable_extraction(tmp_path, max_bytes=10000)
+    client.post(
+        "/research/sources/src-ext4/upload-file",
+        files={"file": ("report.pdf", b"x", "application/pdf")},
+    )
+    unsupported = client.post("/research/sources/src-ext4/extract-text")
+    assert unsupported.status_code == 400
+
+    client.post(
+        "/research/sources/src-ext5/upload-file",
+        files={"file": ("bad.txt", b"\xff\xfe\x00", "text/plain")},
+    )
+    undecodable = client.post("/research/sources/src-ext5/extract-text")
+    assert undecodable.status_code == 400

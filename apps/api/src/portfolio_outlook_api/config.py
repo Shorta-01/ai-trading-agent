@@ -54,6 +54,25 @@ class ResearchUploadSettings(BaseModel):
             raise ValueError("research upload max_file_size_bytes must be positive")
         return value
 
+
+class ResearchExtractionSettings(BaseModel):
+    """Deterministic extracted-text runtime settings."""
+
+    enabled: bool = False
+    extracted_text_archive_dir: str = "var/research-extracted-text"
+    max_input_file_size_bytes: int = 20 * 1024 * 1024
+    max_output_characters: int = 2_000_000
+    preview_max_characters: int = 1_000
+    allowed_extensions: tuple[str, ...] = (".txt", ".md", ".csv")
+
+    @field_validator("extracted_text_archive_dir")
+    @classmethod
+    def _validate_archive_dir(cls, value: str) -> str:
+        cleaned = value.strip()
+        if cleaned == "":
+            raise ValueError("research extraction extracted_text_archive_dir must be non-empty")
+        return cleaned
+
 class Settings(BaseSettings):
     """Runtime settings loaded from environment variables."""
 
@@ -69,6 +88,9 @@ class Settings(BaseSettings):
     ibkr_connection_timeout_seconds: int = 10
     ibkr_status_check_enabled: bool = False
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
+    research_extraction: ResearchExtractionSettings = Field(
+        default_factory=ResearchExtractionSettings
+    )
 
     @field_validator("ibkr_expected_environment")
     @classmethod
