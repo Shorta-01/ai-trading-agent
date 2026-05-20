@@ -183,3 +183,24 @@ Verder:
 - Geen hardcoded lokale paden.
 - Encrypted backups.
 - Backup is pas vertrouwd na restore-test.
+
+
+## 18) Release 1 functional workflow blueprint locks
+
+Leidend document: `docs/product/release-1-functional-workflow-blueprint.md`.
+
+Volgende beslissingen zijn expliciet vergrendeld:
+- geen manuele portfolio-posities
+- IBKR-gesynchroniseerde portfolio source-of-truth
+- in normale GUI enkel eenvoudig account-modus/status-icoon
+- Suggestions-grid met laatste actieve suggestie per asset in portfolio/watchlist
+- Decision Package als kernconcept achter elke suggestie
+- IBKR Action Center met Te keuren / Actief bij IBKR / Historiek
+- vooringevulde maar bewerkbare actie-drafts
+- harde safety checks op draft + backend vóór uitvoering
+- AI-analytics als gestructureerde evidence-laag
+- user uploads als herberekeningstriggers
+- dagelijkse portfolio/watchlist briefing
+- hybride sync/refreshmodel (subscriptions + jobs + events + manuele refreshknoppen)
+
+Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only, zonder live trading, real-money execution of automatische orders.

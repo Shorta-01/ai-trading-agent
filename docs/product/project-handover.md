@@ -8,6 +8,7 @@ Dit document zorgt dat nieuwe sessies starten vanuit repository-truth, niet chat
 
 1. Source-of-truth productdocs:
    - `docs/product/final-solution-vision.md`
+   - `docs/product/release-1-functional-workflow-blueprint.md`
    - `docs/product/current-state.md`
    - `docs/product/locked-decisions.md`
    - `docs/product/version-1-scope-register.md`
@@ -31,5 +32,6 @@ Dit document zorgt dat nieuwe sessies starten vanuit repository-truth, niet chat
 ## Navigatie
 
 - Eindvisie: `docs/product/final-solution-vision.md`
+- Release 1 workflow blueprint: `docs/product/release-1-functional-workflow-blueprint.md`
 - Resterend werk: `docs/product/version-1-backlog.md`
 - Volgende taak: `docs/product/next-task.md`

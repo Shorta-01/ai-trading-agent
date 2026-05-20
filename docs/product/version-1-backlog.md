@@ -105,3 +105,23 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Suggestion engine runtime: **runtime pending**.
 - Probabilistic forecast runtime: **runtime pending**.
 - IBKR runtime: **runtime pending**.
+
+
+## F) Release 1 functional workflow capabilities (locked, not implemented yet)
+
+Volgende capabilities zijn verplicht voor Release 1 volgens `docs/product/release-1-functional-workflow-blueprint.md` en zijn momenteel **niet geïmplementeerd**:
+
+- IBKR sync engine (positions, cash, orders, executions/fills, timestamps)
+- market data engine (freshness + recalculation inputs)
+- Decision Package storage/API/UI
+- Suggestions-grid (Actief / Verlopen / Historiek)
+- IBKR Action Center (Te keuren / Actief bij IBKR / Historiek)
+- actie-draft workflow (prefill, edit, approval, submit, lock, status-follow-up)
+- safety checks + instellingen (draft en backend hard checks)
+- usable-cash berekening voor buy-readiness
+- AI-analytics modules + schema-valid, versioned signal outputs
+- daily portfolio/watchlist briefing
+- user upload → recalculation/revalidation triggers
+- Release 1 end-to-end acceptance workflow
+
+Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; deze PR voegt geen runtimecode toe.
