@@ -85,3 +85,12 @@
 - Preventiechecklist in `docs/product/codex-ci-quality-rules.md` verder aangescherpt voor migratie/API storage-status testafstemming.
 - Geen runtimegedrag gewijzigd.
 - Evidence blijft geblokkeerd voor suggesties.
+
+## Task 67E — Final API pytest repair na Task 67D
+
+- API pytest CI-fout hersteld in `apps/api/tests/test_storage_status_endpoint.py`.
+- Root cause: Task 67D gebruikte de verkeerde helper-returntype-aanname door `check_offline_migration_inventory()` te gebruiken waar `MigrationInventory`-velden nodig waren; die helper retourneert `MigrationReadinessReport`, niet de inventaris met `revision_count`.
+- Test bijgewerkt om `build_expected_migration_inventory()` te gebruiken en zowel `latest_expected_revision_id` als `revision_count` dynamisch te vergelijken.
+- Procespreventie toegevoegd: API `pytest` is verplicht vóór merge bij wijzigingen aan migration/status tests.
+- Geen runtimegedrag gewijzigd; enkel test- en documentatieherstel.
+- Evidence blijft geblokkeerd voor suggesties.

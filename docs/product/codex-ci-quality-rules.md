@@ -53,6 +53,13 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    - Voorkeur: leid de verwachte nieuwste revision af uit de storage migration inventory helper in plaats van hardcoding.
    - Draai altijd API `pytest`, niet alleen storage-tests, omdat de API migration readiness publiceert.
 
-8. **PR mag niet ready/mergebaar zonder API pytest na migratiewijzigingen**  
+8. **Wanneer tests dynamisch worden gemaakt: verifieer helper-returntypes**  
+   - Ga er niet van uit dat een helper een bepaald veld exposeert.
+   - Inspecteer de dataclass/het contract dat de helper teruggeeft vóór gebruik in tests.
+   - Als een test migratie-aantallen nodig heeft: gebruik `build_expected_migration_inventory().revision_count`, niet `check_offline_migration_inventory()`, omdat die laatste een readiness report teruggeeft.
+   - API-tests die storage readiness vergelijken moeten onder API `pytest` draaien vóór de PR als ready wordt gemarkeerd.
+   - Geen enkele PR mag gemerged worden op basis van “zou in CI moeten slagen” als de exact falende package-test lokaal niet is uitgevoerd.
+
+9. **PR mag niet ready/mergebaar zonder API pytest na migratiewijzigingen**  
    - Als een taak een Alembic migratie toevoegt of wijzigt, moet API `pytest` nadien lokaal uitgevoerd zijn.
    - Alleen storage-tests groen is onvoldoende wanneer de API migratiestatus exposeert.
