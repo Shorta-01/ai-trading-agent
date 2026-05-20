@@ -29,6 +29,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "research_document_classifications",
         "research_source_asset_links",
         "research_source_processing_status",
+        "research_source_prompt_injection_scans",
         "research_extracted_texts",
     }
     assert metadata is not None
