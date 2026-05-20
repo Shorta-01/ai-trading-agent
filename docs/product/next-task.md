@@ -1,15 +1,15 @@
 # Next Task
 
-## Aanbevolen volgende stap
+**Task 81 — Market data storage foundation**
 
-**Task 80 — Asset Master search/picker UI foundation**
+Rationale:
+- Na Task 80 bestaan nu portfolio snapshots, watchlist, Asset Master identity foundations en een veilige Asset Master search/picker basis.
+- De volgende conservatieve stap is opslag/freshness-metadata voor market data als fundament, zonder suggestie- of uitvoeringsruntime.
 
-Waarom:
-- Task 79 levert de veilige watchlist-naar-Asset-Master linkstatus en backend-validatie.
-- Er ontbreekt nog een eenvoudige Nederlandse zoek/selecteerflow om bestaande Asset Master identiteiten te kiezen zonder nieuwe runtime-risico's.
-
-Scopegrenzen voor Task 80:
+Scopegrenzen voor Task 81:
+- Alleen storage/API foundation voor market data en freshness metadata.
 - Geen suggesties, geen Decision Packages, geen action drafts.
 - Geen IBKR-ordergedrag.
-- Geen AI/market-data/forecast runtime.
-- Geen fake data.
+- Geen AI runtime.
+- Geen forecast runtime.
+- Geen fake prijzen of fake data.

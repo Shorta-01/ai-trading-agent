@@ -83,6 +83,9 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
         def get_asset_by_asset_id(self, asset_id: str) -> AssetMasterRecord | None:
             return self._assets.get(asset_id)
 
+        def list_asset_master_records(self) -> tuple[AssetMasterRecord, ...]:
+            return tuple(self._assets.values())
+
         def save_source_to_asset_link(
             self, record: SourceToAssetLinkRecord
         ) -> SourceToAssetLinkRecord:
@@ -134,3 +137,18 @@ def test_create_source_to_asset_link_fails_for_unknown_asset(fake_storage: None)
         },
     )
     assert create.status_code == 404
+
+
+def test_search_asset_master_identities(fake_storage: None) -> None:
+    resp = client.get("/assets/master/search", params={"q": "asml"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["records"]) == 1
+    assert body["records"][0]["asset_id"] == "asset-1"
+    assert "geen suggestie" in body["help_nl"].lower()
+
+
+def test_search_asset_master_identities_no_match(fake_storage: None) -> None:
+    resp = client.get("/assets/master/search", params={"q": "unknown"})
+    assert resp.status_code == 200
+    assert resp.json()["records"] == []

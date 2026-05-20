@@ -1,9 +1,9 @@
-# Current State (na Task 78B)
+# Current State (na Task 80)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 79**.
-- CI-status: groen na Task 78B repair.
+- Huidige toestand: **na Task 80**.
+- CI-status: groen na Task 80.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
@@ -104,3 +104,5 @@
 
 
 - Task 79: **completed** — watchlist-to-Asset-Master identity linking foundation toegevoegd (API/UI basis, reference/status-only). Linken/ontkoppelen valideert bestaande asset-identiteit waar veilig, zonder auto-creatie van Asset Master records. Geen portfoliopositiecreatie, geen suggesties, geen Decision Packages, geen action drafts, geen IBKR-ordergedrag, geen AI/market-data/forecast runtime en geen fake data.
+
+- Task 80: **completed** — Asset Master search/picker foundation toegevoegd (read-only zoekendpoint + Volglijst picker UI) zodat gebruikers bestaande canonical asset-identiteiten kunnen zoeken, selecteren, linken en ontkoppelen voor watchlist-items. Reference/status-only: geen auto-creatie van Asset Master records, geen portfoliopositiecreatie, geen suggesties, geen Decision Packages, geen action drafts, geen IBKR-ordergedrag, geen AI/market-data/forecast runtime en geen fake data.

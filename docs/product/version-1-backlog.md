@@ -141,4 +141,4 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 78 — Watchlist foundation + read-only Volglijst page (lokaal/manueel, gescheiden van IBKR-posities).
 - [x] Task 78B — CI-repair na Task 78 (API ruff-formatting + storage stale migration/metadata expectations); geen runtimegedrag gewijzigd en geen nieuwe features toegevoegd.
 
-- [ ] Task 80 — Asset Master search/picker UI foundation (na Task 79 linkstatus foundation).
+- [x] Task 80 — Asset Master search/picker UI foundation (read-only/reference-only; voltooid).
