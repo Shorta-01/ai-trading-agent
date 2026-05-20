@@ -44,3 +44,5 @@
 - **Runtime-impact van Task 71B:** geen runtimegedrag gewijzigd.
 - **CI-status na Task 71B:** groen op main.
 - **Suggestion-status na Task 71/71B:** asset identity blijft referentie/status-only en geblokkeerd voor suggesties.
+
+- **Task 72:** source-to-asset linking foundation toegevoegd (storage/API) met expliciete links van research/evidence/gate/conflict records naar canonieke asset-identiteiten; audit/reference/status-only en geblokkeerd voor suggesties.

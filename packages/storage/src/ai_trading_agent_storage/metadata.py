@@ -797,6 +797,22 @@ research_source_conflict_findings = Table(
     Column("explanation_nl", Text, nullable=False),
 )
 
+source_to_asset_links = Table(
+    "source_to_asset_links",
+    metadata,
+    Column("link_id", Text, primary_key=True),
+    Column("asset_id", Text, ForeignKey("asset_master_records.asset_id"), nullable=False),
+    Column("target_type", Text, nullable=False),
+    Column("target_id", Text, nullable=False),
+    Column("link_reason_nl", Text, nullable=False),
+    Column("audit_context_json", Text, nullable=True),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("created_by", Text, nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
 asset_master_records = Table(
     "asset_master_records",
     metadata,

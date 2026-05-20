@@ -31,7 +31,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - source conflict detection runtime
 - source freshness/runtime validation
 - asset detection from sources
-- source-to-asset linking
+- source-to-asset linking (Task 72 foundation completed; audit/reference-only, blocked for suggestions)
 - watchlist proposal flow met user confirmation
 - multi-year report comparison runtime
 
