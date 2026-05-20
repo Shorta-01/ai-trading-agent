@@ -125,3 +125,4 @@
 
 - Task 84 toegevoegd: read-only IBKR-watchlist import foundation (watchlists + instrument-preview + import-candidates op conid-basis).
 - Geen IBKR watchlist create/update/delete/export, geen market-data runtime, geen suggestions/Decision Packages/action drafts/orders.
+- Task 84C: API pytest-repair na PR #163 voltooid; root cause was uitsluitend test setup (foutief `dataclasses.replace()` op Pydantic `Settings` en ontbrekende IBKR-configuratiepatch in configured-path test), geen runtimegedrag gewijzigd en geen scope-uitbreiding.

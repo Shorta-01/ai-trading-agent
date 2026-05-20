@@ -163,3 +163,4 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - Task 82 completed: read-only IBKR contract search/validation foundation (identity/reference-only) toegevoegd; Volglijst add-flow conversie naar verplichte contractpicker blijft open voor Task 83.
 
 - [x] Task 84 — IBKR watchlist import foundation (read-only adapter boundary, conid-normalisatie, import-candidates; geen write naar IBKR).
+- [x] Task 84C — CI-repair na PR #163: API pytest test setup gecorrigeerd (`Settings.model_copy(update=...)` i.p.v. `dataclasses.replace()` en expliciete IBKR settings patch voor configured-path). Geen runtimewijzigingen, geen scope-uitbreiding; Task 85 pas na groene CI.

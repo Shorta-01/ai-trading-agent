@@ -1,5 +1,3 @@
-from dataclasses import replace
-
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.ibkr_watchlists import (
@@ -102,29 +100,36 @@ def _active_item(symbol: str, conid: str) -> WatchlistItem:
     )
 
 
-def test_watchlists_not_configured_safe_empty():
-    client = TestClient(app)
-    configured = replace(
-        settings,
-        ibkr_enabled=False,
-        ibkr_gateway_url=None,
-        ibkr_account_id_hint=None,
-    )
-    try:
-        import portfolio_outlook_api.status_routes as routes
+def test_watchlists_not_configured_safe_empty(monkeypatch):
+    import portfolio_outlook_api.status_routes as routes
 
-        routes.settings = configured
-        body = client.get("/ibkr/watchlists").json()
-        assert body["status"] == "not_configured"
-        assert body["items"] == []
-    finally:
-        routes.settings = settings
+    client = TestClient(app)
+    not_configured = settings.model_copy(
+        update={
+            "ibkr_enabled": False,
+            "ibkr_gateway_url": None,
+            "ibkr_account_id_hint": None,
+        },
+    )
+    monkeypatch.setattr(routes, "settings", not_configured)
+    body = client.get("/ibkr/watchlists").json()
+    assert body["status"] == "not_configured"
+    assert body["items"] == []
 
 
 def test_watchlist_import_preview_conflicts(monkeypatch):
     import portfolio_outlook_api.ibkr_watchlists as module
+    import portfolio_outlook_api.status_routes as routes
 
     monkeypatch.setattr(module, "DEFAULT_ADAPTER", FakeAdapter())
+    configured = settings.model_copy(
+        update={
+            "ibkr_enabled": True,
+            "ibkr_gateway_url": "http://ibkr.example.test",
+            "ibkr_account_id_hint": "DU123456",
+        }
+    )
+    monkeypatch.setattr(routes, "settings", configured)
     STORE.clear()
     IMPORT_RUNS.clear()
     IMPORT_CANDIDATES.clear()
