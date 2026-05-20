@@ -1,6 +1,5 @@
 """Routes for read-only status/settings summaries."""
 
-from datetime import UTC, datetime
 from typing import Annotated
 
 from ai_trading_agent_storage import (
@@ -21,6 +20,13 @@ from portfolio_outlook_api.ibkr_watchlists import (
     latest_import,
     list_ibkr_watchlist_instruments,
     list_ibkr_watchlists,
+)
+from portfolio_outlook_api.market_data_readiness import (
+    ReadinessDetailResponse,
+    ReadinessListResponse,
+    ReadinessRow,
+    build_readiness_row,
+    utc_now_iso,
 )
 from portfolio_outlook_api.online_storage_status import (
     OnlineStorageStatusResponse,
@@ -277,9 +283,6 @@ def validate_contract(payload: dict[str, object]) -> dict[str, object]:
         ),
     )
 
-def _utc_now_iso() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
 
 def _read_snapshot_metadata(ibkr_conid: str | None) -> dict[str, object] | None:
     if not ibkr_conid:
@@ -300,92 +303,46 @@ def _read_snapshot_metadata(ibkr_conid: str | None) -> dict[str, object] | None:
     except StorageConnectionError:
         return None
 
-
-def _build_market_data_readiness_rows() -> list[dict[str, object]]:
+def _build_market_data_readiness_rows() -> list[ReadinessRow]:
     from portfolio_outlook_api.watchlist import STORE
 
-    rows: list[dict[str, object]] = []
+    evaluated_at = utc_now_iso()
+    rows: list[ReadinessRow] = []
     for item in STORE.values():
         if item.status != "active":
             continue
         conid = (item.ibkr_conid or "").strip()
-        conid_present = bool(conid)
-        validation_ok = item.ibkr_validation_status == "valid"
-        ready = validation_ok and conid_present
-        snapshot_metadata = _read_snapshot_metadata(conid if conid_present else None)
-        freshness_status = "snapshot_available" if snapshot_metadata else "missing_snapshot"
-        status = "ready" if ready else "blocked"
-        blocker_code = None if ready else "missing_or_unvalidated_ibkr_contract"
-        missing_identity_fields: list[str] = []
-        if not conid_present:
-            missing_identity_fields.append("ibkr_conid")
-        if not validation_ok:
-            missing_identity_fields.append("ibkr_validation_status_valid")
-        blocker_reason_nl = (
-            "Klaar voor latere market-data opslag op identiteitsniveau."
-            if ready
-            else (
-                "Geblokkeerd: gevalideerde IBKR-contractidentiteit ontbreekt of is ongeldig. "
-                "Market data, analyse, suggesties en actiedrafts blijven niet toegestaan."
-            )
-        )
-        next_step_nl = (
-            "Controleer de opgeslagen snapshotmetadata; dit blijft read-only statusinformatie."
-            if snapshot_metadata
-            else (
-                "Koppel of valideer eerst het juiste IBKR-contract (conid)."
-                if not ready
-                else "Wacht op toekomstige opslag van een eerste market-data snapshot."
-            )
-        )
+        snapshot_metadata = _read_snapshot_metadata(conid if conid else None)
         rows.append(
-            {
-                "watchlist_item_id": item.watchlist_item_id,
-                "asset_id": item.asset_id,
-                "ibkr_conid": item.ibkr_conid,
-                "symbol": item.symbol,
-                "readiness_status": status,
-                "status": status,
-                "freshness_status": freshness_status,
-                "blocker_code": blocker_code,
-                "blocker_reason_nl": blocker_reason_nl,
-                "required_identity_fields": ["ibkr_conid", "ibkr_validation_status_valid"],
-                "missing_identity_fields": missing_identity_fields,
-                "validation_status": {
-                    "ibkr_conid_present": conid_present,
-                    "ibkr_contract_validated": validation_ok,
-                },
-                "evaluated_at": _utc_now_iso(),
-                "latest_snapshot_metadata": snapshot_metadata,
-                "snapshot_metadata_present": snapshot_metadata is not None,
-                "next_step_nl": next_step_nl,
-                "audit_help_nl": (
-                    "Dit is een read-only audit/statuscontrole. Geen market-data runtime, "
-                    "geen fetch, geen analyse en geen suggestievrijgave."
-                ),
-                "help_nl": "Geen market-data runtime actief; alleen readiness/foundation-status.",
-            }
+            build_readiness_row(
+                item,
+                snapshot_metadata,
+                evaluated_at=evaluated_at,
+            )
         )
     return rows
 
 
-@router.get("/market-data/readiness")
-def read_market_data_readiness() -> dict[str, object]:
-    return {
-        "items": _build_market_data_readiness_rows(),
-        "help_nl": (
+@router.get("/market-data/readiness", response_model=ReadinessListResponse)
+def read_market_data_readiness() -> ReadinessListResponse:
+    return ReadinessListResponse(
+        items=_build_market_data_readiness_rows(),
+        help_nl=(
             "Task 85 foundation: geen market-data fetch, geen prijzen, "
             "alleen conid-gated readinessstatus."
         ),
-    }
+    )
 
 
-@router.get("/market-data/readiness/watchlist/{watchlist_item_id}")
-def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> dict[str, object]:
+@router.get(
+    "/market-data/readiness/watchlist/{watchlist_item_id}",
+    response_model=ReadinessDetailResponse,
+)
+def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> ReadinessDetailResponse:
     for row in _build_market_data_readiness_rows():
-        if row["watchlist_item_id"] == watchlist_item_id:
-            return {"item": row}
-    return {"item": None, "message_nl": "Volglijst-item niet gevonden."}
+        if row.watchlist_item_id == watchlist_item_id:
+            return ReadinessDetailResponse(item=row)
+    return ReadinessDetailResponse(item=None, message_nl="Volglijst-item niet gevonden.")
 
 
 @router.get("/market-data/snapshots/latest/{ibkr_conid}")

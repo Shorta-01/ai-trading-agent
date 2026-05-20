@@ -1,3 +1,3 @@
 # Next Task
 
-Task 88 — Conservatieve readiness-contract consolidatie: centraliseer typed readiness responsemodellen/helpers (API-only, read-only), inclusief regressietests en documentatie-update.
+Task 89 — Conservatieve API-readiness contract hardening: kleine vervolgstap met extra response-contract regressietests en expliciete typed coverage voor snapshot-detailvarianten (read-only, geen runtime).
