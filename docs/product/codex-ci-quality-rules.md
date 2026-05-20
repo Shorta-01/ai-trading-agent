@@ -77,3 +77,15 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
   - `__all__`
   - public-export smoke test
   - API `mypy src`
+
+11. **Migration readiness tests mogen geen verouderde latest revision hardcoden**  
+   - Bij elke nieuwe migratie moeten hardcoded revision-counts en latest revision ids worden bijgewerkt of verwijderd.
+   - Tests die een “current” database simuleren moeten `build_expected_migration_inventory().latest_expected_revision_id` inserten, niet een oude letterlijke revision.
+   - Tests die revision count asserten moeten de migration inventory helper gebruiken of in dezelfde PR expliciet worden geüpdatet.
+   - Draai storage `pytest` na elke migratietaak; merge nooit met bekende storage pytest failures.
+
+12. **API response-shape contracten moeten test en endpoint exact alignen**  
+   - Nieuwe endpoint-tests moeten asserten op de response contract-shape die buur-endpoints werkelijk gebruiken.
+   - Als een nieuwe top-level key (zoals `data`) wordt geïntroduceerd, moeten endpoint-implementatie en alle relevante tests consistent worden aangepast.
+   - Schrijf geen tests tegen een response-shape die niet geïmplementeerd is.
+   - Draai API `pytest` na elke endpoint response-shape wijziging; merge nooit met bekende API pytest failures.

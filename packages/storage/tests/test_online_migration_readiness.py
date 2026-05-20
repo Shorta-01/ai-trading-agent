@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, text
 from ai_trading_agent_storage.migration_readiness import (
     MigrationReadinessStatus,
     build_database_not_connected_readiness_report,
+    build_expected_migration_inventory,
     check_offline_migration_inventory,
     check_online_migration_readiness,
     migration_readiness_is_safe_to_write,
@@ -22,16 +23,20 @@ def test_online_imports_and_interface_flag() -> None:
 
 
 def test_online_current_revision_allows_persistence() -> None:
+    latest_revision_id = build_expected_migration_inventory().latest_expected_revision_id
     with _new_connection() as conn:
         conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
-        conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0014')"))
+        conn.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:latest_revision_id)"),
+            {"latest_revision_id": latest_revision_id},
+        )
         report = check_online_migration_readiness(conn)
 
     assert report.status == MigrationReadinessStatus.MIGRATIONS_CURRENT
     assert report.database_connected is True
     assert report.migrations_checked_against_database is True
-    assert report.database_revision_id == "0014"
-    assert report.latest_expected_revision_id == "0014"
+    assert report.database_revision_id == latest_revision_id
+    assert report.latest_expected_revision_id == latest_revision_id
     assert report.persistence_allowed is True
     assert report.blocks_runtime_writes is False
     assert report.explanation_nl.strip()
@@ -84,10 +89,14 @@ def test_online_empty_alembic_version_table_blocks_writes() -> None:
 
 
 def test_online_multiple_rows_are_not_treated_as_success() -> None:
+    latest_revision_id = build_expected_migration_inventory().latest_expected_revision_id
     with _new_connection() as conn:
         conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
         conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0005')"))
-        conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0014')"))
+        conn.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:latest_revision_id)"),
+            {"latest_revision_id": latest_revision_id},
+        )
         report = check_online_migration_readiness(conn)
 
     assert report.status == MigrationReadinessStatus.FAILED
