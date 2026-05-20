@@ -22,6 +22,8 @@ Voor projectcontinuïteit tussen ChatGPT/Codex sessies:
 - `docs/product/locked-decisions.md` bevat niet-onderhandelbare productbeslissingen.
 - `docs/product/version-1-backlog.md` bevat resterend Version 1 werk.
 - `docs/product/next-task.md` bevat de volgende aanbevolen taak.
+- `docs/product/probabilistic-asset-outlook-doctrine.md` bevat de verplichte probability/range-based forecast doctrine.
+- `docs/product/probabilistic-outlook-scope-addendum.md` bevat de forecast-roadmap scope additions.
 
 ## Traceability rules
 
@@ -82,8 +84,9 @@ Voor projectcontinuïteit tussen ChatGPT/Codex sessies:
 | 20 | User-added URLs | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
 | 21 | User notes as first-class evidence | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
 | 22 | Multi-year report comparison | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
-| 23 | Research source archive | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | API implemented (safe file upload + metadata) | UI implemented (metadata + veilige upload) | Implemented | This register | In progress | Upload-UI foundation toegevoegd met veilige opslag en SHA-256; geen parsing/OCR/extractie/AI/IBKR/suggesties/orders/watchlist. |
-| 24 | Document extraction pipeline | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | API implemented (deterministische TXT/MD/CSV extractie) | Planned | Implemented | This register | In progress | Deterministische runtime voor `.txt/.md/.csv` met hash/preview/archiefopslag; geen PDF/DOCX/XLSX/PPTX, geen OCR, geen AI-analyse of suggestiekoppeling. |
+| 23 | Research source archive | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | API implemented (safe file upload + metadata) | UI implemented (metadata + veilige upload) | Implemented | This register | In progress | Upload-UI foundation toegevoegd met veilige opslag en SHA-256; geen AI/IBKR/suggesties/orders/watchlist. |
+| 24 | Document extraction pipeline | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | API implemented (deterministische TXT/MD/CSV extractie) | UI implemented (extractie-trigger + status) | Implemented | This register | In progress | Deterministische runtime voor `.txt/.md/.csv` met hash/preview/archiefopslag; geen PDF/DOCX/XLSX/PPTX, geen OCR, geen AI-analyse of suggestiekoppeling. |
+| 24A | Deterministic document classification foundation | Research source safety and audit traceability | Implemented | Planned | API implemented (`classify-deterministic`) | Planned | Implemented | This register | In progress | Metadata/extracted-preview based classification; output remains blocked for suggestions; no AI, no prompt-injection runtime, no credibility scoring, no evidence extraction, no watchlist/IBKR/order actions. |
 | 25 | OpenAI File Search / retrieval integration later | V1 governance en betrouwbaarheid | Deferred | Deferred | Deferred | Deferred | Deferred | This register | Deferred | Bewust later; geen V1 runtime verplichting nu. |
 | 26 | Market calendar | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Marktkalender-contracten aanwezig; runtime koppeling volgt met officiële brondata. |
 | 27 | Trading hours | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Handelssessie-contracten aanwezig; geen live broker/beurs-calls. |
@@ -325,3 +328,10 @@ Research inputs
 - Onderzoeksbibliotheek UI heeft nu een expliciete Nederlandse knop om deterministische tekstextractie te starten voor ondersteunde TXT/MD/CSV uploads.
 - UI toont extractiestatus + metadata (ondersteuning, karakters, regels, preview, tijdstip indien beschikbaar) en blijft duidelijk: extracted text is bewijs en blijft geblokkeerd voor suggesties.
 - Geen AI-analyse, geen suggestiecreatie, geen watchlist/IBKR/order-acties toegevoegd.
+
+## Task 64 update (2026-05-20)
+- Deterministische documentclassificatie contracts/runtime foundation toegevoegd voor research sources en extracted-text preview.
+- API endpoint `POST /research/sources/{library_source_id}/classify-deterministic` toegevoegd.
+- Classificatiecategorieën omvatten annual_report, quarterly_report, investor_presentation, etf_factsheet, news_article, broker_report, user_note, market_data_export en unknown.
+- Classificatie slaat metadata en processing-status op, maar blijft geblokkeerd voor suggesties.
+- Geen AI-analyse, geen prompt-injection runtime scan, geen source credibility runtime scoring, geen evidence extraction, geen watchlist/IBKR/order-acties toegevoegd.

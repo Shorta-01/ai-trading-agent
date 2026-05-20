@@ -39,6 +39,7 @@
 - **Task 61B:** deterministische TXT/MD/CSV extractie-runtime + repairs voor green CI.
 - **Task 62:** gedetailleerde project handover en Version 1 backlog source-of-truth docs.
 - **Task 63:** Onderzoeksbibliotheek UI extractie-trigger + extracted-text status display.
+- **Task 64:** deterministic document classification contracts/runtime foundation + API endpoint `POST /research/sources/{library_source_id}/classify-deterministic`; classification remains metadata-only and blocked for suggestions.
 
 ## Forecasting doctrine lock
 
@@ -49,4 +50,4 @@
 
 ## Current task
 
-- **Task 64:** deterministic document classification contracts/runtime foundation is the next recommended focused task, unless CI shows a repair task is needed first.
+- **Task 65:** prompt-injection runtime scan contract wiring for research sources is the next recommended focused task, unless CI shows a repair task is needed first.
