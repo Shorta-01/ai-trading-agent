@@ -320,3 +320,8 @@ Research inputs
 - Prompt-injection protection for external content: runtime checks still planned.
 - Source credibility/evidence pipeline: runtime evaluation and gating still planned.
 - No OpenAI/IBKR/runtime suggestion/order behavior added by this slice.
+
+## Task 63 update (2026-05-20)
+- Onderzoeksbibliotheek UI heeft nu een expliciete Nederlandse knop om deterministische tekstextractie te starten voor ondersteunde TXT/MD/CSV uploads.
+- UI toont extractiestatus + metadata (ondersteuning, karakters, regels, preview, tijdstip indien beschikbaar) en blijft duidelijk: extracted text is bewijs en blijft geblokkeerd voor suggesties.
+- Geen AI-analyse, geen suggestiecreatie, geen watchlist/IBKR/order-acties toegevoegd.
