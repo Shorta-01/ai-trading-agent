@@ -44,3 +44,15 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    - Draai API `mypy src` als de API het nieuwe storage-type importeert.
    - Ga er niet van uit dat storage-tests alleen voldoende zijn; cross-package imports moeten expliciet geverifieerd worden.
    - Een PR is niet ready als API `mypy src` of API `pytest` niet kon draaien door ontbrekende dependencies; installeer dependencies op dezelfde manier als CI en verifieer opnieuw.
+
+
+7. **Nieuwe migratie toegevoegd? API storage-status tests moeten mee bijgewerkt worden**  
+   - Elke nieuwe Alembic migratie vereist een update van storage-status endpoint verwachtingen.
+   - Controleer expliciet `apps/api/tests/test_storage_status_endpoint.py`.
+   - `latest_expected_revision_id` moet gelijk zijn aan de nieuwste migratie.
+   - Voorkeur: leid de verwachte nieuwste revision af uit de storage migration inventory helper in plaats van hardcoding.
+   - Draai altijd API `pytest`, niet alleen storage-tests, omdat de API migration readiness publiceert.
+
+8. **PR mag niet ready/mergebaar zonder API pytest na migratiewijzigingen**  
+   - Als een taak een Alembic migratie toevoegt of wijzigt, moet API `pytest` nadien lokaal uitgevoerd zijn.
+   - Alleen storage-tests groen is onvoldoende wanneer de API migratiestatus exposeert.

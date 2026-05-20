@@ -1,3 +1,4 @@
+from ai_trading_agent_storage import check_offline_migration_inventory
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.main import app
@@ -25,8 +26,15 @@ def test_storage_status_endpoint() -> None:
     assert migration_readiness['database_connected'] is False
     assert migration_readiness['migrations_checked_against_database'] is False
     assert migration_readiness['offline_inventory_valid'] is True
-    assert migration_readiness['latest_expected_revision_id'] == '0013'
-    assert migration_readiness['expected_revision_count'] == 13
+    expected_inventory = check_offline_migration_inventory()
+    assert (
+        migration_readiness['latest_expected_revision_id']
+        == expected_inventory.latest_expected_revision_id
+    )
+    assert (
+        migration_readiness['expected_revision_count']
+        == expected_inventory.expected_revision_count
+    )
     assert migration_readiness['database_revision_id'] is None
     assert migration_readiness['persistence_allowed'] is False
     assert migration_readiness['blocks_runtime_writes'] is True

@@ -76,3 +76,12 @@
 - Preventie toegevoegd: storage public-export smoke test voor API-gebruikte records (`ResearchSourcePromptInjectionScanRecord`, `ResearchSourceCredibilityAssessmentRecord`, `ResearchSourceEvidenceItemRecord`).
 - Preventieproces aangescherpt in `docs/product/codex-ci-quality-rules.md` met expliciete cross-package verificatie en verplichte API mypy/pytest-runbaarheid.
 - Geen runtime-gedrag gewijzigd; evidence blijft geblokkeerd voor suggesties en er is geen wijziging aan trading/suggestion/watchlist/IBKR/order-gedrag.
+
+
+## Task 67D — Final CI repair na Task 67
+
+- API pytest reparatie uitgevoerd voor de laatste resterende CI-fout na Task 67.
+- Root cause: `apps/api/tests/test_storage_status_endpoint.py` verwachtte nog revision `0013` terwijl migratie `0014_research_source_evidence_items.py` al bestond.
+- Preventiechecklist in `docs/product/codex-ci-quality-rules.md` verder aangescherpt voor migratie/API storage-status testafstemming.
+- Geen runtimegedrag gewijzigd.
+- Evidence blijft geblokkeerd voor suggesties.
