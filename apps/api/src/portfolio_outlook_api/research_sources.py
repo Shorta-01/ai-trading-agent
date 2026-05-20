@@ -2,7 +2,7 @@
 
 import re
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
@@ -46,6 +46,15 @@ RepositoryFactory = Callable[
 
 router = APIRouter()
 app_router = router
+
+
+@dataclass(frozen=True)
+class PlainTextExtractionResult:
+    text_hash_sha256: str
+    character_count: int
+    line_count: int
+    preview_text_nl: str
+    extracted_text_storage_uri: str
 
 
 def _require_id(identifier: str, field_name: str) -> str:
@@ -250,7 +259,7 @@ def _extract_plain_research_text(
     library_source_id: str,
     upload_settings: ResearchUploadSettings,
     extraction_settings: ResearchExtractionSettings,
-) -> dict[str, object]:
+) -> PlainTextExtractionResult:
     upload_root = Path(upload_settings.archive_dir).resolve()
     raw_path = Path(source_archive_uri.removeprefix("file://")).resolve()
     if upload_root not in raw_path.parents:
@@ -284,13 +293,13 @@ def _extract_plain_research_text(
         raise HTTPException(status_code=400, detail="Extractie-opslagpad is onveilig.")
     if not output_path.exists():
         output_path.write_bytes(normalized_bytes)
-    return {
-        "text_hash_sha256": text_hash,
-        "character_count": len(normalized),
-        "line_count": normalized.count("\n") + (1 if normalized else 0),
-        "preview_text_nl": normalized[: extraction_settings.preview_max_characters],
-        "extracted_text_storage_uri": f"file://{output_path}",
-    }
+    return PlainTextExtractionResult(
+        text_hash_sha256=text_hash,
+        character_count=len(normalized),
+        line_count=normalized.count("\n") + (1 if normalized else 0),
+        preview_text_nl=normalized[: extraction_settings.preview_max_characters],
+        extracted_text_storage_uri=f"file://{output_path}",
+    )
 
 def _with_repo(
     storage_settings: StorageSettings,
@@ -831,11 +840,11 @@ def extract_research_source_text(library_source_id: str) -> dict[str, object]:
             extraction_method="deterministic_plain_text_v1",
             detected_content_type=metadata.content_type,
             detected_language=None,
-            character_count=int(extracted["character_count"]),
-            line_count=int(extracted["line_count"]),
-            text_hash_sha256=str(extracted["text_hash_sha256"]),
-            extracted_text_storage_uri=str(extracted["extracted_text_storage_uri"]),
-            preview_text_nl=str(extracted["preview_text_nl"]),
+            character_count=extracted.character_count,
+            line_count=extracted.line_count,
+            text_hash_sha256=extracted.text_hash_sha256,
+            extracted_text_storage_uri=extracted.extracted_text_storage_uri,
+            preview_text_nl=extracted.preview_text_nl,
             can_be_used_in_research=False,
             can_be_used_in_suggestions=False,
             needs_user_review=True,
@@ -880,11 +889,11 @@ def extract_research_source_text(library_source_id: str) -> dict[str, object]:
             "library_source_id": source_id,
             "extracted_text_id": extracted_id,
             "extraction_status": "extracted",
-            "character_count": extracted["character_count"],
-            "line_count": extracted["line_count"],
-            "text_hash_sha256": extracted["text_hash_sha256"],
-            "extracted_text_storage_uri": extracted["extracted_text_storage_uri"],
-            "preview_text_nl": extracted["preview_text_nl"],
+            "character_count": extracted.character_count,
+            "line_count": extracted.line_count,
+            "text_hash_sha256": extracted.text_hash_sha256,
+            "extracted_text_storage_uri": extracted.extracted_text_storage_uri,
+            "preview_text_nl": extracted.preview_text_nl,
             "blocks_suggestions": True,
             "can_be_used_in_suggestions": False,
             "record": asdict(record),
