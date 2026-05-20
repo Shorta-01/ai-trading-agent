@@ -13,6 +13,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchDocumentSetRecord,
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
+    ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -262,3 +263,46 @@ def test_archive_repository_roundtrips_and_filters() -> None:
         latest_extracted = repo.get_latest_extracted_text_for_source("src-1")
         assert latest_extracted is not None
         assert latest_extracted.extracted_text_id == "ext-2"
+
+
+def test_source_credibility_assessment_roundtrip_latest() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyResearchSourceArchiveRepository(conn, _report())
+        repo.save_research_source(_source("src-cred"))
+        older = datetime.now(UTC) - timedelta(minutes=1)
+        c1 = ResearchSourceCredibilityAssessmentRecord(
+            assessment_id="cred-1", library_source_id="src-cred", credibility_status="assessed",
+            credibility_level="medium",
+            source_category="news",
+            assessed_at=older,
+            checked_at=older,
+            confidence_level="medium",
+            credibility_signals_json=("x",),
+            limitation_notes_nl=None,
+            safe_to_use_as_evidence=False,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl="Geblokkeerd",
+        )
+        c2 = ResearchSourceCredibilityAssessmentRecord(
+            assessment_id="cred-2", library_source_id="src-cred", credibility_status="assessed",
+            credibility_level="high",
+            source_category="filing",
+            assessed_at=datetime.now(UTC),
+            checked_at=datetime.now(UTC),
+            confidence_level="high",
+            credibility_signals_json=("official",),
+            limitation_notes_nl="Alleen bewijs",
+            safe_to_use_as_evidence=True,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl="Nog steeds geblokkeerd",
+        )
+        repo.save_source_credibility_assessment(c1)
+        repo.save_source_credibility_assessment(c2)
+        latest = repo.get_latest_source_credibility_assessment("src-cred")
+        assert latest is not None
+        assert latest.assessment_id == "cred-2"
+        assert latest.blocks_suggestions is True

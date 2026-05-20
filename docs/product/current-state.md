@@ -1,4 +1,4 @@
-# Current State (na Task 64)
+# Current State (na Task 66)
 
 ## 1) Current status summary
 
@@ -7,7 +7,7 @@
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Source Archive.
 - Echte Suggestion Engine runtime, probabilistische forecast-runtime en IBKR runtime zijn nog niet voltooid.
 - De probabilistische asset-outlook doctrine is vastgelegd in `docs/product/probabilistic-asset-outlook-doctrine.md`.
-- `docs/product/next-task.md` wijst nu naar Task 65: prompt-injection runtime scan contract wiring for research sources.
+- `docs/product/next-task.md` wijst nu naar Task 67: evidence extraction foundation voor research-bronnen.
 
 ## 2) Implemented foundations
 
@@ -112,8 +112,8 @@ Nog niet compleet / runtime pending:
 - geen echte OpenAI/AI research runtime
 - geen AI Event Intelligence runtime
 - geen deep search agent
-- geen prompt-injection runtime scan
-- geen source credibility runtime scoring
+- geen volledige prompt-injection runtime analyse (wel scanstatus-opslag)
+- geen source credibility runtime scoring-engine (wel status-opslag/API foundation)
 - geen evidence extractie-runtime
 - geen complete watchlist runtime/grid
 - geen complete portfolio runtime/grid
@@ -134,3 +134,4 @@ Nog niet compleet / runtime pending:
 - Toekomstige forecasts zijn probability/range outputs, geen zekere prijsvoorspellingen en geen orders.
 
 - Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
+- Task 66 afgerond: source credibility assessment status wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.

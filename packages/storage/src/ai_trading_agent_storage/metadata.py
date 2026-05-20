@@ -613,6 +613,28 @@ research_source_prompt_injection_scans = Table(
     Column("explanation_nl", Text, nullable=False),
 )
 
+
+research_source_credibility_assessments = Table(
+    "research_source_credibility_assessments",
+    metadata,
+    Column("assessment_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("credibility_status", Text, nullable=False),
+    Column("credibility_level", Text, nullable=False),
+    Column("source_category", Text, nullable=False),
+    Column("assessed_at", DateTime(timezone=True), nullable=False),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("confidence_level", Text, nullable=False),
+    Column("credibility_signals_json", Text, nullable=True),
+    Column("limitation_notes_nl", Text, nullable=True),
+    Column("safe_to_use_as_evidence", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("explanation_nl", Text, nullable=False),
+)
+
 research_extracted_texts = Table(
     "research_extracted_texts",
     metadata,

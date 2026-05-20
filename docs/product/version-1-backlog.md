@@ -7,7 +7,7 @@ Statuswaarden: Not started / Contracted / Storage foundation / API foundation / 
 - **Status:** In progress (Storage foundation + API foundation + UI foundation; runtime deels pending).
 - **Why it matters:** Dit is de primaire user-fed evidence-ingang voor suggestiekwaliteit.
 - **Completed/foundation:** metadata-archief, veilige upload, upload-UI, TXT/MD/CSV extractie, UI extractie-trigger + extracted-text status, deterministische documentclassificatie contracts/runtime foundation.
-- **Still missing:** PDF/DOCX/XLSX/PPTX extractie, eventuele OCR, prompt-injection runtime scan, source credibility scoring runtime, evidence extraction, multi-year vergelijking-runtime, URL fetching + veilige snapshotting, asset detectie + watchlist proposal flow.
+- **Still missing:** PDF/DOCX/XLSX/PPTX extractie, eventuele OCR, prompt-injection runtime scan, source credibility scoring-engine runtime (status foundation aanwezig), evidence extraction, multi-year vergelijking-runtime, URL fetching + veilige snapshotting, asset detectie + watchlist proposal flow.
 - **Next likely tasks:** prompt-injection runtime scan contract wiring; daarna source credibility/evidence foundations.
 - **Safety notes:** Alles blijft “evidence only”; geen directe suggestie/order-generatie.
 

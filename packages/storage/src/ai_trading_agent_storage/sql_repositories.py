@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import json
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -25,6 +26,7 @@ from ai_trading_agent_storage.metadata import (
     research_extracted_texts,
     research_source_asset_links,
     research_source_prompt_injection_scans,
+    research_source_credibility_assessments,
     research_source_processing_status,
     research_sources,
     research_uploaded_file_metadata,
@@ -57,6 +59,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourcePromptInjectionScanRecord,
+    ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -838,6 +841,40 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         values = dict(row)
         values["detected_signals_json"] = _json_tuple_or_none(values.get("detected_signals_json"))
         return ResearchSourcePromptInjectionScanRecord(**values)
+
+
+    def save_source_credibility_assessment(
+        self, record: ResearchSourceCredibilityAssessmentRecord
+    ) -> ResearchSourceCredibilityAssessmentRecord:
+        values = asdict(record)
+        values["credibility_signals_json"] = (
+            None
+            if record.credibility_signals_json is None
+            else json.dumps(list(record.credibility_signals_json))
+        )
+        self._insert(research_source_credibility_assessments, values)
+        return record
+
+    def get_latest_source_credibility_assessment(
+        self, library_source_id: str
+    ) -> ResearchSourceCredibilityAssessmentRecord | None:
+        statement = (
+            select(research_source_credibility_assessments)
+            .where(research_source_credibility_assessments.c.library_source_id == library_source_id)
+            .order_by(
+                research_source_credibility_assessments.c.checked_at.desc(),
+                research_source_credibility_assessments.c.assessment_id.desc(),
+            )
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return None
+        values = dict(row)
+        raw_signals = values.get("credibility_signals_json")
+        values["credibility_signals_json"] = (
+            None if raw_signals is None else tuple(json.loads(raw_signals))
+        )
+        return ResearchSourceCredibilityAssessmentRecord(**values)
 
     def save_extracted_text(
         self, record: ResearchExtractedTextRecord

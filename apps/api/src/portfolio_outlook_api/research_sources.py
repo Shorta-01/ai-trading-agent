@@ -16,6 +16,7 @@ from ai_trading_agent_storage import (
     ResearchDocumentSetRecord,
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
+    ResearchSourceCredibilityAssessmentRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -191,6 +192,23 @@ class ResearchProcessingStatusInput(BaseModel):
     blocks_suggestions: bool
     last_error_nl: str | None = None
     reason_nl: str
+
+
+
+
+class ResearchSourceCredibilityAssessmentInput(BaseModel):
+    assessment_id: str
+    credibility_status: str
+    credibility_level: str
+    source_category: str
+    confidence_level: str
+    credibility_signals: list[str] = Field(default_factory=list)
+    limitation_notes_nl: str | None = None
+    safe_to_use_as_evidence: bool = False
+    safe_to_use_for_suggestions: bool = False
+    blocks_suggestions: bool = True
+    assessed_at: datetime | None = None
+    explanation_nl: str
 
 
 class ResearchPromptInjectionScanInput(BaseModel):
@@ -819,6 +837,73 @@ def get_latest_processing_status(library_source_id: str) -> dict[str, object]:
             "Laatste verwerkingsstatus gevonden.",
             asdict(found),
             "Geen achtergrondverwerking gestart.",
+        )
+
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+
+
+@router.post("/research/sources/{library_source_id}/credibility-assessment")
+def create_source_credibility_assessment(
+    library_source_id: str,
+    payload: ResearchSourceCredibilityAssessmentInput,
+) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        now = datetime.now(UTC)
+        record = ResearchSourceCredibilityAssessmentRecord(
+            library_source_id=_require_id(library_source_id, "library_source_id"),
+            assessment_id=payload.assessment_id,
+            credibility_status=payload.credibility_status,
+            credibility_level=payload.credibility_level,
+            source_category=payload.source_category,
+            assessed_at=payload.assessed_at or now,
+            checked_at=now,
+            confidence_level=payload.confidence_level,
+            credibility_signals_json=tuple(payload.credibility_signals),
+            limitation_notes_nl=payload.limitation_notes_nl,
+            safe_to_use_as_evidence=payload.safe_to_use_as_evidence,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl=payload.explanation_nl,
+        )
+        saved = repo.save_source_credibility_assessment(record)
+        return _ok(
+            "Bron-credibilitystatus opgeslagen.",
+            {**asdict(saved), "credibility_signals": list(saved.credibility_signals_json or ())},
+            "Deze status is alleen audit-info; suggesties blijven geblokkeerd.",
+        )
+
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.get("/research/sources/{library_source_id}/credibility-assessment/latest")
+def get_latest_source_credibility_assessment(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        found = repo.get_latest_source_credibility_assessment(_require_id(library_source_id, "library_source_id"))
+        if found is None:
+            return _ok(
+                "Nog geen bron-credibilitybeoordeling gevonden.",
+                {
+                    "library_source_id": library_source_id,
+                    "credibility_status": "not_assessed",
+                    "credibility_level": "unknown",
+                    "source_category": "unknown",
+                    "confidence_level": "unknown",
+                    "credibility_signals": [],
+                    "limitation_notes_nl": "Nog niet beoordeeld.",
+                    "safe_to_use_as_evidence": False,
+                    "safe_to_use_for_suggestions": False,
+                    "blocks_suggestions": True,
+                    "checked_at": datetime.now(UTC).isoformat(),
+                    "explanation_nl": "Bron is nog niet beoordeeld en blijft geblokkeerd voor suggesties.",
+                },
+                "Beoordeling is verplicht, maar zelfs daarna blijven suggesties in deze fase geblokkeerd.",
+            )
+        return _ok(
+            "Laatste bron-credibilitystatus gevonden.",
+            {**asdict(found), "credibility_signals": list(found.credibility_signals_json or ())},
+            "Zelfs hoge credibility ontgrendelt geen suggesties in versie 1 foundation.",
         )
 
     return _with_repo(settings.storage, op, require_writable=False)

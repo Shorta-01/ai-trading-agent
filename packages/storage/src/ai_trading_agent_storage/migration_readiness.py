@@ -147,7 +147,22 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Research extracted text opslagfundament",
         description_nl="Opslagfundament voor geëxtraheerde-tekstmetadata en archiefverwijzingen.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0012",
+        previous_revision_id="0011",
+        filename="0012_research_source_prompt_injection_scan.py",
+        label_nl="Research source prompt-injection scan",
+        description_nl="Opslagfundament voor prompt-injection scanstatus per research-bron.",
+    ),
+    MigrationRevisionInfo(
+        revision_id="0013",
+        previous_revision_id="0012",
+        filename="0013_research_source_credibility_assessments.py",
+        label_nl="Research source credibility assessments",
+        description_nl="Opslagfundament voor bron-credibilitystatus per research-bron.",
+    ),
 )
+
 
 
 def expected_migration_revisions() -> tuple[MigrationRevisionInfo, ...]:
