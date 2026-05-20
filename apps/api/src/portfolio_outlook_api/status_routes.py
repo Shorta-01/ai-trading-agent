@@ -276,8 +276,7 @@ def validate_contract(payload: dict[str, object]) -> dict[str, object]:
         ),
     )
 
-@router.get("/market-data/readiness")
-def read_market_data_readiness() -> dict[str, object]:
+def _build_market_data_readiness_rows() -> list[dict[str, object]]:
     from portfolio_outlook_api.watchlist import STORE
 
     rows: list[dict[str, object]] = []
@@ -303,9 +302,13 @@ def read_market_data_readiness() -> dict[str, object]:
                 "help_nl": "Geen market-data runtime actief; alleen readiness/foundation-status.",
             }
         )
+    return rows
 
+
+@router.get("/market-data/readiness")
+def read_market_data_readiness() -> dict[str, object]:
     return {
-        "items": rows,
+        "items": _build_market_data_readiness_rows(),
         "help_nl": (
             "Task 85 foundation: geen market-data fetch, geen prijzen, "
             "alleen conid-gated readinessstatus."
@@ -315,8 +318,7 @@ def read_market_data_readiness() -> dict[str, object]:
 
 @router.get("/market-data/readiness/watchlist/{watchlist_item_id}")
 def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> dict[str, object]:
-    payload = read_market_data_readiness()
-    for row in payload["items"]:
+    for row in _build_market_data_readiness_rows():
         if row["watchlist_item_id"] == watchlist_item_id:
             return {"item": row}
     return {"item": None, "message_nl": "Volglijst-item niet gevonden."}

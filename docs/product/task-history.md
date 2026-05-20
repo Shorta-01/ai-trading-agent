@@ -156,3 +156,5 @@
 - Ongevalideerde of onopgeloste identiteiten blijven geblokkeerd voor market data en latere analyse/suggesties/actie-drafts.
 
 - Task 86 afgerond: market-data readiness persistence wiring + read-only detail endpoints voor snapshotmetadata. Foundation-only; geen runtime fetch/scheduler/historical/AI/suggesties/orders.
+
+- **Task 86B:** API CI-repair na Task 86. Root cause: `status_routes.py` gebruikte `payload = read_market_data_readiness()` gevolgd door iteratie over `payload["items"]`, waarbij mypy `dict[str, object]`-toegang als `object` typeerde. Fix: boundary cleanup door readiness-rows via een interne typed helper op te bouwen en direct te hergebruiken in detail endpoint. Geen runtimegedrag gewijzigd en geen scope-uitbreiding (geen market-data runtime/fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts, geen IBKR-ordergedrag, geen fake data). CI moet groen blijven vóór de volgende featuretaak start.
