@@ -17,6 +17,9 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    Controleer en werk bij waar nodig:
    - SQLAlchemy metadata
    - storage exports
+   - public package exports (`__init__.py`)
+   - cross-package import checks
+   - API `mypy src` wanneer API nieuwe storage-contracten vanuit package-root importeert
    - repository contracts
    - repository implementation
    - metadata tests
@@ -33,3 +36,10 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
 
 5. **Geen brede ruff-ignores als snelle fix**  
    Los terugkerende lintfouten op via correcte formatting/code-aanpassing.
+
+
+6. **Nieuwe storage dataclass/record/contract toegevoegd?**  
+   - Exporteer het type in `packages/storage/src/ai_trading_agent_storage/__init__.py` wanneer andere packages via de storage package-root importeren.
+   - Draai API `mypy src` als de API het nieuwe storage-type importeert.
+   - Draai een import-smoke-check of package-level typecheck voor elke package die het nieuwe type importeert.
+   - Ga er niet van uit dat storage-tests alleen voldoende zijn; cross-package imports moeten expliciet geverifieerd worden.
