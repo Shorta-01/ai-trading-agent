@@ -137,6 +137,33 @@ export type ResearchSourceRecord = {
   updated_at: string;
 };
 
+
+export type ResearchUploadedFileMetadataRecord = {
+  library_source_id: string;
+  original_file_name: string;
+  stored_file_name: string;
+  file_size_bytes: number;
+  content_type: string | null;
+  file_hash_sha256: string;
+  uploaded_at: string;
+};
+
+export type ResearchExtractTextResponse = {
+  status_nl: string;
+  message_nl: string;
+  help_nl: string;
+  library_source_id: string;
+  extracted_text_id: string;
+  extraction_status: string;
+  character_count: number;
+  line_count: number;
+  text_hash_sha256: string;
+  extracted_text_storage_uri: string;
+  preview_text_nl: string;
+  blocks_suggestions: boolean;
+  can_be_used_in_suggestions: boolean;
+  record: Record<string, unknown>;
+};
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 async function getJson<T>(path: string): Promise<FetchState<T>> { /* unchanged */
@@ -228,6 +255,8 @@ export const apiClient = {
   createUserNote: (librarySourceId: string, payload: Record<string, unknown>) => requestJson<{ message_nl: string }>(`/research/sources/${librarySourceId}/user-note`, "POST", payload),
   getUserNote: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/user-note`, "GET"),
   getLatestProcessingStatus: (librarySourceId: string) => requestJson<{ record: Record<string, unknown> }>(`/research/sources/${librarySourceId}/processing-status/latest`, "GET"),
+  getUploadedFileMetadata: (librarySourceId: string) => requestJson<{ record: ResearchUploadedFileMetadataRecord }>(`/research/sources/${librarySourceId}/uploaded-file-metadata`, "GET"),
+  extractResearchSourceText: (librarySourceId: string) => requestJson<ResearchExtractTextResponse>(`/research/sources/${librarySourceId}/extract-text`, "POST"),
   uploadResearchSourceFile: (
     librarySourceId: string,
     file: File,

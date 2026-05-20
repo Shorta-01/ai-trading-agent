@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { SectionHeader } from "@/components/SectionHeader";
-import { apiClient, ResearchSourceRecord } from "@/lib/apiClient";
+import { apiClient, ResearchExtractTextResponse, ResearchSourceRecord, ResearchUploadedFileMetadataRecord } from "@/lib/apiClient";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".txt", ".md", ".csv", ".docx", ".xlsx", ".pptx"];
 
@@ -30,6 +30,11 @@ export default function ResearchSourcesPage() {
   const [urlMeta, setUrlMeta] = useState<Record<string, unknown> | null>(null);
   const [note, setNote] = useState<Record<string, unknown> | null>(null);
   const [processing, setProcessing] = useState<Record<string, unknown> | null>(null);
+  const [uploadedFileMeta, setUploadedFileMeta] = useState<ResearchUploadedFileMetadataRecord | null>(null);
+  const [extractResult, setExtractResult] = useState<ResearchExtractTextResponse | null>(null);
+  const [extractError, setExtractError] = useState("");
+  const [extractInfo, setExtractInfo] = useState("");
+  const [isExtracting, setIsExtracting] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
@@ -70,14 +75,41 @@ export default function ResearchSourcesPage() {
 
   async function loadSelectedDetails(source: ResearchSourceRecord) {
     setSelected(source);
-    const [urlResponse, noteResponse, processingResponse] = await Promise.all([
-      apiClient.getUrlMetadata(source.library_source_id), apiClient.getUserNote(source.library_source_id), apiClient.getLatestProcessingStatus(source.library_source_id),
+    const [urlResponse, noteResponse, processingResponse, uploadedMetaResponse] = await Promise.all([
+      apiClient.getUrlMetadata(source.library_source_id), apiClient.getUserNote(source.library_source_id), apiClient.getLatestProcessingStatus(source.library_source_id), apiClient.getUploadedFileMetadata(source.library_source_id),
     ]);
     setUrlMeta(urlResponse.ok ? urlResponse.data.record : null);
     setNote(noteResponse.ok ? noteResponse.data.record : null);
     setProcessing(processingResponse.ok ? processingResponse.data.record : null);
+    setUploadedFileMeta(uploadedMetaResponse.ok ? uploadedMetaResponse.data.record : null);
+    setExtractResult(null);
+    setExtractError("");
+    setExtractInfo("");
   }
 
+
+  async function onExtractText() {
+    if (!selected) return;
+    setIsExtracting(true);
+    setExtractError("");
+    setExtractInfo("");
+    const response = await apiClient.extractResearchSourceText(selected.library_source_id);
+    if (!response.ok) {
+      if (response.status === 400) setExtractError("Deze bron heeft geen ondersteund tekstbestand voor extractie.");
+      else if (response.status === 404) setExtractError("Bronbestand of bestandsmetadata ontbreekt. Upload eerst een bestand.");
+      else if (response.status === 413) setExtractError("Het bestand is te groot voor de huidige extractielimiet.");
+      else if (response.status === 503) setExtractError("Tekstextractie staat momenteel uit in de API-instellingen.");
+      else setExtractError(response.message || "Extractie mislukt.");
+      setIsExtracting(false);
+      return;
+    }
+    setExtractResult(response.data);
+    setExtractInfo(response.data.message_nl);
+    await loadSelectedDetails(selected);
+    setIsExtracting(false);
+  }
+
+  const extractSupported = Boolean(uploadedFileMeta && [".txt", ".md", ".csv"].some((ext) => uploadedFileMeta.original_file_name.toLowerCase().endsWith(ext)));
   async function onUploadFile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setUploadError("");
@@ -219,6 +251,27 @@ export default function ResearchSourcesPage() {
       {selected ? <section className="dashboard-card"><SectionHeader title="Brondetails" helpText="Deze bron is bewijs en geen handelsinstructie." />
         <p>Bron-ID: {selected.library_source_id}</p><p>Titel: {selected.title}</p><p>Asset symbool: {f(selected.asset_symbol)}</p><p>Asset naam: {f(selected.asset_name)}</p><p>Soort bron: {selected.source_kind}</p><p>Documenttype: {selected.document_type}</p><p>Bronkwaliteit: {f(selected.source_credibility_level)}</p><p>Prompt-injectierisico: {f(selected.prompt_injection_risk_level)}</p><p>Aangemaakt op: {selected.created_at}</p><p>Laatst aangepast: {selected.updated_at}</p><p>Uitleg: {selected.explanation_nl}</p>
         <p><strong>Deze bron is bewijs voor later onderzoek. Ze is geen handelsinstructie en maakt geen koop- of verkoopactie aan.</strong></p>
+      </section> : null}
+
+      {selected ? <section className="dashboard-card">
+        <SectionHeader title="Tekstextractie (deterministisch)" helpText="Voor TXT/MD/CSV kan je tekst veilig extraheren als bewijsmetadata." />
+        <p>Status ondersteuning: {uploadedFileMeta ? (extractSupported ? "Ondersteund (TXT/MD/CSV)" : "Niet ondersteund in deze versie") : "Nog geen bestandsmetadata"}</p>
+        {uploadedFileMeta ? <p>Bestand: {uploadedFileMeta.original_file_name} ({uploadedFileMeta.file_size_bytes} bytes)</p> : <p>Upload eerst een bestand om extractie te starten.</p>}
+        <button type="button" onClick={() => void onExtractText()} disabled={!extractSupported || isExtracting}>
+          {isExtracting ? "Extractie bezig..." : "Start tekstextractie"}
+        </button>
+        <p className="help-text">Deze knop slaat geëxtraheerde tekst alleen op als bewijs. Deze bron blijft geblokkeerd voor suggesties, en maakt geen koop/verkoop/IBKR-actie aan.</p>
+        {extractError ? <p>{extractError}</p> : null}
+        {extractInfo ? <p>{extractInfo}</p> : null}
+        {extractResult ? <>
+          <p>Extractiestatus: {extractResult.extraction_status}</p>
+          <p>Tekst bestaat: Ja</p>
+          <p>Aantal karakters: {extractResult.character_count}</p>
+          <p>Aantal regels: {extractResult.line_count}</p>
+          <p>Extractie-ID: {extractResult.extracted_text_id}</p>
+          <p>Preview: {extractResult.preview_text_nl || "Geen preview beschikbaar."}</p>
+        </> : <p>Nog geen geëxtraheerde tekstmetadata beschikbaar in deze sessie.</p>}
+        <p>Extractie-tijdstip: {processing && typeof processing.checked_at === "string" ? processing.checked_at : "Nog niet beschikbaar"}</p>
       </section> : null}
 
       {selected ? <section>
