@@ -16,6 +16,7 @@ from ai_trading_agent_storage import (
     ResearchDocumentSetRecord,
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
+    ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -190,6 +191,18 @@ class ResearchProcessingStatusInput(BaseModel):
     blocks_suggestions: bool
     last_error_nl: str | None = None
     reason_nl: str
+
+
+class ResearchPromptInjectionScanInput(BaseModel):
+    scan_id: str
+    scan_status: str
+    risk_level: str
+    detected_signals: list[str] = Field(default_factory=list)
+    safe_to_use_as_evidence: bool
+    safe_to_use_as_instruction: bool
+    blocks_suggestions: bool = True
+    scanned_at: datetime | None = None
+    explanation_nl: str
 
 
 def _sanitize_upload_filename(filename: str) -> str:
@@ -806,6 +819,65 @@ def get_latest_processing_status(library_source_id: str) -> dict[str, object]:
             "Laatste verwerkingsstatus gevonden.",
             asdict(found),
             "Geen achtergrondverwerking gestart.",
+        )
+
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.post("/research/sources/{library_source_id}/prompt-injection-scan")
+def create_prompt_injection_scan_status(
+    library_source_id: str,
+    payload: ResearchPromptInjectionScanInput,
+) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        now = datetime.now(UTC)
+        record = ResearchSourcePromptInjectionScanRecord(
+            library_source_id=_require_id(library_source_id, "library_source_id"),
+            scan_id=payload.scan_id,
+            scan_status=payload.scan_status,
+            risk_level=payload.risk_level,
+            detected_signals_json=tuple(payload.detected_signals),
+            safe_to_use_as_evidence=payload.safe_to_use_as_evidence,
+            safe_to_use_as_instruction=payload.safe_to_use_as_instruction,
+            blocks_suggestions=True if payload.blocks_suggestions is False else payload.blocks_suggestions,
+            scanned_at=payload.scanned_at or now,
+            checked_at=now,
+            explanation_nl=payload.explanation_nl,
+        )
+        saved = repo.save_prompt_injection_scan(record)
+        return _ok(
+            "Prompt-injection scanstatus opgeslagen.",
+            {**asdict(saved), "detected_signals": list(saved.detected_signals_json or ())},
+            "Zelfs bij lage risico blijft suggestie-gebruik geblokkeerd in versie 1.",
+        )
+
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.get("/research/sources/{library_source_id}/prompt-injection-scan/latest")
+def get_latest_prompt_injection_scan(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        found = repo.get_latest_prompt_injection_scan(_require_id(library_source_id, "library_source_id"))
+        if found is None:
+            return _ok(
+                "Nog geen prompt-injection scan gevonden.",
+                {
+                    "library_source_id": library_source_id,
+                    "scan_status": "not_scanned",
+                    "risk_level": "unknown",
+                    "detected_signals": [],
+                    "safe_to_use_as_evidence": False,
+                    "safe_to_use_as_instruction": False,
+                    "blocks_suggestions": True,
+                    "checked_at": datetime.now(UTC).isoformat(),
+                    "explanation_nl": "Bron is nog niet gescand en blijft geblokkeerd voor suggesties.",
+                },
+                "Eerst alle veiligheidscontroles afronden voordat suggesties ooit worden vrijgegeven.",
+            )
+        return _ok(
+            "Laatste prompt-injection scanstatus gevonden.",
+            {**asdict(found), "detected_signals": list(found.detected_signals_json or ())},
+            "Scanresultaat is audit-info; suggesties blijven geblokkeerd.",
         )
 
     return _with_repo(settings.storage, op, require_writable=False)

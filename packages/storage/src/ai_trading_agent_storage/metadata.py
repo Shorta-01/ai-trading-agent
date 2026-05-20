@@ -595,6 +595,24 @@ research_source_processing_status = Table(
     Column("reason_nl", Text, nullable=False),
 )
 
+research_source_prompt_injection_scans = Table(
+    "research_source_prompt_injection_scans",
+    metadata,
+    Column("scan_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column("scan_status", Text, nullable=False),
+    Column("risk_level", Text, nullable=False),
+    Column("detected_signals_json", Text, nullable=True),
+    Column("safe_to_use_as_evidence", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_to_use_as_instruction", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("scanned_at", DateTime(timezone=True), nullable=False),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
 research_extracted_texts = Table(
     "research_extracted_texts",
     metadata,

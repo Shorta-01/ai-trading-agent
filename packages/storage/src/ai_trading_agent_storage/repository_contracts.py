@@ -629,6 +629,28 @@ class ResearchSourceProcessingStatusRecord:
 
 
 @dataclass(frozen=True)
+class ResearchSourcePromptInjectionScanRecord:
+    scan_id: str
+    library_source_id: str
+    scan_status: str
+    risk_level: str
+    detected_signals_json: tuple[str, ...] | None
+    safe_to_use_as_evidence: bool
+    safe_to_use_as_instruction: bool
+    blocks_suggestions: bool
+    scanned_at: datetime
+    checked_at: datetime
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in ("scan_id", "library_source_id", "scan_status", "risk_level", "explanation_nl"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        _require_ordered_datetimes(self.scanned_at, self.checked_at, "scanned_at", "checked_at")
+        if self.blocks_suggestions and self.safe_to_use_as_instruction:
+            raise ValueError("safe_to_use_as_instruction must be false when blocks_suggestions is true.")
+
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str
