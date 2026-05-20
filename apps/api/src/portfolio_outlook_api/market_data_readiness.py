@@ -1,10 +1,17 @@
 """Typed read-only market-data readiness response contracts and builders."""
 
 from datetime import UTC, datetime
+from typing import Protocol
 
 from pydantic import BaseModel
 
-from portfolio_outlook_api.watchlist import WatchlistItem
+
+class ReadinessWatchlistItemLike(Protocol):
+    watchlist_item_id: str
+    asset_id: str | None
+    ibkr_conid: str | None
+    symbol: str
+    ibkr_validation_status: str | None
 
 
 class ReadinessValidationStatus(BaseModel):
@@ -48,7 +55,7 @@ def utc_now_iso() -> str:
 
 
 def build_readiness_row(
-    item: WatchlistItem,
+    item: ReadinessWatchlistItemLike,
     snapshot_metadata: dict[str, object] | None,
     *,
     evaluated_at: str,

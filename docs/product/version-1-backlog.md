@@ -181,3 +181,4 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 
 
 - [x] Task 88 — Conservatieve readiness-contract consolidatie (API-only, read-only): typed readiness responsemodellen/helpers gecentraliseerd, regressietests uitgebreid; geen runtimegedrag toegevoegd.
+- [x] Task 88B — CI-repair na Task 88: import-boundary/type-fix in readiness-contract module (protocol i.p.v. route-model import), zonder runtimewijzigingen of scope-uitbreiding. Task 89 blijft geblokkeerd tot CI groen is.
