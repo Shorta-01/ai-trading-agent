@@ -1,5 +1,6 @@
 """Routes for read-only status/settings summaries."""
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from ai_trading_agent_storage import (
@@ -276,6 +277,30 @@ def validate_contract(payload: dict[str, object]) -> dict[str, object]:
         ),
     )
 
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _read_snapshot_metadata(ibkr_conid: str | None) -> dict[str, object] | None:
+    if not ibkr_conid:
+        return None
+    storage_settings = settings.storage
+    if not storage_settings.enabled or not storage_settings.database_url:
+        return None
+    provider = StorageConnectionProvider(
+        build_database_connection_settings(storage_settings.database_url)
+    )
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyMarketDataSnapshotRepository(checked.connection, checked.readiness)
+            result = repo.get_latest_by_ibkr_conid(ibkr_conid)
+            if result.record is None:
+                return None
+            return dict(result.record.__dict__)
+    except StorageConnectionError:
+        return None
+
+
 def _build_market_data_readiness_rows() -> list[dict[str, object]]:
     from portfolio_outlook_api.watchlist import STORE
 
@@ -283,11 +308,35 @@ def _build_market_data_readiness_rows() -> list[dict[str, object]]:
     for item in STORE.values():
         if item.status != "active":
             continue
-        ready = item.ibkr_validation_status == "valid" and bool((item.ibkr_conid or "").strip())
+        conid = (item.ibkr_conid or "").strip()
+        conid_present = bool(conid)
+        validation_ok = item.ibkr_validation_status == "valid"
+        ready = validation_ok and conid_present
+        snapshot_metadata = _read_snapshot_metadata(conid if conid_present else None)
+        freshness_status = "snapshot_available" if snapshot_metadata else "missing_snapshot"
         status = "ready" if ready else "blocked"
         blocker_code = None if ready else "missing_or_unvalidated_ibkr_contract"
-        reason_nl = "Klaar voor latere market-data opslag." if ready else (
-            "Geblokkeerd: gevalideerde IBKR-contractidentiteit (conid) ontbreekt."
+        missing_identity_fields: list[str] = []
+        if not conid_present:
+            missing_identity_fields.append("ibkr_conid")
+        if not validation_ok:
+            missing_identity_fields.append("ibkr_validation_status_valid")
+        blocker_reason_nl = (
+            "Klaar voor latere market-data opslag op identiteitsniveau."
+            if ready
+            else (
+                "Geblokkeerd: gevalideerde IBKR-contractidentiteit ontbreekt of is ongeldig. "
+                "Market data, analyse, suggesties en actiedrafts blijven niet toegestaan."
+            )
+        )
+        next_step_nl = (
+            "Controleer de opgeslagen snapshotmetadata; dit blijft read-only statusinformatie."
+            if snapshot_metadata
+            else (
+                "Koppel of valideer eerst het juiste IBKR-contract (conid)."
+                if not ready
+                else "Wacht op toekomstige opslag van een eerste market-data snapshot."
+            )
         )
         rows.append(
             {
@@ -295,10 +344,25 @@ def _build_market_data_readiness_rows() -> list[dict[str, object]]:
                 "asset_id": item.asset_id,
                 "ibkr_conid": item.ibkr_conid,
                 "symbol": item.symbol,
+                "readiness_status": status,
                 "status": status,
-                "freshness_status": "missing_snapshot",
+                "freshness_status": freshness_status,
                 "blocker_code": blocker_code,
-                "reason_nl": reason_nl,
+                "blocker_reason_nl": blocker_reason_nl,
+                "required_identity_fields": ["ibkr_conid", "ibkr_validation_status_valid"],
+                "missing_identity_fields": missing_identity_fields,
+                "validation_status": {
+                    "ibkr_conid_present": conid_present,
+                    "ibkr_contract_validated": validation_ok,
+                },
+                "evaluated_at": _utc_now_iso(),
+                "latest_snapshot_metadata": snapshot_metadata,
+                "snapshot_metadata_present": snapshot_metadata is not None,
+                "next_step_nl": next_step_nl,
+                "audit_help_nl": (
+                    "Dit is een read-only audit/statuscontrole. Geen market-data runtime, "
+                    "geen fetch, geen analyse en geen suggestievrijgave."
+                ),
                 "help_nl": "Geen market-data runtime actief; alleen readiness/foundation-status.",
             }
         )
