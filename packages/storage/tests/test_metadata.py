@@ -39,6 +39,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "asset_master_records",
         "asset_identifier_aliases",
         "source_to_asset_links",
+        "watchlist_items",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

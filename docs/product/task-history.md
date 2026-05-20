@@ -101,3 +101,12 @@
 - Nederlandse helpertekst, statusbadge, last-sync en duidelijke empty/error/loading states toegevoegd.
 - Geen orderknoppen, geen order submission/wijziging/cancel, geen action drafts, geen suggesties, geen Decision Packages, geen AI runtime, geen market-data runtime, geen forecast runtime.
 - Geen fake broker/portfolio/order/execution data toegevoegd.
+
+## Task 78B — Fix Task 78 CI failures
+
+- Status: completed.
+- Root causes: API `ruff` formatting violations in `apps/api/src/portfolio_outlook_api/watchlist.py` en `apps/api/tests/test_watchlist_endpoints.py`; storage tests hadden stale verwachtingen na migratie `0020_watchlist_foundation.py` en tabel `watchlist_items`.
+- Fixes: importsortering/regelafbrekingen/semicolon cleanup in watchlist API code + testbestand; storage migration inventory test bijgewerkt naar 20 revisions inclusief `0020_watchlist_foundation.py`; metadata expected table set uitgebreid met `watchlist_items`.
+- Verification: storage/api/web package-checks opnieuw gedraaid en groen.
+- Runtime-impact: geen runtimegedrag gewijzigd, geen nieuwe features toegevoegd.
+- Scope-lock blijft: watchlist blijft lokaal/manueel en gescheiden van IBKR-posities; geen suggesties, action drafts, IBKR-ordergedrag, AI runtime, market-data runtime, forecast runtime of fake data toegevoegd.
