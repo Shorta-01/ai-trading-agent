@@ -378,7 +378,20 @@ export type WatchlistItem = {
   updated_at: string;
 };
 
-export async function listWatchlistItems(): Promise<FetchState<{items: WatchlistItem[]}>> { return getJson('/watchlist/items'); }
-export async function createWatchlistItem(payload: {symbol: string; note?: string | null}): Promise<FetchState<{item: WatchlistItem}>> { return postJson('/watchlist/items', payload); }
-export async function updateWatchlistItem(id: string, payload: {note?: string | null; name?: string | null; exchange?: string | null; currency?: string | null; security_type?: string | null}): Promise<FetchState<{item: WatchlistItem}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {item: WatchlistItem} }; } catch { return { ok: false, reason: 'not_reachable' }; } }
+export async function listWatchlistItems(): Promise<FetchState<{items: WatchlistItemResponse[]}>> { return getJson('/watchlist/items'); }
+export async function createWatchlistItem(payload: {symbol: string; note?: string | null}): Promise<FetchState<{item: WatchlistItemResponse}>> { return postJson('/watchlist/items', payload); }
+export async function updateWatchlistItem(id: string, payload: {note?: string | null; name?: string | null; exchange?: string | null; currency?: string | null; security_type?: string | null; asset_id?: string | null}): Promise<FetchState<{item: WatchlistItemResponse}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {item: WatchlistItemResponse} }; } catch { return { ok: false, reason: 'not_reachable' }; } }
 export async function archiveWatchlistItem(id: string): Promise<FetchState<{archived: boolean}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'DELETE' }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {archived: boolean} }; } catch { return { ok: false, reason: 'not_reachable' }; } }
+
+
+export type WatchlistItemResponse = {
+  item: WatchlistItem;
+  link_status: "gelinkt" | "niet_gelinkt";
+  linked_asset: {
+    asset_id: string;
+    canonical_symbol: string | null;
+    asset_name: string | null;
+    primary_exchange: string | null;
+    primary_currency: string | null;
+  } | null;
+};

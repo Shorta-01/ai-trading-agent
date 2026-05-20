@@ -110,3 +110,10 @@
 - Verification: storage/api/web package-checks opnieuw gedraaid en groen.
 - Runtime-impact: geen runtimegedrag gewijzigd, geen nieuwe features toegevoegd.
 - Scope-lock blijft: watchlist blijft lokaal/manueel en gescheiden van IBKR-posities; geen suggesties, action drafts, IBKR-ordergedrag, AI runtime, market-data runtime, forecast runtime of fake data toegevoegd.
+
+
+## Task 79 — Watchlist asset identity linking foundation
+- Status: completed.
+- Watchlist-item `asset_id` link/unlink flow uitgewerkt op API-niveau met validatie tegen bestaande Asset Master identiteit wanneer beschikbaar.
+- Volglijst UI toont nu veilige linked/unlinked status + canonieke identiteitssamenvatting als die beschikbaar is.
+- Scope guard: reference/status-only; geen suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, market-data runtime, forecast runtime of fake data.

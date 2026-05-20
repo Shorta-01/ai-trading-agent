@@ -1,22 +1,15 @@
 # Next Task
 
-## Task 79 — Asset identity linking vervolg op watchlist foundation (recommended)
+## Aanbevolen volgende stap
 
-Task 78 is afgerond en Task 78B heeft de CI-fouten gerepareerd.
+**Task 80 — Asset Master search/picker UI foundation**
 
-### Waarom nu
+Waarom:
+- Task 79 levert de veilige watchlist-naar-Asset-Master linkstatus en backend-validatie.
+- Er ontbreekt nog een eenvoudige Nederlandse zoek/selecteerflow om bestaande Asset Master identiteiten te kiezen zonder nieuwe runtime-risico's.
 
-- Watchlist foundation + Volglijst zijn aanwezig en CI is terug groen.
-- De volgende stap blijft Task 79 (geen nieuwe scope buiten roadmap).
-
-### Scope voor Task 79
-
-- Vervolg op identity-linking rondom watchlist binnen bestaande Version 1 grenzen.
-- Geen uitbreiding naar suggesties, action drafts of IBKR-ordergedrag.
-
-### Niet doen in Task 79
-
-- Geen ordersubmission, orderwijziging of ordercancel.
-- Geen action drafts, Decision Packages of IBKR Action Center runtime.
-- Geen AI runtime, market-data runtime of forecast runtime.
-- Geen fake broker/portfolio/market/suggestiedata.
+Scopegrenzen voor Task 80:
+- Geen suggesties, geen Decision Packages, geen action drafts.
+- Geen IBKR-ordergedrag.
+- Geen AI/market-data/forecast runtime.
+- Geen fake data.

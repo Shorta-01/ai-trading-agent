@@ -2,7 +2,7 @@
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 78B**.
+- Huidige toestand: **na Task 79**.
 - CI-status: groen na Task 78B repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -101,3 +101,6 @@
 
 - Task 78: **completed** — watchlist foundation + Volglijst-pagina toegevoegd (lokaal/manueel, gescheiden van IBKR-portefeuille).
 - Task 78B: **completed** — CI-repair na Task 78. Root causes: API ruff-formattingfouten in `watchlist.py` en `test_watchlist_endpoints.py`, plus stale storage testverwachtingen voor migratie-inventaris en metadata na `0020_watchlist_foundation.py` / `watchlist_items`. Geen runtimegedrag gewijzigd, geen nieuwe features toegevoegd; watchlist blijft lokaal/manueel en gescheiden van IBKR-posities. Geen suggesties, action drafts, IBKR-ordergedrag, AI runtime, market-data runtime, forecast runtime of fake data toegevoegd.
+
+
+- Task 79: **completed** — watchlist-to-Asset-Master identity linking foundation toegevoegd (API/UI basis, reference/status-only). Linken/ontkoppelen valideert bestaande asset-identiteit waar veilig, zonder auto-creatie van Asset Master records. Geen portfoliopositiecreatie, geen suggesties, geen Decision Packages, geen action drafts, geen IBKR-ordergedrag, geen AI/market-data/forecast runtime en geen fake data.
