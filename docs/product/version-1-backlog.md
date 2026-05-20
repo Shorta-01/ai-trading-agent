@@ -185,3 +185,6 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 88G — Documenteer CI-platformblokkade na PR #171: 6 normale CI jobs + CI Diagnostic falen; diagnostische workflow faalt vóór logs/artifacts; geen geverifieerde application-code root cause.
 - [ ] CI unblock task (GitHub Actions settings/billing/quota/runner/log-access onderzoek en herstel) — **must complete before any feature task**.
 - [ ] Task 89 — mag niet starten zolang CI rood is en diagnostische logs/executie niet hersteld zijn.
+
+
+- [x] Task 88H — tijdelijke CI-diagnostische workflow verwijderd (`.github/workflows/ci-diagnostic.yml`) na bevestiging dat failure buiten normale project test/lint/build-output ligt; CI-blokkade blijft gedocumenteerd, normale CI blijft rood en Task 89 blijft geblokkeerd tot CI groen is.
