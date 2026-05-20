@@ -1,12 +1,13 @@
-# Current State (na Task 63)
+# Current State (na Task 64)
 
 ## 1) Current status summary
 
-- Repository-status: green na Task 63.
+- Repository-status: Task 64 PR CI was green before merge; no failing status is attached to the merge commit.
 - Projectstatus: nog foundation-heavy, geen complete Version 1 applicatie.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Source Archive.
 - Echte Suggestion Engine runtime, probabilistische forecast-runtime en IBKR runtime zijn nog niet voltooid.
-- De probabilistische asset-outlook doctrine is nu vastgelegd in `docs/product/probabilistic-asset-outlook-doctrine.md`.
+- De probabilistische asset-outlook doctrine is vastgelegd in `docs/product/probabilistic-asset-outlook-doctrine.md`.
+- `docs/product/next-task.md` wijst nu naar Task 65: prompt-injection runtime scan contract wiring for research sources.
 
 ## 2) Implemented foundations
 
@@ -82,6 +83,20 @@
 - Geen AI-analyse.
 - Geen evidence extractie-runtime.
 
+### Deterministische documentclassificatie foundation
+
+- Deterministische documentclassificatie contracts en runtime foundation bestaan.
+- Categorieën bestaan voor annual_report, quarterly_report, investor_presentation, etf_factsheet, news_article, broker_report, user_note, market_data_export en unknown.
+- API endpoint `POST /research/sources/{library_source_id}/classify-deterministic` bestaat.
+- Classificatie gebruikt metadata, bestandsnaam en bestaande extracted-text preview.
+- Classificatie slaat een classificatierecord en processing-status op.
+- Classificatie blijft metadata-only en blokkeert suggesties expliciet.
+- Geen AI-analyse.
+- Geen source credibility runtime scoring.
+- Geen prompt-injection runtime scan.
+- Geen evidence extractie-runtime.
+- Geen watchlist/IBKR/order-acties.
+
 ## 3) Current non-complete areas
 
 Nog niet compleet / runtime pending:
@@ -113,6 +128,7 @@ Nog niet compleet / runtime pending:
 
 - Geüploade bestanden zijn evidence, geen instructies.
 - Extracted text is evidence, geen instructies.
+- Deterministische classificatie is evidence metadata, geen advies.
 - Alles blijft geblokkeerd voor suggesties tot toekomstige validatiegates bestaan.
 - Upload/extractie/classificatie mag geen watchlist-entry, suggestie, IBKR actie of order aanmaken.
 - Toekomstige forecasts zijn probability/range outputs, geen zekere prijsvoorspellingen en geen orders.
