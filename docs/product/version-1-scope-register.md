@@ -25,6 +25,7 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Evidence Ledger API/linking (Task 68) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending | Blocked for suggestions; geen IBKR/order gedrag |
 | Research Library source pipeline overall | Contracted | Storage/API/UI foundations implemented | API implemented | UI implemented | Full runtime pipeline pending | Blocked for suggestions; geen IBKR/order gedrag |
 | Gate outcome/freshness foundation (Task 69) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending | Blocked for suggestions; audit/status-only; geen watchlist/IBKR/order gedrag |
+| Source conflict findings (Task 70) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending (analysis engine pending; storage/API foundation implemented) | Blocked for suggestions; audit/status-only; geen AI/watchlist/IBKR/order gedrag |
 | CI quality governance rules | Locked | N/A | N/A | N/A | Implemented as mandatory workflow docs | Geen safety gate verzwakking toegestaan |
 
 ## Hard boundaries (Version 1)
@@ -34,6 +35,3 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 - Geen automatische orders.
 - Geen IBKR live order flow.
 - Suggesties blijven geblokkeerd tot alle gates/runtime engines bestaan.
-
-
-| Source conflict findings (Task 70) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending | Blocked for suggestions; audit/status-only; geen watchlist/IBKR/order gedrag |

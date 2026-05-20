@@ -1,29 +1,22 @@
-## Task 70: Source conflict detection foundation (recommended)
+## Task 71: Asset master identity foundation (recommended)
 
-Doel: foundation toevoegen om conflicten tussen research-bronnen expliciet te detecteren en als status/auditdata vast te leggen, zonder suggestions of runtime-adviesgedrag te activeren.
+Doel: een stabiele asset-identiteitslaag toevoegen zodat bronkoppeling, market data, portfolio/watchlist, freshness en probabilistische outlook-functies correct op één consistente asset-identiteit kunnen bouwen.
 
 ### Waarom nu
 
-- Task 68 (Evidence Ledger-linking) is completed.
-- Task 69 (gate outcome/freshness storage/API foundation) is completed.
-- Task 69B repair is completed en CI staat terug groen.
-- Een logische volgende foundation is nu conflict-detectie (alternatief: asset master identity foundation).
+- Task 70 source conflict detection foundation is geïmplementeerd als storage/API foundation.
+- Task 70B repair is afgerond en CI staat groen.
+- Research/evidence/gate/conflict foundations bestaan nu, maar missen nog een stabiele asset-identiteit als verbindende basis.
+- Zonder asset master identity ontstaan later fouten in source-to-asset linking, data freshness en probabilistische outlook traceability.
 
-### In scope (Task 70)
+### In scope (Task 71)
 
-- Contracten/foundation voor source conflict status binnen Research Library flows.
-- Audit/traceability-first opslag en API-basis voor conflictbevindingen.
-- Volledige behoud van conservative safety gates (blocked for suggestions).
+- Asset master identity foundation (canonieke asset-identiteit, mapping-basis en audit-traceability foundation).
+- Geen suggestion runtime unlock.
+- Geen AI/watchlist/IBKR/order runtimegedrag.
 
-### Out of scope
+### Alternatieve latere taken (niet aanbevolen als eerstvolgende)
 
-- geen AI runtime
-- geen suggestion runtime
-- geen watchlist behavior
-- geen IBKR behavior
-- geen order behavior
-- geen Task 70 runtime-implementatie buiten foundation
-
-## Task 71: Asset master identity foundation (recommended)
-
-Doel: stabiele asset-identiteit toevoegen als basis voor bronkoppeling, market data en freshness-runtime. Alternatief: market calendar/freshness runtime foundation.
+- Market calendar/freshness runtime foundation.
+- Source-to-asset linking foundation.
+- Asset detection foundation.

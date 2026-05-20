@@ -87,3 +87,17 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 
 
 - Task 70 completed: source conflict detection foundation (storage/API) als audit/status records; geen suggestion unlock.
+
+
+## E) Post-Task 70/70B sync status
+
+- Task 70: source conflict detection **foundation exists** (storage/API, audit/status-only).
+- Task 70B: repair afgerond; CI groen; geen runtimegedrag gewijzigd.
+- Source conflict detection runtime/analysis engine: **runtime pending**.
+- Source conflict findings: **blocked for suggestions**.
+- Source-to-asset linking: **runtime pending**.
+- Asset master identity: **runtime pending** (foundation nog te bouwen).
+- Market data/freshness/runtime validation: **runtime pending**.
+- Suggestion engine runtime: **runtime pending**.
+- Probabilistic forecast runtime: **runtime pending**.
+- IBKR runtime: **runtime pending**.
