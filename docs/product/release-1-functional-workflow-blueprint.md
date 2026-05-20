@@ -178,7 +178,9 @@ Regels:
 
 ## 10) Supported human order presets
 
-Bedoelde eenvoudige menselijke presets in Release 1:
+Belangrijke scope-opmerking: deze sectie beschrijft een toekomstige preset-catalogus. De eerste uitvoerbare paper-action flow blijft strikt LMT-only. Market orders, bracket orders, stop orders, trailing orders en conditionele orderpresets zijn niet toegestaan in de eerste uitvoerbare flow. Latere uitbreiding van orderpresets vereist aparte validatie, safety gates, user-approval workflow en expliciete product-lock update.
+
+Bedoelde eenvoudige menselijke presets in de toekomstige catalogus:
 - Buy with limit price.
 - Sell with limit price.
 - Buy if price drops to X.
@@ -188,9 +190,9 @@ Bedoelde eenvoudige menselijke presets in Release 1:
 - Expire after date/time.
 
 Aanvullend:
-- Market order is niet de default.
-- Market order kan enkel expliciet/advanced na validatie.
-- UI gebruikt eenvoudige presets en vertaalt deze naar gevalideerde IBKR-ordervelden.
+- Market order hoort niet bij de eerste uitvoerbare flow en is in Release 1-initiële uitvoering niet toegestaan.
+- Eventuele market-order ondersteuning kan pas in latere fase na aparte validatie en expliciete product-lock update.
+- UI gebruikt eenvoudige presets en vertaalt deze naar gevalideerde IBKR-ordervelden binnen de actieve scope-lock.
 
 ## 11) Execution workflow
 
@@ -365,7 +367,7 @@ Deze blueprint beschrijft vergrendelde functionele ontwerpwaarheid voor Release 
 - Deze workflowonderdelen blijven implementatiewerk voor toekomstige taken.
 - Task 73 in deze PR is documentatie-only en start geen runtime-implementatie.
 
-## 16) Staged internal execution path (Task 88J, documentation-only)
+## 20) Staged internal execution path (Task 88J, documentation-only)
 
 Release 1 workflow wordt intern gefaseerd: V1.0 foundations → V1.1 baseline forecasting → V1.2 AI text-to-feature → V1.3 challengers → V1.4 AI uitleg/RAG → V1.5 dissent challenger → V1.6 monitoring/drift → V1.7 Decision Package + deterministic translator → V1.8 paper action workflow.
 

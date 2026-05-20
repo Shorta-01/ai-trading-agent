@@ -1,4 +1,4 @@
-# Current State (na Task 88I)
+# Current State (na Task 88J)
 
 ## 1) Current status summary
 
@@ -11,7 +11,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 88I**.
+- Huidige toestand: **na Task 88J**.
 - CI-status: **geblokkeerd door GitHub Actions platform/account/repository-level failure** (niet geverifieerd als applicatiecodefout).
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
