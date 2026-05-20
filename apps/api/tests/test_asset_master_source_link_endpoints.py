@@ -13,6 +13,7 @@ from ai_trading_agent_storage import (
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import asset_master
+from portfolio_outlook_api.config import StorageSettings
 from portfolio_outlook_api.main import app
 
 client = TestClient(app)
@@ -20,6 +21,12 @@ client = TestClient(app)
 
 @pytest.fixture
 def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        asset_master.settings,
+        "storage",
+        StorageSettings(enabled=True, database_url="postgresql://user:pass@db/app"),
+    )
+
     class FakeProvider:
         def __init__(self, _settings) -> None:
             pass
