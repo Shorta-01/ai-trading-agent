@@ -196,6 +196,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Asset master identity foundation",
         description_nl="Opslagfundament voor canonieke asset-identiteit en identifier-aliassen.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0019_source_to_asset_linking_foundation",
+        previous_revision_id="0018_asset_master_identity_foundation",
+        filename="0019_source_to_asset_linking_foundation.py",
+        label_nl="Source-to-asset linking foundation",
+        description_nl="Opslagfundament voor veilige bron-naar-asset links (audit/reference-only).",
+    ),
+    MigrationRevisionInfo(
+        revision_id="0020_watchlist_foundation",
+        previous_revision_id="0019_source_to_asset_linking_foundation",
+        filename="0020_watchlist_foundation.py",
+        label_nl="Watchlist foundation",
+        description_nl="Opslagfundament voor lokaal beheerde handmatige volglijst-items.",
+    ),
 )
 
 
