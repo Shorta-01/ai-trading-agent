@@ -28,3 +28,12 @@
 
 - **Task 70:** source conflict detection foundation toegevoegd (storage/API) voor audit/traceability; conflict records blijven suggestion-blocking en activeren geen watchlist/IBKR/ordergedrag.
 - **Task 70B:** repair na Task 70-merge voor CI-fouten. Root causes: (1) API pytest faalde omdat conflict-finding test een niet-bestaande top-level `data` key verwachtte terwijl het endpoint het bestaande `record`-contract gebruikt; (2) storage pytest faalde omdat migration-readiness tests nog stale revision-assumpties (`14` en `0014`) hardcodeden na migratie `0017_research_source_conflict_findings`. Herstel: tests gealigneerd met bestaand API response-contract en migration inventory helper voor latest revision/count. Preventieregels in CI-quality-rules zijn verder aangescherpt. Geen runtimegedrag gewijzigd; conflict findings blijven audit/status-only en geblokkeerd voor suggesties.
+
+
+## Task 70/70B status lock
+
+- **Task 70:** source conflict detection foundation toegevoegd (storage/API), audit/status-only.
+- **Task 70B:** API response-shape test en stale migration-readiness tests gerepareerd.
+- **CI-status na Task 70B:** groen op main.
+- **Runtime-impact van Task 70B:** geen runtimegedrag gewijzigd.
+- **Suggestion-status:** conflict findings blijven geblokkeerd voor suggesties.
