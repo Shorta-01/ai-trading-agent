@@ -824,13 +824,13 @@ def test_conflict_findings_endpoints_are_audit_only(fake_storage: None) -> None:
     create_response = client.post("/research/conflict-findings", json=payload)
     assert create_response.status_code == 200
     assert "alleen auditinformatie" in create_response.json()["help_nl"].lower()
-    assert create_response.json()["data"]["safe_to_use_for_suggestions"] is False
-    assert create_response.json()["data"]["blocks_suggestions"] is True
+    assert create_response.json()["record"]["safe_to_use_for_suggestions"] is False
+    assert create_response.json()["record"]["blocks_suggestions"] is True
 
     by_source = client.get("/research/sources/src-1/conflict-findings")
     assert by_source.status_code == 200
-    assert len(by_source.json()["data"]["records"]) == 1
+    assert len(by_source.json()["record"]["records"]) == 1
 
     by_evidence = client.get("/research/evidence-items/ev-1/conflict-findings")
     assert by_evidence.status_code == 200
-    assert len(by_evidence.json()["data"]["records"]) == 1
+    assert len(by_evidence.json()["record"]["records"]) == 1

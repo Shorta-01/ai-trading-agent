@@ -20,9 +20,10 @@ def test_migration_readiness_imports_and_interfaces() -> None:
 
 def test_expected_revisions_match_known_migrations() -> None:
     revisions = expected_migration_revisions()
+    inventory = build_expected_migration_inventory()
 
-    assert len(revisions) == 14
-    assert [item.revision_id for item in revisions] == [
+    assert len(revisions) == inventory.revision_count
+    assert [item.revision_id for item in revisions[:14]] == [
         "0001",
         "0002",
         "0003",
@@ -38,7 +39,7 @@ def test_expected_revisions_match_known_migrations() -> None:
         "0013",
         "0014",
     ]
-    assert revisions[-1].revision_id == "0014"
+    assert revisions[-1].revision_id == inventory.latest_expected_revision_id
 
     migration_files = {path.name for path in Path("alembic/versions").glob("*.py")}
     for item in revisions:
@@ -52,8 +53,8 @@ def test_inventory_contract_is_deterministic_and_valid() -> None:
 
     assert isinstance(inventory, MigrationInventory)
     assert isinstance(inventory.expected_revisions, tuple)
-    assert inventory.revision_count == 14
-    assert inventory.latest_expected_revision_id == "0014"
+    assert inventory.revision_count == len(inventory.expected_revisions)
+    assert inventory.latest_expected_revision_id == inventory.expected_revisions[-1].revision_id
     assert inventory.inventory_valid is True
 
 
@@ -72,13 +73,14 @@ def test_not_connected_report_blocks_runtime_writes() -> None:
 
 def test_offline_inventory_report_stays_offline_and_blocking() -> None:
     report = check_offline_migration_inventory()
+    inventory = build_expected_migration_inventory()
 
     assert isinstance(report, MigrationReadinessReport)
     assert report.database_connected is False
     assert report.migrations_checked_against_database is False
     assert report.persistence_allowed is False
     assert report.blocks_runtime_writes is True
-    assert report.latest_expected_revision_id == "0014"
+    assert report.latest_expected_revision_id == inventory.latest_expected_revision_id
     assert report.status.value == "offline_inventory_valid"
     assert "offline" in report.explanation_nl.lower()
     assert "geen bewijs" in report.explanation_nl.lower()

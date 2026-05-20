@@ -8,7 +8,10 @@ from ai_trading_agent_storage.connection_provider import (
     StorageConnectionNotReadyError,
     StorageConnectionProvider,
 )
-from ai_trading_agent_storage.migration_readiness import MigrationReadinessStatus
+from ai_trading_agent_storage.migration_readiness import (
+    MigrationReadinessStatus,
+    build_expected_migration_inventory,
+)
 from ai_trading_agent_storage.settings import build_database_connection_settings
 
 
@@ -61,6 +64,7 @@ def test_provider_blocks_writable_when_not_ready(tmp_path: Path) -> None:
 
 
 def test_provider_allows_writable_when_ready(tmp_path: Path) -> None:
+    latest_revision_id = build_expected_migration_inventory().latest_expected_revision_id
     db_path = tmp_path / "storage-ready.sqlite"
     url = f"sqlite+pysqlite:///{db_path}"
 
@@ -71,7 +75,8 @@ def test_provider_allows_writable_when_ready(tmp_path: Path) -> None:
             text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
         )
         checked.connection.execute(
-            text("INSERT INTO alembic_version (version_num) VALUES ('0014')")
+            text("INSERT INTO alembic_version (version_num) VALUES (:latest_revision_id)"),
+            {"latest_revision_id": latest_revision_id},
         )
         checked.connection.commit()
 
