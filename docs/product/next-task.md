@@ -1,5 +1,5 @@
 # Next Task
 
-## Task 84 — IBKR watchlist import foundation
+## Task 85 — Market data storage and freshness foundation
 
-Na Task 83 is handmatige Volglijst-toevoeging verplicht via gevalideerde IBKR-contractidentiteit. Volgende stap: basis voor import van bestaande IBKR-watchlists als conid-gebaseerde kandidaten/items, zonder automatische verwijdering, zonder suggesties, zonder market-data runtime en zonder ordergedrag.
+Na Task 84 zijn handmatige Volglijst-activering en IBKR-watchlist-import conid-gebaseerd. De volgende veilige stap is opslag/freshness-metadata voor market data, zonder suggesties, forecasts, AI-runtime, action drafts of ordergedrag.

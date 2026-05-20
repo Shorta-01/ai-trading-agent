@@ -8,6 +8,13 @@ from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync import read_status, run_sync
+from portfolio_outlook_api.ibkr_watchlists import (
+    import_by_id,
+    import_ibkr_watchlist,
+    latest_import,
+    list_ibkr_watchlist_instruments,
+    list_ibkr_watchlists,
+)
 from portfolio_outlook_api.online_storage_status import (
     OnlineStorageStatusResponse,
     build_online_storage_status,
@@ -212,6 +219,31 @@ def read_ibkr_executions() -> dict[str, object]:
     }
 
 
+
+
+@router.get("/ibkr/watchlists")
+def read_ibkr_watchlists() -> dict[str, object]:
+    return list_ibkr_watchlists(settings)
+
+
+@router.get("/ibkr/watchlists/{watchlist_id}/instruments")
+def read_ibkr_watchlist_instruments(watchlist_id: str) -> dict[str, object]:
+    return list_ibkr_watchlist_instruments(settings, watchlist_id)
+
+
+@router.post("/ibkr/watchlists/{watchlist_id}/import")
+def prepare_ibkr_watchlist_import(watchlist_id: str) -> dict[str, object]:
+    return import_ibkr_watchlist(settings, watchlist_id)
+
+
+@router.get("/ibkr/watchlists/imports/latest")
+def read_latest_ibkr_watchlist_import() -> dict[str, object]:
+    return latest_import()
+
+
+@router.get("/ibkr/watchlists/imports/{import_run_id}")
+def read_ibkr_watchlist_import(import_run_id: str) -> dict[str, object]:
+    return import_by_id(import_run_id)
 @router.get("/ibkr/contracts/search")
 def search_contracts(query: str = "", name: bool = False) -> dict[str, object]:
     return search_ibkr_contracts(settings, query, search_name=name)

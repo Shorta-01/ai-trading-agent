@@ -161,3 +161,5 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - AI event analysis trigger foundation *(not implemented yet)*
 
 - Task 82 completed: read-only IBKR contract search/validation foundation (identity/reference-only) toegevoegd; Volglijst add-flow conversie naar verplichte contractpicker blijft open voor Task 83.
+
+- [x] Task 84 — IBKR watchlist import foundation (read-only adapter boundary, conid-normalisatie, import-candidates; geen write naar IBKR).

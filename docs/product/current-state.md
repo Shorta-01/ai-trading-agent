@@ -120,3 +120,8 @@
 
 
 - Task 83: Volglijst add-flow omgezet naar IBKR contractpicker; actieve creatie vereist gevalideerde IBKR-contractidentiteit. Bestaande losse records zonder contract blijven niet-gevalideerd en niet klaar voor analyse. Geen market-data runtime, historical fetching, schedulers, suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, forecast runtime of fake data toegevoegd.
+
+## Task 84 update
+
+- Task 84 toegevoegd: read-only IBKR-watchlist import foundation (watchlists + instrument-preview + import-candidates op conid-basis).
+- Geen IBKR watchlist create/update/delete/export, geen market-data runtime, geen suggestions/Decision Packages/action drafts/orders.
