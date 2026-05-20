@@ -386,7 +386,7 @@ def _enable_uploads(tmp_path: Path, enabled: bool = True, max_bytes: int = 1024)
         enabled=enabled,
         archive_dir=str(tmp_path / "archive"),
         max_file_size_bytes=max_bytes,
-        allowed_extensions=(".txt", ".pdf"),
+        allowed_extensions=(".txt", ".pdf", ".md", ".csv"),
         allowed_content_types=("text/plain", "application/pdf"),
     )
 
@@ -521,10 +521,11 @@ def test_extract_text_txt_success_and_blocks_suggestions(
 def test_extract_text_md_csv_supported(fake_storage: None, tmp_path: Path, name: str) -> None:
     _enable_uploads(tmp_path, max_bytes=10000)
     _enable_extraction(tmp_path, max_bytes=10000)
-    client.post(
+    upload = client.post(
         "/research/sources/src-ext3/upload-file",
         files={"file": (name, b"a,b\n1,2\n", "text/plain")},
     )
+    assert upload.status_code == 200, upload.text
     response = client.post("/research/sources/src-ext3/extract-text")
     assert response.status_code == 200
 
