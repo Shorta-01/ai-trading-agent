@@ -23,3 +23,7 @@ Doel: foundation toevoegen om conflicten tussen research-bronnen expliciet te de
 - geen IBKR behavior
 - geen order behavior
 - geen Task 70 runtime-implementatie buiten foundation
+
+## Task 71: Asset master identity foundation (recommended)
+
+Doel: stabiele asset-identiteit toevoegen als basis voor bronkoppeling, market data en freshness-runtime. Alternatief: market calendar/freshness runtime foundation.

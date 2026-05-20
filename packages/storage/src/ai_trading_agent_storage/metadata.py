@@ -636,7 +636,6 @@ research_source_credibility_assessments = Table(
 )
 
 
-
 research_source_evidence_items = Table(
     "research_source_evidence_items",
     metadata,
@@ -738,6 +737,64 @@ research_gate_outcomes = Table(
     Column("explanation_nl", Text, nullable=False),
     Column("source_reference_ids_json", Text, nullable=True),
     Column("audit_context_json", Text, nullable=True),
+)
+
+research_source_conflict_findings = Table(
+    "research_source_conflict_findings",
+    metadata,
+    Column("conflict_finding_id", Text, primary_key=True),
+    Column("conflict_status", Text, nullable=False),
+    Column("conflict_type", Text, nullable=False),
+    Column("severity", Text, nullable=False),
+    Column(
+        "primary_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column(
+        "conflicting_source_id",
+        Text,
+        ForeignKey("research_sources.library_source_id"),
+        nullable=True,
+    ),
+    Column(
+        "primary_evidence_item_id",
+        Text,
+        ForeignKey("research_source_evidence_items.evidence_item_id"),
+        nullable=True,
+    ),
+    Column(
+        "conflicting_evidence_item_id",
+        Text,
+        ForeignKey("research_source_evidence_items.evidence_item_id"),
+        nullable=True,
+    ),
+    Column(
+        "primary_evidence_ledger_item_id",
+        Text,
+        ForeignKey("evidence_items.evidence_id"),
+        nullable=True,
+    ),
+    Column(
+        "conflicting_evidence_ledger_item_id",
+        Text,
+        ForeignKey("evidence_items.evidence_id"),
+        nullable=True,
+    ),
+    Column(
+        "gate_outcome_id", Text, ForeignKey("research_gate_outcomes.gate_outcome_id"), nullable=True
+    ),
+    Column("asset_symbol", Text, nullable=True),
+    Column("fiscal_year", Integer, nullable=True),
+    Column("reporting_period", Text, nullable=True),
+    Column("detected_at", DateTime(timezone=True), nullable=False),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("conflict_summary_nl", Text, nullable=False),
+    Column("conflict_reason_nl", Text, nullable=False),
+    Column("source_reference_ids_json", Text, nullable=True),
+    Column("audit_context_json", Text, nullable=True),
+    Column("safe_to_use_as_evidence", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("explanation_nl", Text, nullable=False),
 )
 
 research_extracted_texts = Table(

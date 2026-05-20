@@ -15,6 +15,7 @@ from ai_trading_agent_storage import (
     ResearchSourceAssetLinkRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourceConflictFindingRecord,
     ResearchSourceEvidenceItemRecord,
     ResearchSourceEvidenceLedgerLinkRecord,
     ResearchSourceProcessingStatusRecord,
@@ -165,6 +166,7 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self.extracted_texts: dict[str, list[ResearchExtractedTextRecord]] = defaultdict(list)
             self.evidence_items: dict[str, list[ResearchSourceEvidenceItemRecord]] = defaultdict(list)
             self.evidence_ledger_links: dict[str, list[ResearchSourceEvidenceLedgerLinkRecord]] = defaultdict(list)
+            self.conflicts: dict[str, list[ResearchSourceConflictFindingRecord]] = defaultdict(list)
 
         def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
             self.sources[record.library_source_id] = record
@@ -323,6 +325,34 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             return tuple(
                 x for links in self.evidence_ledger_links.values() for x in links if x.evidence_item_id == evidence_item_id
             )
+
+
+        def save_source_conflict_finding(
+            self, record: ResearchSourceConflictFindingRecord
+        ) -> ResearchSourceConflictFindingRecord:
+            self.conflicts[record.primary_source_id].append(record)
+            return record
+
+        def list_conflict_findings_by_source(
+            self, primary_source_id: str
+        ) -> tuple[ResearchSourceConflictFindingRecord, ...]:
+            return tuple(self.conflicts.get(primary_source_id, []))
+
+        def list_conflict_findings_by_evidence_item(
+            self, evidence_item_id: str
+        ) -> tuple[ResearchSourceConflictFindingRecord, ...]:
+            return tuple(
+                x
+                for rows in self.conflicts.values()
+                for x in rows
+                if x.primary_evidence_item_id == evidence_item_id
+                or x.conflicting_evidence_item_id == evidence_item_id
+            )
+
+        def list_conflict_findings_by_asset_symbol(
+            self, asset_symbol: str
+        ) -> tuple[ResearchSourceConflictFindingRecord, ...]:
+            return tuple(x for rows in self.conflicts.values() for x in rows if x.asset_symbol == asset_symbol)
 
         def save_extracted_text(
             self, record: ResearchExtractedTextRecord
@@ -775,3 +805,32 @@ def test_evidence_ledger_link_missing_evidence_item_is_safe(fake_storage: None) 
         'lineage_scope': 'source_to_ledger', 'gate_context_status': 'blocked_pending_gates', 'explanation_nl': 'audit link'
     })
     assert response.status_code == 404
+
+
+def test_conflict_findings_endpoints_are_audit_only(fake_storage: None) -> None:
+    _create_source()
+    payload = {
+        "conflict_finding_id": "cf-1",
+        "conflict_status": "open",
+        "conflict_type": "factual_mismatch",
+        "severity": "blocking",
+        "primary_source_id": "src-1",
+        "primary_evidence_item_id": "ev-1",
+        "conflict_summary_nl": "Bronnen spreken elkaar tegen",
+        "conflict_reason_nl": "Andere omzetwaarde",
+        "safe_to_use_as_evidence": False,
+        "explanation_nl": "Auditstatus",
+    }
+    create_response = client.post("/research/conflict-findings", json=payload)
+    assert create_response.status_code == 200
+    assert "alleen auditinformatie" in create_response.json()["help_nl"].lower()
+    assert create_response.json()["data"]["safe_to_use_for_suggestions"] is False
+    assert create_response.json()["data"]["blocks_suggestions"] is True
+
+    by_source = client.get("/research/sources/src-1/conflict-findings")
+    assert by_source.status_code == 200
+    assert len(by_source.json()["data"]["records"]) == 1
+
+    by_evidence = client.get("/research/evidence-items/ev-1/conflict-findings")
+    assert by_evidence.status_code == 200
+    assert len(by_evidence.json()["data"]["records"]) == 1

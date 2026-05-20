@@ -17,6 +17,7 @@ from ai_trading_agent_storage import (
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourceConflictFindingRecord,
     ResearchSourceEvidenceItemRecord,
     ResearchSourceEvidenceLedgerLinkRecord,
     ResearchGateOutcomeRecord,
@@ -284,6 +285,29 @@ class ResearchGateOutcomeInput(BaseModel):
     safe_to_use_as_evidence: bool = False
     source_reference_ids: list[str] = Field(default_factory=list)
     audit_context: dict[str, str] | None = None
+    explanation_nl: str
+
+
+class ResearchSourceConflictFindingInput(BaseModel):
+    conflict_finding_id: str
+    conflict_status: str
+    conflict_type: str
+    severity: str
+    primary_source_id: str
+    conflicting_source_id: str | None = None
+    primary_evidence_item_id: str | None = None
+    conflicting_evidence_item_id: str | None = None
+    primary_evidence_ledger_item_id: str | None = None
+    conflicting_evidence_ledger_item_id: str | None = None
+    gate_outcome_id: str | None = None
+    asset_symbol: str | None = None
+    fiscal_year: int | None = None
+    reporting_period: str | None = None
+    conflict_summary_nl: str
+    conflict_reason_nl: str
+    source_reference_ids: list[str] = Field(default_factory=list)
+    audit_context: dict[str, str] | None = None
+    safe_to_use_as_evidence: bool = False
     explanation_nl: str
 
 
@@ -1351,4 +1375,55 @@ def list_research_gate_outcomes_by_evidence_item(evidence_item_id: str) -> dict[
     def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
         records = repo.list_research_gate_outcomes_by_evidence_item(_require_id(evidence_item_id, "evidence_item_id"))
         return _ok("Gate-uitkomsten voor bewijsitem opgehaald.", {"records": [asdict(x) for x in records]}, "Deze gate-uitkomst is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.post("/research/conflict-findings")
+def create_source_conflict_finding(payload: ResearchSourceConflictFindingInput) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        now = datetime.now(UTC)
+        record = ResearchSourceConflictFindingRecord(
+            conflict_finding_id=payload.conflict_finding_id,
+            conflict_status=payload.conflict_status,
+            conflict_type=payload.conflict_type,
+            severity=payload.severity,
+            primary_source_id=payload.primary_source_id,
+            conflicting_source_id=payload.conflicting_source_id,
+            primary_evidence_item_id=payload.primary_evidence_item_id,
+            conflicting_evidence_item_id=payload.conflicting_evidence_item_id,
+            primary_evidence_ledger_item_id=payload.primary_evidence_ledger_item_id,
+            conflicting_evidence_ledger_item_id=payload.conflicting_evidence_ledger_item_id,
+            gate_outcome_id=payload.gate_outcome_id,
+            asset_symbol=payload.asset_symbol,
+            fiscal_year=payload.fiscal_year,
+            reporting_period=payload.reporting_period,
+            detected_at=now,
+            checked_at=now,
+            conflict_summary_nl=payload.conflict_summary_nl,
+            conflict_reason_nl=payload.conflict_reason_nl,
+            source_reference_ids_json=tuple(payload.source_reference_ids) or None,
+            audit_context_json=payload.audit_context,
+            safe_to_use_as_evidence=payload.safe_to_use_as_evidence,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl=payload.explanation_nl,
+        )
+        saved = repo.save_source_conflict_finding(record)
+        return _ok("Bronconflict-bevinding opgeslagen.", asdict(saved), "Deze bronconflict-status is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.get("/research/sources/{library_source_id}/conflict-findings")
+def list_source_conflict_findings(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        records = repo.list_conflict_findings_by_source(_require_id(library_source_id, "library_source_id"))
+        return _ok("Bronconflict-bevindingen opgehaald.", {"records": [asdict(x) for x in records]}, "Deze bronconflict-status is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.get("/research/evidence-items/{evidence_item_id}/conflict-findings")
+def list_evidence_conflict_findings(evidence_item_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        records = repo.list_conflict_findings_by_evidence_item(_require_id(evidence_item_id, "evidence_item_id"))
+        return _ok("Bronconflict-bevindingen voor bewijsitem opgehaald.", {"records": [asdict(x) for x in records]}, "Deze bronconflict-status is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
     return _with_repo(settings.storage, op, require_writable=False)

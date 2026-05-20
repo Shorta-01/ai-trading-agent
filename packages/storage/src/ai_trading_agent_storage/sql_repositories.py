@@ -27,6 +27,7 @@ from ai_trading_agent_storage.metadata import (
     research_source_asset_links,
     research_source_prompt_injection_scans,
     research_source_credibility_assessments,
+    research_source_conflict_findings,
     research_source_evidence_ledger_links,
     research_source_evidence_items,
     research_gate_outcomes,
@@ -63,6 +64,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchSourceAssetLinkRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourceConflictFindingRecord,
     ResearchSourceEvidenceItemRecord,
     ResearchSourceEvidenceLedgerLinkRecord,
     ResearchGateOutcomeRecord,
@@ -122,6 +124,21 @@ def _row_to_gate_outcome_record(row: Any) -> ResearchGateOutcomeRecord:
         else dict(json.loads(values["audit_context_json"]))
     )
     return ResearchGateOutcomeRecord(**values)
+
+
+def _row_to_conflict_finding_record(row: Any) -> ResearchSourceConflictFindingRecord:
+    values = dict(row)
+    values["source_reference_ids_json"] = _json_tuple_or_none(
+        None
+        if values.get("source_reference_ids_json") is None
+        else json.loads(values["source_reference_ids_json"])
+    )
+    values["audit_context_json"] = (
+        None
+        if values.get("audit_context_json") is None
+        else dict(json.loads(values["audit_context_json"]))
+    )
+    return ResearchSourceConflictFindingRecord(**values)
 
 
 def _read_one_by_column(
@@ -863,7 +880,6 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         values["detected_signals_json"] = _json_tuple_or_none(values.get("detected_signals_json"))
         return ResearchSourcePromptInjectionScanRecord(**values)
 
-
     def save_source_credibility_assessment(
         self, record: ResearchSourceCredibilityAssessmentRecord
     ) -> ResearchSourceCredibilityAssessmentRecord:
@@ -896,8 +912,6 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
             None if raw_signals is None else tuple(json.loads(raw_signals))
         )
         return ResearchSourceCredibilityAssessmentRecord(**values)
-
-
 
     def save_source_evidence_item(
         self, record: ResearchSourceEvidenceItemRecord
@@ -972,28 +986,106 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
     def list_research_gate_outcomes_by_source(
         self, library_source_id: str
     ) -> tuple[ResearchGateOutcomeRecord, ...]:
-        rows = self._connection.execute(
-            select(research_gate_outcomes)
-            .where(research_gate_outcomes.c.library_source_id == library_source_id)
-            .order_by(
-                research_gate_outcomes.c.checked_at.desc(),
-                research_gate_outcomes.c.gate_outcome_id.desc(),
+        rows = (
+            self._connection.execute(
+                select(research_gate_outcomes)
+                .where(research_gate_outcomes.c.library_source_id == library_source_id)
+                .order_by(
+                    research_gate_outcomes.c.checked_at.desc(),
+                    research_gate_outcomes.c.gate_outcome_id.desc(),
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         return tuple(_row_to_gate_outcome_record(row) for row in rows)
 
     def list_research_gate_outcomes_by_evidence_item(
         self, evidence_item_id: str
     ) -> tuple[ResearchGateOutcomeRecord, ...]:
-        rows = self._connection.execute(
-            select(research_gate_outcomes)
-            .where(research_gate_outcomes.c.evidence_item_id == evidence_item_id)
-            .order_by(
-                research_gate_outcomes.c.checked_at.desc(),
-                research_gate_outcomes.c.gate_outcome_id.desc(),
+        rows = (
+            self._connection.execute(
+                select(research_gate_outcomes)
+                .where(research_gate_outcomes.c.evidence_item_id == evidence_item_id)
+                .order_by(
+                    research_gate_outcomes.c.checked_at.desc(),
+                    research_gate_outcomes.c.gate_outcome_id.desc(),
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         return tuple(_row_to_gate_outcome_record(row) for row in rows)
+
+    def save_source_conflict_finding(
+        self, record: ResearchSourceConflictFindingRecord
+    ) -> ResearchSourceConflictFindingRecord:
+        values = asdict(record)
+        values["source_reference_ids_json"] = (
+            None
+            if record.source_reference_ids_json is None
+            else json.dumps(list(record.source_reference_ids_json))
+        )
+        values["audit_context_json"] = (
+            None if record.audit_context_json is None else json.dumps(record.audit_context_json)
+        )
+        self._insert(research_source_conflict_findings, values)
+        return record
+
+    def list_conflict_findings_by_source(
+        self, primary_source_id: str
+    ) -> tuple[ResearchSourceConflictFindingRecord, ...]:
+        rows = (
+            self._connection.execute(
+                select(research_source_conflict_findings)
+                .where(research_source_conflict_findings.c.primary_source_id == primary_source_id)
+                .order_by(
+                    research_source_conflict_findings.c.checked_at.desc(),
+                    research_source_conflict_findings.c.conflict_finding_id.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_row_to_conflict_finding_record(row) for row in rows)
+
+    def list_conflict_findings_by_evidence_item(
+        self, evidence_item_id: str
+    ) -> tuple[ResearchSourceConflictFindingRecord, ...]:
+        rows = (
+            self._connection.execute(
+                select(research_source_conflict_findings).where(
+                    (
+                        research_source_conflict_findings.c.primary_evidence_item_id
+                        == evidence_item_id
+                    )
+                    | (
+                        research_source_conflict_findings.c.conflicting_evidence_item_id
+                        == evidence_item_id
+                    )
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_row_to_conflict_finding_record(row) for row in rows)
+
+    def list_conflict_findings_by_asset_symbol(
+        self, asset_symbol: str
+    ) -> tuple[ResearchSourceConflictFindingRecord, ...]:
+        rows = (
+            self._connection.execute(
+                select(research_source_conflict_findings)
+                .where(research_source_conflict_findings.c.asset_symbol == asset_symbol)
+                .order_by(
+                    research_source_conflict_findings.c.checked_at.desc(),
+                    research_source_conflict_findings.c.conflict_finding_id.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_row_to_conflict_finding_record(row) for row in rows)
 
     def save_extracted_text(
         self, record: ResearchExtractedTextRecord

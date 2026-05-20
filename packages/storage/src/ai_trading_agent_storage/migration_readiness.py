@@ -168,6 +168,27 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Research source evidence items",
         description_nl="Opslagfundament voor evidence-items gekoppeld aan research-bronnen.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0015_research_source_evidence_ledger_links",
+        previous_revision_id="0014",
+        filename="0015_research_source_evidence_ledger_links.py",
+        label_nl="Research source evidence-ledger-links",
+        description_nl="Opslagfundament voor evidence-lineage links naar Evidence Ledger.",
+    ),
+    MigrationRevisionInfo(
+        revision_id="0016_research_gate_outcomes",
+        previous_revision_id="0015_research_source_evidence_ledger_links",
+        filename="0016_research_gate_outcomes.py",
+        label_nl="Research gate-outcomes en freshness",
+        description_nl="Opslagfundament voor gate-uitkomsten en freshnessstatus (audit-only).",
+    ),
+    MigrationRevisionInfo(
+        revision_id="0017_research_source_conflict_findings",
+        previous_revision_id="0016_research_gate_outcomes",
+        filename="0017_research_source_conflict_findings.py",
+        label_nl="Research bronconflict-bevindingen",
+        description_nl="Opslagfundament voor auditbare bron/evidence-conflictbevindingen.",
+    ),
 )
 
 

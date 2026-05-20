@@ -811,6 +811,51 @@ class ResearchGateOutcomeRecord:
 
 
 @dataclass(frozen=True)
+class ResearchSourceConflictFindingRecord:
+    conflict_finding_id: str
+    conflict_status: str
+    conflict_type: str
+    severity: str
+    primary_source_id: str
+    conflicting_source_id: str | None
+    primary_evidence_item_id: str | None
+    conflicting_evidence_item_id: str | None
+    primary_evidence_ledger_item_id: str | None
+    conflicting_evidence_ledger_item_id: str | None
+    gate_outcome_id: str | None
+    asset_symbol: str | None
+    fiscal_year: int | None
+    reporting_period: str | None
+    detected_at: datetime
+    checked_at: datetime
+    conflict_summary_nl: str
+    conflict_reason_nl: str
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_context_json: dict[str, str] | None
+    safe_to_use_as_evidence: bool
+    safe_to_use_for_suggestions: bool
+    blocks_suggestions: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "conflict_finding_id",
+            "conflict_status",
+            "conflict_type",
+            "severity",
+            "primary_source_id",
+            "conflict_summary_nl",
+            "conflict_reason_nl",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in version 1 foundation.")
+        if not self.blocks_suggestions and _normalize_value(self.conflict_status) == "open":
+            raise ValueError("Open conflicts must block suggestions in this foundation.")
+
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str
