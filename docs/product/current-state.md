@@ -1,9 +1,9 @@
-# Current State (na Task 67E)
+# Current State (na Task 69B)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 67E**.
-- CI-status: groen na de finale Task 67-repair (67B/67C/67D/67E).
+- Huidige toestand: **na Task 69B**.
+- CI-status: groen na Task 69B repair (na Task 69 merge).
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime en IBKR runtime bestaan nog niet.
@@ -61,4 +61,7 @@
 - Belgische tax/compliance runtime: pending.
 - Deployment backup/restore hardening met restore-test bewijs: pending.
 
-- Task 68: Evidence Ledger-linking foundation voor research-source evidence toegevoegd (storage/API), uitsluitend voor audit/lineage; suggesties blijven geblokkeerd.
+- Task 68: **completed** — Evidence Ledger-linking foundation voor research-source evidence toegevoegd (storage/API), uitsluitend voor audit/lineage; suggesties blijven geblokkeerd.
+
+- Task 69 gate outcome/freshness foundation toegevoegd als storage/API basis (audit/status-only).
+- Task 69B repair afgerond; CI opnieuw groen zonder runtimewijzigingen.
