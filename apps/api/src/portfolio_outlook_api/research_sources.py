@@ -19,6 +19,7 @@ from ai_trading_agent_storage import (
     ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceEvidenceItemRecord,
     ResearchSourceEvidenceLedgerLinkRecord,
+    ResearchGateOutcomeRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -260,6 +261,29 @@ class ResearchSourceEvidenceLedgerLinkInput(BaseModel):
     gate_context_status: str
     safe_to_use_for_suggestions: bool = False
     blocks_suggestions: bool = True
+    explanation_nl: str
+
+
+class ResearchGateOutcomeInput(BaseModel):
+    gate_outcome_id: str
+    gate_name: str
+    gate_version: str = "v1_foundation"
+    target_type: str
+    target_id: str
+    library_source_id: str | None = None
+    evidence_item_id: str | None = None
+    evidence_ledger_item_id: str | None = None
+    outcome_status: str
+    severity: str
+    freshness_status: str
+    valid_until: datetime | None = None
+    expires_at: datetime | None = None
+    source_timestamp: datetime | None = None
+    data_age_seconds: int | None = None
+    blocking_reason_code: str | None = None
+    safe_to_use_as_evidence: bool = False
+    source_reference_ids: list[str] = Field(default_factory=list)
+    audit_context: dict[str, str] | None = None
     explanation_nl: str
 
 
@@ -1276,4 +1300,55 @@ def list_evidence_item_ledger_links(evidence_item_id: str) -> dict[str, object]:
         records = repo.list_evidence_item_ledger_links(item_id)
         return _ok("Evidence Ledger-links voor bewijsitem opgehaald.", {"records": [asdict(x) for x in records]}, "Links dienen enkel voor audit en onderzoek; suggesties blijven geblokkeerd.")
 
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.post("/research/gate-outcomes")
+def create_research_gate_outcome(payload: ResearchGateOutcomeInput) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        now = datetime.now(UTC)
+        record = ResearchGateOutcomeRecord(
+            gate_outcome_id=payload.gate_outcome_id,
+            gate_name=payload.gate_name,
+            gate_version=payload.gate_version,
+            target_type=payload.target_type,
+            target_id=payload.target_id,
+            library_source_id=payload.library_source_id,
+            evidence_item_id=payload.evidence_item_id,
+            evidence_ledger_item_id=payload.evidence_ledger_item_id,
+            outcome_status=payload.outcome_status,
+            severity=payload.severity,
+            freshness_status=payload.freshness_status,
+            checked_at=now,
+            valid_until=payload.valid_until,
+            expires_at=payload.expires_at,
+            source_timestamp=payload.source_timestamp,
+            data_age_seconds=payload.data_age_seconds,
+            blocking_reason_code=payload.blocking_reason_code,
+            blocks_suggestions=True,
+            safe_to_use_as_evidence=payload.safe_to_use_as_evidence,
+            safe_to_use_for_suggestions=False,
+            explanation_nl=payload.explanation_nl,
+            source_reference_ids_json=tuple(payload.source_reference_ids) or None,
+            audit_context_json=payload.audit_context,
+        )
+        saved = repo.save_research_gate_outcome(record)
+        return _ok("Gate-uitkomst opgeslagen.", asdict(saved), "Deze gate-uitkomst is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
+
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.get("/research/sources/{library_source_id}/gate-outcomes")
+def list_research_gate_outcomes_by_source(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        records = repo.list_research_gate_outcomes_by_source(_require_id(library_source_id, "library_source_id"))
+        return _ok("Gate-uitkomsten voor bron opgehaald.", {"records": [asdict(x) for x in records]}, "Deze gate-uitkomst is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.get("/research/evidence-items/{evidence_item_id}/gate-outcomes")
+def list_research_gate_outcomes_by_evidence_item(evidence_item_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        records = repo.list_research_gate_outcomes_by_evidence_item(_require_id(evidence_item_id, "evidence_item_id"))
+        return _ok("Gate-uitkomsten voor bewijsitem opgehaald.", {"records": [asdict(x) for x in records]}, "Deze gate-uitkomst is alleen auditinformatie. Suggesties blijven geblokkeerd. Deze controle maakt geen order of IBKR-actie aan.")
     return _with_repo(settings.storage, op, require_writable=False)
