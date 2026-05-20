@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, HTTPException
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync import read_status, run_sync
 from portfolio_outlook_api.online_storage_status import (
@@ -134,9 +135,7 @@ def resolve_system_event(
     payload: Annotated[SystemEventMutationInput | None, Body()] = None,
 ) -> dict[str, object]:
     mutation_payload = payload or SystemEventMutationInput()
-    result = mark_system_event_resolved(
-        system_event_id, settings.storage, mutation_payload
-    )
+    result = mark_system_event_resolved(system_event_id, settings.storage, mutation_payload)
     if result.not_found:
         raise HTTPException(status_code=404, detail=result.response["message_nl"])
     if result.blocked:
@@ -150,9 +149,7 @@ def archive_system_event(
     payload: Annotated[SystemEventMutationInput | None, Body()] = None,
 ) -> dict[str, object]:
     mutation_payload = payload or SystemEventMutationInput()
-    result = mark_system_event_archived(
-        system_event_id, settings.storage, mutation_payload
-    )
+    result = mark_system_event_archived(system_event_id, settings.storage, mutation_payload)
     if result.not_found:
         raise HTTPException(status_code=404, detail=result.response["message_nl"])
     if result.blocked:
@@ -213,3 +210,30 @@ def read_ibkr_executions() -> dict[str, object]:
         "items": STORE.executions,
         "help_nl": "Alleen read-only execution/fill snapshots uit IBKR-sync.",
     }
+
+
+@router.get("/ibkr/contracts/search")
+def search_contracts(query: str = "", name: bool = False) -> dict[str, object]:
+    return search_ibkr_contracts(settings, query, search_name=name)
+
+
+@router.get("/ibkr/contracts/{conid}/details")
+def contract_details(conid: str, security_type: str | None = None) -> dict[str, object]:
+    return validate_ibkr_contract(settings, conid, security_type=security_type)
+
+
+@router.post("/ibkr/contracts/validate")
+def validate_contract(payload: dict[str, object]) -> dict[str, object]:
+    conid = str(payload.get("ibkr_conid") or "")
+    security_type = payload.get("security_type")
+    return validate_ibkr_contract(
+        settings,
+        conid,
+        security_type=None if security_type is None else str(security_type),
+        asset_id=None if payload.get("asset_id") is None else str(payload.get("asset_id")),
+        watchlist_item_id=(
+            None
+            if payload.get("watchlist_item_id") is None
+            else str(payload.get("watchlist_item_id"))
+        ),
+    )

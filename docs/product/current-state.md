@@ -115,3 +115,5 @@
 - Task 80: **completed** — Asset Master search/picker foundation toegevoegd (read-only zoekendpoint + Volglijst picker UI) zodat gebruikers bestaande canonical asset-identiteiten kunnen zoeken, selecteren, linken en ontkoppelen voor watchlist-items. Reference/status-only: geen auto-creatie van Asset Master records, geen portfoliopositiecreatie, geen suggesties, geen Decision Packages, geen action drafts, geen IBKR-ordergedrag, geen AI/market-data/forecast runtime en geen fake data.
 
 - Task 81: **completed** — documentation-only; IBKR-contract-based active watchlist rule vergrendeld, conid-based data-readiness rule vergrendeld en sync/freshness/performance-roadmap vergrendeld. Geen runtimecode gewijzigd.
+
+- Task 82: **completed** — read-only IBKR contract search/validation foundation toegevoegd met veilige not-configured responses en genormaliseerde conid-gebaseerde contractkandidaten/validatieresultaten via API-endpoints. Geen market-data runtime, geen historische data-fetching, geen schedulers, geen suggestions/Decision Packages/action drafts, geen IBKR ordergedrag, geen AI/forecast runtime en geen fake data.
