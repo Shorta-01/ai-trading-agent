@@ -78,3 +78,6 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | AI event trigger layer | Core workflow | Planned | Planned | Planned | Runtime pending | Event-analysis trigger foundation on validated, freshness-aware data |
 
 | IBKR contract search/validation foundation (Task 82) | Contracted | API foundation implemented | Read-only endpoints implemented | UI not converted yet | Runtime pending | Identity/reference-only; safe not-configured behavior; no market-data/historical/scheduler/suggestions/Decision Packages/action drafts/order/AI/forecast runtime |
+
+
+- Task 83: Volglijst add-flow omgezet naar IBKR contractpicker; actieve creatie vereist gevalideerde IBKR-contractidentiteit. Bestaande losse records zonder contract blijven niet-gevalideerd en niet klaar voor analyse. Geen market-data runtime, historical fetching, schedulers, suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, forecast runtime of fake data toegevoegd.

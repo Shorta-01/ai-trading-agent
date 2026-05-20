@@ -18,6 +18,8 @@ from portfolio_outlook_api.config import settings
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
+VALID_STATUSES = {"valid", "unvalidated", "not_found", "ambiguous", "error", "unsupported"}
+
 
 class AssetIdentitySummary(BaseModel):
     asset_id: str
@@ -25,6 +27,19 @@ class AssetIdentitySummary(BaseModel):
     asset_name: str | None = None
     primary_exchange: str | None = None
     primary_currency: str | None = None
+
+
+class IbkrContractIdentity(BaseModel):
+    ibkr_conid: str | None = None
+    ibkr_symbol: str | None = None
+    ibkr_contract_name: str | None = None
+    ibkr_security_type: str | None = None
+    ibkr_exchange: str | None = None
+    ibkr_primary_exchange: str | None = None
+    ibkr_currency: str | None = None
+    ibkr_validation_status: str | None = None
+    ibkr_validated_at: str | None = None
+    ibkr_validation_source: str | None = None
 
 
 class WatchlistItem(BaseModel):
@@ -40,30 +55,43 @@ class WatchlistItem(BaseModel):
     source: str
     created_at: str
     updated_at: str
+    ibkr_conid: str | None = None
+    ibkr_symbol: str | None = None
+    ibkr_contract_name: str | None = None
+    ibkr_security_type: str | None = None
+    ibkr_exchange: str | None = None
+    ibkr_primary_exchange: str | None = None
+    ibkr_currency: str | None = None
+    ibkr_validation_status: str | None = None
+    ibkr_validated_at: str | None = None
+    ibkr_validation_source: str | None = None
 
 
 class WatchlistItemResponse(BaseModel):
     item: WatchlistItem
     link_status: str
     linked_asset: AssetIdentitySummary | None = None
+    ibkr_status_label_nl: str
+    analysis_readiness_label_nl: str
 
 
 class CreateWatchlistItemRequest(BaseModel):
-    symbol: str
     asset_id: str | None = None
-    name: str | None = None
-    exchange: str | None = None
-    currency: str | None = None
-    security_type: str | None = None
     note: str | None = None
+    ibkr_conid: str
+    ibkr_symbol: str
+    ibkr_contract_name: str | None = None
+    ibkr_security_type: str | None = None
+    ibkr_exchange: str | None = None
+    ibkr_primary_exchange: str | None = None
+    ibkr_currency: str | None = None
+    ibkr_validation_status: str
+    ibkr_validated_at: str | None = None
+    ibkr_validation_source: str | None = None
 
 
 class PatchWatchlistItemRequest(BaseModel):
     asset_id: str | None = None
-    name: str | None = None
-    exchange: str | None = None
-    currency: str | None = None
-    security_type: str | None = None
     note: str | None = None
 
 
@@ -118,6 +146,22 @@ def _resolve_asset_summary(
     return result
 
 
+def _ibkr_status_label(status: str | None) -> str:
+    if status == "valid":
+        return "Gevalideerd"
+    if status == "ambiguous":
+        return "Meerdere matches / keuze nodig"
+    if status == "not_found":
+        return "Validatie mislukt"
+    return "Niet gevalideerd"
+
+
+def _analysis_readiness(item: WatchlistItem) -> str:
+    if item.ibkr_validation_status == "valid" and item.ibkr_conid:
+        return "Klaar voor latere data-opbouw"
+    return "Niet klaar voor analyse"
+
+
 def _serialize_item(item: WatchlistItem) -> WatchlistItemResponse:
     linked_asset = _resolve_asset_summary(item.asset_id, fail_if_missing=False)
     return WatchlistItemResponse(
@@ -126,6 +170,8 @@ def _serialize_item(item: WatchlistItem) -> WatchlistItemResponse:
             "gelinkt" if item.asset_id is not None and linked_asset is not None else "niet_gelinkt"
         ),
         linked_asset=linked_asset,
+        ibkr_status_label_nl=_ibkr_status_label(item.ibkr_validation_status),
+        analysis_readiness_label_nl=_analysis_readiness(item),
     )
 
 
@@ -134,29 +180,38 @@ def list_watchlist_items() -> dict[str, object]:
     rows = [row for row in STORE.values() if row.status == "active"]
     return {
         "items": [_serialize_item(row) for row in rows],
-        "help_nl": "Lokale volglijstitems, gescheiden van IBKR-portefeuille.",
+        "help_nl": "Geen actief Volglijst-item zonder IBKR-contract.",
     }
 
 
 @router.post("/items")
 def create_watchlist_item(request: CreateWatchlistItemRequest) -> dict[str, object]:
-    symbol = _norm(request.symbol)
+    if _norm(request.ibkr_conid) == "":
+        raise HTTPException(status_code=400, detail="IBKR-contract (conid) is verplicht.")
+    if request.ibkr_validation_status not in VALID_STATUSES:
+        raise HTTPException(status_code=422, detail="Onbekende IBKR-validatiestatus.")
+    if request.ibkr_validation_status != "valid":
+        raise HTTPException(
+            status_code=422, detail="Alleen gevalideerde IBKR-contracten kunnen actief worden."
+        )
+
+    symbol = _norm(request.ibkr_symbol)
     if not symbol:
-        raise HTTPException(status_code=400, detail="Symbool is verplicht.")
+        raise HTTPException(status_code=400, detail="IBKR-symbool is verplicht.")
     _resolve_asset_summary(request.asset_id, fail_if_missing=True)
-    normalized_exchange = _norm(request.exchange)
-    normalized_currency = _norm(request.currency)
+    normalized_exchange = _norm(request.ibkr_exchange)
+    normalized_currency = _norm(request.ibkr_currency)
     for row in STORE.values():
         has_matching_identity = (
             row.status == "active"
-            and _norm(row.symbol) == symbol
-            and _norm(row.exchange) == normalized_exchange
-            and _norm(row.currency) == normalized_currency
+            and _norm(row.ibkr_conid) == _norm(request.ibkr_conid)
+            and _norm(row.ibkr_exchange) == normalized_exchange
+            and _norm(row.ibkr_currency) == normalized_currency
         )
         if has_matching_identity:
             raise HTTPException(
                 status_code=409,
-                detail="Actief volglijst-item bestaat al voor dit symbool/beurs/valuta.",
+                detail="Actief volglijst-item bestaat al voor dit IBKR-contract.",
             )
 
     now = datetime.now(UTC).isoformat()
@@ -164,20 +219,30 @@ def create_watchlist_item(request: CreateWatchlistItemRequest) -> dict[str, obje
         watchlist_item_id=f"watchlist-{uuid4()}",
         symbol=symbol,
         asset_id=request.asset_id,
-        name=request.name,
-        exchange=request.exchange,
-        currency=request.currency,
-        security_type=request.security_type,
+        name=request.ibkr_contract_name,
+        exchange=request.ibkr_exchange,
+        currency=request.ibkr_currency,
+        security_type=request.ibkr_security_type,
         note=request.note,
         status="active",
         source="manual",
         created_at=now,
         updated_at=now,
+        ibkr_conid=request.ibkr_conid,
+        ibkr_symbol=symbol,
+        ibkr_contract_name=request.ibkr_contract_name,
+        ibkr_security_type=request.ibkr_security_type,
+        ibkr_exchange=request.ibkr_exchange,
+        ibkr_primary_exchange=request.ibkr_primary_exchange,
+        ibkr_currency=request.ibkr_currency,
+        ibkr_validation_status=request.ibkr_validation_status,
+        ibkr_validated_at=request.ibkr_validated_at or now,
+        ibkr_validation_source=request.ibkr_validation_source or "ibkr_secdef_info",
     )
     STORE[item.watchlist_item_id] = item
     return {
         "item": _serialize_item(item),
-        "message_nl": "Volglijst-item toegevoegd. Geen portefeuillepositie aangemaakt.",
+        "message_nl": "Volglijst-item toegevoegd met gevalideerd IBKR-contract.",
     }
 
 
