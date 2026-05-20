@@ -18,6 +18,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - probabilistic asset outlook doctrine
 - CI quality rules
 - asset master identity foundation (Task 71 storage/API, referentie/status-only)
+- source-to-asset linking foundation (Task 72 storage/API, audit/reference/status-only, blocked for suggestions)
 
 ## B) Still missing for Research Library
 
@@ -31,7 +32,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - source conflict detection runtime
 - source freshness/runtime validation
 - asset detection from sources
-- source-to-asset linking (Task 72 foundation completed; audit/reference-only, blocked for suggestions)
+- source-to-asset linking runtime/detection/matching beyond foundation (Task 72 foundation completed; audit/reference-only, blocked for suggestions)
 - watchlist proposal flow met user confirmation
 - multi-year report comparison runtime
 
@@ -90,16 +91,16 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Task 70 completed: source conflict detection foundation (storage/API) als audit/status records; geen suggestion unlock.
 
 
-## E) Post-Task 70/70B sync status
+## E) Post-Task 72/72B/72C sync status
 
-- Task 70: source conflict detection **foundation exists** (storage/API, audit/status-only).
-- Task 70B: repair afgerond; CI groen; geen runtimegedrag gewijzigd.
-- Source conflict detection runtime/analysis engine: **runtime pending**.
-- Source conflict findings: **blocked for suggestions**.
-- Source-to-asset linking: **runtime pending**.
-- Asset master identity foundation: **implemented** (storage/API, referentie/status-only; suggestion-blocking).
-- Asset master runtime verdieping (advanced identity validation/mapping): **runtime pending**.
-- Source-to-asset linking foundation: **next missing foundation**.
+- Task 72: source-to-asset linking **foundation exists** (storage/API, audit/reference-only).
+- Task 72B: storage mypy row-to-record typing en API pytest 503 failures gerepareerd; geen runtimegedrag gewijzigd.
+- Task 72C: resterende API pytest source-link create→list fake repository persistence failure gerepareerd; geen runtimegedrag gewijzigd.
+- CI-status na Task 72C: **groen**.
+- Source-to-asset links: **audit/reference/status-only**.
+- Source-to-asset links: **blocked for suggestions**.
+- Asset detection from sources: **runtime pending**.
+- Watchlist proposal/user-confirm flow: **runtime pending**.
 - Market data/freshness/runtime validation: **runtime pending**.
 - Suggestion engine runtime: **runtime pending**.
 - Probabilistic forecast runtime: **runtime pending**.
