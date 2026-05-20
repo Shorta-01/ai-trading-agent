@@ -1194,6 +1194,65 @@ class BrokerSnapshotRepository(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class MarketDataSnapshotRecord:
+    snapshot_id: str
+    watchlist_item_id: str
+    asset_id: str | None
+    ibkr_conid: str
+    symbol: str
+    security_type: str
+    exchange: str | None
+    primary_exchange: str | None
+    currency: str
+    provider_name: str
+    data_kind: str
+    captured_at: datetime
+    source_timestamp: datetime | None
+    stored_at: datetime
+    freshness_status: str
+    validation_status: str
+    blocked_reason: str | None
+    raw_reference: str | None
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "snapshot_id",
+            "watchlist_item_id",
+            "ibkr_conid",
+            "symbol",
+            "security_type",
+            "currency",
+            "provider_name",
+            "data_kind",
+            "freshness_status",
+            "validation_status",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+
+
+class MarketDataSnapshotRepository(Protocol):
+    def get_latest_by_ibkr_conid(
+        self,
+        ibkr_conid: str,
+    ) -> StorageReadResult[MarketDataSnapshotRecord]:
+        ...
+
+    def list_by_ibkr_conid(
+        self,
+        ibkr_conid: str,
+    ) -> StorageListResult[MarketDataSnapshotRecord]:
+        ...
+
+    def list_by_watchlist_item(
+        self,
+        watchlist_item_id: str,
+    ) -> StorageListResult[MarketDataSnapshotRecord]:
+        ...
+
+
 class BrokerReconciliationRepository(Protocol):
     def get_report_by_id(
         self,
@@ -1289,6 +1348,7 @@ def repository_interfaces_are_defined() -> bool:
         BrokerAccountRepository,
         BrokerSyncRunRepository,
         BrokerSnapshotRepository,
+        MarketDataSnapshotRepository,
         BrokerReconciliationRepository,
         ExternalBrokerActivityRepository,
         BrokerStorageUnitOfWork,
@@ -1298,6 +1358,7 @@ def repository_interfaces_are_defined() -> bool:
         BrokerCashSnapshotRecord,
         BrokerExecutionSnapshotRecord,
         BrokerCommissionSnapshotRecord,
+        MarketDataSnapshotRecord,
         BrokerReconciliationReportRecord,
         BrokerReconciliationDifferenceRecord,
         ExternalBrokerActivityRecord,

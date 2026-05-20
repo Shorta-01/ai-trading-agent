@@ -2,6 +2,12 @@
 
 from typing import Annotated
 
+from ai_trading_agent_storage import (
+    SqlAlchemyMarketDataSnapshotRepository,
+    StorageConnectionError,
+    StorageConnectionProvider,
+    build_database_connection_settings,
+)
 from fastapi import APIRouter, Body, HTTPException
 
 from portfolio_outlook_api.config import settings
@@ -305,3 +311,29 @@ def read_market_data_readiness() -> dict[str, object]:
             "alleen conid-gated readinessstatus."
         ),
     }
+
+
+@router.get("/market-data/readiness/watchlist/{watchlist_item_id}")
+def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> dict[str, object]:
+    payload = read_market_data_readiness()
+    for row in payload["items"]:
+        if row["watchlist_item_id"] == watchlist_item_id:
+            return {"item": row}
+    return {"item": None, "message_nl": "Volglijst-item niet gevonden."}
+
+
+@router.get("/market-data/snapshots/latest/{ibkr_conid}")
+def read_market_data_snapshot_latest(ibkr_conid: str) -> dict[str, object]:
+    storage_settings = settings.storage
+    if not storage_settings.enabled or not storage_settings.database_url:
+        return {"item": None, "message_nl": "Storage niet geconfigureerd."}
+    provider = StorageConnectionProvider(
+        build_database_connection_settings(storage_settings.database_url)
+    )
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyMarketDataSnapshotRepository(checked.connection, checked.readiness)
+            result = repo.get_latest_by_ibkr_conid(ibkr_conid)
+            return {"item": None if result.record is None else result.record.__dict__}
+    except StorageConnectionError:
+        return {"item": None, "message_nl": "Storageverbinding mislukt."}
