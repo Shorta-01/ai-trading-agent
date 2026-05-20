@@ -138,3 +138,5 @@
 - Locked conid-based data-readiness rule: geen unresolved asset voor market data/analysis/suggestions/action drafts.
 - Locked sync/freshness/performance roadmap-volgorde vóór market-data runtime.
 - No runtime code changed.
+
+- Task 82 — IBKR contract search and validation foundation: toegevoegd read-only adapter boundary + API endpoints voor contract search/details/validate met veilige not-configured status en genormaliseerde conid identity records. Geen market-data/historical/scheduler/suggestion/Decision Package/action draft/order/AI/forecast runtime.

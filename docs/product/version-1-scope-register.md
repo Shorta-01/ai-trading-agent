@@ -76,3 +76,5 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Market snapshot scheduler | Core workflow | Planned | Planned | Planned | Runtime pending | Latest snapshot scheduler layered with freshness policy |
 | Fast alert layer | Core workflow | Planned | Planned | Planned | Runtime pending | Early signal layer on validated identities only |
 | AI event trigger layer | Core workflow | Planned | Planned | Planned | Runtime pending | Event-analysis trigger foundation on validated, freshness-aware data |
+
+| IBKR contract search/validation foundation (Task 82) | Contracted | API foundation implemented | Read-only endpoints implemented | UI not converted yet | Runtime pending | Identity/reference-only; safe not-configured behavior; no market-data/historical/scheduler/suggestions/Decision Packages/action drafts/order/AI/forecast runtime |
