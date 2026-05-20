@@ -10,6 +10,17 @@
 - Geen fake market prices, brokerdata of aanbevelingen toegevoegd.
 - Unresolved/unvalidated identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
 
+## Task 88B — CI repair after Task 88
+
+- Status: completed.
+- Scope: uitsluitend CI/type/test/import-boundary repair; geen feature-uitbreiding.
+- Root cause: readiness contract-module importeerde `WatchlistItem` uit `portfolio_outlook_api.watchlist`, waardoor een ongewenste dependency ontstond van een typed response/helper module naar route/store-georiënteerde API code.
+- Fix: `build_readiness_row` accepteert nu een klein structureel typed protocol (`ReadinessWatchlistItemLike`) in `market_data_readiness.py`, zonder import van route-module modellen.
+- Resultaat: typed readiness contracts blijven intact, routes blijven dun, en modulegrenzen zijn schoner/stabieler voor CI-controles.
+- Geen market-data runtime, historical fetching, scheduler, AI runtime, suggesties, Decision Packages, action drafts of IBKR-ordergedrag toegevoegd.
+- Geen fake market prices, brokerdata of aanbevelingen toegevoegd.
+- Unresolved/unvalidated identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
+
 
 ## Tasks 65–67E
 

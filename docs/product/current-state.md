@@ -1,4 +1,4 @@
-# Current State (na Task 88)
+# Current State (na Task 88B)
 
 ## 1) Current status summary
 
@@ -9,7 +9,7 @@
 - Task 81 voegt geen historische data-fetching toe.
 - Task 81 voegt geen schedulers toe.
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
-- Huidige toestand: **na Task 88**.
+- Huidige toestand: **na Task 88B**.
 - CI-status: groen na Task 80.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -84,6 +84,7 @@
 ## 5) Latest task sequence status
 
 - Task 88: **completed** — API-only readiness-contract consolidatie voltooid: typed readiness responsemodellen/helpers gecentraliseerd (`market_data_readiness.py`), readiness-routes verdund en regressietests uitgebreid. Read-only scope behouden; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
+- Task 88B: **completed** — CI/type/import-boundary repair na Task 88: `market_data_readiness.py` koppelt niet langer aan `watchlist.py` modelimport en gebruikt nu een minimale typed protocol-input voor readiness-row build. Dit voorkomt onnodige route/store dependency-koppeling in response-contract code. Geen runtimegedrag toegevoegd; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts of IBKR-ordergedrag toegevoegd. Geen fake market prices, brokerdata of aanbevelingen toegevoegd. Ongevalideerde/onopgeloste identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
 
 - Task 68: **completed** — Evidence Ledger-linking foundation voor research-source evidence toegevoegd (storage/API), uitsluitend voor audit/lineage; suggesties blijven geblokkeerd.
 - Task 69: **completed** — gate outcome/freshness foundation toegevoegd als storage/API basis (audit/status-only).
