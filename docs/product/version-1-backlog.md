@@ -53,7 +53,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - scenario engine
 - portfolio-level probability/risk
 - suggestion engine runtime
-- portfolio grid
+- portfolio grid (read-only snapshot UI toegevoegd in Task 77; verdere runtime-verdieping pending)
 - watchlist grid
 - action badges + explanation panel
 - IBKR read-only integration (positions/cash/open orders/executions snapshots foundation toegevoegd in Task 75/76; echte connectieruntime pending)
@@ -136,3 +136,5 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 
 - [x] Task 75 — IBKR portfolio sync engine foundation (read-only status + portfolio snapshots + API basis).
 - [x] Task 76 — IBKR executions/open-orders sync foundation (read-only snapshots + API; geen ordersubmission/-wijziging/-cancel, geen action drafts/suggesties/Decision Packages/AI/market-data/forecast runtime, geen fake broker/order/execution data).
+- [x] Task 76B / PR #153 — API mypy repair op sync run count typing (`int`), CI terug groen, geen runtimewijziging.
+- [x] Task 77 — Read-only Portefeuille-grid UI vanuit bestaande IBKR snapshot-endpoints (`/ibkr/sync/status`, `/ibkr/portfolio/positions`, `/ibkr/account/cash`, `/ibkr/orders/open`, `/ibkr/executions`), zonder ordergedrag/suggesties/AI/market-data/forecast of fake data.

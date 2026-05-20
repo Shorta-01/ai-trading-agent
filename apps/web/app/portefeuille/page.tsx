@@ -1,10 +1,139 @@
-import { EmptyState } from "@/components/EmptyState";
+"use client";
 
-export default function Page() {
+import { useEffect, useMemo, useState } from "react";
+
+import { EmptyState } from "@/components/EmptyState";
+import { StatusBadge } from "@/components/StatusBadge";
+import {
+  apiClient,
+  IbkrCashSnapshot,
+  IbkrExecutionSnapshot,
+  IbkrOpenOrderSnapshot,
+  IbkrPositionSnapshot,
+  IbkrSyncStatusResponse,
+} from "@/lib/apiClient";
+
+function displayValue(value: string | null | undefined): string {
+  return value && value.trim().length > 0 ? value : "Niet beschikbaar";
+}
+
+export default function PortfolioPage() {
+  const [syncStatus, setSyncStatus] = useState<IbkrSyncStatusResponse | null>(null);
+  const [positions, setPositions] = useState<IbkrPositionSnapshot[]>([]);
+  const [cashItems, setCashItems] = useState<IbkrCashSnapshot[]>([]);
+  const [openOrders, setOpenOrders] = useState<IbkrOpenOrderSnapshot[]>([]);
+  const [executions, setExecutions] = useState<IbkrExecutionSnapshot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const loadData = async () => {
+    setLoading(true);
+    const [statusRes, positionsRes, cashRes, ordersRes, executionsRes] = await Promise.all([
+      apiClient.getIbkrSyncStatus(),
+      apiClient.getIbkrPositions(),
+      apiClient.getIbkrCash(),
+      apiClient.getIbkrOpenOrders(),
+      apiClient.getIbkrExecutions(),
+    ]);
+
+    setLoadFailed(!statusRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
+    if (statusRes.ok) setSyncStatus(statusRes.data);
+    if (positionsRes.ok) setPositions(positionsRes.data.items ?? []);
+    if (cashRes.ok) setCashItems(cashRes.data.items ?? []);
+    if (ordersRes.ok) setOpenOrders(ordersRes.data.items ?? []);
+    if (executionsRes.ok) setExecutions(executionsRes.data.items ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const statusTone = useMemo(() => {
+    if (!syncStatus?.configured) return "aandacht" as const;
+    if (syncStatus.status_nl.toLowerCase().includes("mislukt")) return "geblokkeerd" as const;
+    if (syncStatus.status_nl.toLowerCase().includes("nog niet")) return "wacht" as const;
+    return "ok" as const;
+  }, [syncStatus]);
+
+  const runSync = async () => {
+    setSyncing(true);
+    await apiClient.runIbkrSync();
+    await loadData();
+    setSyncing(false);
+  };
+
   return (
     <main className="page-wrap">
-      <h2>Portefeuille</h2>
-      <EmptyState title="Module in opbouw" message="Deze pagina toont later echte workflow-data zodra de benodigde runtime actief is." />
+      <section className="dashboard-panel">
+        <div className="panel-head">
+          <h2>Portefeuille</h2>
+          <button className="sync-button" type="button" onClick={() => void runSync()} disabled={syncing}>
+            {syncing ? "Synchroniseren..." : "Synchroniseer snapshots"}
+          </button>
+        </div>
+        <p className="top-sub">Read-only weergave van laatst opgeslagen IBKR snapshots voor posities, cash, open orders en uitvoeringen.</p>
+
+        <div className="portfolio-meta-grid">
+          <div><strong>Status:</strong> <StatusBadge label={syncStatus?.status_nl ?? "Niet beschikbaar"} status={statusTone} title={syncStatus?.help_nl ?? "Nog geen syncstatus."} /></div>
+          <div><strong>Laatste sync:</strong> {displayValue(syncStatus?.last_sync_at)}</div>
+          <div><strong>Posities:</strong> {syncStatus?.positions_count ?? positions.length}</div>
+          <div><strong>Cash snapshot:</strong> {syncStatus?.cash_available ? "Beschikbaar" : "Niet beschikbaar"}</div>
+          <div><strong>Open orders:</strong> {syncStatus?.open_orders_count ?? openOrders.length}</div>
+          <div><strong>Executions/fills:</strong> {syncStatus?.executions_count ?? executions.length}</div>
+        </div>
+      </section>
+
+      {loading ? <EmptyState title="Laden..." message="IBKR snapshots worden opgehaald." /> : null}
+      {!loading && loadFailed ? <EmptyState title="Sync mislukt. Controleer de IBKR-koppeling." message="Nog geen IBKR-sync uitgevoerd" /> : null}
+
+      <section className="dashboard-panel">
+        <h2>Posities</h2>
+        {positions.length === 0 ? <EmptyState title="Geen posities gevonden in de laatste snapshot" message="Nog geen IBKR-sync uitgevoerd" /> : (
+          <table className="portfolio-table"><thead><tr><th>Asset / symbool</th><th>Type</th><th>Beurs</th><th>Valuta</th><th>Aantal</th><th>Gem. aankoopprijs</th><th>Laatste sync</th><th>Status</th></tr></thead><tbody>
+            {positions.map((position, idx) => (
+              <tr key={`${position.sync_run_id}-${position.symbol}-${idx}`}><td>{position.symbol}</td><td>{position.security_type}</td><td>{displayValue(position.exchange)}</td><td>{position.currency}</td><td>{position.quantity}</td><td>{displayValue(position.average_cost)}</td><td>{displayValue(position.timestamp)}</td><td><StatusBadge label="Read-only" status="info" title="Snapshot uit IBKR-sync." /></td></tr>
+            ))}
+          </tbody></table>
+        )}
+      </section>
+
+      <section className="dashboard-panel">
+        <h2>Cash</h2>
+        {cashItems.length === 0 ? <EmptyState title="Cashgegevens niet beschikbaar" message="Nog geen IBKR-sync uitgevoerd" /> : cashItems.slice(0, 1).map((cash) => (
+          <div key={`${cash.sync_run_id}-${cash.account_ref}`} className="portfolio-meta-grid">
+            <div><strong>Basisvaluta:</strong> {cash.base_currency}</div>
+            <div><strong>Cash:</strong> {cash.cash}</div>
+            <div><strong>Available funds:</strong> {displayValue(cash.available_funds)}</div>
+            <div><strong>Buying power:</strong> {displayValue(cash.buying_power)}</div>
+            <div><strong>Laatste sync:</strong> {displayValue(cash.timestamp)}</div>
+            <div><strong>Status:</strong> Snapshot beschikbaar</div>
+          </div>
+        ))}
+      </section>
+
+      <section className="dashboard-panel">
+        <h2>Open orders</h2>
+        {openOrders.length === 0 ? <EmptyState title="Open orders verschijnen hier na sync" message="Nog geen IBKR-sync uitgevoerd" /> : (
+          <table className="portfolio-table"><thead><tr><th>Order-ID</th><th>Symbool</th><th>Koop/verkoop</th><th>Ordertype</th><th>Aantal</th><th>Status</th><th>Gevuld</th><th>Resterend</th><th>Laatste status</th></tr></thead><tbody>
+            {openOrders.map((order) => (
+              <tr key={`${order.sync_run_id}-${order.ibkr_order_id}`}><td>{order.ibkr_order_id}</td><td>{order.symbol}</td><td>{displayValue(order.action_side)}</td><td>{displayValue(order.order_type)}</td><td>{order.quantity}</td><td>{order.status}</td><td>{order.filled_quantity}</td><td>{order.remaining_quantity}</td><td>{displayValue(order.last_status_at)}</td></tr>
+            ))}
+          </tbody></table>
+        )}
+      </section>
+
+      <section className="dashboard-panel">
+        <h2>Executions/fills</h2>
+        {executions.length === 0 ? <EmptyState title="Uitvoeringen/fills verschijnen hier na sync" message="Nog geen IBKR-sync uitgevoerd" /> : (
+          <table className="portfolio-table"><thead><tr><th>Execution-ID</th><th>Symbool</th><th>Koop/verkoop</th><th>Aantal</th><th>Prijs</th><th>Tijd</th><th>Valuta</th></tr></thead><tbody>
+            {executions.map((execution) => (
+              <tr key={`${execution.sync_run_id}-${execution.execution_id}`}><td>{execution.execution_id}</td><td>{execution.symbol}</td><td>{execution.side}</td><td>{execution.quantity}</td><td>{execution.price}</td><td>{execution.execution_time}</td><td>{execution.currency}</td></tr>
+            ))}
+          </tbody></table>
+        )}
+      </section>
     </main>
   );
 }

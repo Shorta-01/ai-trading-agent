@@ -84,3 +84,20 @@
 - Geen ordersubmission, orderwijziging of ordercancel toegevoegd.
 - Geen action drafts, suggesties, Decision Packages, AI runtime, market-data runtime of forecast runtime toegevoegd.
 - Tests blijven adapter-fake gebaseerd; geen echte IBKR connectie vereist.
+
+
+## Task 76B / PR #153 — API mypy repair
+
+- Status: completed.
+- `ibkr_sync.py` run-count typing vernauwd naar `int` voor API mypy-compatibiliteit.
+- CI terug groen na repair.
+- Geen runtimegedrag gewijzigd; read-only IBKR snapshot scope bleef ongewijzigd.
+
+
+## Task 77 — Portfolio read-only grid from IBKR snapshots
+
+- Status: completed.
+- Portefeuille-pagina toont nu read-only snapshots voor posities, cash, open orders en executions/fills via bestaande endpoints.
+- Nederlandse helpertekst, statusbadge, last-sync en duidelijke empty/error/loading states toegevoegd.
+- Geen orderknoppen, geen order submission/wijziging/cancel, geen action drafts, geen suggesties, geen Decision Packages, geen AI runtime, geen market-data runtime, geen forecast runtime.
+- Geen fake broker/portfolio/order/execution data toegevoegd.
