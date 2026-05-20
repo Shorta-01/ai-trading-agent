@@ -157,3 +157,13 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - IBKR integration foundation now includes official research notes and ADR 0003 for adapter-first architecture.
 - Added typed internal broker adapter contracts with Decimal-only financial fields; no credentials, no real IBKR calls, and no order submission.
 - Added read-only endpoint `GET /broker/ibkr/status` with Dutch placeholder status; orders remain blocked until future account-mode verification.
+
+
+## Project continuation / handover
+- [project-handover.md](docs/product/project-handover.md)
+- [current-state.md](docs/product/current-state.md)
+- [locked-decisions.md](docs/product/locked-decisions.md)
+- [version-1-backlog.md](docs/product/version-1-backlog.md)
+- [next-task.md](docs/product/next-task.md)
+- [task-history.md](docs/product/task-history.md)
+- [new-chat-startup-prompt.md](docs/product/new-chat-startup-prompt.md)
