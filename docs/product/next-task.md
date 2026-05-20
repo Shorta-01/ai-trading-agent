@@ -1,23 +1,23 @@
-## Task 71: Asset master identity foundation (recommended)
+## Task 72: Source-to-asset linking foundation (recommended)
 
-Doel: een stabiele asset-identiteitslaag toevoegen zodat bronkoppeling, market data, portfolio/watchlist, freshness en probabilistische outlook-functies correct op één consistente asset-identiteit kunnen bouwen.
+Doel: research sources, evidence items, conflict findings en gate outcomes veilig linken aan canonieke asset-identiteiten uit de asset master identity foundation, zonder suggestion/watchlist/portfolio/IBKR/order runtime unlock.
 
 ### Waarom nu
 
-- Task 70 source conflict detection foundation is geïmplementeerd als storage/API foundation.
-- Task 70B repair is afgerond en CI staat groen.
-- Research/evidence/gate/conflict foundations bestaan nu, maar missen nog een stabiele asset-identiteit als verbindende basis.
-- Zonder asset master identity ontstaan later fouten in source-to-asset linking, data freshness en probabilistische outlook traceability.
+- Task 71 asset master identity foundation is geïmplementeerd als storage/API basis.
+- Task 71B repair is afgerond en CI staat groen.
+- De veiligste volgende stap is lineage/traceability verdiepen via source-to-asset linking op canonieke asset-identiteiten.
+- Dit blijft audit/status-only en houdt suggesties geblokkeerd.
 
-### In scope (Task 71)
+### In scope (Task 72)
 
-- Asset master identity foundation (canonieke asset-identiteit, mapping-basis en audit-traceability foundation).
+- Source-to-asset linking foundation op basis van asset master identities.
+- Linkbaarheid voor research sources, evidence, conflict findings en gate outcomes.
 - Geen suggestion runtime unlock.
-- Geen AI/watchlist/IBKR/order runtimegedrag.
+- Geen watchlist insertion, portfolio positions, AI runtime, market-data runtime, forecast runtime, IBKR gedrag of ordergedrag.
 
-### Alternatieve latere taken (niet aanbevolen als eerstvolgende)
+### Alternatieve latere taken
 
-- Market calendar/freshness runtime foundation.
-- Source-to-asset linking foundation.
-- Asset detection foundation.
-\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
+- market calendar/freshness runtime foundation
+- asset detection foundation
+- market data metadata foundation

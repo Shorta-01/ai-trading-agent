@@ -17,6 +17,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - source evidence item storage/API
 - probabilistic asset outlook doctrine
 - CI quality rules
+- asset master identity foundation (Task 71 storage/API, referentie/status-only)
 
 ## B) Still missing for Research Library
 
@@ -36,7 +37,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 
 ## C) Still missing for core product
 
-- asset master
+- asset master runtime verdieping (advanced identity validation/mapping)
 - market data storage
 - adjusted/unadjusted historical price data
 - corporate actions
@@ -96,9 +97,10 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Source conflict detection runtime/analysis engine: **runtime pending**.
 - Source conflict findings: **blocked for suggestions**.
 - Source-to-asset linking: **runtime pending**.
-- Asset master identity: **runtime pending** (foundation nog te bouwen).
+- Asset master identity foundation: **implemented** (storage/API, referentie/status-only; suggestion-blocking).
+- Asset master runtime verdieping (advanced identity validation/mapping): **runtime pending**.
+- Source-to-asset linking foundation: **next missing foundation**.
 - Market data/freshness/runtime validation: **runtime pending**.
 - Suggestion engine runtime: **runtime pending**.
 - Probabilistic forecast runtime: **runtime pending**.
 - IBKR runtime: **runtime pending**.
-\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
