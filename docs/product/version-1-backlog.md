@@ -6,9 +6,9 @@ Statuswaarden: Not started / Contracted / Storage foundation / API foundation / 
 
 - **Status:** In progress (Storage foundation + API foundation + UI foundation; runtime deels pending).
 - **Why it matters:** Dit is de primaire user-fed evidence-ingang voor suggestiekwaliteit.
-- **Completed/foundation:** metadata-archief, veilige upload, upload-UI, TXT/MD/CSV extractie, UI extractie-trigger + extracted-text status.
-- **Still missing:** PDF/DOCX/XLSX/PPTX extractie, eventuele OCR, classificatie-runtime, prompt-injection runtime scan, source credibility scoring runtime, evidence extraction, multi-year vergelijking-runtime, URL fetching + veilige snapshotting, asset detectie + watchlist proposal flow.
-- **Next likely tasks:** classificatie foundation; daarna credibility/prompt-injection/evidence foundations.
+- **Completed/foundation:** metadata-archief, veilige upload, upload-UI, TXT/MD/CSV extractie, UI extractie-trigger + extracted-text status, deterministische documentclassificatie contracts/runtime foundation.
+- **Still missing:** PDF/DOCX/XLSX/PPTX extractie, eventuele OCR, prompt-injection runtime scan, source credibility scoring runtime, evidence extraction, multi-year vergelijking-runtime, URL fetching + veilige snapshotting, asset detectie + watchlist proposal flow.
+- **Next likely tasks:** prompt-injection runtime scan contract wiring; daarna source credibility/evidence foundations.
 - **Safety notes:** Alles blijft “evidence only”; geen directe suggestie/order-generatie.
 
 ## 2) Evidence Ledger
@@ -73,7 +73,7 @@ Statuswaarden: Not started / Contracted / Storage foundation / API foundation / 
 - **Why it matters:** Dit is de kern van de toekomstige forecastlaag: het systeem moet probability/range-based asset outlooks berekenen in plaats van één zogezegd exact toekomstig koersdoel.
 - **Source of truth:** `docs/product/probabilistic-asset-outlook-doctrine.md` en `docs/product/probabilistic-outlook-scope-addendum.md`.
 - **Still missing:** asset master, market data storage, adjusted/unadjusted price history, FX/freshness, point-in-time data, feature store, forecast target definitions, baseline probability model, backtesting/walk-forward validation, probability calibration, model registry, scenario engine, portfolio-level probability/risk.
-- **Next likely tasks:** after research-library classification, add asset-master and market-data foundations before building any advanced forecast runtime.
+- **Next likely tasks:** na prompt-injection/source-credibility/evidence gates: add asset-master and market-data foundations before building any advanced forecast runtime.
 - **Safety notes:** Forecasts zijn geen orders; Python/modelcode berekent kansen/ranges; AI legt uit en interpreteert bewijs.
 
 ## 10) AI Event Intelligence
