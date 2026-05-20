@@ -83,7 +83,7 @@
 
 ## 5) Latest task sequence status
 
-- Task 88G: **completed (documentation-only)** — post-merge diagnose vastgelegd dat GitHub Actions momenteel op platform/account/repository-niveau faalt. Alle 6 normale CI-jobs falen én de minimale `ci-diagnostic.yml` faalt ook vóór bruikbare logs/artifacts beschikbaar zijn. Geen repository-gestuurde applicatiecode-root-cause geverifieerd. Featurewerk blijft geblokkeerd tot CI-executie/logging hersteld is; Task 89 mag niet starten zolang CI rood blijft.
+- Task 88G: **completed (documentation-only)** — post-merge diagnose vastgelegd dat GitHub Actions momenteel op platform/account/repository-niveau faalt. Alle 6 normale CI-jobs falen; de tijdelijke minimale `ci-diagnostic.yml` bevestigde eerder dezelfde blokkade en is daarna verwijderd om extra ruis te stoppen. Geen repository-gestuurde applicatiecode-root-cause geverifieerd. Featurewerk blijft geblokkeerd tot CI-executie/logging hersteld is; Task 89 mag niet starten zolang CI rood blijft.
 
 - Task 88: **completed** — API-only readiness-contract consolidatie voltooid: typed readiness responsemodellen/helpers gecentraliseerd (`market_data_readiness.py`), readiness-routes verdund en regressietests uitgebreid. Read-only scope behouden; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 88B: **completed** — CI/type/import-boundary repair na Task 88: `market_data_readiness.py` koppelt niet langer aan `watchlist.py` modelimport en gebruikt nu een minimale typed protocol-input voor readiness-row build. Dit voorkomt onnodige route/store dependency-koppeling in response-contract code. Geen runtimegedrag toegevoegd; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts of IBKR-ordergedrag toegevoegd. Geen fake market prices, brokerdata of aanbevelingen toegevoegd. Ongevalideerde/onopgeloste identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
@@ -129,8 +129,8 @@
 ## Current CI blocker
 
 - Normale CI (`ci.yml`) faalt momenteel in alle 6 jobs.
-- De minimale diagnostische workflow (`ci-diagnostic.yml`) faalt ook.
-- Diagnostische run levert geen bruikbare staplogs en geen artifact op.
+- De tijdelijke diagnostische workflow (`ci-diagnostic.yml`) is verwijderd nadat die dezelfde blokkade bevestigde.
+- De diagnostische runs leverden geen bruikbare staplogs en geen artifact op.
 - Dit wijst op een waarschijnlijke oorzaak buiten applicatiecode (GitHub Actions execution/logging laag).
 - Vereiste vervolgstap: onderzoek GitHub Actions settings, billing/quota, runner-beschikbaarheid en log/artifact-toegang op account/repository/platformniveau.
 - Tot CI-executie en logging hersteld zijn: **geen blind codeherstel, geen featurewerk, Task 89 blijft geblokkeerd**.

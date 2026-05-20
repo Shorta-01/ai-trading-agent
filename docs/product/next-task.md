@@ -2,7 +2,7 @@
 
 ## Blocker first (required)
 
-CI is momenteel geblokkeerd door een GitHub Actions execution/logging probleem dat ook optreedt in de minimale diagnostische workflow. Eerst herstellen:
+CI is momenteel geblokkeerd door een GitHub Actions execution/logging probleem dat eerder ook in de minimale diagnostische workflow optrad. Die tijdelijke workflow is intussen verwijderd na bevestiging van dezelfde blokkade zonder bruikbare logs/artifacts. Eerst herstellen:
 
 1. GitHub Actions repository/settings controleren.
 2. Billing/quota limieten controleren.
