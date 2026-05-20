@@ -11,6 +11,8 @@ from ai_trading_agent_storage.connection_provider import (
     StorageConnectionProvider,
 )
 from ai_trading_agent_storage.metadata import (
+    asset_identifier_aliases,
+    asset_master_records,
     audit_events,
     broker_accounts,
     broker_cash_snapshots,
@@ -58,6 +60,8 @@ from ai_trading_agent_storage.migration_readiness import (
     read_database_alembic_revision,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetIdentifierAliasRecord,
+    AssetMasterRecord,
     BrokerAccountRecord,
     BrokerAccountRepository,
     BrokerCashSnapshotRecord,
@@ -126,6 +130,10 @@ from ai_trading_agent_storage.sql_repositories import (
 )
 
 __all__ = [
+    "AssetIdentifierAliasRecord",
+    "AssetMasterRecord",
+    "asset_identifier_aliases",
+    "asset_master_records",
     "CheckedStorageConnection",
     "StorageConnectionError",
     "StorageConnectionNotReadyError",

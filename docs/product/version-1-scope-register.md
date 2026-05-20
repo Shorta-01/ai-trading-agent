@@ -35,3 +35,4 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 - Geen automatische orders.
 - Geen IBKR live order flow.
 - Suggesties blijven geblokkeerd tot alle gates/runtime engines bestaan.
+\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.

@@ -37,3 +37,4 @@
 - **CI-status na Task 70B:** groen op main.
 - **Runtime-impact van Task 70B:** geen runtimegedrag gewijzigd.
 - **Suggestion-status:** conflict findings blijven geblokkeerd voor suggesties.
+\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.

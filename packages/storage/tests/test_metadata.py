@@ -36,6 +36,8 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "research_source_evidence_ledger_links",
         "research_gate_outcomes",
         "research_source_conflict_findings",
+        "asset_master_records",
+        "asset_identifier_aliases",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

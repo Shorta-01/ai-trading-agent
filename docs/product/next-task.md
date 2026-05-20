@@ -20,3 +20,4 @@ Doel: een stabiele asset-identiteitslaag toevoegen zodat bronkoppeling, market d
 - Market calendar/freshness runtime foundation.
 - Source-to-asset linking foundation.
 - Asset detection foundation.
+\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
