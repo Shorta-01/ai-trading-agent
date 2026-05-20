@@ -765,6 +765,52 @@ class ResearchSourceEvidenceLedgerLinkRecord:
 
 
 @dataclass(frozen=True)
+class ResearchGateOutcomeRecord:
+    gate_outcome_id: str
+    gate_name: str
+    gate_version: str
+    target_type: str
+    target_id: str
+    library_source_id: str | None
+    evidence_item_id: str | None
+    evidence_ledger_item_id: str | None
+    outcome_status: str
+    severity: str
+    freshness_status: str
+    checked_at: datetime
+    valid_until: datetime | None
+    expires_at: datetime | None
+    source_timestamp: datetime | None
+    data_age_seconds: int | None
+    blocking_reason_code: str | None
+    blocks_suggestions: bool
+    safe_to_use_as_evidence: bool
+    safe_to_use_for_suggestions: bool
+    explanation_nl: str
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_context_json: dict[str, str] | None
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "gate_outcome_id",
+            "gate_name",
+            "gate_version",
+            "target_type",
+            "target_id",
+            "outcome_status",
+            "severity",
+            "freshness_status",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        _require_non_negative_int(self.data_age_seconds, "data_age_seconds")
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in version 1 foundation.")
+        if not self.blocks_suggestions and _normalize_value(self.outcome_status) not in {"passed", "warning"}:
+            raise ValueError("Non-blocking gate outcomes are only allowed for informational statuses.")
+
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str

@@ -696,6 +696,35 @@ research_source_evidence_ledger_links = Table(
     Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
     Column("explanation_nl", Text, nullable=False),
 )
+
+research_gate_outcomes = Table(
+    "research_gate_outcomes",
+    metadata,
+    Column("gate_outcome_id", Text, primary_key=True),
+    Column("gate_name", Text, nullable=False),
+    Column("gate_version", Text, nullable=False),
+    Column("target_type", Text, nullable=False),
+    Column("target_id", Text, nullable=False),
+    Column("library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=True),
+    Column("evidence_item_id", Text, ForeignKey("research_source_evidence_items.evidence_item_id"), nullable=True),
+    Column("evidence_ledger_item_id", Text, ForeignKey("evidence_items.evidence_id"), nullable=True),
+    Column("outcome_status", Text, nullable=False),
+    Column("severity", Text, nullable=False),
+    Column("freshness_status", Text, nullable=False),
+    Column("checked_at", DateTime(timezone=True), nullable=False),
+    Column("valid_until", DateTime(timezone=True), nullable=True),
+    Column("expires_at", DateTime(timezone=True), nullable=True),
+    Column("source_timestamp", DateTime(timezone=True), nullable=True),
+    Column("data_age_seconds", Integer, nullable=True),
+    Column("blocking_reason_code", Text, nullable=True),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("safe_to_use_as_evidence", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("explanation_nl", Text, nullable=False),
+    Column("source_reference_ids_json", Text, nullable=True),
+    Column("audit_context_json", Text, nullable=True),
+)
+
 research_extracted_texts = Table(
     "research_extracted_texts",
     metadata,
