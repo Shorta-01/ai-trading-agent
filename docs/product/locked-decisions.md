@@ -218,3 +218,12 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 - No unresolved asset may receive analysis/suggestions/action drafts.
 - Locked wording: “Every active watchlist item must have a validated IBKR contract identity, including conid, asset class, exchange or primary exchange where available, and currency. Manual add must use IBKR contract search and user selection. System-detected assets must resolve to the correct IBKR contract before they can become active watchlist items. IBKR watchlist sync is allowed, but imported items must be stored with full conid-based identity and all sync conflicts must be auditable. No unresolved asset may receive market data, analysis, suggestions or action drafts.”
 - Locked principle: “No serious analysis or suggestion may run on loose, ambiguous or unvalidated data.”
+
+
+## Architecture-audit lock additions (Task 88I)
+
+- Usable cash mag **niet** gebaseerd zijn op leveraged buying power; enkel auditeerbare beschikbare funds/cash min verplichtingen en user buffer.
+- AssetListing-identiteitssplitsing is vereist vóór serieuze market-data/forecast/suggestion runtime.
+- Eerste uitvoerbare paper action flow blijft LMT-only (geen market, geen bracket/stop/trailing in eerste flow).
+- AI mag geen financiële kerngetallen origineren voor beslissingen; AI structureert/verklaart evidence binnen schema- en safety-gates.
+- IBKR reply-handshake en order-state-machine is verplicht vóór toekomstige paper submission flow.

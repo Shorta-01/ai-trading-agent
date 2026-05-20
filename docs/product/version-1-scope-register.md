@@ -102,3 +102,16 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Task 88 readiness-contract consolidatie | Contracted | Bestaande storage-read contracten hergebruikt | API implemented (typed readiness responsecontracten/helpers gecentraliseerd) | UI N/A | Runtime pending | Read-only consolidatie; geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag; unresolved identities blijven blocked. |
 | Task 88B CI-repair na Task 88 | Contracted | N/A | API import-boundary/type repair uitgevoerd (protocol-based input contract in readiness helper) | UI N/A | Runtime onveranderd | CI/type repair only; geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag; geen fake data; unresolved identities blijven blocked. |
 | Task 88G CI-diagnose lock | Locked | N/A | N/A | N/A | CI execution/logging blocked buiten app-code (vermoed platform/account/repository-level) | 6 normale CI jobs falen; tijdelijke diagnostic workflow is na bevestiging verwijderd wegens geen bruikbare logs/artifacts; geen featurewerk/Task 89 tot CI hersteld is. |
+
+
+## Planned capability additions from architecture audit (Task 88I)
+
+| Planned capability | Status | Scope note |
+|---|---|---|
+| AssetListing identity model (naast AssetMaster) | Planned | Nodig vóór serieuze market-data/analyse/suggesties; conid op listing-niveau met identity-history. |
+| Centrale IBKR Gateway skeleton (read-only/safe boundary) | Planned | Sessiebeheer, auth/account-mode status, keepalive, logging, pacing, paper-only enforcement. |
+| Market-data pacing/freshness hardening | Planned | Geen fetch-unlock zonder freshness/quality gates; geen zero-fill of stale-hergebruik als fresh. |
+| Deterministisch usable-cash contract | Planned | Buying power is geen veilige cash; cashberekening volledig auditeerbaar. |
+| AI enforcement foundation | Planned | Schema-validatie + evidence-linking + safety gates vóór AI-impact op beslissingen. |
+| Decision Package storage/API/UI | Planned | Verplicht vóór suggestions; immutable/auditable beslissingscontext. |
+| Paper action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft paper-only. |

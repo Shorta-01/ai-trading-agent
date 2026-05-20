@@ -188,3 +188,18 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 
 
 - [x] Task 88H — tijdelijke CI-diagnostische workflow verwijderd (`.github/workflows/ci-diagnostic.yml`) na bevestiging dat failure buiten normale project test/lint/build-output ligt; CI-blokkade blijft gedocumenteerd, normale CI blijft rood en Task 89 blijft geblokkeerd tot CI groen is.
+
+
+## Accepted architecture-audit todo items (Task 88I)
+
+- **CI blijft directe blocker**: geen featurewerk zolang GitHub Actions execution/logging geblokkeerd is; **Task 89 blijft geblokkeerd** tot CI opnieuw groen en bruikbaar is.
+- **Asset identity hardening vóór serieuze runtime**: roadmap voegt expliciete `AssetMaster` (entiteit/bedrijf) + `AssetListing` (verhandelbare listing/instrument) splitsing toe. IBKR `conid` hoort op listing-niveau; model moet conid-history, primary/routing exchange, listing/settlement currency, ADR-underlying relaties, corporate-action identity changes en unresolved identity blockers ondersteunen.
+- **Geen serieuze analyse op losse tickertekst**: geen market data, suggesties of action-drafts op ambiguë/onopgeloste identiteit.
+- **IBKR Gateway skeleton (read-only/safe boundary) gepland**: centrale sessiestatus, auth/account-mode status, tickle/keepalive, request logging, pacing awareness, foutafhandeling, paper-only enforcement en latere order-serialisatiegrens.
+- **Market-data readiness hardening vóór echte fetching**: request logs, provider/source metadata, snapshot timestamps, freshness policy, stale/null handling, geen zero-fill, geen stale last-known-price als verse data en geen analysis unlock op ontbrekende/stale data.
+- **Usable-cash contract vóór action-drafts**: geen leveraged buying power als veilige cash; usable cash = beschikbare funds/cash minus pending buys, approved/submitted drafts en user buffer; alle cashcijfers moeten auditeerbaar zijn.
+- **AI enforcement foundation vóór beslissingsinvloed**: AI-output moet schema-gevalideerd, evidence-linked en source-grounded zijn met injection/credibility/freshness/risk gates; AI mag geen financiële kerngetallen origineren.
+- **Decision Package blijft harde voorwaarde vóór suggesties**: immutable/auditable package met identity, portfolio-state, market-data snapshot, evidence/sources, gate outcomes, model outputs, blockers en expiry/validity-window.
+- **Eerste paper action flow blijft conservatief**: roadmap noteert LMT-only start; geen market orders, geen brackets/stops/trailing in eerste flow, DAY/GTC alleen als later expliciet ondersteund, user approval + backend safety recheck + IBKR confirmation handshake verplicht.
+- **IBKR reply-handshake state machine vóór paper submission**: minimaal states Draft → Safety checked → User approved → Submitted → Awaiting IBKR reply → Reply confirmed → Working → Filled/Cancelled/Rejected → Reconciled.
+- Scope in deze taak blijft documentatie-only; geen runtime-/productcodewijzigingen.
