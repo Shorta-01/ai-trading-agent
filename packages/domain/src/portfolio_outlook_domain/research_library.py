@@ -264,6 +264,122 @@ class ResearchDocumentClassification(DomainBaseModel):
         return self
 
 
+class DeterministicDocumentCategory(StrEnum):
+    ANNUAL_REPORT = "annual_report"
+    QUARTERLY_REPORT = "quarterly_report"
+    INVESTOR_PRESENTATION = "investor_presentation"
+    ETF_FACTSHEET = "etf_factsheet"
+    NEWS_ARTICLE = "news_article"
+    BROKER_REPORT = "broker_report"
+    USER_NOTE = "user_note"
+    MARKET_DATA_EXPORT = "market_data_export"
+    UNKNOWN = "unknown"
+
+
+class DeterministicClassificationMethod(StrEnum):
+    METADATA_ONLY = "metadata_only"
+    METADATA_AND_EXTRACTED_TEXT = "metadata_and_extracted_text"
+
+
+class DeterministicDocumentClassificationResult(DomainBaseModel):
+    library_source_id: str
+    category: DeterministicDocumentCategory
+    method: DeterministicClassificationMethod
+    matched_signals: tuple[str, ...]
+    confidence: DocumentClassificationConfidence
+    can_be_used_in_research: bool
+    can_be_used_in_suggestions: bool
+    blocks_suggestions: bool
+    needs_user_review: bool
+    reason_nl: str
+    classified_at: datetime
+
+
+def classify_document_deterministically(
+    *,
+    library_source_id: str,
+    source_kind: ResearchLibrarySourceKind,
+    title: str,
+    original_file_name: str | None = None,
+    extracted_text: str | None = None,
+    classified_at: datetime,
+) -> DeterministicDocumentClassificationResult:
+    metadata = f"{title} {original_file_name or ''}".lower()
+    text = (extracted_text or "").lower()
+    signals: list[str] = []
+
+    def has(*words: str) -> bool:
+        return any(word in metadata or (text and word in text) for word in words)
+
+    category = DeterministicDocumentCategory.UNKNOWN
+    confidence = DocumentClassificationConfidence.UNKNOWN
+
+    if source_kind == ResearchLibrarySourceKind.USER_NOTE:
+        category = DeterministicDocumentCategory.USER_NOTE
+        signals.append("source_kind:user_note")
+        confidence = DocumentClassificationConfidence.HIGH
+    elif has(
+        "annual report",
+        "annual-report",
+        "annual_report",
+        "annual rep",
+        "jaarverslag",
+        "form 10-k",
+    ):
+        category = DeterministicDocumentCategory.ANNUAL_REPORT
+        signals.append("keyword:annual_report")
+        confidence = DocumentClassificationConfidence.MEDIUM
+    elif has("quarterly report", "kwartaal", "form 10-q"):
+        category = DeterministicDocumentCategory.QUARTERLY_REPORT
+        signals.append("keyword:quarterly_report")
+        confidence = DocumentClassificationConfidence.MEDIUM
+    elif has("investor presentation", "investor deck", "presentation"):
+        category = DeterministicDocumentCategory.INVESTOR_PRESENTATION
+        signals.append("keyword:investor_presentation")
+        confidence = DocumentClassificationConfidence.MEDIUM
+    elif has("factsheet", "fact sheet", "kiid", "etf"):
+        category = DeterministicDocumentCategory.ETF_FACTSHEET
+        signals.append("keyword:etf_factsheet")
+        confidence = DocumentClassificationConfidence.MEDIUM
+    elif has("reuters", "bloomberg", "news", "nieuws"):
+        category = DeterministicDocumentCategory.NEWS_ARTICLE
+        signals.append("keyword:news_article")
+        confidence = DocumentClassificationConfidence.LOW
+    elif has("broker report", "analyst report", "analistenrapport"):
+        category = DeterministicDocumentCategory.BROKER_REPORT
+        signals.append("keyword:broker_report")
+        confidence = DocumentClassificationConfidence.LOW
+    elif has("open,high,low,close", "timestamp", "volume", "csv export"):
+        category = DeterministicDocumentCategory.MARKET_DATA_EXPORT
+        signals.append("keyword:market_data_export")
+        confidence = DocumentClassificationConfidence.MEDIUM
+
+    method = (
+        DeterministicClassificationMethod.METADATA_AND_EXTRACTED_TEXT
+        if extracted_text
+        else DeterministicClassificationMethod.METADATA_ONLY
+    )
+    if not signals:
+        signals.append("fallback:unknown")
+
+    return DeterministicDocumentClassificationResult(
+        library_source_id=library_source_id,
+        category=category,
+        method=method,
+        matched_signals=tuple(signals),
+        confidence=confidence,
+        can_be_used_in_research=False,
+        can_be_used_in_suggestions=False,
+        blocks_suggestions=True,
+        needs_user_review=True,
+        reason_nl=(
+            "Deterministische classificatie is alleen metadata voor audit. "
+            "Deze bron blijft geblokkeerd voor suggesties tot latere validatiegates."
+        ),
+        classified_at=classified_at,
+    )
+
+
 class ResearchLibraryReadinessStatus(StrEnum):
     READY = "ready"
     NEEDS_USER_INPUT = "needs_user_input"

@@ -28,6 +28,10 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from portfolio_outlook_domain.research_library import (
+    ResearchLibrarySourceKind,
+    classify_document_deterministically,
+)
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
@@ -188,8 +192,6 @@ class ResearchProcessingStatusInput(BaseModel):
     reason_nl: str
 
 
-
-
 def _sanitize_upload_filename(filename: str) -> str:
     cleaned = filename.strip()
     if cleaned == "":
@@ -239,7 +241,7 @@ def _archive_uploaded_file(
         chunks.append(chunk)
     file_hash = hasher.hexdigest()
     stored_name = f"{library_source_id}-{file_hash[:16]}-{original_name}"
-    if any(sep in stored_name for sep in ("/", "\\")) or stored_name.strip()=="":
+    if any(sep in stored_name for sep in ("/", "\\")) or stored_name.strip() == "":
         raise HTTPException(status_code=400, detail="Opslagbestandsnaam is ongeldig.")
     target = (archive_dir / stored_name).resolve()
     if archive_dir not in target.parents:
@@ -300,6 +302,7 @@ def _extract_plain_research_text(
         preview_text_nl=normalized[: extraction_settings.preview_max_characters],
         extracted_text_storage_uri=f"file://{output_path}",
     )
+
 
 def _with_repo(
     storage_settings: StorageSettings,
@@ -806,6 +809,77 @@ def get_latest_processing_status(library_source_id: str) -> dict[str, object]:
         )
 
     return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.post("/research/sources/{library_source_id}/classify-deterministic")
+def classify_research_source_deterministic(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        source_id = _require_id(library_source_id, "library_source_id")
+        source = repo.get_research_source(source_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="Onderzoeksbron niet gevonden.")
+        metadata = repo.get_uploaded_file_metadata(source_id)
+        extracted = repo.get_latest_extracted_text_for_source(source_id)
+
+        kind_value = source.source_kind.strip().lower()
+        try:
+            source_kind = ResearchLibrarySourceKind(kind_value)
+        except ValueError:
+            source_kind = ResearchLibrarySourceKind.UNKNOWN
+
+        extracted_preview = extracted.preview_text_nl if extracted else None
+        now = datetime.now(UTC)
+        result = classify_document_deterministically(
+            library_source_id=source_id,
+            source_kind=source_kind,
+            title=source.title,
+            original_file_name=metadata.original_file_name if metadata else None,
+            extracted_text=extracted_preview,
+            classified_at=now,
+        )
+        classification_id = f"det-{source_id}-{int(now.timestamp())}"
+        record = ResearchDocumentClassificationRecord(
+            classification_id=classification_id,
+            library_source_id=source_id,
+            document_type=result.category.value,
+            source_type=source.source_type,
+            confidence=result.confidence.value,
+            detected_asset_symbol=source.asset_symbol,
+            detected_asset_name=source.asset_name,
+            detected_fiscal_year=None,
+            detected_reporting_period=None,
+            detected_language=metadata.detected_language if metadata else None,
+            needs_user_review=result.needs_user_review,
+            reason_nl=result.reason_nl,
+            classified_at=now,
+            schema_version="v1",
+        )
+        status = ResearchSourceProcessingStatusRecord(
+            processing_id=f"classification-{source_id}-{int(now.timestamp())}",
+            library_source_id=source_id,
+            classification_status="deterministic_classified",
+            extraction_status="extracted" if extracted else "pending",
+            analysis_status="not_started",
+            readiness_status="classified_metadata_only",
+            can_be_used_in_research=False,
+            can_be_used_in_suggestions=False,
+            needs_user_review=True,
+            blocks_suggestions=True,
+            last_error_nl=None,
+            checked_at=now,
+            reason_nl=result.reason_nl,
+        )
+        repo.save_document_classification(record)
+        repo.save_processing_status(status)
+        return {
+            "status_nl": "OK",
+            "message_nl": "Deterministische classificatie opgeslagen.",
+            "help_nl": "Alleen veilige metadata-classificatie. Geen suggestieflow.",
+            "record": asdict(record),
+            "classification_result": result.model_dump(),
+        }
+
+    return _with_repo(settings.storage, op, require_writable=True)
 
 
 @router.post("/research/sources/{library_source_id}/extract-text")

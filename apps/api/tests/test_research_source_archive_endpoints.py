@@ -546,3 +546,23 @@ def test_extract_text_rejects_unsupported_and_binary(fake_storage: None, tmp_pat
     )
     undecodable = client.post("/research/sources/src-ext5/extract-text")
     assert undecodable.status_code == 400
+
+
+def test_deterministic_classification_endpoint_saves_blocked_classification(
+    fake_storage: None, tmp_path: Path
+) -> None:
+    _enable_uploads(tmp_path, max_bytes=10000)
+    _enable_extraction(tmp_path, max_bytes=10000)
+    client.post(
+        "/research/sources/src-class/upload-file",
+        files={"file": ("annual-report.txt", b"Annual Report 2025", "text/plain")},
+    )
+    client.post("/research/sources/src-class/extract-text")
+    response = client.post("/research/sources/src-class/classify-deterministic")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["record"]["document_type"] == "annual_report"
+    assert body["classification_result"]["can_be_used_in_suggestions"] is False
+    status = client.get("/research/sources/src-class/processing-status/latest").json()["record"]
+    assert status["classification_status"] == "deterministic_classified"
+    assert status["blocks_suggestions"] is True
