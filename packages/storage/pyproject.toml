@@ -31,6 +31,12 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/0012_research_source_prompt_injection_scan.py" = ["E501", "I001"]
+"src/ai_trading_agent_storage/__init__.py" = ["I001"]
+"src/ai_trading_agent_storage/repository_contracts.py" = ["E501"]
+"src/ai_trading_agent_storage/sql_repositories.py" = ["I001"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["ai_trading_agent_storage"]
 
