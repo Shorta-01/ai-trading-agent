@@ -9,3 +9,4 @@ def test_research_source_records_used_by_api_are_exported() -> None:
     assert hasattr(storage, "ResearchSourcePromptInjectionScanRecord")
     assert hasattr(storage, "ResearchSourceCredibilityAssessmentRecord")
     assert hasattr(storage, "ResearchSourceEvidenceItemRecord")
+    assert hasattr(storage, "ResearchGateOutcomeRecord")
