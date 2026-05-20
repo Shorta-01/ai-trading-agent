@@ -15,6 +15,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchSourceAssetLinkRecord,
     ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceEvidenceItemRecord,
+    ResearchSourceEvidenceLedgerLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -292,6 +293,26 @@ def test_archive_repository_roundtrips_and_filters() -> None:
         evidence = repo.list_source_evidence_items("src-1")
         assert len(evidence) == 1
         assert evidence[0].safe_to_use_for_suggestions is False
+        ledger_link = ResearchSourceEvidenceLedgerLinkRecord(
+            link_id="lnk-1",
+            library_source_id="src-1",
+            evidence_item_id="evidence-1",
+            evidence_ledger_item_id="ledger-1",
+            link_type="source_lineage",
+            link_status="registered",
+            created_at=datetime.now(UTC),
+            created_by_system="tests",
+            lineage_scope="source_to_ledger",
+            source_snapshot_reference=None,
+            evidence_text_hash_sha256=None,
+            gate_context_status="blocked_pending_gates",
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl="Auditlink",
+        )
+        repo.save_source_evidence_ledger_link(ledger_link)
+        assert len(repo.list_source_evidence_ledger_links("src-1")) == 1
+        assert len(repo.list_evidence_item_ledger_links("evidence-1")) == 1
 
 
 def test_source_credibility_assessment_roundtrip_latest() -> None:

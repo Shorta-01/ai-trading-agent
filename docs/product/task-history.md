@@ -19,3 +19,5 @@
 - Helper returntypes eerst inspecteren vóór tests dynamisch gemaakt worden.
 - Een PR is niet “ready” als exact falende package-checks niet lokaal zijn uitgevoerd.
 - CI moet groen zijn vóór de volgende featuretaak start.
+
+- **Task 68:** research-source evidence naar Evidence Ledger linking/lineage foundation toegevoegd (storage/API), audit-only en nog steeds geblokkeerd voor suggesties.

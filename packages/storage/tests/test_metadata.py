@@ -33,6 +33,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "research_extracted_texts",
         "research_source_credibility_assessments",
         "research_source_evidence_items",
+        "research_source_evidence_ledger_links",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

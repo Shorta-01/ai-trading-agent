@@ -27,3 +27,5 @@ Doel: een kleine, veilige vervolgstap na Task 67E die research-source evidence-i
 ### Verplichte kwaliteitsstap vóór “ready”
 
 Volg de CI-checklist in `docs/product/codex-ci-quality-rules.md` en markeer een PR pas ready als de relevante package-checks lokaal gedraaid zijn.
+## Next task recommendation
+Task 69 zou best gate outcome records + freshness policy foundation toevoegen (punt-in-tijd gatebeslissingen), eventueel gevolgd door source-conflict detection of asset master foundation.

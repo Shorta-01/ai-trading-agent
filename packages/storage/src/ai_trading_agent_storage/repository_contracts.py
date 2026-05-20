@@ -727,6 +727,44 @@ class ResearchSourceEvidenceItemRecord:
 
 
 @dataclass(frozen=True)
+class ResearchSourceEvidenceLedgerLinkRecord:
+    link_id: str
+    library_source_id: str
+    evidence_item_id: str
+    evidence_ledger_item_id: str
+    link_type: str
+    link_status: str
+    created_at: datetime
+    created_by_system: str
+    lineage_scope: str
+    source_snapshot_reference: str | None
+    evidence_text_hash_sha256: str | None
+    gate_context_status: str
+    safe_to_use_for_suggestions: bool
+    blocks_suggestions: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "link_id",
+            "library_source_id",
+            "evidence_item_id",
+            "evidence_ledger_item_id",
+            "link_type",
+            "link_status",
+            "created_by_system",
+            "lineage_scope",
+            "gate_context_status",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in version 1 foundation.")
+        if not self.blocks_suggestions:
+            raise ValueError("blocks_suggestions must remain true in version 1 foundation.")
+
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str

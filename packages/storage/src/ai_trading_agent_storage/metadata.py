@@ -667,6 +667,35 @@ research_source_evidence_items = Table(
     Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
     Column("explanation_nl", Text, nullable=False),
 )
+
+research_source_evidence_ledger_links = Table(
+    "research_source_evidence_ledger_links",
+    metadata,
+    Column("link_id", Text, primary_key=True),
+    Column(
+        "library_source_id", Text, ForeignKey("research_sources.library_source_id"), nullable=False
+    ),
+    Column(
+        "evidence_item_id",
+        Text,
+        ForeignKey("research_source_evidence_items.evidence_item_id"),
+        nullable=False,
+    ),
+    Column(
+        "evidence_ledger_item_id", Text, ForeignKey("evidence_items.evidence_id"), nullable=False
+    ),
+    Column("link_type", Text, nullable=False),
+    Column("link_status", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("created_by_system", Text, nullable=False),
+    Column("lineage_scope", Text, nullable=False),
+    Column("source_snapshot_reference", Text, nullable=True),
+    Column("evidence_text_hash_sha256", Text, nullable=True),
+    Column("gate_context_status", Text, nullable=False),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("explanation_nl", Text, nullable=False),
+)
 research_extracted_texts = Table(
     "research_extracted_texts",
     metadata,

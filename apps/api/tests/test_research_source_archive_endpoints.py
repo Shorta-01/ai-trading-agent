@@ -16,6 +16,7 @@ from ai_trading_agent_storage import (
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceEvidenceItemRecord,
+    ResearchSourceEvidenceLedgerLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -163,6 +164,7 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self.credibility: dict[str, list[ResearchSourceCredibilityAssessmentRecord]] = defaultdict(list)
             self.extracted_texts: dict[str, list[ResearchExtractedTextRecord]] = defaultdict(list)
             self.evidence_items: dict[str, list[ResearchSourceEvidenceItemRecord]] = defaultdict(list)
+            self.evidence_ledger_links: dict[str, list[ResearchSourceEvidenceLedgerLinkRecord]] = defaultdict(list)
 
         def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
             self.sources[record.library_source_id] = record
@@ -303,6 +305,24 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self, library_source_id: str
         ) -> tuple[ResearchSourceEvidenceItemRecord, ...]:
             return tuple(self.evidence_items.get(library_source_id, []))
+
+        def save_source_evidence_ledger_link(
+            self, record: ResearchSourceEvidenceLedgerLinkRecord
+        ) -> ResearchSourceEvidenceLedgerLinkRecord:
+            self.evidence_ledger_links[record.library_source_id].append(record)
+            return record
+
+        def list_source_evidence_ledger_links(
+            self, library_source_id: str
+        ) -> tuple[ResearchSourceEvidenceLedgerLinkRecord, ...]:
+            return tuple(self.evidence_ledger_links.get(library_source_id, []))
+
+        def list_evidence_item_ledger_links(
+            self, evidence_item_id: str
+        ) -> tuple[ResearchSourceEvidenceLedgerLinkRecord, ...]:
+            return tuple(
+                x for links in self.evidence_ledger_links.values() for x in links if x.evidence_item_id == evidence_item_id
+            )
 
         def save_extracted_text(
             self, record: ResearchExtractedTextRecord
@@ -718,3 +738,40 @@ def test_evidence_item_register_and_list(fake_storage: None) -> None:
     missing = client.get('/research/sources/src-unknown/evidence-items')
     assert missing.status_code == 200
     assert missing.json()['records'] == []
+
+def test_evidence_ledger_link_register_and_lists(fake_storage: None) -> None:
+    client.post('/research/sources', json=_source_payload())
+    client.post('/research/sources/src-1/evidence-items', json={
+        'evidence_item_id': 'ev-1', 'evidence_type': 'fact', 'evidence_status': 'registered',
+        'extracted_from_kind': 'source_text', 'source_reference_text': 'x', 'normalized_evidence_text': 'x',
+        'evidence_summary_nl': 'samenvatting', 'confidence_level': 'medium', 'extraction_method': 'manual',
+        'explanation_nl': 'bewijs'
+    })
+    response = client.post('/research/sources/src-1/evidence-ledger-links', json={
+        'link_id': 'lnk-1', 'evidence_item_id': 'ev-1', 'evidence_ledger_item_id': 'ledger-1',
+        'link_type': 'source_lineage', 'link_status': 'registered', 'created_by_system': 'research_api',
+        'lineage_scope': 'source_to_ledger', 'gate_context_status': 'blocked_pending_gates', 'explanation_nl': 'audit link'
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body['record']['safe_to_use_for_suggestions'] is False
+    assert body['record']['blocks_suggestions'] is True
+    assert 'audit' in body['message_nl'].lower()
+
+    by_source = client.get('/research/sources/src-1/evidence-ledger-links')
+    assert by_source.status_code == 200
+    assert len(by_source.json()['record']['records']) == 1
+
+    by_item = client.get('/research/evidence-items/ev-1/evidence-ledger-links')
+    assert by_item.status_code == 200
+    assert len(by_item.json()['record']['records']) == 1
+
+
+def test_evidence_ledger_link_missing_evidence_item_is_safe(fake_storage: None) -> None:
+    client.post('/research/sources', json=_source_payload())
+    response = client.post('/research/sources/src-1/evidence-ledger-links', json={
+        'link_id': 'lnk-404', 'evidence_item_id': 'missing', 'evidence_ledger_item_id': 'ledger-1',
+        'link_type': 'source_lineage', 'link_status': 'registered', 'created_by_system': 'research_api',
+        'lineage_scope': 'source_to_ledger', 'gate_context_status': 'blocked_pending_gates', 'explanation_nl': 'audit link'
+    })
+    assert response.status_code == 404

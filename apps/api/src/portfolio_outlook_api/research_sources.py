@@ -18,6 +18,7 @@ from ai_trading_agent_storage import (
     ResearchSourceAssetLinkRecord,
     ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceEvidenceItemRecord,
+    ResearchSourceEvidenceLedgerLinkRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -243,6 +244,22 @@ class ResearchPromptInjectionScanInput(BaseModel):
     safe_to_use_as_instruction: bool
     blocks_suggestions: bool = True
     scanned_at: datetime | None = None
+    explanation_nl: str
+
+
+class ResearchSourceEvidenceLedgerLinkInput(BaseModel):
+    link_id: str
+    evidence_item_id: str
+    evidence_ledger_item_id: str
+    link_type: str
+    link_status: str
+    created_by_system: str
+    lineage_scope: str
+    source_snapshot_reference: str | None = None
+    evidence_text_hash_sha256: str | None = None
+    gate_context_status: str
+    safe_to_use_for_suggestions: bool = False
+    blocks_suggestions: bool = True
     explanation_nl: str
 
 
@@ -1202,5 +1219,61 @@ def list_source_evidence_items(library_source_id: str) -> dict[str, object]:
         if not records:
             return {"status_nl": "OK", "message_nl": "Nog geen bewijsitems voor deze bron.", "help_nl": "Zonder bewijsitems blijft de bron geblokkeerd voor suggesties.", "records": []}
         return {"status_nl": "OK", "message_nl": "Bewijsitems opgehaald.", "help_nl": "Bewijsitems zijn alleen audit- en onderzoeksinformatie; suggesties blijven geblokkeerd.", "records": [asdict(x) for x in records]}
+
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.post("/research/sources/{library_source_id}/evidence-ledger-links")
+def create_source_evidence_ledger_link(
+    library_source_id: str, payload: ResearchSourceEvidenceLedgerLinkInput
+) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        source_id = _require_id(library_source_id, "library_source_id")
+        if repo.get_research_source(source_id) is None:
+            raise HTTPException(status_code=404, detail="Onderzoeksbron niet gevonden.")
+        evidence_items = repo.list_source_evidence_items(source_id)
+        if payload.evidence_item_id not in {item.evidence_item_id for item in evidence_items}:
+            raise HTTPException(status_code=404, detail="Bewijsitem niet gevonden voor deze bron.")
+        record = ResearchSourceEvidenceLedgerLinkRecord(
+            link_id=payload.link_id,
+            library_source_id=source_id,
+            evidence_item_id=payload.evidence_item_id,
+            evidence_ledger_item_id=payload.evidence_ledger_item_id,
+            link_type=payload.link_type,
+            link_status=payload.link_status,
+            created_at=datetime.now(UTC),
+            created_by_system=payload.created_by_system,
+            lineage_scope=payload.lineage_scope,
+            source_snapshot_reference=payload.source_snapshot_reference,
+            evidence_text_hash_sha256=payload.evidence_text_hash_sha256,
+            gate_context_status=payload.gate_context_status,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl=payload.explanation_nl,
+        )
+        saved = repo.save_source_evidence_ledger_link(record)
+        return _ok("Evidence Ledger-link opgeslagen voor auditspoor.", asdict(saved), "Deze link is alleen voor traceerbaarheid en ontgrendelt geen suggesties.")
+
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.get("/research/sources/{library_source_id}/evidence-ledger-links")
+def list_source_evidence_ledger_links(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        source_id = _require_id(library_source_id, "library_source_id")
+        if repo.get_research_source(source_id) is None:
+            return _ok("Onderzoeksbron niet gevonden.", {"records": []}, "Er zijn geen links en suggesties blijven geblokkeerd.")
+        records = repo.list_source_evidence_ledger_links(source_id)
+        return _ok("Evidence Ledger-links voor bron opgehaald.", {"records": [asdict(x) for x in records]}, "Links dienen enkel voor audit en onderzoek; suggesties blijven geblokkeerd.")
+
+    return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.get("/research/evidence-items/{evidence_item_id}/evidence-ledger-links")
+def list_evidence_item_ledger_links(evidence_item_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        item_id = _require_id(evidence_item_id, "evidence_item_id")
+        records = repo.list_evidence_item_ledger_links(item_id)
+        return _ok("Evidence Ledger-links voor bewijsitem opgehaald.", {"records": [asdict(x) for x in records]}, "Links dienen enkel voor audit en onderzoek; suggesties blijven geblokkeerd.")
 
     return _with_repo(settings.storage, op, require_writable=False)
