@@ -131,3 +131,5 @@ Statuswaarden: Not started / Contracted / Storage foundation / API foundation / 
 - **Still missing:** production compose-profiel, restore-geteste backups, encryptie, health checks, Raspberry Pi deployment docs, portable AMD64/ARM64 validatie.
 - **Next likely tasks:** backup/restore runbook.
 - **Safety notes:** Backup niet vertrouwen zonder hersteltest.
+
+- Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.

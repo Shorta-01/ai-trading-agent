@@ -132,3 +132,5 @@ Nog niet compleet / runtime pending:
 - Alles blijft geblokkeerd voor suggesties tot toekomstige validatiegates bestaan.
 - Upload/extractie/classificatie mag geen watchlist-entry, suggestie, IBKR actie of order aanmaken.
 - Toekomstige forecasts zijn probability/range outputs, geen zekere prijsvoorspellingen en geen orders.
+
+- Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.

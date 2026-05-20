@@ -335,3 +335,5 @@ Research inputs
 - Classificatiecategorieën omvatten annual_report, quarterly_report, investor_presentation, etf_factsheet, news_article, broker_report, user_note, market_data_export en unknown.
 - Classificatie slaat metadata en processing-status op, maar blijft geblokkeerd voor suggesties.
 - Geen AI-analyse, geen prompt-injection runtime scan, geen source credibility runtime scoring, geen evidence extraction, geen watchlist/IBKR/order-acties toegevoegd.
+
+- Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.

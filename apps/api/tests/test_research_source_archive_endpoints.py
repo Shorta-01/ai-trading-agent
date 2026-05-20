@@ -13,6 +13,7 @@ from ai_trading_agent_storage import (
     ResearchDocumentSetRecord,
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
+    ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -156,6 +157,7 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self.processing: dict[
                 str, list[ResearchSourceProcessingStatusRecord]
             ] = defaultdict(list)
+            self.prompt_scans: dict[str, list[ResearchSourcePromptInjectionScanRecord]] = defaultdict(list)
             self.extracted_texts: dict[str, list[ResearchExtractedTextRecord]] = defaultdict(list)
 
         def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
@@ -259,6 +261,18 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self, library_source_id: str
         ) -> ResearchSourceProcessingStatusRecord | None:
             records = self.processing.get(library_source_id, [])
+            return records[-1] if records else None
+
+        def save_prompt_injection_scan(
+            self, record: ResearchSourcePromptInjectionScanRecord
+        ) -> ResearchSourcePromptInjectionScanRecord:
+            self.prompt_scans[record.library_source_id].append(record)
+            return record
+
+        def get_latest_prompt_injection_scan(
+            self, library_source_id: str
+        ) -> ResearchSourcePromptInjectionScanRecord | None:
+            records = self.prompt_scans.get(library_source_id, [])
             return records[-1] if records else None
 
         def save_extracted_text(
@@ -379,6 +393,48 @@ def test_document_set_links_and_processing(fake_storage: None) -> None:
     )
     assert processing_status_response.status_code == 200
     assert "geen analyse gestart" in processing_status_response.json()["message_nl"].lower()
+
+
+def test_prompt_injection_scan_defaults_and_blocks_suggestions(fake_storage: None) -> None:
+    _create_source()
+    unscanned = client.get("/research/sources/src-1/prompt-injection-scan/latest")
+    assert unscanned.status_code == 200
+    assert unscanned.json()["record"]["blocks_suggestions"] is True
+    assert "geblokkeerd" in unscanned.json()["record"]["explanation_nl"].lower()
+
+    blocked = client.post(
+        "/research/sources/src-1/prompt-injection-scan",
+        json={
+            "scan_id": "scan-1",
+            "scan_status": "completed",
+            "risk_level": "high",
+            "detected_signals": ["role_override", "ignore_previous"],
+            "safe_to_use_as_evidence": False,
+            "safe_to_use_as_instruction": False,
+            "blocks_suggestions": True,
+            "explanation_nl": "Verdachte instructies gevonden. Bron blijft geblokkeerd.",
+        },
+    )
+    assert blocked.status_code == 200
+    assert blocked.json()["record"]["blocks_suggestions"] is True
+    assert blocked.json()["record"]["safe_to_use_as_instruction"] is False
+
+    clean = client.post(
+        "/research/sources/src-1/prompt-injection-scan",
+        json={
+            "scan_id": "scan-2",
+            "scan_status": "completed",
+            "risk_level": "low",
+            "detected_signals": [],
+            "safe_to_use_as_evidence": True,
+            "safe_to_use_as_instruction": False,
+            "blocks_suggestions": False,
+            "explanation_nl": "Geen sterke signalen, maar bron blijft nog geblokkeerd voor suggesties.",
+        },
+    )
+    assert clean.status_code == 200
+    assert clean.json()["record"]["blocks_suggestions"] is True
+    assert "versie 1" in clean.json()["help_nl"].lower()
 
 
 def _enable_uploads(tmp_path: Path, enabled: bool = True, max_bytes: int = 1024) -> None:

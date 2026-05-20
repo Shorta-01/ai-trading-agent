@@ -24,6 +24,7 @@ from ai_trading_agent_storage.metadata import (
     research_document_sets,
     research_extracted_texts,
     research_source_asset_links,
+    research_source_prompt_injection_scans,
     research_source_processing_status,
     research_sources,
     research_uploaded_file_metadata,
@@ -55,6 +56,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchDocumentSetRecord,
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
+    ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -810,6 +812,32 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         )
         row = self._connection.execute(statement).mappings().first()
         return None if row is None else ResearchSourceProcessingStatusRecord(**dict(row))
+
+    def save_prompt_injection_scan(
+        self, record: ResearchSourcePromptInjectionScanRecord
+    ) -> ResearchSourcePromptInjectionScanRecord:
+        values = asdict(record)
+        values["detected_signals_json"] = _json_list_or_none(record.detected_signals_json)
+        self._insert(research_source_prompt_injection_scans, values)
+        return record
+
+    def get_latest_prompt_injection_scan(
+        self, library_source_id: str
+    ) -> ResearchSourcePromptInjectionScanRecord | None:
+        statement = (
+            select(research_source_prompt_injection_scans)
+            .where(research_source_prompt_injection_scans.c.library_source_id == library_source_id)
+            .order_by(
+                research_source_prompt_injection_scans.c.checked_at.desc(),
+                research_source_prompt_injection_scans.c.scan_id.desc(),
+            )
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return None
+        values = dict(row)
+        values["detected_signals_json"] = _json_tuple_or_none(values.get("detected_signals_json"))
+        return ResearchSourcePromptInjectionScanRecord(**values)
 
     def save_extracted_text(
         self, record: ResearchExtractedTextRecord

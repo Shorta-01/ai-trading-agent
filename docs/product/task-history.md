@@ -51,3 +51,5 @@
 ## Current task
 
 - **Task 65:** prompt-injection runtime scan contract wiring for research sources is the next recommended focused task, unless CI shows a repair task is needed first.
+
+- Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
