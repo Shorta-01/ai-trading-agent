@@ -133,12 +133,20 @@ def import_ibkr_watchlist(
     fetched = list_ibkr_watchlist_instruments(settings, watchlist_id, adapter=adapter)
     if fetched["status"] != "ok":
         return fetched
+    items = fetched.get("items")
+    if not isinstance(items, list):
+        return {
+            "status": "error",
+            "message_nl": "Instrumenten ophalen mislukt.",
+        }
     now = datetime.now(UTC).isoformat()
     run_id = f"ibkr-watchlist-import-{uuid4()}"
     candidates: list[dict[str, object]] = []
     matched = 0
     needs_review = 0
-    for row in fetched["items"]:
+    for row in items:
+        if not isinstance(row, dict):
+            continue
         conid = (row.get("ibkr_conid") or "").strip()
         symbol = (row.get("symbol") or "").strip().upper()
         status = "candidate"
