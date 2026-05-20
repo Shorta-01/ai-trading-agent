@@ -101,3 +101,4 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Suggestion engine runtime: **runtime pending**.
 - Probabilistic forecast runtime: **runtime pending**.
 - IBKR runtime: **runtime pending**.
+\n\n- Task 71: asset master identity foundation toegevoegd; identity is alleen referentie/status data, geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.

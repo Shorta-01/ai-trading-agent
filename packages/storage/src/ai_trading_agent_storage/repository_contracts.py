@@ -856,6 +856,52 @@ class ResearchSourceConflictFindingRecord:
 
 
 @dataclass(frozen=True)
+class AssetMasterRecord:
+    asset_id: str
+    canonical_symbol: str
+    asset_name: str
+    asset_type: str
+    primary_exchange: str | None
+    primary_currency: str | None
+    country: str | None
+    isin: str | None
+    figi: str | None
+    cusip: str | None
+    ibkr_contract_id: str | None
+    sector: str | None
+    industry: str | None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    identity_confidence: str
+    identity_source: str
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_context_json: dict[str, str] | None
+    safe_to_use_for_suggestions: bool
+    blocks_suggestions: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in ("asset_id", "canonical_symbol", "asset_name", "asset_type", "status", "identity_confidence", "identity_source", "explanation_nl"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in this foundation.")
+        if not self.blocks_suggestions:
+            raise ValueError("blocks_suggestions must remain true in this foundation.")
+
+
+@dataclass(frozen=True)
+class AssetIdentifierAliasRecord:
+    alias_id: str
+    asset_id: str
+    identifier_type: str
+    identifier_value: str
+    source: str
+    confidence_level: str
+    created_at: datetime
+    explanation_nl: str
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str

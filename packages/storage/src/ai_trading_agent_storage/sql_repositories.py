@@ -10,6 +10,8 @@ from sqlalchemy import Table, select
 from sqlalchemy.engine import Connection
 
 from ai_trading_agent_storage.metadata import (
+    asset_identifier_aliases,
+    asset_master_records,
     broker_accounts,
     broker_cash_snapshots,
     broker_commission_snapshots,
@@ -44,6 +46,8 @@ from ai_trading_agent_storage.migration_readiness import (
     migration_readiness_is_safe_to_write,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetIdentifierAliasRecord,
+    AssetMasterRecord,
     BrokerAccountRecord,
     BrokerCashSnapshotRecord,
     BrokerCommissionSnapshotRecord,
@@ -139,6 +143,17 @@ def _row_to_conflict_finding_record(row: Any) -> ResearchSourceConflictFindingRe
         else dict(json.loads(values["audit_context_json"]))
     )
     return ResearchSourceConflictFindingRecord(**values)
+
+
+def _row_to_asset_master_record(row: Any) -> AssetMasterRecord:
+    values = dict(row)
+    values["source_reference_ids_json"] = _json_tuple_or_none(
+        values.get("source_reference_ids_json")
+    )
+    values["audit_context_json"] = (
+        None if values.get("audit_context_json") is None else dict(values["audit_context_json"])
+    )
+    return AssetMasterRecord(**values)
 
 
 def _read_one_by_column(
@@ -699,6 +714,43 @@ class SqlAlchemyExternalBrokerActivityRepository(_Base):
 
 
 class SqlAlchemyResearchSourceArchiveRepository(_Base):
+    def save_asset_master_record(self, record: AssetMasterRecord) -> AssetMasterRecord:
+        values = asdict(record)
+        values["source_reference_ids_json"] = _json_list_or_none(record.source_reference_ids_json)
+        values["audit_context_json"] = (
+            None if record.audit_context_json is None else json.dumps(record.audit_context_json)
+        )
+        self._insert(asset_master_records, values)
+        return record
+
+    def get_asset_by_asset_id(self, asset_id: str) -> AssetMasterRecord | None:
+        row = _read_one_by_column(self._connection, asset_master_records, "asset_id", asset_id)
+        return None if row is None else _row_to_asset_master_record(row)
+
+    def get_asset_by_canonical_symbol(self, canonical_symbol: str) -> AssetMasterRecord | None:
+        row = _read_one_by_column(
+            self._connection, asset_master_records, "canonical_symbol", canonical_symbol
+        )
+        return None if row is None else _row_to_asset_master_record(row)
+
+    def list_asset_master_records(self) -> tuple[AssetMasterRecord, ...]:
+        rows = self._connection.execute(select(asset_master_records)).mappings().all()
+        return tuple(_row_to_asset_master_record(row) for row in rows)
+
+    def save_asset_identifier_alias(
+        self, record: AssetIdentifierAliasRecord
+    ) -> AssetIdentifierAliasRecord:
+        self._insert(asset_identifier_aliases, asdict(record))
+        return record
+
+    def list_asset_identifier_aliases(
+        self, asset_id: str
+    ) -> tuple[AssetIdentifierAliasRecord, ...]:
+        rows = _read_many_by_column(
+            self._connection, asset_identifier_aliases, "asset_id", asset_id
+        )
+        return tuple(AssetIdentifierAliasRecord(**dict(row)) for row in rows)
+
     def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
         self._insert(research_sources, asdict(record))
         return record

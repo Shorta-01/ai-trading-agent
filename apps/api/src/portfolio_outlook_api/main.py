@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 
+from portfolio_outlook_api.asset_master import router as asset_master_router
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.health import HealthResponse, get_health_response
 from portfolio_outlook_api.research_sources import router as research_sources_router
@@ -26,3 +27,4 @@ def read_health() -> HealthResponse:
 
 app.include_router(status_router)
 app.include_router(research_sources_router)
+app.include_router(asset_master_router)

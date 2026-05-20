@@ -797,6 +797,47 @@ research_source_conflict_findings = Table(
     Column("explanation_nl", Text, nullable=False),
 )
 
+asset_master_records = Table(
+    "asset_master_records",
+    metadata,
+    Column("asset_id", Text, primary_key=True),
+    Column("canonical_symbol", Text, nullable=False, unique=True),
+    Column("asset_name", Text, nullable=False),
+    Column("asset_type", Text, nullable=False),
+    Column("primary_exchange", Text, nullable=True),
+    Column("primary_currency", Text, nullable=True),
+    Column("country", Text, nullable=True),
+    Column("isin", Text, nullable=True),
+    Column("figi", Text, nullable=True),
+    Column("cusip", Text, nullable=True),
+    Column("ibkr_contract_id", Text, nullable=True),
+    Column("sector", Text, nullable=True),
+    Column("industry", Text, nullable=True),
+    Column("status", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("identity_confidence", Text, nullable=False),
+    Column("identity_source", Text, nullable=False),
+    Column("source_reference_ids_json", JSON, nullable=True),
+    Column("audit_context_json", JSON, nullable=True),
+    Column("safe_to_use_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("blocks_suggestions", Boolean, nullable=False, server_default=sa_true()),
+    Column("explanation_nl", Text, nullable=False),
+)
+
+asset_identifier_aliases = Table(
+    "asset_identifier_aliases",
+    metadata,
+    Column("alias_id", Text, primary_key=True),
+    Column("asset_id", Text, ForeignKey("asset_master_records.asset_id"), nullable=False),
+    Column("identifier_type", Text, nullable=False),
+    Column("identifier_value", Text, nullable=False),
+    Column("source", Text, nullable=False),
+    Column("confidence_level", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+)
+
 research_extracted_texts = Table(
     "research_extracted_texts",
     metadata,

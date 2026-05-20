@@ -189,6 +189,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Research bronconflict-bevindingen",
         description_nl="Opslagfundament voor auditbare bron/evidence-conflictbevindingen.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0018_asset_master_identity_foundation",
+        previous_revision_id="0017_research_source_conflict_findings",
+        filename="0018_asset_master_identity_foundation.py",
+        label_nl="Asset master identity foundation",
+        description_nl="Opslagfundament voor canonieke asset-identiteit en identifier-aliassen.",
+    ),
 )
 
 
