@@ -362,3 +362,23 @@ export const apiClient = {
 type SystemEventActionInput = {
   reason_nl?: string;
 };
+
+export type WatchlistItem = {
+  watchlist_item_id: string;
+  asset_id: string | null;
+  symbol: string;
+  name: string | null;
+  exchange: string | null;
+  currency: string | null;
+  security_type: string | null;
+  note: string | null;
+  status: "active" | "archived";
+  source: "manual";
+  created_at: string;
+  updated_at: string;
+};
+
+export async function listWatchlistItems(): Promise<FetchState<{items: WatchlistItem[]}>> { return getJson('/watchlist/items'); }
+export async function createWatchlistItem(payload: {symbol: string; note?: string | null}): Promise<FetchState<{item: WatchlistItem}>> { return postJson('/watchlist/items', payload); }
+export async function updateWatchlistItem(id: string, payload: {note?: string | null; name?: string | null; exchange?: string | null; currency?: string | null; security_type?: string | null}): Promise<FetchState<{item: WatchlistItem}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {item: WatchlistItem} }; } catch { return { ok: false, reason: 'not_reachable' }; } }
+export async function archiveWatchlistItem(id: string): Promise<FetchState<{archived: boolean}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'DELETE' }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {archived: boolean} }; } catch { return { ok: false, reason: 'not_reachable' }; } }

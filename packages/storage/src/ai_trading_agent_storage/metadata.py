@@ -813,6 +813,26 @@ source_to_asset_links = Table(
     Column("explanation_nl", Text, nullable=False),
 )
 
+watchlist_items = Table(
+    "watchlist_items",
+    metadata,
+    Column("watchlist_item_id", Text, primary_key=True),
+    Column("asset_id", Text, ForeignKey("asset_master_records.asset_id"), nullable=True),
+    Column("symbol", Text, nullable=False),
+    Column("name", Text, nullable=True),
+    Column("exchange", Text, nullable=True),
+    Column("currency", Text, nullable=True),
+    Column("security_type", Text, nullable=True),
+    Column("note", Text, nullable=True),
+    Column("status", Text, nullable=False),
+    Column("source", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint("symbol <> ''", name="ck_watchlist_items_symbol_not_empty"),
+    CheckConstraint("status IN ('active', 'archived')", name="ck_watchlist_items_status_valid"),
+    CheckConstraint("source = 'manual'", name="ck_watchlist_items_source_manual"),
+)
+
 asset_master_records = Table(
     "asset_master_records",
     metadata,
