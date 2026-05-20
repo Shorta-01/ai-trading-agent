@@ -6,6 +6,7 @@ from fastapi import APIRouter, Body, HTTPException
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
+from portfolio_outlook_api.ibkr_sync import read_status, run_sync
 from portfolio_outlook_api.online_storage_status import (
     OnlineStorageStatusResponse,
     build_online_storage_status,
@@ -156,3 +157,22 @@ def archive_system_event(
 @router.put("/settings/trading")
 def update_trading_settings(payload: TradingSettingsUpdateInput) -> dict[str, object]:
     return update_trading_settings_response(payload, settings.storage)
+
+
+@router.get("/ibkr/sync/status")
+def read_ibkr_sync_status() -> dict[str, object]:
+    return read_status(settings)
+
+@router.post("/ibkr/sync/run")
+def start_ibkr_sync_run() -> dict[str, object]:
+    return run_sync(settings)
+
+@router.get("/ibkr/portfolio/positions")
+def read_ibkr_positions() -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync import STORE
+    return {"items": STORE.positions, "help_nl": "Alleen gesynchroniseerde IBKR-posities."}
+
+@router.get("/ibkr/account/cash")
+def read_ibkr_cash() -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync import STORE
+    return {"items": STORE.cash, "help_nl": "Alleen gesynchroniseerde IBKR-cashgegevens."}

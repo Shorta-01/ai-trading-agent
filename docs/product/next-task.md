@@ -20,3 +20,9 @@ Doel: na de UI-foundation van Task 74 een conservatieve, read-only IBKR portfoli
 - Geen suggestion/AI runtime.
 - Geen Decision Packages.
 - Geen ordergedrag of action drafts.
+
+# Next Task
+
+## Task 76 — IBKR executions/open-orders sync foundation (read-only)
+
+Bouw de volgende conservatieve stap: read-only opslag en API voor executions/fills + open-orders status, zonder order submission.
