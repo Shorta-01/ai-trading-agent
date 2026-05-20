@@ -61,3 +61,10 @@ body { margin:0; background:#f3f6fb; color:#0f172a; }
   .side-nav { position:sticky; top:0; z-index:2; }
   .dashboard-layout { grid-template-columns: 1fr; }
 }
+
+.portfolio-meta-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:.6rem; margin-top:.6rem; }
+.portfolio-table { width:100%; border-collapse:collapse; font-size:.9rem; }
+.portfolio-table th,.portfolio-table td { border-bottom:1px solid #e2e8f0; padding:.45rem; text-align:left; vertical-align:top; }
+.portfolio-table th { color:#475569; font-weight:600; }
+.sync-button { border:1px solid #93c5fd; background:#eff6ff; color:#1e3a8a; border-radius:8px; padding:.4rem .65rem; cursor:pointer; }
+.sync-button:disabled { opacity:.65; cursor:not-allowed; }

@@ -90,6 +90,53 @@ export type IbkrSyncStatusResponse = {
   last_sync_at?: string;
 };
 
+
+export type IbkrPositionSnapshot = {
+  sync_run_id: string;
+  account_ref: string;
+  symbol: string;
+  security_type: string;
+  currency: string;
+  quantity: string;
+  average_cost: string | null;
+  exchange: string | null;
+  timestamp: string;
+};
+
+export type IbkrCashSnapshot = {
+  sync_run_id: string;
+  account_ref: string;
+  base_currency: string;
+  cash: string;
+  available_funds: string | null;
+  buying_power: string | null;
+  timestamp: string;
+};
+
+export type IbkrOpenOrderSnapshot = {
+  sync_run_id: string;
+  ibkr_order_id: number;
+  symbol: string;
+  action_side: string | null;
+  order_type: string | null;
+  quantity: string;
+  status: string;
+  filled_quantity: string;
+  remaining_quantity: string;
+  last_status_at: string;
+};
+
+export type IbkrExecutionSnapshot = {
+  sync_run_id: string;
+  execution_id: string;
+  symbol: string;
+  side: string;
+  quantity: string;
+  price: string;
+  execution_time: string;
+  currency: string;
+};
+
 export type IbkrStatusResponse = {
   provider: "ibkr";
   enabled: boolean;
@@ -254,6 +301,11 @@ export const apiClient = {
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),
+  getIbkrPositions: () => getJson<{ items: IbkrPositionSnapshot[] }>("/ibkr/portfolio/positions"),
+  getIbkrCash: () => getJson<{ items: IbkrCashSnapshot[] }>("/ibkr/account/cash"),
+  getIbkrOpenOrders: () => getJson<{ items: IbkrOpenOrderSnapshot[] }>("/ibkr/orders/open"),
+  getIbkrExecutions: () => getJson<{ items: IbkrExecutionSnapshot[] }>("/ibkr/executions"),
+  runIbkrSync: () => postJson<{ status: string }>("/ibkr/sync/run"),
   updateTradingSettings: (payload: TradingSettingsUpdateInput) => putJson<TradingSettingsResponse>("/settings/trading", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>

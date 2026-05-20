@@ -1,8 +1,8 @@
-# Current State (na Task 76)
+# Current State (na Task 77)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 76**.
+- Huidige toestand: **na Task 77**.
 - CI-status: groen na Task 72C repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -96,3 +96,5 @@
 
 
 - Task 76: **completed** — read-only IBKR sync foundation uitgebreid met open-orders en executions/fills snapshots + endpoints. Geen ordersubmission, orderwijziging, ordercancel, action drafts, suggesties, Decision Packages, AI/market-data/forecast runtime en geen fake broker/order/execution data.
+- Task 76B / PR #153: **completed** — API mypy repair op sync run count typing (`int`) met CI terug groen; geen runtimegedrag gewijzigd.
+- Task 77: **completed** — read-only Portefeuille-grid toegevoegd op basis van opgeslagen IBKR snapshots (posities, cash, open orders, executions/fills) met Nederlandse empty/error/loading states. Geen echte IBKR connectieruntime, geen ordersubmission/-wijziging/-cancel, geen action drafts, geen suggesties, geen Decision Packages, geen AI/market-data/forecast runtime en geen fake broker/portfolio/order/execution data.

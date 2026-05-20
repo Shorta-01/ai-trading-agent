@@ -1,23 +1,24 @@
 # Next Task
 
-## Task 77 — Portfolio read-only grid from IBKR snapshots (recommended)
+## Task 78 — Watchlist foundation and read-only watchlist page (recommended)
 
-Bouw een read-only portefeuillegrid die uitsluitend de opgeslagen IBKR snapshots toont (posities, cash, open orders, executions/fills), met eenvoudige Nederlandse UI en auditvriendelijke timestamps.
+Bouw een conservatieve watchlist foundation en read-only Volglijst-pagina met manuele watchlist-items, duidelijk gescheiden van IBKR-portfolio-posities.
 
 ### Waarom nu
 
-- Task 75 en Task 76 leveren read-only broker snapshots maar de gebruikerswaarde in de portefeuilleweergave is nog beperkt.
-- Een conservatieve read-only grid levert zichtbare waarde zonder ordergedrag of suggestion-runtime.
+- Na Task 77 is de Portefeuille nu zichtbaar op basis van read-only IBKR snapshots.
+- De volgende veilige workflowstap is een aparte watchlist voor researchprioriteiten zonder ordergedrag.
 
-### Scope voor Task 77
+### Scope voor Task 78
 
-- Read-only portefeuille-overzicht vanuit bestaande snapshot-opslag.
-- Duidelijke empty/error states en sync-timestamp weergave.
-- Geen bewerkbare rijen en geen orderknoppen.
+- Storage/API/UI foundation voor manueel beheerde watchlist-items.
+- Read-only Volglijst-grid met eenvoudige Nederlandse empty/error/loading states.
+- Duidelijke scheiding tussen IBKR-owned portfolio-posities en lokale watchlist-items.
 
-### Niet doen in Task 77
+### Niet doen in Task 78
 
+- Geen echte IBKR-connectieruntime.
 - Geen ordersubmission, orderwijziging of ordercancel.
 - Geen action drafts of IBKR Action Center runtime.
 - Geen suggesties, Decision Packages, AI runtime, market-data runtime of forecast runtime.
-- Geen fake broker/order/execution data.
+- Geen fake broker/portfolio/order/execution/suggestiedata.
