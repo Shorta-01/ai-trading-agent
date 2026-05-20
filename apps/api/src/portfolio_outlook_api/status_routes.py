@@ -269,3 +269,39 @@ def validate_contract(payload: dict[str, object]) -> dict[str, object]:
             else str(payload.get("watchlist_item_id"))
         ),
     )
+
+@router.get("/market-data/readiness")
+def read_market_data_readiness() -> dict[str, object]:
+    from portfolio_outlook_api.watchlist import STORE
+
+    rows: list[dict[str, object]] = []
+    for item in STORE.values():
+        if item.status != "active":
+            continue
+        ready = item.ibkr_validation_status == "valid" and bool((item.ibkr_conid or "").strip())
+        status = "ready" if ready else "blocked"
+        blocker_code = None if ready else "missing_or_unvalidated_ibkr_contract"
+        reason_nl = "Klaar voor latere market-data opslag." if ready else (
+            "Geblokkeerd: gevalideerde IBKR-contractidentiteit (conid) ontbreekt."
+        )
+        rows.append(
+            {
+                "watchlist_item_id": item.watchlist_item_id,
+                "asset_id": item.asset_id,
+                "ibkr_conid": item.ibkr_conid,
+                "symbol": item.symbol,
+                "status": status,
+                "freshness_status": "missing_snapshot",
+                "blocker_code": blocker_code,
+                "reason_nl": reason_nl,
+                "help_nl": "Geen market-data runtime actief; alleen readiness/foundation-status.",
+            }
+        )
+
+    return {
+        "items": rows,
+        "help_nl": (
+            "Task 85 foundation: geen market-data fetch, geen prijzen, "
+            "alleen conid-gated readinessstatus."
+        ),
+    }

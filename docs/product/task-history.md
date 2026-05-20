@@ -146,3 +146,11 @@
 
 - Task 84 afgerond: read-only IBKR-watchlist import foundation met conid-gebaseerde kandidaatimport en conflictmarkering; geen IBKR write-operaties.
 - Task 84C: API pytest failures na PR #163 gerepareerd. Root causes: test setup gebruikte onterecht `dataclasses.replace()` op Pydantic `Settings`, en de configured-path test patchte IBKR settings niet waardoor endpoint terecht `not_configured` retourneerde. Herstel bleef test-only; geen runtime behavior toegevoegd en geen productscope uitgebreid (geen market-data runtime, historical fetching, schedulers, suggestions, Decision Packages, action drafts, IBKR order behavior, AI runtime, forecast runtime of fake data). Task 85 start niet vóór groene CI.
+
+
+## Task 85 update
+
+- Task 85 voltooid: conservatieve market-data storage/freshness foundation toegevoegd (schema + status-only API readiness endpoint).
+- Geen market-data runtime toegevoegd, geen historical fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag.
+- Geen fake market prices of fake broker/recommendation data toegevoegd.
+- Ongevalideerde of onopgeloste identiteiten blijven geblokkeerd voor market data en latere analyse/suggesties/actie-drafts.

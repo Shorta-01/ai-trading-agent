@@ -833,6 +833,35 @@ watchlist_items = Table(
     CheckConstraint("source = 'manual'", name="ck_watchlist_items_source_manual"),
 )
 
+market_data_snapshots = Table(
+    "market_data_snapshots",
+    metadata,
+    Column("snapshot_id", Text, primary_key=True),
+    Column(
+        "watchlist_item_id",
+        Text,
+        ForeignKey("watchlist_items.watchlist_item_id"),
+        nullable=False,
+    ),
+    Column("asset_id", Text, ForeignKey("asset_master_records.asset_id"), nullable=True),
+    Column("ibkr_conid", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("security_type", Text, nullable=False),
+    Column("exchange", Text, nullable=True),
+    Column("primary_exchange", Text, nullable=True),
+    Column("currency", Text, nullable=False),
+    Column("provider_name", Text, nullable=False),
+    Column("data_kind", Text, nullable=False),
+    Column("captured_at", DateTime(timezone=True), nullable=False),
+    Column("source_timestamp", DateTime(timezone=True), nullable=True),
+    Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("freshness_status", Text, nullable=False),
+    Column("validation_status", Text, nullable=False),
+    Column("blocked_reason", Text, nullable=True),
+    Column("raw_reference", Text, nullable=True),
+    Column("explanation_nl", Text, nullable=False),
+)
+
 asset_master_records = Table(
     "asset_master_records",
     metadata,
