@@ -181,4 +181,7 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 
 
 - [x] Task 88 — Conservatieve readiness-contract consolidatie (API-only, read-only): typed readiness responsemodellen/helpers gecentraliseerd, regressietests uitgebreid; geen runtimegedrag toegevoegd.
-- [x] Task 88B — CI-repair na Task 88: import-boundary/type-fix in readiness-contract module (protocol i.p.v. route-model import), zonder runtimewijzigingen of scope-uitbreiding. Task 89 blijft geblokkeerd tot CI groen is.
+- [x] Task 88B — CI-repair na Task 88: import-boundary/type-fix in readiness-contract module (protocol i.p.v. route-model import), zonder runtimewijzigingen of scope-uitbreiding.
+- [x] Task 88G — Documenteer CI-platformblokkade na PR #171: 6 normale CI jobs + CI Diagnostic falen; diagnostische workflow faalt vóór logs/artifacts; geen geverifieerde application-code root cause.
+- [ ] CI unblock task (GitHub Actions settings/billing/quota/runner/log-access onderzoek en herstel) — **must complete before any feature task**.
+- [ ] Task 89 — mag niet starten zolang CI rood is en diagnostische logs/executie niet hersteld zijn.

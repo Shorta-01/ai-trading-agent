@@ -1,5 +1,14 @@
 # Task History (concise)
 
+## Task 88G — GitHub Actions platform-level failure diagnosis
+
+- Status: completed (documentation-only).
+- Na merge van PR #171 (`.github/workflows/ci-diagnostic.yml`) falen 7 checks totaal: 6 normale CI jobs + 1 CI Diagnostic job.
+- De minimale CI Diagnostic workflow faalt vóór bruikbare step logs en vóór artifact publicatie.
+- Diagnose: geen geverifieerde repository/application-code root cause; blokkade zit waarschijnlijk op GitHub Actions platform/account/repository niveau (execution/logging/runner/quota/settings).
+- Besluit: geen blind code-repair attempts uitvoeren zolang logging/executie niet hersteld is.
+- Gate: geen featurewerk en **Task 89 mag niet starten** zolang CI rood blijft.
+
 ## Task 88 — Conservative readiness-contract consolidation
 
 - Status: completed.
