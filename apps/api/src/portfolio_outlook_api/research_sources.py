@@ -14,6 +14,7 @@ from ai_trading_agent_storage import (
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
     ResearchDocumentSetRecord,
+    ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -30,7 +31,12 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
-from portfolio_outlook_api.config import ResearchUploadSettings, StorageSettings, settings
+from portfolio_outlook_api.config import (
+    ResearchExtractionSettings,
+    ResearchUploadSettings,
+    StorageSettings,
+    settings,
+)
 
 ConnectionProviderFactory = Callable[[DatabaseConnectionSettings], StorageConnectionProvider]
 RepositoryFactory = Callable[
@@ -235,6 +241,56 @@ def _archive_uploaded_file(
         for chunk in chunks:
             fh.write(chunk)
     return original_name, stored_name, size, file_hash, f"file://{target}"
+
+
+def _extract_plain_research_text(
+    *,
+    source_archive_uri: str,
+    original_filename: str,
+    library_source_id: str,
+    upload_settings: ResearchUploadSettings,
+    extraction_settings: ResearchExtractionSettings,
+) -> dict[str, object]:
+    upload_root = Path(upload_settings.archive_dir).resolve()
+    raw_path = Path(source_archive_uri.removeprefix("file://")).resolve()
+    if upload_root not in raw_path.parents:
+        raise HTTPException(status_code=400, detail="Archiefpad van bronbestand is onveilig.")
+    if not raw_path.exists() or not raw_path.is_file():
+        raise HTTPException(status_code=404, detail="Gearchiveerd bronbestand niet gevonden.")
+    extension = Path(original_filename).suffix.lower()
+    if extension not in {ext.lower() for ext in extraction_settings.allowed_extensions}:
+        raise HTTPException(status_code=400, detail="Bestandstype wordt nog niet ondersteund.")
+    file_size = raw_path.stat().st_size
+    if file_size > extraction_settings.max_input_file_size_bytes:
+        raise HTTPException(status_code=413, detail="Bestand is te groot voor extractie.")
+    raw_bytes = raw_path.read_bytes()
+    try:
+        text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Bestand kon niet als UTF-8 tekst worden gelezen.",
+        ) from exc
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    if len(normalized) > extraction_settings.max_output_characters:
+        normalized = normalized[: extraction_settings.max_output_characters]
+    normalized_bytes = normalized.encode("utf-8")
+    text_hash = sha256(normalized_bytes).hexdigest()
+    output_root = Path(extraction_settings.extracted_text_archive_dir).resolve()
+    output_root.mkdir(parents=True, exist_ok=True)
+    output_name = f"{library_source_id}-{text_hash[:16]}.txt"
+    output_path = (output_root / output_name).resolve()
+    if output_root not in output_path.parents:
+        raise HTTPException(status_code=400, detail="Extractie-opslagpad is onveilig.")
+    if not output_path.exists():
+        output_path.write_bytes(normalized_bytes)
+    return {
+        "text_hash_sha256": text_hash,
+        "character_count": len(normalized),
+        "line_count": normalized.count("\n") + (1 if normalized else 0),
+        "preview_text_nl": normalized[: extraction_settings.preview_max_characters],
+        "extracted_text_storage_uri": f"file://{output_path}",
+    }
 
 def _with_repo(
     storage_settings: StorageSettings,
@@ -741,3 +797,97 @@ def get_latest_processing_status(library_source_id: str) -> dict[str, object]:
         )
 
     return _with_repo(settings.storage, op, require_writable=False)
+
+
+@router.post("/research/sources/{library_source_id}/extract-text")
+def extract_research_source_text(library_source_id: str) -> dict[str, object]:
+    if not settings.research_extraction.enabled:
+        raise HTTPException(status_code=503, detail="Tekstextractie staat uit.")
+
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        source_id = _require_id(library_source_id, "library_source_id")
+        source = repo.get_research_source(source_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="Onderzoeksbron niet gevonden.")
+        metadata = repo.get_uploaded_file_metadata(source_id)
+        if metadata is None:
+            raise HTTPException(status_code=404, detail="Bestandsmetadata niet gevonden.")
+        if source.archive_storage_uri is None:
+            raise HTTPException(status_code=404, detail="Bronbestand ontbreekt in het archief.")
+        extracted = _extract_plain_research_text(
+            source_archive_uri=source.archive_storage_uri,
+            original_filename=metadata.original_file_name,
+            library_source_id=source_id,
+            upload_settings=settings.research_upload,
+            extraction_settings=settings.research_extraction,
+        )
+        now = datetime.now(UTC)
+        extracted_id = f"ext-{source_id}-{int(now.timestamp())}"
+        record = ResearchExtractedTextRecord(
+            extracted_text_id=extracted_id,
+            library_source_id=source_id,
+            source_file_hash_sha256=metadata.file_hash_sha256,
+            extraction_status="extracted",
+            extraction_method="deterministic_plain_text_v1",
+            detected_content_type=metadata.content_type,
+            detected_language=None,
+            character_count=int(extracted["character_count"]),
+            line_count=int(extracted["line_count"]),
+            text_hash_sha256=str(extracted["text_hash_sha256"]),
+            extracted_text_storage_uri=str(extracted["extracted_text_storage_uri"]),
+            preview_text_nl=str(extracted["preview_text_nl"]),
+            can_be_used_in_research=False,
+            can_be_used_in_suggestions=False,
+            needs_user_review=True,
+            blocks_suggestions=True,
+            created_at=now,
+            extracted_at=now,
+            schema_version="v1",
+            reason_nl="Deterministische tekstextractie uitgevoerd; nog geen analyse.",
+        )
+        status = ResearchSourceProcessingStatusRecord(
+            processing_id=f"extract-{source_id}-{int(now.timestamp())}",
+            library_source_id=source_id,
+            classification_status="pending",
+            extraction_status="extracted",
+            analysis_status="not_started",
+            readiness_status="extracted_text_metadata_only",
+            can_be_used_in_research=False,
+            can_be_used_in_suggestions=False,
+            needs_user_review=True,
+            blocks_suggestions=True,
+            last_error_nl=None,
+            checked_at=now,
+            reason_nl=(
+                "Tekst is geëxtraheerd, maar nog niet gecontroleerd op bronkwaliteit, "
+                "actualiteit of kwaadaardige instructies. Daarom mag ze nog geen "
+                "invloed hebben op suggesties."
+            ),
+        )
+        repo.save_extracted_text(record)
+        repo.save_processing_status(status)
+        return {
+            "status_nl": "OK",
+            "message_nl": (
+                "Tekst veilig geëxtraheerd en opgeslagen als onderzoeksmetadata. "
+                "De inhoud is nog niet geanalyseerd of gebruikt voor suggesties."
+            ),
+            "help_nl": (
+                "Deze tekst is bewijs voor later onderzoek. Ze maakt geen koop- of "
+                "verkoopactie aan en blijft geblokkeerd voor suggesties tot latere "
+                "controles klaar zijn."
+            ),
+            "library_source_id": source_id,
+            "extracted_text_id": extracted_id,
+            "extraction_status": "extracted",
+            "character_count": extracted["character_count"],
+            "line_count": extracted["line_count"],
+            "text_hash_sha256": extracted["text_hash_sha256"],
+            "extracted_text_storage_uri": extracted["extracted_text_storage_uri"],
+            "preview_text_nl": extracted["preview_text_nl"],
+            "blocks_suggestions": True,
+            "can_be_used_in_suggestions": False,
+            "record": asdict(record),
+        }
+
+    return _with_repo(settings.storage, op, require_writable=True)
