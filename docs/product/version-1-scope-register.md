@@ -64,3 +64,15 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Watchlist-to-Asset-Master identity linking foundation (Task 79) | Contracted | Bestaande storage hergebruikt (`watchlist_items.asset_id`) | API implemented | UI implemented (statusbadge + read-only canonical samenvatting) | Runtime pending | Reference/status-only; geen auto Asset Master create; geen portfolioposities/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/AI/market-data/forecast runtime; geen fake data |
 
 | Asset Master search/picker UI foundation (Task 80) | Contracted | Bestaande storage hergebruikt (Asset Master records read-only) | API implemented (`GET /assets/master/search`) | UI implemented (Volglijst picker component + koppelen/ontkoppelen) | Runtime pending | Reference/status-only; selecteert alleen bestaande asset-identiteiten; geen auto Asset Master create, geen portfolioposities/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/AI/market-data/forecast runtime; geen fake data |
+
+
+| IBKR contract identity validation | Core workflow | Planned | Planned | Planned | Runtime pending | Active watchlist requires validated IBKR identity before data/analysis runtime |
+| IBKR conid mapping | Core workflow | Planned | Planned | Planned | Runtime pending | Conid mapping required for market data readiness; ticker text alone is insufficient |
+| IBKR-contract-based Volglijst activation | Core workflow | Planned | Planned | Planned | Runtime pending | Only resolved IBKR contracts may become active watchlist items |
+| System-detected asset candidate resolution | Core workflow | Planned | Planned | Planned | Runtime pending | Detected assets remain candidates until IBKR contract resolution succeeds |
+| IBKR watchlist sync | Core workflow | Planned | Planned | Planned | Runtime pending | Import/export later; must stay conid-based with auditable conflicts |
+| Data freshness and priority engine | Core workflow | Planned | Planned | Planned | Runtime pending | Hot/warm/cold freshness tiers and readiness states |
+| Historical data backfill scheduler | Core workflow | Planned | Planned | Planned | Runtime pending | Pacing-aware backfill queue before serious analysis |
+| Market snapshot scheduler | Core workflow | Planned | Planned | Planned | Runtime pending | Latest snapshot scheduler layered with freshness policy |
+| Fast alert layer | Core workflow | Planned | Planned | Planned | Runtime pending | Early signal layer on validated identities only |
+| AI event trigger layer | Core workflow | Planned | Planned | Planned | Runtime pending | Event-analysis trigger foundation on validated, freshness-aware data |

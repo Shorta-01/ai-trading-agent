@@ -1,8 +1,15 @@
-# Current State (na Task 80)
+# Current State (na Task 81)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 80**.
+
+- Task 81 is documentation-only en vergrendelt dat actieve Volglijst-items IBKR-contract-based moeten zijn.
+- Task 81 voegt geen IBKR-runtime toe.
+- Task 81 voegt geen market-data runtime toe.
+- Task 81 voegt geen historische data-fetching toe.
+- Task 81 voegt geen schedulers toe.
+- Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
+- Huidige toestand: **na Task 81**.
 - CI-status: groen na Task 80.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -106,3 +113,5 @@
 - Task 79: **completed** — watchlist-to-Asset-Master identity linking foundation toegevoegd (API/UI basis, reference/status-only). Linken/ontkoppelen valideert bestaande asset-identiteit waar veilig, zonder auto-creatie van Asset Master records. Geen portfoliopositiecreatie, geen suggesties, geen Decision Packages, geen action drafts, geen IBKR-ordergedrag, geen AI/market-data/forecast runtime en geen fake data.
 
 - Task 80: **completed** — Asset Master search/picker foundation toegevoegd (read-only zoekendpoint + Volglijst picker UI) zodat gebruikers bestaande canonical asset-identiteiten kunnen zoeken, selecteren, linken en ontkoppelen voor watchlist-items. Reference/status-only: geen auto-creatie van Asset Master records, geen portfoliopositiecreatie, geen suggesties, geen Decision Packages, geen action drafts, geen IBKR-ordergedrag, geen AI/market-data/forecast runtime en geen fake data.
+
+- Task 81: **completed** — documentation-only; IBKR-contract-based active watchlist rule vergrendeld, conid-based data-readiness rule vergrendeld en sync/freshness/performance-roadmap vergrendeld. Geen runtimecode gewijzigd.

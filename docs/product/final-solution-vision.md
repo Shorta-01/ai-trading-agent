@@ -12,30 +12,32 @@ Portfolio Outlook Manager is een professionele AI-ondersteunde **paper portfolio
 
 De gedetailleerde en vergrendelde Release 1 workflowblauwdruk staat in `docs/product/release-1-functional-workflow-blueprint.md`. Die blueprint is leidend voor implementatievolgorde en afbakening van Decision Packages, Suggestions-grid, IBKR Action Center, sync/recompute en AI-analytics.
 
-IBKR/paper account data  
-→ market data en FX data  
-→ market calendar/trading-hours/freshness checks  
-→ portfolio/watchlist state  
-→ geüploade documenten/URL’s/notities  
-→ deterministische extractie/parsing  
-→ classificatie  
-→ prompt-injection scanning  
-→ source credibility scoring  
-→ evidence ledger  
-→ quant models  
-→ probabilistic asset outlook  
-→ AI event intelligence  
-→ suggestion engine  
-→ risk controls  
-→ eenvoudige Nederlandse uitleg  
-→ portfolio/watchlist action badge  
-→ detail “waarom”-paneel  
-→ optionele conversie naar bewerkbare IBKR paper actie  
-→ user review/bewerking/bevestiging  
-→ paper-only submission  
-→ warning/confirmation capture  
-→ execution import  
-→ reconciliatie  
+IBKR/paper account data
+→ IBKR contract validation (conid-based identity)
+→ active portfolio/watchlist state
+→ market data en FX data
+→ historical data en freshness checks
+→ models/AI/suggestions
+→ geüploade documenten/URL’s/notities
+→ deterministische extractie/parsing
+→ classificatie
+→ prompt-injection scanning
+→ source credibility scoring
+→ evidence ledger
+→ quant models
+→ probabilistic asset outlook
+→ AI event intelligence
+→ suggestion engine
+→ risk controls
+→ eenvoudige Nederlandse uitleg
+→ portfolio/watchlist action badge
+→ detail “waarom”-paneel
+→ optionele conversie naar bewerkbare IBKR paper actie
+→ user review/bewerking/bevestiging
+→ paper-only submission
+→ warning/confirmation capture
+→ execution import
+→ reconciliatie
 → audit/outcome tracking
 
 ## 3) Final analytical goal

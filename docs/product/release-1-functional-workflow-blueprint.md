@@ -42,10 +42,28 @@ GUI-principe:
 
 ## 3) Watchlist rule
 
-- Watchlist-assets mogen manueel toegevoegd worden.
-- Watchlist-assets zijn gescheiden van werkelijk aangehouden portfolio-assets.
-- Watchlist-assets mogen suggesties ontvangen.
-- Watchlist buy-suggesties mogen actie-drafts aanmaken.
+- De actieve Volglijst moet IBKR-contract-based zijn.
+- Elke actieve watchlist-item moet een gevalideerde IBKR-contractidentiteit hebben met minstens:
+  - `ibkr_conid`
+  - `symbol`
+  - `asset class`
+  - `exchange` of `primary exchange` waar beschikbaar
+  - `currency`
+  - `validation status`
+  - `validation timestamp`
+- Exacte lock: “Every active watchlist item must have a validated IBKR contract identity, including conid, asset class, exchange or primary exchange where available, and currency. Manual add must use IBKR contract search and user selection. System-detected assets must resolve to the correct IBKR contract before they can become active watchlist items. IBKR watchlist sync is allowed, but imported items must be stored with full conid-based identity and all sync conflicts must be auditable. No unresolved asset may receive market data, analysis, suggestions or action drafts.”
+- Watchlist-assets mogen manueel toegevoegd worden via dit verplichte pad:
+  - IBKR contract search
+  - user selecteert exact contract
+  - Asset Master link/create path
+  - pas dan actief watchlist-item
+- System-detected assets starten als kandidaten en mogen pas actief worden na geslaagde IBKR-contractresolutie.
+- Ambigue of onopgeloste gedetecteerde assets mogen nooit actieve watchlist-items worden.
+- Onopgeloste assets mogen geen market data, analyse, suggesties of action drafts ontvangen.
+- Tickertekst alleen is nooit voldoende identiteit voor actieve watchlist, analyse of acties.
+- IBKR watchlist import/export is later toegestaan, maar altijd conid-based en auditeerbaar.
+- Sync mag geen automatische deleties doen; conflicts moeten zichtbaar en veilig oplosbaar zijn.
+- Watchlist-assets blijven gescheiden van werkelijk aangehouden portfolio-assets.
 - Watchlist sell-acties mogen enkel wanneer IBKR op dat moment effectief een positie toont.
 
 ## 4) IBKR portfolio sync and broker data
