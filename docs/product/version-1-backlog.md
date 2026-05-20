@@ -133,3 +133,5 @@ Statuswaarden: Not started / Contracted / Storage foundation / API foundation / 
 - **Safety notes:** Backup niet vertrouwen zonder hersteltest.
 
 - Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
+
+- Evidence extraction foundation (Task 67) toegevoegd: opslag + API voor evidence-items per bron, met blijvende suggestieblokkade.

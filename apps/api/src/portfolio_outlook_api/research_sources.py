@@ -17,6 +17,7 @@ from ai_trading_agent_storage import (
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourceEvidenceItemRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -208,6 +209,28 @@ class ResearchSourceCredibilityAssessmentInput(BaseModel):
     safe_to_use_for_suggestions: bool = False
     blocks_suggestions: bool = True
     assessed_at: datetime | None = None
+    explanation_nl: str
+
+
+class ResearchSourceEvidenceItemInput(BaseModel):
+    evidence_item_id: str
+    evidence_type: str
+    evidence_status: str
+    extracted_from_kind: str
+    source_reference_text: str
+    normalized_evidence_text: str
+    evidence_summary_nl: str
+    asset_symbol: str | None = None
+    reporting_period: str | None = None
+    fiscal_year: int | None = None
+    confidence_level: str
+    extraction_method: str
+    source_text_hash_sha256: str | None = None
+    extraction_run_id: str | None = None
+    extracted_at: datetime | None = None
+    safe_to_use_as_evidence: bool = False
+    safe_to_use_for_suggestions: bool = False
+    blocks_suggestions: bool = True
     explanation_nl: str
 
 
@@ -1131,3 +1154,53 @@ def extract_research_source_text(library_source_id: str) -> dict[str, object]:
         }
 
     return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.post("/research/sources/{library_source_id}/evidence-items")
+def create_source_evidence_item(library_source_id: str, payload: ResearchSourceEvidenceItemInput) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        source_id = _require_id(library_source_id, "library_source_id")
+        if repo.get_research_source(source_id) is None:
+            raise HTTPException(status_code=404, detail="Onderzoeksbron niet gevonden.")
+        now = datetime.now(UTC)
+        record = ResearchSourceEvidenceItemRecord(
+            evidence_item_id=payload.evidence_item_id,
+            library_source_id=source_id,
+            evidence_type=payload.evidence_type,
+            evidence_status=payload.evidence_status,
+            extracted_from_kind=payload.extracted_from_kind,
+            source_reference_text=payload.source_reference_text,
+            normalized_evidence_text=payload.normalized_evidence_text,
+            evidence_summary_nl=payload.evidence_summary_nl,
+            asset_symbol=payload.asset_symbol,
+            reporting_period=payload.reporting_period,
+            fiscal_year=payload.fiscal_year,
+            confidence_level=payload.confidence_level,
+            extraction_method=payload.extraction_method,
+            source_text_hash_sha256=payload.source_text_hash_sha256,
+            extraction_run_id=payload.extraction_run_id,
+            created_at=now,
+            extracted_at=payload.extracted_at or now,
+            safe_to_use_as_evidence=payload.safe_to_use_as_evidence,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl=payload.explanation_nl,
+        )
+        saved = repo.save_source_evidence_item(record)
+        return _ok("Bewijsitem opgeslagen voor later onderzoek.", asdict(saved), "Bewijsitems ontgrendelen nog geen suggesties in versie 1.")
+
+    return _with_repo(settings.storage, op, require_writable=True)
+
+
+@router.get("/research/sources/{library_source_id}/evidence-items")
+def list_source_evidence_items(library_source_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        source_id = _require_id(library_source_id, "library_source_id")
+        if repo.get_research_source(source_id) is None:
+            return {"status_nl": "OK", "message_nl": "Onderzoeksbron niet gevonden; bewijs blijft geblokkeerd.", "help_nl": "Er zijn geen bewijsitems en suggesties blijven geblokkeerd.", "records": []}
+        records = repo.list_source_evidence_items(source_id)
+        if not records:
+            return {"status_nl": "OK", "message_nl": "Nog geen bewijsitems voor deze bron.", "help_nl": "Zonder bewijsitems blijft de bron geblokkeerd voor suggesties.", "records": []}
+        return {"status_nl": "OK", "message_nl": "Bewijsitems opgehaald.", "help_nl": "Bewijsitems zijn alleen audit- en onderzoeksinformatie; suggesties blijven geblokkeerd.", "records": [asdict(x) for x in records]}
+
+    return _with_repo(settings.storage, op, require_writable=False)

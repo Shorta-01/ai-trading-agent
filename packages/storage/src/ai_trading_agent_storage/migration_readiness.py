@@ -161,6 +161,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="Research source credibility assessments",
         description_nl="Opslagfundament voor bron-credibilitystatus per research-bron.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0014",
+        previous_revision_id="0013",
+        filename="0014_research_source_evidence_items.py",
+        label_nl="Research source evidence items",
+        description_nl="Opslagfundament voor evidence-items gekoppeld aan research-bronnen.",
+    ),
 )
 
 

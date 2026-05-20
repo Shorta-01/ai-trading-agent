@@ -15,6 +15,7 @@ from ai_trading_agent_storage import (
     ResearchSourceAssetLinkRecord,
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourceEvidenceItemRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -161,6 +162,7 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self.prompt_scans: dict[str, list[ResearchSourcePromptInjectionScanRecord]] = defaultdict(list)
             self.credibility: dict[str, list[ResearchSourceCredibilityAssessmentRecord]] = defaultdict(list)
             self.extracted_texts: dict[str, list[ResearchExtractedTextRecord]] = defaultdict(list)
+            self.evidence_items: dict[str, list[ResearchSourceEvidenceItemRecord]] = defaultdict(list)
 
         def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
             self.sources[record.library_source_id] = record
@@ -289,6 +291,18 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
         ) -> ResearchSourceCredibilityAssessmentRecord | None:
             records = self.credibility.get(library_source_id, [])
             return records[-1] if records else None
+
+
+        def save_source_evidence_item(
+            self, record: ResearchSourceEvidenceItemRecord
+        ) -> ResearchSourceEvidenceItemRecord:
+            self.evidence_items[record.library_source_id].append(record)
+            return record
+
+        def list_source_evidence_items(
+            self, library_source_id: str
+        ) -> tuple[ResearchSourceEvidenceItemRecord, ...]:
+            return tuple(self.evidence_items.get(library_source_id, []))
 
         def save_extracted_text(
             self, record: ResearchExtractedTextRecord
@@ -675,3 +689,32 @@ def test_source_credibility_defaults_and_remains_blocked(fake_storage: None) -> 
     assert latest.json()['record']['credibility_level'] == 'low'
     assert latest.json()['record']['blocks_suggestions'] is True
     assert 'beoordeling' in latest.json()['message_nl'].lower()
+
+
+def test_evidence_item_register_and_list(fake_storage: None) -> None:
+    _create_source()
+    empty = client.get('/research/sources/src-1/evidence-items')
+    assert empty.status_code == 200
+    assert 'nog geen bewijsitems' in empty.json()['message_nl'].lower()
+
+    created = client.post('/research/sources/src-1/evidence-items', json={
+        'evidence_item_id': 'ev-1', 'evidence_type': 'financial_statement_fact', 'evidence_status': 'registered',
+        'extracted_from_kind': 'extracted_text_preview', 'source_reference_text': 'Omzet steeg 5%',
+        'normalized_evidence_text': 'omzet steeg 5 procent', 'evidence_summary_nl': 'Omzetgroei gemeld',
+        'confidence_level': 'medium', 'extraction_method': 'deterministic_manual_payload',
+        'safe_to_use_as_evidence': True, 'safe_to_use_for_suggestions': True, 'blocks_suggestions': False,
+        'explanation_nl': 'Alleen bewijs in versie 1',
+    })
+    assert created.status_code == 200
+    record = created.json()['record']
+    assert record['safe_to_use_for_suggestions'] is False
+    assert record['blocks_suggestions'] is True
+
+    listed = client.get('/research/sources/src-1/evidence-items')
+    assert listed.status_code == 200
+    assert len(listed.json()['records']) == 1
+    assert 'suggesties blijven geblokkeerd' in listed.json()['help_nl'].lower()
+
+    missing = client.get('/research/sources/src-unknown/evidence-items')
+    assert missing.status_code == 200
+    assert missing.json()['records'] == []
