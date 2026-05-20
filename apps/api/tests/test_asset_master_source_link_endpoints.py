@@ -47,9 +47,8 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             yield type("Checked", (), {"connection": object(), "readiness": readiness})()
 
     class FakeRepo:
-        def __init__(self, _c, _r) -> None:
-            now = datetime.now(UTC)
-            self.assets = {
+        _now = datetime.now(UTC)
+        _assets = {
                 "asset-1": AssetMasterRecord(
                     asset_id="asset-1",
                     canonical_symbol="ASML",
@@ -65,8 +64,8 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
                     sector=None,
                     industry=None,
                     status="active",
-                    created_at=now,
-                    updated_at=now,
+                    created_at=_now,
+                    updated_at=_now,
                     identity_confidence="laag",
                     identity_source="handmatig",
                     source_reference_ids_json=None,
@@ -76,21 +75,24 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
                     explanation_nl="x",
                 )
             }
-            self.links: dict[str, list[SourceToAssetLinkRecord]] = defaultdict(list)
+        _links: dict[str, list[SourceToAssetLinkRecord]] = defaultdict(list)
+
+        def __init__(self, _c, _r) -> None:
+            pass
 
         def get_asset_by_asset_id(self, asset_id: str) -> AssetMasterRecord | None:
-            return self.assets.get(asset_id)
+            return self._assets.get(asset_id)
 
         def save_source_to_asset_link(
             self, record: SourceToAssetLinkRecord
         ) -> SourceToAssetLinkRecord:
-            self.links[record.asset_id].append(record)
+            self._links[record.asset_id].append(record)
             return record
 
         def list_source_to_asset_links_for_asset(
             self, asset_id: str
         ) -> tuple[SourceToAssetLinkRecord, ...]:
-            return tuple(self.links[asset_id])
+            return tuple(self._links[asset_id])
 
     monkeypatch.setattr(asset_master, "StorageConnectionProvider", FakeProvider)
     monkeypatch.setattr(asset_master, "SqlAlchemyResearchSourceArchiveRepository", FakeRepo)
