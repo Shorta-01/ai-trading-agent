@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import asdict
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import Table, select
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, RowMapping
 
 from ai_trading_agent_storage.metadata import (
     asset_identifier_aliases,
@@ -119,13 +118,28 @@ def _json_list_or_none(value: tuple[str, ...] | list[str] | None) -> list[str] |
 
 
 
-def _row_to_source_to_asset_link_record(row: Mapping[str, object]) -> SourceToAssetLinkRecord:
-    values = dict(row)
-    raw_audit_context = values.get("audit_context_json")
-    values["audit_context_json"] = (
-        None if raw_audit_context is None else json.loads(raw_audit_context)
+def _row_to_source_to_asset_link_record(row: RowMapping) -> SourceToAssetLinkRecord:
+    raw_audit_context = row["audit_context_json"]
+    audit_context_json: dict[str, str] | None = None
+    if raw_audit_context is not None:
+        if not isinstance(raw_audit_context, (str, bytes, bytearray)):
+            raise TypeError("audit_context_json moet een JSON-string zijn of None.")
+        parsed = json.loads(raw_audit_context)
+        audit_context_json = {str(key): str(value) for key, value in dict(parsed).items()}
+
+    return SourceToAssetLinkRecord(
+        link_id=str(row["link_id"]),
+        asset_id=str(row["asset_id"]),
+        target_type=str(row["target_type"]),
+        target_id=str(row["target_id"]),
+        link_reason_nl=str(row["link_reason_nl"]),
+        audit_context_json=audit_context_json,
+        safe_to_use_for_suggestions=cast(bool, row["safe_to_use_for_suggestions"]),
+        blocks_suggestions=cast(bool, row["blocks_suggestions"]),
+        created_at=cast(datetime, row["created_at"]),
+        created_by=str(row["created_by"]),
+        explanation_nl=str(row["explanation_nl"]),
     )
-    return SourceToAssetLinkRecord(**values)
 
 def _row_to_gate_outcome_record(row: Any) -> ResearchGateOutcomeRecord:
     values = dict(row)
