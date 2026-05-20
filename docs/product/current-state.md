@@ -1,4 +1,4 @@
-# Current State (na Task 88B)
+# Current State (na Task 88G)
 
 ## 1) Current status summary
 
@@ -9,8 +9,8 @@
 - Task 81 voegt geen historische data-fetching toe.
 - Task 81 voegt geen schedulers toe.
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
-- Huidige toestand: **na Task 88B**.
-- CI-status: groen na Task 80.
+- Huidige toestand: **na Task 88G**.
+- CI-status: **geblokkeerd door GitHub Actions platform/account/repository-level failure** (niet geverifieerd als applicatiecodefout).
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
@@ -83,6 +83,8 @@
 
 ## 5) Latest task sequence status
 
+- Task 88G: **completed (documentation-only)** — post-merge diagnose vastgelegd dat GitHub Actions momenteel op platform/account/repository-niveau faalt. Alle 6 normale CI-jobs falen én de minimale `ci-diagnostic.yml` faalt ook vóór bruikbare logs/artifacts beschikbaar zijn. Geen repository-gestuurde applicatiecode-root-cause geverifieerd. Featurewerk blijft geblokkeerd tot CI-executie/logging hersteld is; Task 89 mag niet starten zolang CI rood blijft.
+
 - Task 88: **completed** — API-only readiness-contract consolidatie voltooid: typed readiness responsemodellen/helpers gecentraliseerd (`market_data_readiness.py`), readiness-routes verdund en regressietests uitgebreid. Read-only scope behouden; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 88B: **completed** — CI/type/import-boundary repair na Task 88: `market_data_readiness.py` koppelt niet langer aan `watchlist.py` modelimport en gebruikt nu een minimale typed protocol-input voor readiness-row build. Dit voorkomt onnodige route/store dependency-koppeling in response-contract code. Geen runtimegedrag toegevoegd; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts of IBKR-ordergedrag toegevoegd. Geen fake market prices, brokerdata of aanbevelingen toegevoegd. Ongevalideerde/onopgeloste identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
 
@@ -123,6 +125,15 @@
 
 
 - Task 83: Volglijst add-flow omgezet naar IBKR contractpicker; actieve creatie vereist gevalideerde IBKR-contractidentiteit. Bestaande losse records zonder contract blijven niet-gevalideerd en niet klaar voor analyse. Geen market-data runtime, historical fetching, schedulers, suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, forecast runtime of fake data toegevoegd.
+
+## Current CI blocker
+
+- Normale CI (`ci.yml`) faalt momenteel in alle 6 jobs.
+- De minimale diagnostische workflow (`ci-diagnostic.yml`) faalt ook.
+- Diagnostische run levert geen bruikbare staplogs en geen artifact op.
+- Dit wijst op een waarschijnlijke oorzaak buiten applicatiecode (GitHub Actions execution/logging laag).
+- Vereiste vervolgstap: onderzoek GitHub Actions settings, billing/quota, runner-beschikbaarheid en log/artifact-toegang op account/repository/platformniveau.
+- Tot CI-executie en logging hersteld zijn: **geen blind codeherstel, geen featurewerk, Task 89 blijft geblokkeerd**.
 
 ## Task 84 update
 
