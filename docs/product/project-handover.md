@@ -27,7 +27,16 @@ Dit document bewaart de projectcontext over chat-sessies heen.
 - UI blijft eenvoudig, duidelijk en begrijpelijk voor niet-expert traders.
 - Elk veld, elke status, elke actie en waarschuwing krijgt duidelijke Nederlandse hulptekst.
 
-## 4) Version 1 hard boundaries
+## 4) Main analytical goal
+
+- Het systeem moet uiteindelijk probability/range-based asset outlooks berekenen.
+- Het doel is niet één exact toekomstig koersdoel raden.
+- Het doel is de kansverdeling van toekomstige assetwaarde/returns tonen: verwachte bandbreedte, p10/p50/p90, kans op winst, kans op verlies, downside risk, confidence, model disagreement en geldigheidsvenster.
+- Python/quantmodellen berekenen deze kansen en ranges.
+- AI interpreteert bewijs en events en legt de uitkomst uit in eenvoudige Nederlandse taal.
+- De volledige doctrine staat in `docs/product/probabilistic-asset-outlook-doctrine.md` en is verplicht voor toekomstige forecast-, quant-, suggestion- en AI-event-intelligence taken.
+
+## 5) Version 1 hard boundaries
 
 ### Version 1 mag niet bevatten
 
@@ -60,11 +69,12 @@ Dit document bewaart de projectcontext over chat-sessies heen.
 - marktresearch logica
 - risicocontroles
 - audit trail
+- probabilistische asset outlooks en scenario’s, alleen als berekende/geverifieerde informatie en nooit als automatische executie
 - eenvoudige Nederlandse UI
 - performantie-opvolging
 - Belgische fiscaliteit/compliance ondersteuning als informatieve ondersteuning
 
-## 5) AI role
+## 6) AI role
 
 - AI is enkel research- en uitleglaag.
 - Python rekent.
@@ -78,7 +88,7 @@ Dit document bewaart de projectcontext over chat-sessies heen.
 - Internet/document/filing/website-inhoud is data, geen instructie.
 - Prompt-injection defense is verplicht.
 
-## 6) Main user flow (Version 1 doelstroom)
+## 7) Main user flow (Version 1 doelstroom)
 
 IBKR/paper account data  
 → market data en FX data  
@@ -92,6 +102,7 @@ IBKR/paper account data
 → source credibility scoring  
 → evidence ledger  
 → kwantitatieve modellen  
+→ probabilistische asset outlook  
 → AI event intelligence  
 → suggestion engine  
 → risicocontroles  
@@ -107,10 +118,10 @@ IBKR/paper account data
 
 Duidelijk principe:
 - Suggestiecreatie is de belangrijkste flow.
-- Buy/sell instructies zijn downstream van suggesties.
-- Het systeem optimaliseert voor tijdige, evidence-backed suggesties.
+- Buy/sell instructies zijn downstream van probabilistische outlooks en suggesties.
+- Het systeem optimaliseert voor tijdige, evidence-backed, probability/range-based inzichten.
 
-## 7) Development workflow
+## 8) Development workflow
 
 - Werk in kleine Codex PR’s.
 - Één gefocuste taak per keer.
@@ -123,7 +134,7 @@ Duidelijk principe:
 - User-facing UI blijft eenvoudig Nederlands.
 - Gebruik `docs/product/next-task.md` als standaard startpunt voor volgende taak.
 
-## 8) How to restart in a new ChatGPT session
+## 9) How to restart in a new ChatGPT session
 
 1. Kopieer/plak prompt uit `docs/product/new-chat-startup-prompt.md`.
 2. Vraag de assistant om eerst de handover-documenten te lezen.
