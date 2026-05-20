@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { archiveWatchlistItem, createWatchlistItem, listWatchlistItems, type WatchlistItem } from "@/lib/apiClient";
+import { archiveWatchlistItem, createWatchlistItem, listWatchlistItems, type WatchlistItemResponse } from "@/lib/apiClient";
 
 export default function Page() {
-  const [items, setItems] = useState<WatchlistItem[]>([]);
+  const [items, setItems] = useState<WatchlistItemResponse[]>([]);
   const [symbol, setSymbol] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -17,15 +17,18 @@ export default function Page() {
     }
     setItems(res.data.items);
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   return <main className="page-wrap"><h2>Volglijst</h2><p>Lokale volgassets voor onderzoek. Dit zijn geen IBKR-posities.</p>
+    <p title="Asset-identiteit helpt het systeem later data en bewijs correct te koppelen.">Asset-identiteit helpt het systeem later data en bewijs correct te koppelen.</p>
     <form onSubmit={async (e)=>{e.preventDefault(); setError(null); const r=await createWatchlistItem({symbol,note: note || null}); if(!r.ok){setError("Toevoegen mislukt.");return;} setSymbol(""); setNote(""); await load();}}>
       <label>Symbool <input value={symbol} onChange={(e)=>setSymbol(e.target.value)} /></label>
       <label>Notitie <input value={note} onChange={(e)=>setNote(e.target.value)} /></label>
       <button type="submit">Toevoegen</button>
     </form>
     {error ? <p>{error}</p> : null}
-    {items.length===0 ? <p>Nog geen volglijst-items. Voeg handmatig een asset toe.</p> : <table><thead><tr><th>Symbool</th><th>Naam</th><th>Beurs</th><th>Valuta</th><th>Type</th><th>Status</th><th>Notitie</th><th>Laatst aangepast</th><th>Actie</th></tr></thead><tbody>{items.map((i)=><tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.name ?? "Niet beschikbaar"}</td><td>{i.exchange ?? "Niet beschikbaar"}</td><td>{i.currency ?? "Niet beschikbaar"}</td><td>{i.security_type ?? "Niet beschikbaar"}</td><td>{i.status}</td><td>{i.note ?? "Niet beschikbaar"}</td><td>{new Date(i.updated_at).toLocaleString("nl-BE")}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>)}</tbody></table>}
+    {items.length===0 ? <p>Nog geen volglijst-items. Voeg handmatig een asset toe.</p> : <table><thead><tr><th>Symbool</th><th>Naam</th><th>Beurs</th><th>Valuta</th><th>Type</th><th>Status</th><th>Link-status</th><th>Canonieke asset</th><th>Notitie</th><th>Laatst aangepast</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; return <tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.name ?? "Niet beschikbaar"}</td><td>{i.exchange ?? "Niet beschikbaar"}</td><td>{i.currency ?? "Niet beschikbaar"}</td><td>{i.security_type ?? "Niet beschikbaar"}</td><td>{i.status}</td><td>{wrapped.link_status === "gelinkt" ? "Gelinkt" : "Niet gelinkt"}</td><td>{wrapped.linked_asset ? `${wrapped.linked_asset.asset_name ?? "Niet beschikbaar"} (${wrapped.linked_asset.canonical_symbol ?? "Niet beschikbaar"}) - ${wrapped.linked_asset.primary_exchange ?? "Niet beschikbaar"}/${wrapped.linked_asset.primary_currency ?? "Niet beschikbaar"}` : "Niet beschikbaar"}</td><td>{i.note ?? "Niet beschikbaar"}</td><td>{new Date(i.updated_at).toLocaleString("nl-BE")}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>}
   </main>;
 }
