@@ -92,3 +92,5 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 - Geen market-data runtime toegevoegd, geen historical fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag.
 - Geen fake market prices of fake broker/recommendation data toegevoegd.
 - Ongevalideerde of onopgeloste identiteiten blijven geblokkeerd voor market data en latere analyse/suggesties/actie-drafts.
+
+| Market-data readiness persistence wiring (Task 86) | Contracted | Storage read-contracten geïmplementeerd | API read-only detail endpoints geïmplementeerd | UI pending | Runtime pending | Geen market-data runtime/historical/scheduler/AI/suggesties/orders; unresolved identities blijven blocked. |

@@ -172,3 +172,5 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - Geen market-data runtime toegevoegd, geen historical fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag.
 - Geen fake market prices of fake broker/recommendation data toegevoegd.
 - Ongevalideerde of onopgeloste identiteiten blijven geblokkeerd voor market data en latere analyse/suggesties/actie-drafts.
+
+- [x] Task 86 — Market data readiness persistence wiring (read-only snapshotmetadata, conid-gated readiness blijft actief).

@@ -21,6 +21,7 @@ from ai_trading_agent_storage.metadata import (
     broker_reconciliation_reports,
     broker_sync_runs,
     external_broker_activities,
+    market_data_snapshots,
     paper_portfolio_setups,
     research_document_classifications,
     research_document_set_members,
@@ -60,6 +61,7 @@ from ai_trading_agent_storage.repository_contracts import (
     CreatePaperPortfolioSetupRequest,
     CreateSystemEventRequest,
     ExternalBrokerActivityRecord,
+    MarketDataSnapshotRecord,
     PaperPortfolioSetupRecord,
     RepositoryHealthStatus,
     ResearchDocumentClassificationRecord,
@@ -583,6 +585,71 @@ class SqlAlchemyBrokerSnapshotRepository(_Base):
             broker_commission_snapshots.name,
             True,
             "Commissiemomentopname opgeslagen.",
+        )
+
+
+class SqlAlchemyMarketDataSnapshotRepository(_Base):
+    def get_latest_by_ibkr_conid(
+        self,
+        ibkr_conid: str,
+    ) -> StorageReadResult[MarketDataSnapshotRecord]:
+        row = (
+            self._connection.execute(
+                select(market_data_snapshots)
+                .where(market_data_snapshots.c.ibkr_conid == ibkr_conid)
+                .order_by(market_data_snapshots.c.stored_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return StorageReadResult(
+                found=False,
+                record=None,
+                table_name=market_data_snapshots.name,
+                explanation_nl="Geen market-data snapshot gevonden voor conid.",
+            )
+        return StorageReadResult(
+            found=True,
+            record=MarketDataSnapshotRecord(**dict(row)),
+            table_name=market_data_snapshots.name,
+            explanation_nl="Laatste market-data snapshot opgehaald voor conid.",
+        )
+
+    def list_by_ibkr_conid(self, ibkr_conid: str) -> StorageListResult[MarketDataSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(market_data_snapshots)
+                .where(market_data_snapshots.c.ibkr_conid == ibkr_conid)
+                .order_by(market_data_snapshots.c.stored_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return StorageListResult(
+            records=tuple(MarketDataSnapshotRecord(**dict(row)) for row in rows),
+            table_name=market_data_snapshots.name,
+            explanation_nl="Market-data snapshots opgehaald voor conid.",
+        )
+
+    def list_by_watchlist_item(
+        self,
+        watchlist_item_id: str,
+    ) -> StorageListResult[MarketDataSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(market_data_snapshots)
+                .where(market_data_snapshots.c.watchlist_item_id == watchlist_item_id)
+                .order_by(market_data_snapshots.c.stored_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return StorageListResult(
+            records=tuple(MarketDataSnapshotRecord(**dict(row)) for row in rows),
+            table_name=market_data_snapshots.name,
+            explanation_nl="Market-data snapshots opgehaald voor volglijst-item.",
         )
 
 

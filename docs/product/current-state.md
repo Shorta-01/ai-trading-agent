@@ -134,3 +134,5 @@
 - Geen market-data runtime toegevoegd, geen historical fetching, geen scheduler, geen AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag.
 - Geen fake market prices of fake broker/recommendation data toegevoegd.
 - Ongevalideerde of onopgeloste identiteiten blijven geblokkeerd voor market data en latere analyse/suggesties/actie-drafts.
+
+- Task 86: **completed** — market-data readiness persistence wiring uitgebreid met read-only detail toegang en snapshot-metadata endpointfundament. Geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prijzen/data toegevoegd. Onopgeloste of ongevalideerde identiteiten blijven geblokkeerd.

@@ -46,3 +46,16 @@ def test_market_data_readiness_ready_for_validated_identity_only() -> None:
     assert row["status"] == "ready"
     assert row["blocker_code"] is None
     assert row["freshness_status"] == "missing_snapshot"
+
+
+def test_market_data_readiness_watchlist_detail_endpoint() -> None:
+    STORE["w-1"] = _item("w-1", conid="265598", validation_status="valid")
+    response = client.get("/market-data/readiness/watchlist/w-1")
+    assert response.status_code == 200
+    assert response.json()["item"]["watchlist_item_id"] == "w-1"
+
+
+def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled() -> None:
+    response = client.get("/market-data/snapshots/latest/265598")
+    assert response.status_code == 200
+    assert response.json()["item"] is None
