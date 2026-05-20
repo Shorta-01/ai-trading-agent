@@ -25,8 +25,8 @@ def test_storage_status_endpoint() -> None:
     assert migration_readiness['database_connected'] is False
     assert migration_readiness['migrations_checked_against_database'] is False
     assert migration_readiness['offline_inventory_valid'] is True
-    assert migration_readiness['latest_expected_revision_id'] == '0011'
-    assert migration_readiness['expected_revision_count'] == 11
+    assert migration_readiness['latest_expected_revision_id'] == '0013'
+    assert migration_readiness['expected_revision_count'] == 13
     assert migration_readiness['database_revision_id'] is None
     assert migration_readiness['persistence_allowed'] is False
     assert migration_readiness['blocks_runtime_writes'] is True

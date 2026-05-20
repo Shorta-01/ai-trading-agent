@@ -901,7 +901,7 @@ def get_latest_source_credibility_assessment(library_source_id: str) -> dict[str
                 "Beoordeling is verplicht, maar zelfs daarna blijven suggesties in deze fase geblokkeerd.",
             )
         return _ok(
-            "Laatste bron-credibilitystatus gevonden.",
+            "Laatste bron-credibilitybeoordeling gevonden.",
             {**asdict(found), "credibility_signals": list(found.credibility_signals_json or ())},
             "Zelfs hoge credibility ontgrendelt geen suggesties in versie 1 foundation.",
         )

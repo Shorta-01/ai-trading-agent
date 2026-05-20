@@ -24,14 +24,14 @@ def test_online_imports_and_interface_flag() -> None:
 def test_online_current_revision_allows_persistence() -> None:
     with _new_connection() as conn:
         conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
-        conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0011')"))
+        conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0013')"))
         report = check_online_migration_readiness(conn)
 
     assert report.status == MigrationReadinessStatus.MIGRATIONS_CURRENT
     assert report.database_connected is True
     assert report.migrations_checked_against_database is True
-    assert report.database_revision_id == "0011"
-    assert report.latest_expected_revision_id == "0011"
+    assert report.database_revision_id == "0013"
+    assert report.latest_expected_revision_id == "0013"
     assert report.persistence_allowed is True
     assert report.blocks_runtime_writes is False
     assert report.explanation_nl.strip()
@@ -87,7 +87,7 @@ def test_online_multiple_rows_are_not_treated_as_success() -> None:
     with _new_connection() as conn:
         conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
         conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0005')"))
-        conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0011')"))
+        conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('0013')"))
         report = check_online_migration_readiness(conn)
 
     assert report.status == MigrationReadinessStatus.FAILED
