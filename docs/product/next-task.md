@@ -1,23 +1,14 @@
-## Task 72: Source-to-asset linking foundation (recommended)
+## Task 73: Asset detection foundation (recommended)
 
-Doel: research sources, evidence items, conflict findings en gate outcomes veilig linken aan canonieke asset-identiteiten uit de asset master identity foundation, zonder suggestion/watchlist/portfolio/IBKR/order runtime unlock.
+Doel: veilige, auditbare detectievoorstellen van asset-kandidaten vanuit bronnen toevoegen, zonder suggestion/watchlist/portfolio/IBKR/order runtime unlock.
 
 ### Waarom nu
 
-- Task 71 asset master identity foundation is geïmplementeerd als storage/API basis.
-- Task 71B repair is afgerond en CI staat groen.
-- De veiligste volgende stap is lineage/traceability verdiepen via source-to-asset linking op canonieke asset-identiteiten.
-- Dit blijft audit/status-only en houdt suggesties geblokkeerd.
+- Task 72 source-to-asset linking foundation bestaat en geeft traceerbare relaties naar canonieke asset-identiteiten.
+- De volgende conservatieve stap is detectievoorstellen (status-only) vóór enige runtime-acties.
 
-### In scope (Task 72)
+### In scope (Task 73)
 
-- Source-to-asset linking foundation op basis van asset master identities.
-- Linkbaarheid voor research sources, evidence, conflict findings en gate outcomes.
-- Geen suggestion runtime unlock.
-- Geen watchlist insertion, portfolio positions, AI runtime, market-data runtime, forecast runtime, IBKR gedrag of ordergedrag.
-
-### Alternatieve latere taken
-
-- market calendar/freshness runtime foundation
-- asset detection foundation
-- market data metadata foundation
+- Asset-detection kandidaatrecords (status-only).
+- Link met bestaande source/evidence lineage.
+- Geen suggestion runtime unlock en geen watchlist insertion zonder user-confirm flow.

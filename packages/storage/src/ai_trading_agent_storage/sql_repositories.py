@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict
 import json
 from datetime import UTC, datetime
@@ -30,6 +31,7 @@ from ai_trading_agent_storage.metadata import (
     research_source_prompt_injection_scans,
     research_source_credibility_assessments,
     research_source_conflict_findings,
+    source_to_asset_links,
     research_source_evidence_ledger_links,
     research_source_evidence_items,
     research_gate_outcomes,
@@ -69,6 +71,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceConflictFindingRecord,
+    SourceToAssetLinkRecord,
     ResearchSourceEvidenceItemRecord,
     ResearchSourceEvidenceLedgerLinkRecord,
     ResearchGateOutcomeRecord,
@@ -114,6 +117,15 @@ def _json_list_or_none(value: tuple[str, ...] | list[str] | None) -> list[str] |
         return None
     return list(value)
 
+
+
+def _row_to_source_to_asset_link_record(row: Mapping[str, object]) -> SourceToAssetLinkRecord:
+    values = dict(row)
+    raw_audit_context = values.get("audit_context_json")
+    values["audit_context_json"] = (
+        None if raw_audit_context is None else json.loads(raw_audit_context)
+    )
+    return SourceToAssetLinkRecord(**values)
 
 def _row_to_gate_outcome_record(row: Any) -> ResearchGateOutcomeRecord:
     values = dict(row)
@@ -860,6 +872,34 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         )
         row = self._connection.execute(statement).mappings().first()
         return None if row is None else ResearchDocumentClassificationRecord(**dict(row))
+
+
+    def save_source_to_asset_link(
+        self, record: SourceToAssetLinkRecord
+    ) -> SourceToAssetLinkRecord:
+        values = asdict(record)
+        values["audit_context_json"] = (
+            None if record.audit_context_json is None else json.dumps(record.audit_context_json)
+        )
+        self._insert(source_to_asset_links, values)
+        return record
+
+    def list_source_to_asset_links_for_asset(
+        self, asset_id: str
+    ) -> tuple[SourceToAssetLinkRecord, ...]:
+        rows = (
+            self._connection.execute(
+                select(source_to_asset_links)
+                .where(source_to_asset_links.c.asset_id == asset_id)
+                .order_by(
+                    source_to_asset_links.c.created_at.desc(),
+                    source_to_asset_links.c.link_id.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_row_to_source_to_asset_link_record(row) for row in rows)
 
     def save_source_asset_link(
         self, record: ResearchSourceAssetLinkRecord

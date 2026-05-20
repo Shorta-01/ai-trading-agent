@@ -856,6 +856,31 @@ class ResearchSourceConflictFindingRecord:
 
 
 @dataclass(frozen=True)
+class SourceToAssetLinkRecord:
+    link_id: str
+    asset_id: str
+    target_type: str
+    target_id: str
+    link_reason_nl: str
+    audit_context_json: dict[str, str] | None
+    safe_to_use_for_suggestions: bool
+    blocks_suggestions: bool
+    created_at: datetime
+    created_by: str
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "link_id", "asset_id", "target_type", "target_id", "link_reason_nl", "created_by", "explanation_nl"
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in this foundation.")
+        if not self.blocks_suggestions:
+            raise ValueError("blocks_suggestions must remain true in this foundation.")
+
+
+@dataclass(frozen=True)
 class AssetMasterRecord:
     asset_id: str
     canonical_symbol: str

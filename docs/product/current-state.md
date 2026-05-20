@@ -80,3 +80,5 @@
 - Task 70B: **completed** — API/storage pytest issues gerepareerd; CI groen; geen runtimegedrag gewijzigd.
 - Task 71: **completed** — asset master identity foundation toegevoegd (storage/API), identity blijft referentie/status-only en geblokkeerd voor suggesties; geen watchlist/portfolio/suggestie/IBKR/order/AI/market-data/forecast runtime.
 - Task 71B: **completed** — API mypy repair afgerond; CI opnieuw groen; geen runtimegedrag gewijzigd.
+
+- Task 72: **completed** — source-to-asset linking foundation toegevoegd (storage/API), audit/reference-only naar canonical asset identities; blijft geblokkeerd voor suggesties en voegt geen watchlist/portfolio/AI/market-data/forecast/IBKR/order runtime toe.

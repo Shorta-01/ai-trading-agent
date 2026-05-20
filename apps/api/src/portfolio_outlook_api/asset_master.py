@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from ai_trading_agent_storage import (
     AssetIdentifierAliasRecord,
     AssetMasterRecord,
+    SourceToAssetLinkRecord,
     SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
     StorageConnectionProvider,
@@ -158,6 +159,57 @@ def list_aliases(asset_id: str) -> dict[str, object]:
         return {
             "records": repo.list_asset_identifier_aliases(asset_id),
             "help_nl": "Dit maakt geen order of IBKR-actie aan.",
+        }
+
+    return _with_repository(op, require_writable=False)
+
+
+class SourceToAssetLinkCreateRequest(BaseModel):
+    link_id: str
+    asset_id: str
+    target_type: str
+    target_id: str
+    link_reason_nl: str
+    created_by: str
+    audit_context_json: dict[str, str] | None = None
+
+
+@router.post("/assets/master/source-links")
+def create_source_to_asset_link(request: SourceToAssetLinkCreateRequest) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        if repo.get_asset_by_asset_id(request.asset_id) is None:
+            raise HTTPException(status_code=404, detail="Asset-identiteit niet gevonden.")
+        record = SourceToAssetLinkRecord(
+            link_id=request.link_id,
+            asset_id=request.asset_id,
+            target_type=request.target_type,
+            target_id=request.target_id,
+            link_reason_nl=request.link_reason_nl,
+            audit_context_json=request.audit_context_json,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            created_at=datetime.now(UTC),
+            created_by=request.created_by,
+            explanation_nl="Deze link is alleen voor audit en referentie.",
+        )
+        saved = repo.save_source_to_asset_link(record)
+        return {
+            "record": saved,
+            "help_nl": (
+                "Deze link is alleen audit/referentie. Dit maakt geen suggestie, order, "
+                "watchlist-item of IBKR-actie aan."
+            ),
+        }
+
+    return _with_repository(op, require_writable=True)
+
+
+@router.get("/assets/master/{asset_id}/source-links")
+def list_source_to_asset_links(asset_id: str) -> dict[str, object]:
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> dict[str, object]:
+        return {
+            "records": repo.list_source_to_asset_links_for_asset(asset_id),
+            "help_nl": "Audit/referentie-links; suggesties en orders blijven geblokkeerd.",
         }
 
     return _with_repository(op, require_writable=False)
