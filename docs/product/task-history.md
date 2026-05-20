@@ -37,7 +37,16 @@
 - **Task 60:** file upload UI.
 - **Task 61A:** extracted text storage foundation.
 - **Task 61B:** deterministische TXT/MD/CSV extractie-runtime + repairs voor green CI.
+- **Task 62:** gedetailleerde project handover en Version 1 backlog source-of-truth docs.
+- **Task 63:** Onderzoeksbibliotheek UI extractie-trigger + extracted-text status display.
+
+## Forecasting doctrine lock
+
+- Probabilistische asset-outlook doctrine toegevoegd als productrichting voor toekomstige forecast-, quant-, suggestion- en AI-event-intelligence taken.
+- Locked principle: het systeem berekent probability/range-based outlooks, geen fake exact toekomstig koersdoel.
+- Locked principle: Python/modelcode berekent kansen, ranges en risico; AI interpreteert bewijs en legt uit.
+- Locked principle: forecasts zijn geen orders, geen IBKR acties en bypassen geen gates.
 
 ## Current task
 
-- **Task 62:** gedetailleerde project handover en Version 1 backlog source-of-truth docs.
+- **Task 64:** deterministic document classification contracts/runtime foundation is the next recommended focused task, unless CI shows a repair task is needed first.
