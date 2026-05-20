@@ -194,6 +194,7 @@ export type ResearchSourceRecord = {
   explanation_nl: string;
   created_at: string;
   updated_at: string;
+  ibkr_conid: string | null;
 };
 
 
@@ -393,10 +394,13 @@ export type WatchlistItem = {
   source: "manual";
   created_at: string;
   updated_at: string;
+  ibkr_conid: string | null;
 };
 
 export async function listWatchlistItems(): Promise<FetchState<{items: WatchlistItemResponse[]}>> { return getJson('/watchlist/items'); }
-export async function createWatchlistItem(payload: {symbol: string; note?: string | null}): Promise<FetchState<{item: WatchlistItemResponse}>> { return postJson('/watchlist/items', payload); }
+export type IbkrContractCandidate = { candidate_id: string; ibkr_conid: string; symbol: string; company_name: string | null; asset_class: string | null; exchange: string | null; primary_exchange: string | null; currency: string | null; validation_status: string; };
+export async function searchIbkrContracts(query: string): Promise<FetchState<{items: IbkrContractCandidate[]}>> { return getJson(`/ibkr/contracts/search?query=${encodeURIComponent(query)}`); }
+export async function createWatchlistItem(payload: {ibkr_conid: string; ibkr_symbol: string; ibkr_contract_name?: string | null; ibkr_security_type?: string | null; ibkr_exchange?: string | null; ibkr_primary_exchange?: string | null; ibkr_currency?: string | null; ibkr_validation_status: string; note?: string | null}): Promise<FetchState<{item: WatchlistItemResponse}>> { return postJson('/watchlist/items', payload); }
 export async function updateWatchlistItem(id: string, payload: {note?: string | null; name?: string | null; exchange?: string | null; currency?: string | null; security_type?: string | null; asset_id?: string | null}): Promise<FetchState<{item: WatchlistItemResponse}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {item: WatchlistItemResponse} }; } catch { return { ok: false, reason: 'not_reachable' }; } }
 export async function archiveWatchlistItem(id: string): Promise<FetchState<{archived: boolean}>> { try { const response = await fetch(`${API_BASE_URL}/watchlist/items/${id}`, { method: 'DELETE' }); if (!response.ok) return { ok: false, reason: 'not_reachable' }; return { ok: true, data: (await response.json()) as {archived: boolean} }; } catch { return { ok: false, reason: 'not_reachable' }; } }
 
@@ -411,4 +415,6 @@ export type WatchlistItemResponse = {
     primary_exchange: string | null;
     primary_currency: string | null;
   } | null;
+  ibkr_status_label_nl: string;
+  analysis_readiness_label_nl: string;
 };

@@ -140,3 +140,6 @@
 - No runtime code changed.
 
 - Task 82 — IBKR contract search and validation foundation: toegevoegd read-only adapter boundary + API endpoints voor contract search/details/validate met veilige not-configured status en genormaliseerde conid identity records. Geen market-data/historical/scheduler/suggestion/Decision Package/action draft/order/AI/forecast runtime.
+
+
+- Task 83: Volglijst add-flow omgezet naar IBKR contractpicker; actieve creatie vereist gevalideerde IBKR-contractidentiteit. Bestaande losse records zonder contract blijven niet-gevalideerd en niet klaar voor analyse. Geen market-data runtime, historical fetching, schedulers, suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, forecast runtime of fake data toegevoegd.

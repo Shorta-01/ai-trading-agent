@@ -117,3 +117,6 @@
 - Task 81: **completed** — documentation-only; IBKR-contract-based active watchlist rule vergrendeld, conid-based data-readiness rule vergrendeld en sync/freshness/performance-roadmap vergrendeld. Geen runtimecode gewijzigd.
 
 - Task 82: **completed** — read-only IBKR contract search/validation foundation toegevoegd met veilige not-configured responses en genormaliseerde conid-gebaseerde contractkandidaten/validatieresultaten via API-endpoints. Geen market-data runtime, geen historische data-fetching, geen schedulers, geen suggestions/Decision Packages/action drafts, geen IBKR ordergedrag, geen AI/forecast runtime en geen fake data.
+
+
+- Task 83: Volglijst add-flow omgezet naar IBKR contractpicker; actieve creatie vereist gevalideerde IBKR-contractidentiteit. Bestaande losse records zonder contract blijven niet-gevalideerd en niet klaar voor analyse. Geen market-data runtime, historical fetching, schedulers, suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, forecast runtime of fake data toegevoegd.
