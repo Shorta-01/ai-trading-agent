@@ -73,3 +73,15 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     response = client.get("/market-data/snapshots/latest/265598")
     assert response.status_code == 200
     assert response.json()["item"] is None
+
+
+def test_market_data_readiness_missing_snapshot_includes_dutch_audit_fields() -> None:
+    STORE["w-1"] = _item("w-1", conid="265598", validation_status="valid")
+
+    response = client.get("/market-data/readiness/watchlist/w-1")
+    assert response.status_code == 200
+    row = response.json()["item"]
+    assert row["freshness_status"] == "missing_snapshot"
+    assert "read-only" in row["audit_help_nl"].lower()
+    assert "geen market-data runtime" in row["help_nl"].lower()
+    assert "suggestie" in row["audit_help_nl"].lower()

@@ -1,5 +1,16 @@
 # Task History (concise)
 
+## Task 88 — Conservative readiness-contract consolidation
+
+- Status: completed.
+- API-only/read-only consolidatie uitgevoerd voor market-data readiness responses.
+- Typed responsecontracten/helpers gecentraliseerd in API-module; route-opbouw met ad-hoc `dict[str, object]` verminderd.
+- Regressietests bijgewerkt voor readiness list/detail shape en conservatieve NL audit/help velden.
+- Geen market-data runtime, historical fetching, scheduler, AI runtime, suggesties, Decision Packages, action drafts of IBKR-ordergedrag toegevoegd.
+- Geen fake market prices, brokerdata of aanbevelingen toegevoegd.
+- Unresolved/unvalidated identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
+
+
 ## Tasks 65–67E
 
 - **Task 65:** prompt-injection scan status foundation toegevoegd (storage/API), met conservatieve suggestieblokkade.
