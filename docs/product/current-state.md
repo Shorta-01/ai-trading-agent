@@ -1,4 +1,4 @@
-# Current State (na Task 88G)
+# Current State (na Task 88I)
 
 ## 1) Current status summary
 
@@ -9,7 +9,9 @@
 - Task 81 voegt geen historische data-fetching toe.
 - Task 81 voegt geen schedulers toe.
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
-- Huidige toestand: **na Task 88G**.
+- Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
+- Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
+- Huidige toestand: **na Task 88I**.
 - CI-status: **geblokkeerd door GitHub Actions platform/account/repository-level failure** (niet geverifieerd als applicatiecodefout).
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.

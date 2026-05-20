@@ -1,5 +1,12 @@
 # Task History (concise)
 
+## Task 88I — Documentation-only roadmap update from Claude architecture audit
+
+- Status: completed (documentation-only).
+- Claude architecture/roadmap audit is reviewed; accepted bevindingen zijn vertaald naar backlog/locks/scope/next-task documentatie.
+- CI-context ongewijzigd: GitHub Actions execution/logging blocker blijft actief; **Task 89 blijft geblokkeerd**.
+- Geen app-code, tests, migraties, package metadata of workflows aangepast.
+
 ## Task 88G — GitHub Actions platform-level failure diagnosis
 
 - Status: completed (documentation-only).

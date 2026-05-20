@@ -18,3 +18,10 @@ Zolang CI rood blijft en diagnostische logging ontbreekt:
 ## Daarna pas
 
 Task 89 — Conservatieve API-readiness contract hardening: kleine vervolgstap met extra response-contract regressietests en expliciete typed coverage voor snapshot-detailvarianten (read-only, geen runtime).
+
+
+## Nota na Task 88I
+
+- Claude architecture-audit bevindingen zijn geaccepteerd en als roadmap/lock-updates gedocumenteerd.
+- Volgorde na CI-herstel: eerst conservatieve identity/gateway/readiness hardening (AssetListing-model, IBKR gateway skeleton, market-data freshness/pacing gates, usable-cash contract, AI enforcement foundation, Decision Package/state-machine ontwerp) vóór runtime-uitbreiding.
+- Task 89 blijft geblokkeerd tot CI groen is; Task 89 start niet binnen Task 88I.
