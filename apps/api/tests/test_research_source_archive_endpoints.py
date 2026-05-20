@@ -14,6 +14,7 @@ from ai_trading_agent_storage import (
     ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourcePromptInjectionScanRecord,
+    ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -158,6 +159,7 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
                 str, list[ResearchSourceProcessingStatusRecord]
             ] = defaultdict(list)
             self.prompt_scans: dict[str, list[ResearchSourcePromptInjectionScanRecord]] = defaultdict(list)
+            self.credibility: dict[str, list[ResearchSourceCredibilityAssessmentRecord]] = defaultdict(list)
             self.extracted_texts: dict[str, list[ResearchExtractedTextRecord]] = defaultdict(list)
 
         def save_research_source(self, record: ResearchSourceRecord) -> ResearchSourceRecord:
@@ -273,6 +275,19 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> None:
             self, library_source_id: str
         ) -> ResearchSourcePromptInjectionScanRecord | None:
             records = self.prompt_scans.get(library_source_id, [])
+            return records[-1] if records else None
+
+
+        def save_source_credibility_assessment(
+            self, record: ResearchSourceCredibilityAssessmentRecord
+        ) -> ResearchSourceCredibilityAssessmentRecord:
+            self.credibility[record.library_source_id].append(record)
+            return record
+
+        def get_latest_source_credibility_assessment(
+            self, library_source_id: str
+        ) -> ResearchSourceCredibilityAssessmentRecord | None:
+            records = self.credibility.get(library_source_id, [])
             return records[-1] if records else None
 
         def save_extracted_text(
@@ -622,3 +637,41 @@ def test_deterministic_classification_endpoint_saves_blocked_classification(
     status = client.get("/research/sources/src-class/processing-status/latest").json()["record"]
     assert status["classification_status"] == "deterministic_classified"
     assert status["blocks_suggestions"] is True
+
+
+def test_source_credibility_defaults_and_remains_blocked(fake_storage: None) -> None:
+    _create_source()
+    unassessed = client.get('/research/sources/src-1/credibility-assessment/latest')
+    assert unassessed.status_code == 200
+    assert unassessed.json()['record']['blocks_suggestions'] is True
+
+    high = client.post('/research/sources/src-1/credibility-assessment', json={
+        'assessment_id': 'cred-1',
+        'credibility_status': 'assessed',
+        'credibility_level': 'high',
+        'source_category': 'official_filing',
+        'confidence_level': 'high',
+        'credibility_signals': ['official_source'],
+        'safe_to_use_as_evidence': True,
+        'safe_to_use_for_suggestions': True,
+        'blocks_suggestions': False,
+        'explanation_nl': 'Hoge credibility, maar suggesties blijven geblokkeerd.'
+    })
+    assert high.status_code == 200
+    high_record = high.json()['record']
+    assert high_record['safe_to_use_for_suggestions'] is False
+    assert high_record['blocks_suggestions'] is True
+    assert 'geblokkeerd' in high.json()['help_nl'].lower()
+
+    low = client.post('/research/sources/src-1/credibility-assessment', json={
+        'assessment_id': 'cred-2', 'credibility_status': 'assessed', 'credibility_level': 'low',
+        'source_category': 'questionable', 'confidence_level': 'medium', 'credibility_signals': ['weinig_bronnen'],
+        'safe_to_use_as_evidence': False, 'safe_to_use_for_suggestions': False, 'blocks_suggestions': True,
+        'limitation_notes_nl': 'Onzeker', 'explanation_nl': 'Bron blijft geblokkeerd.'
+    })
+    assert low.status_code == 200
+    latest = client.get('/research/sources/src-1/credibility-assessment/latest')
+    assert latest.status_code == 200
+    assert latest.json()['record']['credibility_level'] == 'low'
+    assert latest.json()['record']['blocks_suggestions'] is True
+    assert 'beoordeling' in latest.json()['message_nl'].lower()

@@ -1,5 +1,5 @@
-## Task 66: Add source credibility runtime foundation for research sources
+## Task 67: Add evidence extraction foundation for research sources
 
-Task 65 is afgerond: prompt-injection scanstatus kan nu worden opgeslagen en opgehaald per research source, met conservatieve blokkade voor suggesties.
+Doel: kleine veilige runtime-basis om evidence-items deterministisch te registreren en te linken aan research-bronnen, zonder suggesties te ontgrendelen.
 
-Volgende kleine stap: source credibility runtime foundation (status opslag + veilige blokkade) óf evidence extraction foundation.
+Na Task 66 is source credibility status-opslag/API aanwezig; volgende stap is evidence extraction/ledger linking foundation.

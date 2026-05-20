@@ -73,7 +73,7 @@ Voor projectcontinuïteit tussen ChatGPT/Codex sessies:
 | 9 | Shadow suggestion mode | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 10 | Outcome tracking | V1 governance en betrouwbaarheid | Planned | Planned | Planned | Planned | Planned | This register | Locked | Locked voor V1; implementatie nog gepland. |
 | 11 | Evidence Ledger | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | Planned | Planned | Planned | This register | In progress | Storagefundament toegevoegd; runtime/UI volgt. |
-| 12 | Source credibility scoring | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
+| 12 | Source credibility scoring | V1 governance en betrouwbaarheid | Implemented (contract) | Implemented (status storage) | Implemented (latest/save API) | Planned | Implemented (tests for blocked defaults) | This register | In progress | Task 66: credibility status foundation toegevoegd; suggesties blijven altijd geblokkeerd. |
 | 13 | Source conflict detection | V1 governance en betrouwbaarheid | Planned | Storage foundation implemented | Planned | Planned | Planned | This register | In progress | Conflict-opslag toegevoegd; detectielogica volgt. |
 | 14 | Prompt-injection defense | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
 | 15 | AI research output schema validation | V1 governance en betrouwbaarheid | Implemented (contract) | Planned | Planned | Planned | Planned | This register | Contracted | Domain contract aanwezig; runtime volgt. |
@@ -337,3 +337,4 @@ Research inputs
 - Geen AI-analyse, geen prompt-injection runtime scan, geen source credibility runtime scoring, geen evidence extraction, geen watchlist/IBKR/order-acties toegevoegd.
 
 - Task 65 afgerond: prompt-injection runtime scanstatus wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.
+- Task 66 afgerond: source credibility assessment status wiring toegevoegd (opslaan + latest ophalen), met conservatieve blokkade voor suggesties in alle gevallen.

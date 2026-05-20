@@ -651,6 +651,36 @@ class ResearchSourcePromptInjectionScanRecord:
 
 
 @dataclass(frozen=True)
+class ResearchSourceCredibilityAssessmentRecord:
+    assessment_id: str
+    library_source_id: str
+    credibility_status: str
+    credibility_level: str
+    source_category: str
+    assessed_at: datetime
+    checked_at: datetime
+    confidence_level: str
+    credibility_signals_json: tuple[str, ...] | None
+    limitation_notes_nl: str | None
+    safe_to_use_as_evidence: bool
+    safe_to_use_for_suggestions: bool
+    blocks_suggestions: bool
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "assessment_id", "library_source_id", "credibility_status", "credibility_level",
+            "source_category", "confidence_level", "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        _require_ordered_datetimes(self.assessed_at, self.checked_at, "assessed_at", "checked_at")
+        if self.safe_to_use_for_suggestions:
+            raise ValueError("safe_to_use_for_suggestions must remain false in version 1 foundation.")
+        if not self.blocks_suggestions:
+            raise ValueError("blocks_suggestions must remain true in version 1 foundation.")
+
+
+@dataclass(frozen=True)
 class ResearchExtractedTextRecord:
     extracted_text_id: str
     library_source_id: str
