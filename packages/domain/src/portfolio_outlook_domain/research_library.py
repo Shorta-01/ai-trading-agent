@@ -318,7 +318,14 @@ def classify_document_deterministically(
         category = DeterministicDocumentCategory.USER_NOTE
         signals.append("source_kind:user_note")
         confidence = DocumentClassificationConfidence.HIGH
-    elif has("annual report", "jaarverslag", "form 10-k"):
+    elif has(
+        "annual report",
+        "annual-report",
+        "annual_report",
+        "annual rep",
+        "jaarverslag",
+        "form 10-k",
+    ):
         category = DeterministicDocumentCategory.ANNUAL_REPORT
         signals.append("keyword:annual_report")
         confidence = DocumentClassificationConfidence.MEDIUM
