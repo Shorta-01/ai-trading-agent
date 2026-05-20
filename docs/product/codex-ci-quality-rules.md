@@ -89,3 +89,11 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    - Als een nieuwe top-level key (zoals `data`) wordt geïntroduceerd, moeten endpoint-implementatie en alle relevante tests consistent worden aangepast.
    - Schrijf geen tests tegen een response-shape die niet geïmplementeerd is.
    - Draai API `pytest` na elke endpoint response-shape wijziging; merge nooit met bekende API pytest failures.
+
+
+13. **API route modules must not import private helpers from other route modules**
+   - Do not import names starting with `_` from another API route module.
+   - Shared API dependencies, such as repository providers, must live in a shared module with a public name.
+   - Every new API route module must pass `mypy src` before merge.
+   - API pytest must run after any new route module is added.
+   - A PR that says API mypy or API pytest could not be validated is not ready.
