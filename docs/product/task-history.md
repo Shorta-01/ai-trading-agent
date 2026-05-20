@@ -67,3 +67,12 @@
 - Preventiechecklist in `docs/product/codex-ci-quality-rules.md` aangescherpt voor storage package-exports en cross-package mypy-verificatie.
 - Geen runtime-gedrag gewijzigd; enkel import/typecheck-herstel en procesversterking.
 - Evidence blijft geblokkeerd voor suggesties.
+
+
+## Task 67C — Repair Task 67 API mypy export failure and prevention
+
+- API CI-fout (`mypy src`) bevestigd: `Module "ai_trading_agent_storage" has no attribute "ResearchSourceEvidenceItemRecord" [attr-defined]`.
+- Root cause vastgelegd: ontbrekende package-root export in `packages/storage/src/ai_trading_agent_storage/__init__.py` voor cross-package importgebruik in de API.
+- Preventie toegevoegd: storage public-export smoke test voor API-gebruikte records (`ResearchSourcePromptInjectionScanRecord`, `ResearchSourceCredibilityAssessmentRecord`, `ResearchSourceEvidenceItemRecord`).
+- Preventieproces aangescherpt in `docs/product/codex-ci-quality-rules.md` met expliciete cross-package verificatie en verplichte API mypy/pytest-runbaarheid.
+- Geen runtime-gedrag gewijzigd; evidence blijft geblokkeerd voor suggesties en er is geen wijziging aan trading/suggestion/watchlist/IBKR/order-gedrag.

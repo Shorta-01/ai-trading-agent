@@ -40,6 +40,7 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
 
 6. **Nieuwe storage dataclass/record/contract toegevoegd?**  
    - Exporteer het type in `packages/storage/src/ai_trading_agent_storage/__init__.py` wanneer andere packages via de storage package-root importeren.
+   - Voeg een public-export smoke test toe of werk die bij (bij voorkeur `packages/storage/tests/test_public_exports.py`).
    - Draai API `mypy src` als de API het nieuwe storage-type importeert.
-   - Draai een import-smoke-check of package-level typecheck voor elke package die het nieuwe type importeert.
    - Ga er niet van uit dat storage-tests alleen voldoende zijn; cross-package imports moeten expliciet geverifieerd worden.
+   - Een PR is niet ready als API `mypy src` of API `pytest` niet kon draaien door ontbrekende dependencies; installeer dependencies op dezelfde manier als CI en verifieer opnieuw.
