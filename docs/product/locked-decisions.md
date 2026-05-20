@@ -204,3 +204,17 @@ Volgende beslissingen zijn expliciet vergrendeld:
 - hybride sync/refreshmodel (subscriptions + jobs + events + manuele refreshknoppen)
 
 Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only, zonder live trading, real-money execution of automatische orders.
+
+## IBKR-contract-based watchlist and data-readiness locks
+
+- No active watchlist item without validated IBKR contract identity.
+- Ticker text alone is never sufficient for active watchlist, market data, suggestions or action drafts.
+- Asset Master identity and IBKR contract identity are both required for serious analysis.
+- IBKR conid is mandatory before market data fetch.
+- User manual add must use IBKR contract search/selection.
+- System-detected assets require IBKR resolution before activation.
+- Imported IBKR watchlist items must be stored with conid identity.
+- Sync conflicts must be auditable.
+- No unresolved asset may receive analysis/suggestions/action drafts.
+- Locked wording: “Every active watchlist item must have a validated IBKR contract identity, including conid, asset class, exchange or primary exchange where available, and currency. Manual add must use IBKR contract search and user selection. System-detected assets must resolve to the correct IBKR contract before they can become active watchlist items. IBKR watchlist sync is allowed, but imported items must be stored with full conid-based identity and all sync conflicts must be auditable. No unresolved asset may receive market data, analysis, suggestions or action drafts.”
+- Locked principle: “No serious analysis or suggestion may run on loose, ambiguous or unvalidated data.”

@@ -142,3 +142,20 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 78B — CI-repair na Task 78 (API ruff-formatting + storage stale migration/metadata expectations); geen runtimegedrag gewijzigd en geen nieuwe features toegevoegd.
 
 - [x] Task 80 — Asset Master search/picker UI foundation (read-only/reference-only; voltooid).
+
+
+## Task 81 lock — required work before market-data runtime (not implemented yet)
+
+- IBKR contract search/validation foundation *(not implemented yet)*
+- IBKR conid mapping for Asset Master *(not implemented yet)*
+- Volglijst add flow converted to IBKR contract picker *(not implemented yet)*
+- System-detected asset candidate resolution through IBKR contract search *(not implemented yet)*
+- IBKR watchlist import foundation *(not implemented yet)*
+- IBKR watchlist export foundation later *(not implemented yet)*
+- Watchlist sync conflict handling *(not implemented yet)*
+- Asset data-readiness status *(not implemented yet)*
+- Historical data backfill queue *(not implemented yet)*
+- Latest market snapshot scheduler *(not implemented yet)*
+- Hot/warm/cold asset refresh tiers *(not implemented yet)*
+- Fast alert layer foundation *(not implemented yet)*
+- AI event analysis trigger foundation *(not implemented yet)*

@@ -28,15 +28,17 @@ Do not jump straight to an advanced AI forecasting layer.
 Recommended order:
 
 1. Asset master foundation.
-2. Market data and FX foundation.
-3. Point-in-time storage/freshness rules.
-4. Return and volatility calculation engine.
-5. Feature store foundation.
-6. Forecast target definitions.
-7. Baseline probabilistic forecast model.
-8. Backtesting and probability calibration.
-9. Scenario engine and Dutch explanations.
-10. Ensemble/AI-event integration only after the above foundations exist.
+2. IBKR contract identity validation / conid mapping.
+3. Active watchlist contract validation.
+4. Market data and FX foundation.
+5. Point-in-time storage/freshness rules.
+6. Return and volatility calculation engine.
+7. Feature store foundation.
+8. Forecast target definitions.
+9. Baseline probabilistic forecast model.
+10. Backtesting and probability calibration.
+11. Scenario engine and Dutch explanations.
+12. Ensemble/AI-event integration only after the above foundations exist.
 
 ## Safety locks
 

@@ -97,6 +97,9 @@ Forecasts must clearly state their horizon. A forecast for one horizon must not 
 A serious probabilistic forecasting engine requires these foundations:
 
 - asset master and instrument identity
+- validated IBKR contract identity/conid before market data or forecast work
+- no forecast may run on loose ticker text
+- historical data must be point-in-time, freshness-aware and paced
 - adjusted and unadjusted historical price data
 - corporate actions, splits and dividends
 - FX rates and FX freshness

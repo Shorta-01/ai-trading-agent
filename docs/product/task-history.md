@@ -128,3 +128,13 @@
 - Geen portfoliopositiecreatie.
 - Geen suggesties, Decision Packages, action drafts of IBKR-ordergedrag.
 - Geen AI/market-data/forecast runtime en geen fake data.
+
+
+## Task 81 — Docs: lock IBKR-contract-based watchlist, sync and freshness design
+
+- Status: completed
+- Type: documentation-only
+- Locked dat actieve Volglijst-items IBKR-contract-based moeten zijn.
+- Locked conid-based data-readiness rule: geen unresolved asset voor market data/analysis/suggestions/action drafts.
+- Locked sync/freshness/performance roadmap-volgorde vóór market-data runtime.
+- No runtime code changed.
