@@ -1,29 +1,22 @@
-## Task 73: Docs — lock Release 1 functional workflow blueprint (recommended)
+## Task 75: IBKR portfolio sync engine foundation (recommended)
 
-Doel: eerst repository-truth vastzetten voor de volledige Release 1 functionele workflow vóór nieuwe implementatietaken starten.
+Doel: na de UI-foundation van Task 74 een conservatieve, read-only IBKR portfolio sync-basis bouwen met audit-first gedrag.
 
 ### Waarom nu
 
-- Na Task 72C is de repository nog foundation-heavy en ontbreken suggestion/IBKR/AI/market-data/forecast runtimes.
-- De bredere Release 1 ontwerpbeslissingen zijn nu vergrendeld en moeten eerst als documentatiebron worden vastgelegd.
-- Zonder deze blueprint is er risico op versnipperde implementatie en scope-drift.
+- Task 74 leverde een moderne dashboard-shell met veilige empty states, maar runtime-data ontbreekt nog.
+- Release 1 blueprint vereist IBKR als operationele waarheid voor posities/cash/orders/executions.
+- Zonder sync-engine blijft dashboardinformatie terecht “niet beschikbaar”.
 
-### Task 73 output (docs-only)
+### Scope voor Task 75 (toekomstig)
 
-- Voeg `docs/product/release-1-functional-workflow-blueprint.md` toe als leidende bron voor end-to-end Release 1 workflow.
-- Synchroniseer verwijzingen in handover, final vision, locked decisions, backlog, scope register en task history.
-- Bevestig expliciet dat geen runtimecode, migraties, API’s, UI, tests of tradinggedrag worden toegevoegd.
+- Read-only IBKR sync foundation voor posities/cash/accountwaarden en sync-timestamps.
+- Audit logging en zichtbare foutstatussen voor mislukte sync-runs.
+- Geen orderflow, geen submissions, geen live trading, geen automatische acties.
 
-### Niet doen in Task 73
+### Niet doen in Task 75
 
-- Geen asset detection implementeren.
-- Geen IBKR sync runtime bouwen.
-- Geen suggestions/Decision Packages/action grids bouwen.
-- Geen market-data of AI runtime toevoegen.
-
-### Na merge van deze docs-task (toekomstige volgende stap)
-
-Als deze blueprint gemerged is en CI groen is, start dan pas een conservatieve eerste runtime-implementatietaak, bijvoorbeeld:
-- “Task 74: IBKR portfolio sync engine foundation (read-only, audit-first, geen orderflow)”
-
-Die toekomstige taak blijft buiten deze PR.
+- Geen market-data runtime.
+- Geen suggestion/AI runtime.
+- Geen Decision Packages.
+- Geen ordergedrag of action drafts.

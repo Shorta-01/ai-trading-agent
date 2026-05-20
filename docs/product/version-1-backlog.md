@@ -125,3 +125,11 @@ Volgende capabilities zijn verplicht voor Release 1 volgens `docs/product/releas
 - Release 1 end-to-end acceptance workflow
 
 Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; deze PR voegt geen runtimecode toe.
+
+
+## G) Task 74 update
+
+- Moderne GUI shell + dashboard foundation is toegevoegd.
+- Dashboard gebruikt veilige empty states: geen fake portfolio-/broker-/suggestiedata en geen fake chartwaarden.
+- Navigatie-shell voor Release 1 workflow bestaat (Dashboard, Portefeuille, Volglijst, Suggesties, IBKR Acties, Onderzoek, Historiek, Instellingen).
+- Geen IBKR runtime, market-data runtime, suggestion runtime, AI runtime of ordergedrag toegevoegd.

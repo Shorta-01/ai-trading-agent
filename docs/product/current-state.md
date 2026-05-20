@@ -1,12 +1,13 @@
-# Current State (na Task 72C)
+# Current State (na Task 74)
 
 ## 1) Current status summary
 
-- Huidige toestand: **na Task 72C**.
+- Huidige toestand: **na Task 74**.
 - CI-status: groen na Task 72C repair.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
+- Moderne web app shell + dashboard foundation bestaat nu met eerlijke empty states (geen fake data).
 
 ## 2) Implemented foundations
 
@@ -87,3 +88,6 @@
 
 - Task 72B: **completed** — storage mypy row-to-record typing en API pytest 503 failures gerepareerd; CI groen; geen runtimegedrag gewijzigd.
 - Task 72C: **completed** — resterende API pytest source-link create→list fixture persistence failure gerepareerd; CI opnieuw groen; geen runtimegedrag gewijzigd.
+
+
+- Task 74: **completed** — moderne GUI shell en dashboard foundation toegevoegd (apps/web) met Nederlandse navigatie, statusbadges, icon-tooltips, dashboardpanelen en veilige empty states. Geen IBKR runtime, geen market-data runtime, geen suggestion runtime, geen AI runtime, geen ordergedrag en geen fake portfolio/broker/suggestiedata toegevoegd.

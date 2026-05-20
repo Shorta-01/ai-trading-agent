@@ -1,37 +1,20 @@
-import { HelpText } from "@/components/HelpText";
-import { StatusBadge } from "@/components/StatusBadge";
-
-type BadgeType = "actief" | "waarschuwing" | "fout" | "info";
+import { StatusBadge, UiStatus } from "@/components/StatusBadge";
 
 type StatusCardProps = {
-  titel: string;
-  status: string;
-  statusType?: BadgeType;
-  hulptekst: string;
-  extraRegels?: string[];
+  title: string;
+  description: string;
+  statusLabel: string;
+  status: UiStatus;
 };
 
-export function StatusCard({
-  titel,
-  status,
-  statusType = "info",
-  hulptekst,
-  extraRegels = [],
-}: StatusCardProps) {
+export function StatusCard({ title, description, statusLabel, status }: StatusCardProps) {
   return (
-    <article className="dashboard-card" aria-label={`${titel} kaart`}>
+    <article className="dashboard-card" aria-label={`${title} kaart`}>
       <div className="card-topline">
-        <h3>{titel}</h3>
-        <StatusBadge text={status} type={statusType} />
+        <h3>{title}</h3>
+        <StatusBadge label={statusLabel} status={status} />
       </div>
-      {extraRegels.length > 0 ? (
-        <ul className="card-list">
-          {extraRegels.map((regel) => (
-            <li key={regel}>{regel}</li>
-          ))}
-        </ul>
-      ) : null}
-      <HelpText text={hulptekst} />
+      <p>{description}</p>
     </article>
   );
 }

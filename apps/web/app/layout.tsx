@@ -1,27 +1,54 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AccountModeBadge } from "@/components/AccountModeBadge";
 import { SystemEventsIndicator } from "@/components/SystemEventsIndicator";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI-Trading-Agent",
-  description: "Moderne Nederlandstalige paper-only dashboard basis",
+  title: "Portfolio Outlook Manager",
+  description: "Modern dashboard foundation in eenvoudige Nederlandse taal",
 };
+
+const navItems = [
+  ["/", "Dashboard"],
+  ["/portefeuille", "Portefeuille"],
+  ["/volglijst", "Volglijst"],
+  ["/suggesties", "Suggesties"],
+  ["/ibkr-acties", "IBKR Acties"],
+  ["/onderzoek", "Onderzoek"],
+  ["/historiek", "Historiek"],
+  ["/instellingen", "Instellingen"],
+] as const;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="nl">
       <body>
-        <div className="top-nav">
-          <nav className="main-nav" aria-label="Hoofdnavigatie">
-            <Link href="/">Dashboard</Link>
-            <Link href="/research-sources" title="Bewaar bronnen zoals notities, URL’s en documentmetadata die later kunnen helpen bij onderzoek. Deze bronnen zijn bewijs, geen handelsinstructies.">Onderzoeksbibliotheek</Link>
-          </nav>
-          <SystemEventsIndicator />
+        <div className="app-shell">
+          <aside className="side-nav">
+            <h1>Portfolio Outlook Manager</h1>
+            <nav aria-label="Hoofdnavigatie">
+              {navItems.map(([href, label]) => (
+                <Link href={href} key={href}>{label}</Link>
+              ))}
+            </nav>
+          </aside>
+          <div className="main-area">
+            <header className="top-status">
+              <div>
+                <p className="top-title">Release 1 dashboard</p>
+                <p className="top-sub">Veilige basis zonder runtime-data.</p>
+              </div>
+              <div className="top-actions">
+                <AccountModeBadge />
+                <SystemEventsIndicator />
+              </div>
+            </header>
+            {children}
+          </div>
         </div>
-        {children}
       </body>
     </html>
   );
