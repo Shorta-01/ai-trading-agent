@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_ten_revision_files_exist_with_expected_names() -> None:
+def test_exactly_eleven_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -46,6 +46,7 @@ def test_exactly_ten_revision_files_exist_with_expected_names() -> None:
         "0008_trading_settings.py",
         "0009_evidence_ledger.py",
         "0010_research_source_archive.py",
+        "0011_research_extracted_text.py",
     ]
 
 
@@ -273,3 +274,12 @@ def test_0010_research_archive_migration_has_tables_and_downgrade_order() -> Non
     drop_positions = [content.find(f'op.drop_table("{name}")') for name in drop_order]
     assert all(position >= 0 for position in drop_positions)
     assert drop_positions == sorted(drop_positions)
+
+
+def test_0011_research_extracted_text_migration_has_table_and_downgrade() -> None:
+    revision_path = ROOT / "alembic" / "versions" / "0011_research_extracted_text.py"
+    content = revision_path.read_text(encoding="utf-8")
+    assert 'revision = "0011_research_extracted_text"' in content
+    assert 'down_revision = "0010_research_source_archive"' in content
+    assert '"research_extracted_texts"' in content
+    assert 'op.drop_table("research_extracted_texts")' in content

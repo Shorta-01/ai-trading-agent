@@ -7,6 +7,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
     ResearchDocumentSetRecord,
+    ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -256,7 +257,65 @@ def test_contracts_do_not_expose_bytes_or_credentials_or_keys() -> None:
         ResearchDocumentClassificationRecord,
         ResearchSourceAssetLinkRecord,
         ResearchSourceProcessingStatusRecord,
+        ResearchExtractedTextRecord,
     ):
         for field in fields(contract):
             lower = field.name.lower()
             assert not any(token in lower for token in forbidden)
+
+
+def test_research_extracted_text_record_validation() -> None:
+    base = dict(
+        extracted_text_id="ext-1",
+        library_source_id="src-1",
+        source_file_hash_sha256=None,
+        extraction_status="pending",
+        extraction_method="manual_record",
+        detected_content_type=None,
+        detected_language=None,
+        character_count=0,
+        line_count=0,
+        text_hash_sha256=None,
+        extracted_text_storage_uri=None,
+        preview_text_nl="korte preview",
+        can_be_used_in_research=False,
+        can_be_used_in_suggestions=False,
+        needs_user_review=True,
+        blocks_suggestions=True,
+        created_at=_now(),
+        extracted_at=None,
+        schema_version="1.0",
+        reason_nl="Nog niet verwerkt.",
+    )
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"extracted_text_id": ""}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"library_source_id": ""}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"extraction_status": ""}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"extraction_method": ""}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"schema_version": ""}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"reason_nl": ""}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"character_count": -1}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"line_count": -1}))
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(
+            **(
+                base
+                | {
+                    "created_at": datetime(2026, 1, 2, tzinfo=UTC),
+                    "extracted_at": datetime(2026, 1, 1, tzinfo=UTC),
+                }
+            )
+        )
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(
+            **(base | {"can_be_used_in_suggestions": True, "blocks_suggestions": True})
+        )
+    with pytest.raises(ValueError):
+        ResearchExtractedTextRecord(**(base | {"preview_text_nl": "x" * 1001}))

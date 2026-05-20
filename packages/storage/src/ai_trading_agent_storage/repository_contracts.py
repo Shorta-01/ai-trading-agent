@@ -629,6 +629,53 @@ class ResearchSourceProcessingStatusRecord:
 
 
 @dataclass(frozen=True)
+class ResearchExtractedTextRecord:
+    extracted_text_id: str
+    library_source_id: str
+    source_file_hash_sha256: str | None
+    extraction_status: str
+    extraction_method: str
+    detected_content_type: str | None
+    detected_language: str | None
+    character_count: int | None
+    line_count: int | None
+    text_hash_sha256: str | None
+    extracted_text_storage_uri: str | None
+    preview_text_nl: str | None
+    can_be_used_in_research: bool
+    can_be_used_in_suggestions: bool
+    needs_user_review: bool
+    blocks_suggestions: bool
+    created_at: datetime
+    extracted_at: datetime | None
+    schema_version: str
+    reason_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "extracted_text_id",
+            "library_source_id",
+            "extraction_status",
+            "extraction_method",
+            "schema_version",
+            "reason_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        _require_non_negative_int(self.character_count, "character_count")
+        _require_non_negative_int(self.line_count, "line_count")
+        if self.extracted_at is not None:
+            _require_ordered_datetimes(
+                self.created_at, self.extracted_at, "created_at", "extracted_at"
+            )
+        if self.blocks_suggestions and self.can_be_used_in_suggestions:
+            raise ValueError(
+                "can_be_used_in_suggestions must be false when blocks_suggestions is true."
+            )
+        if self.preview_text_nl is not None and len(self.preview_text_nl) > 1000:
+            raise ValueError("preview_text_nl must be 1000 characters or less when provided.")
+
+
+@dataclass(frozen=True)
 class SystemEventRecord:
     system_event_id: str
     created_at: datetime

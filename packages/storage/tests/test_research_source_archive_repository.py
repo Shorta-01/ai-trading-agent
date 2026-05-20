@@ -11,6 +11,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
     ResearchDocumentSetRecord,
+    ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -27,8 +28,8 @@ def _report() -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0010",
-        database_revision_id="0010",
+        latest_expected_revision_id="0011",
+        database_revision_id="0011",
         persistence_allowed=True,
         blocks_runtime_writes=False,
         explanation_nl="test",
@@ -233,3 +234,31 @@ def test_archive_repository_roundtrips_and_filters() -> None:
         latest_processing = repo.get_latest_processing_status("src-1")
         assert latest_processing is not None
         assert latest_processing.processing_id == p2.processing_id
+
+        e1 = ResearchExtractedTextRecord(
+            "ext-1", "src-1", None, "pending", "manual_record", None, "nl", 10, 1, None, None,
+            "preview", False, False, True, True, older, None, "1.0", "Wachten op extractie."
+        )
+        e2 = ResearchExtractedTextRecord(
+            "ext-2", "src-1", None, "extracted", "deterministic_text_extraction", "text/plain",
+            "nl", 120, 8, "hash", "archive://x", "preview2", True, False, False, False,
+            datetime(2026, 1, 2, tzinfo=UTC), datetime(2026, 1, 3, tzinfo=UTC), "1.0", "Klaar."
+        )
+        e3 = ResearchExtractedTextRecord(
+            "ext-3", "src-2", None, "extracted", "deterministic_text_extraction", "text/plain",
+            "nl", 20, 2, None, None, None, True, False, False, False,
+            datetime(2026, 1, 2, tzinfo=UTC), datetime(2026, 1, 2, tzinfo=UTC), "1.0", "Klaar."
+        )
+        repo.save_extracted_text(e1)
+        repo.save_extracted_text(e2)
+        repo.save_extracted_text(e3)
+        loaded_extracted = repo.get_extracted_text("ext-1")
+        assert loaded_extracted is not None
+        assert loaded_extracted.extracted_text_id == "ext-1"
+        assert [x.extracted_text_id for x in repo.list_extracted_texts_for_source("src-1")] == [
+            "ext-2",
+            "ext-1",
+        ]
+        latest_extracted = repo.get_latest_extracted_text_for_source("src-1")
+        assert latest_extracted is not None
+        assert latest_extracted.extracted_text_id == "ext-2"

@@ -140,6 +140,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "verwerkingsstatus."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0011",
+        previous_revision_id="0010",
+        filename="0011_research_extracted_text.py",
+        label_nl="Research extracted text opslagfundament",
+        description_nl="Opslagfundament voor geëxtraheerde-tekstmetadata en archiefverwijzingen.",
+    ),
 )
 
 

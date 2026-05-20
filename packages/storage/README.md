@@ -126,3 +126,10 @@ SQLAlchemy opslag-repository skelet toegevoegd met expliciete `Connection` + mig
 - Research Source Archive storage DTO-contracten bestaan nu voor alle 9 research archive-tabellen.
 - Deze DTOs zijn alleen opslagcontracten met validatie; ze uploaden geen bestanden en halen geen URLs op.
 - Er is geen document parsing/OCR, geen OpenAI-calls, geen IBKR-calls en geen suggestie- of ordercreatie.
+
+
+## Task 61A update (2026-05-20)
+- Added migration `0011_research_extracted_text` with table `research_extracted_texts` for extracted-text metadata, short preview text, and archive URI pointers only (no full text storage).
+- Added storage contract `ResearchExtractedTextRecord` with safety defaults that keep extracted text blocked for suggestions until future validation/classification checks.
+- Added repository read/write/list/latest methods for extracted-text records using explicit SQLAlchemy `Connection`.
+- No runtime extraction, parsing, OCR, OpenAI integration, IBKR integration, suggestion generation, or order behavior added in this task.

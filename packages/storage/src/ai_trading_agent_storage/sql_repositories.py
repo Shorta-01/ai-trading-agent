@@ -22,6 +22,7 @@ from ai_trading_agent_storage.metadata import (
     research_document_classifications,
     research_document_set_members,
     research_document_sets,
+    research_extracted_texts,
     research_source_asset_links,
     research_source_processing_status,
     research_sources,
@@ -52,6 +53,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
     ResearchDocumentSetRecord,
+    ResearchExtractedTextRecord,
     ResearchSourceAssetLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
@@ -808,6 +810,47 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         )
         row = self._connection.execute(statement).mappings().first()
         return None if row is None else ResearchSourceProcessingStatusRecord(**dict(row))
+
+    def save_extracted_text(
+        self, record: ResearchExtractedTextRecord
+    ) -> ResearchExtractedTextRecord:
+        self._insert(research_extracted_texts, asdict(record))
+        return record
+
+    def get_extracted_text(self, extracted_text_id: str) -> ResearchExtractedTextRecord | None:
+        row = _read_one_by_column(
+            self._connection, research_extracted_texts, "extracted_text_id", extracted_text_id
+        )
+        return None if row is None else ResearchExtractedTextRecord(**dict(row))
+
+    def list_extracted_texts_for_source(
+        self, library_source_id: str
+    ) -> tuple[ResearchExtractedTextRecord, ...]:
+        statement = (
+            select(research_extracted_texts)
+            .where(research_extracted_texts.c.library_source_id == library_source_id)
+            .order_by(
+                research_extracted_texts.c.created_at.asc(),
+                research_extracted_texts.c.extracted_text_id.asc(),
+            )
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        return tuple(ResearchExtractedTextRecord(**dict(row)) for row in rows)
+
+    def get_latest_extracted_text_for_source(
+        self, library_source_id: str
+    ) -> ResearchExtractedTextRecord | None:
+        statement = (
+            select(research_extracted_texts)
+            .where(research_extracted_texts.c.library_source_id == library_source_id)
+            .order_by(
+                research_extracted_texts.c.extracted_at.desc().nullslast(),
+                research_extracted_texts.c.created_at.desc(),
+                research_extracted_texts.c.extracted_text_id.desc(),
+            )
+        )
+        row = self._connection.execute(statement).mappings().first()
+        return None if row is None else ResearchExtractedTextRecord(**dict(row))
 
 
 class SqlAlchemyBrokerStorageUnitOfWork:
