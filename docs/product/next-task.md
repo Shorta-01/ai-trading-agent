@@ -1,31 +1,25 @@
-## Task 68: Evidence Ledger API/linking foundation for research source evidence
+## Task 70: Source conflict detection foundation (recommended)
 
-Doel: een kleine, veilige vervolgstap na Task 67E die research-source evidence-items expliciet linkt aan de bredere Evidence Ledger/audit-structuur.
+Doel: foundation toevoegen om conflicten tussen research-bronnen expliciet te detecteren en als status/auditdata vast te leggen, zonder suggestions of runtime-adviesgedrag te activeren.
 
-### Waarom dit de juiste volgende stap is
+### Waarom nu
 
-- Task 67 heeft source-evidence item opslag/API foundation toegevoegd.
-- Task 67E heeft de laatste CI-testmismatch hersteld.
-- CI is groen na de finale Task 67-repair.
-- De veiligste progressie is nu: evidence traceability verdiepen, zonder suggestie-unlock.
+- Task 68 (Evidence Ledger-linking) is completed.
+- Task 69 (gate outcome/freshness storage/API foundation) is completed.
+- Task 69B repair is completed en CI staat terug groen.
+- Een logische volgende foundation is nu conflict-detectie (alternatief: asset master identity foundation).
 
-### In scope (Task 68)
+### In scope (Task 70)
 
-- Evidence Ledger API/listing/linking foundation voor research source evidence-items.
-- Bron → evidence-ledger traceability contracten en veilige basiswiring.
-- Auditgerichte koppeling, zonder runtime adviesgedrag.
+- Contracten/foundation voor source conflict status binnen Research Library flows.
+- Audit/traceability-first opslag en API-basis voor conflictbevindingen.
+- Volledige behoud van conservative safety gates (blocked for suggestions).
 
-### Out of scope (blijft verboden)
+### Out of scope
 
-- geen suggestions
-- geen AI analysis runtime
+- geen AI runtime
+- geen suggestion runtime
 - geen watchlist behavior
 - geen IBKR behavior
-- geen orders
-- geen source unlock voor suggestions
-
-### Verplichte kwaliteitsstap vóór “ready”
-
-Volg de CI-checklist in `docs/product/codex-ci-quality-rules.md` en markeer een PR pas ready als de relevante package-checks lokaal gedraaid zijn.
-## Next task recommendation
-Task 69 zou best gate outcome records + freshness policy foundation toevoegen (punt-in-tijd gatebeslissingen), eventueel gevolgd door source-conflict detection of asset master foundation.
+- geen order behavior
+- geen Task 70 runtime-implementatie buiten foundation
