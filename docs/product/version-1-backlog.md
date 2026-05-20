@@ -80,3 +80,5 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - CFDs
 - complex derivatives
 - high-frequency trading
+
+- Task 68 completed: Evidence Ledger API/linking foundation voor research source evidence (audit-only, geen suggestion unlock).

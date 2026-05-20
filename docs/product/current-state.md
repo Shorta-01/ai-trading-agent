@@ -60,3 +60,5 @@
 - AI Event Intelligence runtime: pending.
 - Belgische tax/compliance runtime: pending.
 - Deployment backup/restore hardening met restore-test bewijs: pending.
+
+- Task 68: Evidence Ledger-linking foundation voor research-source evidence toegevoegd (storage/API), uitsluitend voor audit/lineage; suggesties blijven geblokkeerd.

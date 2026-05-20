@@ -50,6 +50,7 @@ def test_exactly_fourteen_revision_files_exist_with_expected_names() -> None:
         "0012_research_source_prompt_injection_scan.py",
         "0013_research_source_credibility_assessments.py",
         "0014_research_source_evidence_items.py",
+        "0015_research_source_evidence_ledger_links.py",
     ]
 
 

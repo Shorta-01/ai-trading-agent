@@ -27,6 +27,7 @@ from ai_trading_agent_storage.metadata import (
     research_source_asset_links,
     research_source_prompt_injection_scans,
     research_source_credibility_assessments,
+    research_source_evidence_ledger_links,
     research_source_evidence_items,
     research_source_processing_status,
     research_sources,
@@ -62,6 +63,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ResearchSourcePromptInjectionScanRecord,
     ResearchSourceCredibilityAssessmentRecord,
     ResearchSourceEvidenceItemRecord,
+    ResearchSourceEvidenceLedgerLinkRecord,
     ResearchSourceProcessingStatusRecord,
     ResearchSourceRecord,
     ResearchUploadedFileMetadataRecord,
@@ -900,6 +902,40 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         )
         rows = self._connection.execute(statement).mappings().all()
         return tuple(ResearchSourceEvidenceItemRecord(**dict(row)) for row in rows)
+
+    def save_source_evidence_ledger_link(
+        self, record: ResearchSourceEvidenceLedgerLinkRecord
+    ) -> ResearchSourceEvidenceLedgerLinkRecord:
+        self._insert(research_source_evidence_ledger_links, asdict(record))
+        return record
+
+    def list_source_evidence_ledger_links(
+        self, library_source_id: str
+    ) -> tuple[ResearchSourceEvidenceLedgerLinkRecord, ...]:
+        statement = (
+            select(research_source_evidence_ledger_links)
+            .where(research_source_evidence_ledger_links.c.library_source_id == library_source_id)
+            .order_by(
+                research_source_evidence_ledger_links.c.created_at.desc(),
+                research_source_evidence_ledger_links.c.link_id.desc(),
+            )
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        return tuple(ResearchSourceEvidenceLedgerLinkRecord(**dict(row)) for row in rows)
+
+    def list_evidence_item_ledger_links(
+        self, evidence_item_id: str
+    ) -> tuple[ResearchSourceEvidenceLedgerLinkRecord, ...]:
+        statement = (
+            select(research_source_evidence_ledger_links)
+            .where(research_source_evidence_ledger_links.c.evidence_item_id == evidence_item_id)
+            .order_by(
+                research_source_evidence_ledger_links.c.created_at.desc(),
+                research_source_evidence_ledger_links.c.link_id.desc(),
+            )
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        return tuple(ResearchSourceEvidenceLedgerLinkRecord(**dict(row)) for row in rows)
 
     def save_extracted_text(
         self, record: ResearchExtractedTextRecord

@@ -33,3 +33,5 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 - Geen automatische orders.
 - Geen IBKR live order flow.
 - Suggesties blijven geblokkeerd tot alle gates/runtime engines bestaan.
+
+| Evidence Ledger linking (Task 68) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending | Blocked for suggestions; geen watchlist/IBKR/order gedrag |
