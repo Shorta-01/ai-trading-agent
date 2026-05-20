@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -110,6 +111,13 @@ class InMemoryIbkrSyncStore:
 
 
 STORE = InMemoryIbkrSyncStore()
+
+
+def _int_count(record: Mapping[str, object], key: str) -> int:
+    value = record.get(key, 0)
+    if isinstance(value, int):
+        return value
+    return 0
 
 
 def is_configured(settings: Settings) -> bool:
@@ -276,10 +284,10 @@ def read_status(settings: Settings) -> dict[str, object]:
             "executions_count": 0,
         }
     latest = STORE.runs[-1]
-    positions_count = latest.get("positions_count", 0)
-    cash_count = latest.get("cash_count", 0)
-    open_orders_count = latest.get("open_orders_count", 0)
-    executions_count = latest.get("executions_count", 0)
+    positions_count = _int_count(latest, "positions_count")
+    cash_count = _int_count(latest, "cash_count")
+    open_orders_count = _int_count(latest, "open_orders_count")
+    executions_count = _int_count(latest, "executions_count")
     return {
         "configured": True,
         "status_nl": "Laatste sync beschikbaar",
