@@ -1001,6 +1001,38 @@ class SystemEventRecord:
 
 
 @dataclass(frozen=True)
+class AssetListingRecord:
+    listing_id: str
+    asset_id: str
+    ibkr_conid: str | None
+    symbol: str
+    local_symbol: str | None
+    trading_class: str | None
+    security_type: str
+    asset_class: str | None
+    exchange: str | None
+    primary_exchange: str | None
+    currency: str
+    listing_country: str | None
+    listing_status: str
+    validation_status: str
+    validation_source: str | None
+    validated_at: datetime | None
+    identity_confidence: str
+    identity_source: str
+    created_at: datetime
+    updated_at: datetime
+    source_reference_ids_json: tuple[str, ...] | None
+    audit_context_json: dict[str, str] | None
+    safe_to_use_for_market_data: bool
+    safe_to_use_for_analysis: bool
+    safe_to_use_for_suggestions: bool
+    blocks_market_data: bool
+    blocks_analysis: bool
+    blocks_suggestions: bool
+    explanation_nl: str
+
+@dataclass(frozen=True)
 class CreateSystemEventRequest:
     system_event_id: str
     created_at: datetime

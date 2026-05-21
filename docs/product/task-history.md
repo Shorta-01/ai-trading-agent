@@ -291,3 +291,6 @@ Niet gedaan (bewuste scopegrens):
 - Nieuwe roadmapbron toegevoegd: `docs/product/asset-value-prediction-engine-roadmap.md` met volledige V1.0–V1.8 plan, model/AI/validatie/risk-gates/monitoring en Must-Should-Could scopeacceptatie.
 - Geen runtimecode, tests, migraties, package metadata of GitHub workflows aangepast.
 - CI-context ongewijzigd: bekende GitHub Actions blocker blijft; Task 89 blijft geblokkeerd.
+
+## Task 93 — AssetListing identity foundation deepening
+Status: completed. Scope: grotere maar begrensde foundationstap (storage/API/tests/docs), identity/reference/status-only.

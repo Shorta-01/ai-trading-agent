@@ -223,3 +223,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Decision Package: immutable evidence/model/gate bundle;
 - deterministic suggestion translator (Python rules, AI never decides label);
 - paper action workflow: future, LMT-only, user-approved, paper-only.
+
+- [x] Task 93 — AssetListing identity foundation verdieping (storage/API/tests/docs), zonder runtime market data/forecast/AI/suggesties/actions/orders.
