@@ -1,7 +1,7 @@
 """Request-log/provider-source/freshness-audit opslagcontracten (non-runtime skeleton)."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "0023_request_log_provider_freshness_contracts"
 down_revision = "0022_asset_listing_identity_foundation"
@@ -35,18 +35,47 @@ def upgrade() -> None:
         sa.Column("rejected_record_count", sa.Integer(), nullable=True),
         sa.Column("safe_for_analysis", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("safe_for_suggestions", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("safe_for_action_drafts", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "safe_for_action_drafts", sa.Boolean(), nullable=False, server_default=sa.false()
+        ),
         sa.Column("explanation_nl", sa.Text(), nullable=False),
-        sa.CheckConstraint("completed_at IS NULL OR completed_at >= created_at", name="ck_request_logs_completed_after_created"),
-        sa.CheckConstraint("pacing_weight IS NULL OR pacing_weight >= 0", name="ck_request_logs_pacing_weight_non_negative"),
-        sa.CheckConstraint("provider_request_budget_remaining IS NULL OR provider_request_budget_remaining >= 0", name="ck_request_logs_budget_non_negative"),
-        sa.CheckConstraint("retry_count IS NULL OR retry_count >= 0", name="ck_request_logs_retry_count_non_negative"),
-        sa.CheckConstraint("received_record_count IS NULL OR received_record_count >= 0", name="ck_request_logs_received_non_negative"),
-        sa.CheckConstraint("stored_record_count IS NULL OR stored_record_count >= 0", name="ck_request_logs_stored_non_negative"),
-        sa.CheckConstraint("rejected_record_count IS NULL OR rejected_record_count >= 0", name="ck_request_logs_rejected_non_negative"),
-        sa.CheckConstraint("safe_for_analysis IS FALSE", name="ck_request_logs_safe_for_analysis_false"),
-        sa.CheckConstraint("safe_for_suggestions IS FALSE", name="ck_request_logs_safe_for_suggestions_false"),
-        sa.CheckConstraint("safe_for_action_drafts IS FALSE", name="ck_request_logs_safe_for_action_drafts_false"),
+        sa.CheckConstraint(
+            "completed_at IS NULL OR completed_at >= created_at",
+            name="ck_request_logs_completed_after_created",
+        ),
+        sa.CheckConstraint(
+            "pacing_weight IS NULL OR pacing_weight >= 0",
+            name="ck_request_logs_pacing_weight_non_negative",
+        ),
+        sa.CheckConstraint(
+            "provider_request_budget_remaining IS NULL OR provider_request_budget_remaining >= 0",
+            name="ck_request_logs_budget_non_negative",
+        ),
+        sa.CheckConstraint(
+            "retry_count IS NULL OR retry_count >= 0",
+            name="ck_request_logs_retry_count_non_negative",
+        ),
+        sa.CheckConstraint(
+            "received_record_count IS NULL OR received_record_count >= 0",
+            name="ck_request_logs_received_non_negative",
+        ),
+        sa.CheckConstraint(
+            "stored_record_count IS NULL OR stored_record_count >= 0",
+            name="ck_request_logs_stored_non_negative",
+        ),
+        sa.CheckConstraint(
+            "rejected_record_count IS NULL OR rejected_record_count >= 0",
+            name="ck_request_logs_rejected_non_negative",
+        ),
+        sa.CheckConstraint(
+            "safe_for_analysis IS FALSE", name="ck_request_logs_safe_for_analysis_false"
+        ),
+        sa.CheckConstraint(
+            "safe_for_suggestions IS FALSE", name="ck_request_logs_safe_for_suggestions_false"
+        ),
+        sa.CheckConstraint(
+            "safe_for_action_drafts IS FALSE", name="ck_request_logs_safe_for_action_drafts_false"
+        ),
     )
     op.create_table(
         "provider_sources",
@@ -62,8 +91,14 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("explanation_nl", sa.Text(), nullable=False),
-        sa.CheckConstraint("updated_at >= created_at", name="ck_provider_sources_updated_after_created"),
-        sa.CheckConstraint("source_effective_to IS NULL OR source_effective_from IS NULL OR source_effective_to >= source_effective_from", name="ck_provider_sources_effective_order"),
+        sa.CheckConstraint(
+            "updated_at >= created_at", name="ck_provider_sources_updated_after_created"
+        ),
+        sa.CheckConstraint(
+            "source_effective_to IS NULL OR source_effective_from IS NULL OR "
+            "source_effective_to >= source_effective_from",
+            name="ck_provider_sources_effective_order",
+        ),
     )
     op.create_table(
         "freshness_audit_records",
@@ -82,15 +117,35 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("safe_for_analysis", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("safe_for_suggestions", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("safe_for_action_drafts", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "safe_for_action_drafts", sa.Boolean(), nullable=False, server_default=sa.false()
+        ),
         sa.Column("explanation_nl", sa.Text(), nullable=False),
-        sa.CheckConstraint("age_seconds IS NULL OR age_seconds >= 0", name="ck_freshness_audit_age_non_negative"),
-        sa.CheckConstraint("freshness_window_seconds IS NULL OR freshness_window_seconds >= 0", name="ck_freshness_audit_window_non_negative"),
-        sa.CheckConstraint("stale_after IS NULL OR snapshot_as_of IS NULL OR stale_after >= snapshot_as_of", name="ck_freshness_audit_stale_after_order"),
-        sa.CheckConstraint("expires_at IS NULL OR stale_after IS NULL OR expires_at >= stale_after", name="ck_freshness_audit_expires_after_stale"),
-        sa.CheckConstraint("safe_for_analysis IS FALSE", name="ck_freshness_audit_safe_for_analysis_false"),
-        sa.CheckConstraint("safe_for_suggestions IS FALSE", name="ck_freshness_audit_safe_for_suggestions_false"),
-        sa.CheckConstraint("safe_for_action_drafts IS FALSE", name="ck_freshness_audit_safe_for_action_drafts_false"),
+        sa.CheckConstraint(
+            "age_seconds IS NULL OR age_seconds >= 0", name="ck_freshness_audit_age_non_negative"
+        ),
+        sa.CheckConstraint(
+            "freshness_window_seconds IS NULL OR freshness_window_seconds >= 0",
+            name="ck_freshness_audit_window_non_negative",
+        ),
+        sa.CheckConstraint(
+            "stale_after IS NULL OR snapshot_as_of IS NULL OR stale_after >= snapshot_as_of",
+            name="ck_freshness_audit_stale_after_order",
+        ),
+        sa.CheckConstraint(
+            "expires_at IS NULL OR stale_after IS NULL OR expires_at >= stale_after",
+            name="ck_freshness_audit_expires_after_stale",
+        ),
+        sa.CheckConstraint(
+            "safe_for_analysis IS FALSE", name="ck_freshness_audit_safe_for_analysis_false"
+        ),
+        sa.CheckConstraint(
+            "safe_for_suggestions IS FALSE", name="ck_freshness_audit_safe_for_suggestions_false"
+        ),
+        sa.CheckConstraint(
+            "safe_for_action_drafts IS FALSE",
+            name="ck_freshness_audit_safe_for_action_drafts_false",
+        ),
     )
 
 

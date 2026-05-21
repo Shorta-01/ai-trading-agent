@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_twenty_two_revision_files_exist_with_expected_names() -> None:
+def test_exactly_twenty_three_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -58,6 +58,7 @@ def test_exactly_twenty_two_revision_files_exist_with_expected_names() -> None:
         "0020_watchlist_foundation.py",
         "0021_market_data_storage_foundation.py",
         "0022_asset_listing_identity_foundation.py",
+        "0023_request_log_provider_freshness_contracts.py",
     ]
 
 
