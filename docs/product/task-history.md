@@ -348,3 +348,16 @@ Niet gedaan (bewuste scopegrens):
 
 ## Task 93 — AssetListing identity foundation deepening
 Status: completed. Scope: grotere maar begrensde foundationstap (storage/API/tests/docs), identity/reference/status-only.
+
+
+## Task 101 — Anchor read-only readiness terminology in handover en locked decisions
+
+Status: ✅ Completed (documentatie-only).
+
+Resultaat:
+- `project-handover.md` verwijst nu expliciet naar de read-only readiness terminologiedocs.
+- `locked-decisions.md` bevat een compacte vergrendelde termenset voor pre-runtime wording.
+- Lichte cross-links toegevoegd tussen inventaris, checklist, audit en locked decision.
+
+Bevestiging scope:
+- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders, geen fake data.

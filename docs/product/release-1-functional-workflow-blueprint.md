@@ -2,6 +2,9 @@
 
 ## 1) Release 1 product intent
 
+Terminologieguardrail: pre-runtime wording blijft vergrendeld via `docs/product/locked-decisions.md` (sectie **Read-only readiness terminology lock (Task 101)**); dit document beschrijft target-state workflow, geen reeds actieve runtime.
+
+
 Release 1 is geen gedeeltelijke demo. Release 1 is pas compleet wanneer de volledige workflow end-to-end werkt.
 
 Complete workflowdoel voor Release 1:

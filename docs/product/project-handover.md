@@ -21,6 +21,14 @@ Dit document zorgt dat nieuwe sessies starten vanuit repository-truth, niet chat
 4. Volgende implementatiestap:
    - `docs/product/next-task.md`
 
+
+## Read-only readiness terminologie-startpunt
+
+Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, **geen runtime-unlock**) raadpleeg vroeg:
+- `docs/product/read-only-readiness-ui-contract-inventory.md`
+- `docs/product/read-only-readiness-pr-checklist.md`
+- `docs/product/read-only-readiness-product-doc-terminology-audit.md`
+
 ## Kerncontext
 
 - Productnaam: Portfolio Outlook Manager.

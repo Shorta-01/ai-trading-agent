@@ -84,3 +84,8 @@ Voorkeurspatroon voor read-only wording:
 - geen actiedrafts
 - geen orders
 - geen fake data
+
+
+## G) Locked decision cross-link (Task 101)
+
+Voor blijvende terminologie-consistentie is de definitieve wording-lock nu vastgelegd in `docs/product/locked-decisions.md` (sectie **Read-only readiness terminology lock (Task 101)**). Deze audit blijft een reviewinstrument en unlockt geen runtime-capability.

@@ -218,6 +218,12 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - AI text-to-feature: FinBERT/FinGPT/structured event tagging;
 - AI explanation/RAG: Dutch schema-based uitleg met evidence-only numerics;
 - AI dissent challenger: confidence modulation only;
+
+## I) Task 101 update (documentation-only)
+
+- Task 101 is afgerond als documentatie/cross-link/terminologie-anchor-only follow-up.
+- Task 100-termenset is verankerd in `project-handover.md` en `locked-decisions.md`, met lichte navigatiecross-links tussen inventory/checklist/product-doc audit/locked decision.
+- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
 - validation spine: walk-forward, purged CV, CPCV, DSR, PBO, holdout;
 - monitoring/drift: PSI/KS, IC decay, CRPS, pinball, retraining triggers;
 - Decision Package: immutable evidence/model/gate bundle;

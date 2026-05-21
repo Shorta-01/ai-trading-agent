@@ -68,6 +68,9 @@ Niet toegestaan:
 
 ## 5) Version 1 boundary (hard)
 
+Terminologieguardrail: zie `docs/product/locked-decisions.md` (sectie **Read-only readiness terminology lock (Task 101)**) voor vergrendelde pre-runtime woordkeuze.
+
+
 Version 1:
 - IBKR paper-only
 - geen real money

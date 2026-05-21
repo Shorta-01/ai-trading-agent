@@ -1,5 +1,25 @@
 # Locked Decisions (Version 1)
 
+## Read-only readiness terminology lock (Task 101)
+
+Deze termenset is vergrendeld als documentatie/review guardrail (geen runtime feature):
+- read-only status
+- metadata/status-only
+- geen market-data runtime
+- geen runtime-fetch
+- geen latest-price fetching
+- geen analysevrijgave
+- geen suggesties
+- geen Decision Packages runtime
+- geen actiedrafts
+- geen orders
+- geen fake data
+
+Kader:
+- UI/API/productdocs mogen geen runtime-beschikbaarheid impliceren voordat runtime echt bestaat.
+- Nieuwe runtime-capability mag alleen via expliciet afgebakende taken met safety gates, tests en productdoc-updates.
+- Deze wording-lock stuurt reviewconsistentie, maar activeert geen runtimegedrag.
+
 ## 1) Product en scope
 
 - Portfolio Outlook Manager is de productnaam.

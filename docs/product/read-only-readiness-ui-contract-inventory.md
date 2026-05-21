@@ -113,3 +113,10 @@ De inventaris blijft de inhoudelijke referentiebron voor veilige read-only wordi
 Gebruik voor PR-reviews aanvullend: `docs/product/read-only-readiness-pr-checklist.md`.
 - De inventaris = bron van termen/patronen en scopecontext.
 - De checklist = compacte reviewer-tool vóór merge.
+
+## H) Cross-links voor reviewflow (Task 101)
+
+Navigatiepad: inventaris → checklist → product-doc audit → locked decision.
+- Checklist: `docs/product/read-only-readiness-pr-checklist.md`
+- Product-doc audit: `docs/product/read-only-readiness-product-doc-terminology-audit.md`
+- Vergrendelde wording: `docs/product/locked-decisions.md` (sectie **Read-only readiness terminology lock (Task 101)**)

@@ -160,3 +160,8 @@ Task 99 voegt een compacte read-only readiness PR-checklist en term-review rubri
 
 Task 100 voegt een beperkte product-doc terminologie-audit toe voor read-only readiness buiten de UI/API inventory, inclusief het nieuwe document `docs/product/read-only-readiness-product-doc-terminology-audit.md`.
 Stale trackingverwijzingen zijn conservatief geharmoniseerd waar nodig; geen runtimegedrag gewijzigd en geen market-data runtime, runtime-fetch/latest-price fetching, scheduler/background jobs, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd.
+
+
+## Task 101 update (documentation-only)
+
+Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-koppelpunten (handover, locked decision, cross-links). Dit is een review-/terminologieguardrail en geen runtimefeature. Geen market-data/latest-price runtime-fetching, geen scheduler/background jobs, geen forecast/AI runtime, geen suggesties/Decision Packages/actiedrafts/orders, geen fake data.
