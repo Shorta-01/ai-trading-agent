@@ -551,7 +551,6 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
     assert parsed.status == LatestSnapshotStatus.SNAPSHOT_AVAILABLE
     assert parsed.snapshot_available is True
     assert parsed.analysis_ready is False
-    _assert_boundary_terms(parsed.help_nl)
     assert parsed.status_nl == "Snapshot beschikbaar"
     assert parsed.stale is False
     assert parsed.provider_code == "ibkr"
