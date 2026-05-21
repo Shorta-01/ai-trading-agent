@@ -421,23 +421,45 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
     try:
         with provider.checked_connection(require_writable=False) as checked:
             repo = SqlAlchemyMarketDataSnapshotRepository(checked.connection, checked.readiness)
-            result = repo.get_latest_by_ibkr_conid(ibkr_conid)
+            result = repo.get_latest_market_data_snapshot_by_conid(ibkr_conid)
             if result.record is None:
                 return build_latest_snapshot_response(
                     ibkr_conid,
                     None,
                     status=LatestSnapshotStatus.MISSING_SNAPSHOT,
-                    status_nl="Nog geen snapshotmetadata opgeslagen.",
+                    status_nl="Geen marktdata",
                     missing_reason="snapshot_not_found",
                     evaluated_at=evaluated_at,
                 )
-            return build_latest_snapshot_response(
+            record = result.record
+            status = LatestSnapshotStatus.STALE_SNAPSHOT if record.freshness_status == "stale" else LatestSnapshotStatus.SNAPSHOT_AVAILABLE
+            response = build_latest_snapshot_response(
                 ibkr_conid,
-                build_readiness_snapshot_metadata(result.record),
-                status=LatestSnapshotStatus.SNAPSHOT_AVAILABLE,
-                status_nl="Snapshotmetadata beschikbaar.",
+                None,
+                status=status,
+                status_nl="Data verouderd" if status is LatestSnapshotStatus.STALE_SNAPSHOT else "Snapshot beschikbaar",
                 evaluated_at=evaluated_at,
             )
+            response.provider_code = record.provider_code
+            response.provider_environment = record.provider_environment
+            response.provider_account_mode = record.provider_account_mode
+            response.market_data_type = record.market_data_type
+            response.requested_at = record.requested_at
+            response.received_at = record.received_at
+            response.provider_as_of = record.provider_as_of
+            response.stored_at = record.stored_at
+            response.freshness_status = record.freshness_status
+            response.snapshot_available = True
+            response.stale = status is LatestSnapshotStatus.STALE_SNAPSHOT
+            response.last_price = str(record.last_price) if record.last_price is not None else None
+            response.bid_price = str(record.bid_price) if record.bid_price is not None else None
+            response.ask_price = str(record.ask_price) if record.ask_price is not None else None
+            response.close_price = str(record.close_price) if record.close_price is not None else None
+            response.day_change_percent = str(record.day_change_percent) if record.day_change_percent is not None else None
+            response.currency = record.currency
+            response.next_step_nl = "Alleen status. Nog geen analyse."
+            response.help_nl = "Nog geen suggesties mogelijk."
+            return response
     except StorageConnectionError:
         return build_latest_snapshot_response(
             ibkr_conid,
