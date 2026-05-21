@@ -207,3 +207,13 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Productdocs gecontroleerd op post-Task-102 tracking/wordingdrift tegen de vergrendelde termenset in `docs/product/locked-decisions.md`.
 - Gerichte documentatiefixes uitgevoerd (current-state tracking + backlog/next-step logging) en compacte checknotitie toegevoegd: `docs/product/read-only-readiness-consistency-check-task-103.md`.
 - Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
+
+## Task 107 sustainability tracking guardrail (documentation/review-hardening only)
+
+- Status: afgerond.
+- Post-Task-106 producttracking gecontroleerd tegen de vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Kleine trackingdrift gecorrigeerd in `docs/product/current-state.md` (titel + `Huidige toestand:`).
+- Compacte sustainability-checknotitie toegevoegd: `docs/product/read-only-readiness-sustainability-check-task-107.md`.
+- Tracking-drift preventieregel toegevoegd aan `docs/product/project-handover.md` en `docs/product/codex-ci-quality-rules.md` als documentatie/review discipline (geen CI-automatisering).
+- Geen runtime market-data fetching, runtime-fetch, latest-price fetching, scheduler/background jobs, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd.

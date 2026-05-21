@@ -1,12 +1,12 @@
 # Next Task
 
-## Task 107 — Conservatieve read-only terminology lock sustainability mini-check
+## Task 108 — Conservatieve read-only implementatie-prep audit (non-runtime foundation preflight)
 
 Doel:
-- Houd scope documentatie-only en voer een korte sustainability-check uit op producttracking na Task 106.
-- Bevestig dat `docs/product/locked-decisions.md` leidend blijft voor read-only status, metadata/status-only en expliciete “geen runtime” formuleringen.
+- Voer een bounded documentatie/design preflight uit voor de eerstvolgende non-runtime foundation stap, met expliciete check tegen `docs/product/locked-decisions.md`.
+- Bevestig dat read-only status, metadata/status-only en “geen runtime” terminologie consistent blijft terwijl implementatievoorbereiding wordt aangescherpt.
 
-Niet doen in Task 107:
+Niet doen in Task 108:
 - geen market-data runtime of runtime-fetch;
 - geen latest-price fetching;
 - geen scheduler/background jobs;
@@ -18,4 +18,4 @@ Niet doen in Task 107:
 
 Acceptatie:
 - Documentatie-only diff.
-- Gerichte cross-doc consistencycheck met expliciete lock-verwijzing naar `docs/product/locked-decisions.md`.
+- Compacte preflight-notitie met expliciete verwijzing naar de terminology lock in `docs/product/locked-decisions.md` en bevestiging dat Task 107 tracking-drift preventieregel is nageleefd.
