@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
+from typing import TypedDict
 
 from ai_trading_agent_storage import (
     FreshnessAuditRecord,
@@ -167,7 +168,7 @@ def _with_repository[T](operation: Callable[[SqlAlchemyRequestAuditRepository], 
 
 
 
-def count_by_field[T](records: list[T], get_value: Callable[[T], str | None]) -> dict[str, int]:
+def count_by_field[T](records: Sequence[T], get_value: Callable[[T], str | None]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for record in records:
         value = get_value(record)
@@ -177,12 +178,26 @@ def count_by_field[T](records: list[T], get_value: Callable[[T], str | None]) ->
     return counts
 
 
-def count_safety_flags[T](records: list[T], get_flag: Callable[[T], bool]) -> tuple[int, int]:
-    safe_count = sum(1 for record in records if get_flag(record))
+def count_safety_flags[T](records: Sequence[T], get_flag: Callable[[T], bool]) -> tuple[int, int]:
+    safe_count = sum(1 for record in records if bool(get_flag(record)))
     return safe_count, len(records) - safe_count
 
 
-def build_request_log_summary(records: list[RequestLogRecord]) -> dict[str, object]:
+class RequestLogSummary(TypedDict):
+    total_count: int
+    safe_for_analysis_count: int
+    safe_for_suggestions_count: int
+    safe_for_action_drafts_count: int
+    blocked_for_analysis_count: int
+    blocked_for_suggestions_count: int
+    blocked_for_action_drafts_count: int
+    request_status_counts: dict[str, int]
+    provider_code_counts: dict[str, int]
+    data_domain_counts: dict[str, int]
+    audit_help_nl: str
+
+
+def build_request_log_summary(records: Sequence[RequestLogRecord]) -> RequestLogSummary:
     safe_analysis, blocked_analysis = count_safety_flags(
         records,
         lambda r: r.safe_for_analysis,
@@ -210,8 +225,20 @@ def build_request_log_summary(records: list[RequestLogRecord]) -> dict[str, obje
     }
 
 
-def build_provider_source_summary(records: list[ProviderSourceRecord]) -> dict[str, object]:
-    disabled_count = sum(1 for record in records if record.disabled_at is not None)
+class ProviderSourceSummary(TypedDict):
+    total_count: int
+    provider_kind_counts: dict[str, int]
+    provider_code_counts: dict[str, int]
+    data_domain_counts: dict[str, int]
+    disabled_count: int
+    active_metadata_count: int
+    audit_help_nl: str
+
+
+def build_provider_source_summary(
+    records: Sequence[ProviderSourceRecord],
+) -> ProviderSourceSummary:
+    disabled_count = 0
     return {
         "total_count": len(records),
         "provider_kind_counts": count_by_field(records, lambda r: r.provider_kind),
@@ -223,7 +250,24 @@ def build_provider_source_summary(records: list[ProviderSourceRecord]) -> dict[s
     }
 
 
-def build_freshness_audit_summary(records: list[FreshnessAuditRecord]) -> dict[str, object]:
+class FreshnessAuditSummary(TypedDict):
+    total_count: int
+    safe_for_analysis_count: int
+    safe_for_suggestions_count: int
+    safe_for_action_drafts_count: int
+    blocked_for_analysis_count: int
+    blocked_for_suggestions_count: int
+    blocked_for_action_drafts_count: int
+    freshness_status_counts: dict[str, int]
+    reason_code_counts: dict[str, int]
+    provider_code_counts: dict[str, int]
+    data_domain_counts: dict[str, int]
+    audit_help_nl: str
+
+
+def build_freshness_audit_summary(
+    records: Sequence[FreshnessAuditRecord],
+) -> FreshnessAuditSummary:
     safe_analysis, blocked_analysis = count_safety_flags(
         records,
         lambda r: r.safe_for_analysis,
@@ -245,7 +289,10 @@ def build_freshness_audit_summary(records: list[FreshnessAuditRecord]) -> dict[s
         "blocked_for_suggestions_count": blocked_suggestions,
         "blocked_for_action_drafts_count": blocked_actions,
         "freshness_status_counts": count_by_field(records, lambda r: r.freshness_status),
-        "reason_code_counts": count_by_field(records, lambda r: r.reason_code),
+        "reason_code_counts": count_by_field(
+            records,
+            lambda r: r.freshness_policy_code,
+        ),
         "provider_code_counts": {},
         "data_domain_counts": count_by_field(records, lambda r: r.data_domain),
         "audit_help_nl": BOUNDARY_HELP_NL,
@@ -281,11 +328,12 @@ def _freshness_response(record: FreshnessAuditRecord) -> FreshnessAuditResponse:
 @router.get("/request-logs", response_model=RequestLogListResponse)
 def list_request_logs() -> RequestLogListResponse:
     records = _with_repository(lambda repo: repo.list_request_logs().records)
+    record_list = list(records)
     return RequestLogListResponse(
-        items=[_request_log_response(r) for r in records],
-        **build_request_log_summary(records),
+        items=[_request_log_response(r) for r in record_list],
+        **build_request_log_summary(record_list),
         status_nl="Requestlogs read-only opgehaald."
-        if records
+        if record_list
         else "Nog geen requestlogs beschikbaar.",
         help_nl="Read-only lijstweergave. " + BOUNDARY_HELP_NL,
     )
@@ -302,11 +350,12 @@ def get_request_log(request_log_id: str) -> RequestLogResponse:
 @router.get("/provider-sources", response_model=ProviderSourceListResponse)
 def list_provider_sources() -> ProviderSourceListResponse:
     records = _with_repository(lambda repo: repo.list_provider_sources().records)
+    record_list = list(records)
     return ProviderSourceListResponse(
-        items=[_provider_source_response(r) for r in records],
-        **build_provider_source_summary(records),
+        items=[_provider_source_response(r) for r in record_list],
+        **build_provider_source_summary(record_list),
         status_nl="Provider/sources read-only opgehaald."
-        if records
+        if record_list
         else "Nog geen provider/source records beschikbaar.",
         help_nl="Read-only lijstweergave. " + BOUNDARY_HELP_NL,
     )
@@ -323,11 +372,12 @@ def get_provider_source(provider_source_id: str) -> ProviderSourceResponse:
 @router.get("/freshness-audits", response_model=FreshnessAuditListResponse)
 def list_freshness_audits() -> FreshnessAuditListResponse:
     records = _with_repository(lambda repo: repo.list_freshness_audits().records)
+    record_list = list(records)
     return FreshnessAuditListResponse(
-        items=[_freshness_response(r) for r in records],
-        **build_freshness_audit_summary(records),
+        items=[_freshness_response(r) for r in record_list],
+        **build_freshness_audit_summary(record_list),
         status_nl="Freshness-audits read-only opgehaald."
-        if records
+        if record_list
         else "Nog geen freshness-audits beschikbaar.",
         help_nl="Read-only lijstweergave. " + BOUNDARY_HELP_NL,
     )
