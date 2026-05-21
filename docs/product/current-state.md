@@ -1,4 +1,4 @@
-# Current State (na Task 98)
+# Current State (na Task 99)
 
 ## 1) Current status summary
 
@@ -28,6 +28,8 @@
 
 
 - Task 98: **completed** — documentatie/inventaris-only read-only readiness UI/API contractinventaris toegevoegd (`docs/product/read-only-readiness-ui-contract-inventory.md`) voor resterende schermen en readiness-contracten. Labelpatronen voor "veilig", "onveilig tenzij ontkend" en follow-up governance zijn expliciet vastgelegd. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
+
+- Task 99: **completed** — documentatie/review-guardrail-only hardening toegevoegd met compacte PR-checklist + term-review rubric (`docs/product/read-only-readiness-pr-checklist.md`) en koppeling vanuit de read-only readiness inventaris/CI kwaliteitsregels. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 
 ## 2) Implemented foundations
 

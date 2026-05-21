@@ -1,10 +1,10 @@
 # Next Task (conservative)
 
-## Task 99 (proposed)
+## Task 100 (proposed)
 
-Conservatieve documentatie-hardening: voeg een compacte PR-checklist + term-review rubric toe voor read-only readiness taalgebruik, zodat nieuwe UI/API wijzigingen systematisch controleren op onveilige termen zonder runtime-uitbreiding.
+Conservatieve documentatie-follow-up: voer een beperkte terminologie-audit uit op resterende productdocs buiten de UI/API-inventaris en harmoniseer read-only readiness taal waar nodig, zonder runtimewijzigingen.
 
-- Alleen documentatie en review-guardrails.
+- Alleen documentatie en review-harmonisatie.
 - Geen market-data runtime.
 - Geen runtime-fetch of latest-price fetching.
 - Geen scheduler/background jobs.
