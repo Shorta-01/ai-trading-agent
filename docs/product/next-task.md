@@ -1,8 +1,8 @@
 # Next Task (conservative)
 
-## Task 100 (proposed)
+## Task 101 (proposed)
 
-Conservatieve documentatie-follow-up: voer een beperkte terminologie-audit uit op resterende productdocs buiten de UI/API-inventaris en harmoniseer read-only readiness taal waar nodig, zonder runtimewijzigingen.
+Conservatieve documentatie-follow-up: veranker de read-only readiness termenset uit Task 100 op resterende product-koppelpunten (handover/locked-decisions/cross-links) met gerichte consistentie-updates, zonder runtimewijzigingen.
 
 - Alleen documentatie en review-harmonisatie.
 - Geen market-data runtime.

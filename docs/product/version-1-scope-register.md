@@ -155,3 +155,8 @@ Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/fr
 ## Task 99 (documentation/review-guardrail only)
 
 Task 99 voegt een compacte read-only readiness PR-checklist en term-review rubric toe als documentatie/review-guardrail. Dit verandert geen runtimegedrag en unlockt geen market-data runtime, latest-price fetching, scheduler/background jobs, forecast runtime, AI runtime, suggesties, Decision Packages, action drafts of orders.
+
+## Task 100 (documentation/audit/harmonization only)
+
+Task 100 voegt een beperkte product-doc terminologie-audit toe voor read-only readiness buiten de UI/API inventory, inclusief het nieuwe document `docs/product/read-only-readiness-product-doc-terminology-audit.md`.
+Stale trackingverwijzingen zijn conservatief geharmoniseerd waar nodig; geen runtimegedrag gewijzigd en geen market-data runtime, runtime-fetch/latest-price fetching, scheduler/background jobs, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd.
