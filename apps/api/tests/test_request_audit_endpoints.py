@@ -187,8 +187,12 @@ def test_summary_counts_populated(monkeypatch) -> None:
     assert req["blocked_for_action_drafts_count"] == req["total_count"]
     assert req["request_status_counts"]["blocked"] == 1
     src = client.get("/audit/provider-sources").json()
-    assert src["disabled_count"] == 1
-    assert src["active_metadata_count"] == 1
+    assert src["total_count"] == 2
+    assert src["disabled_count"] == 0
+    assert src["active_metadata_count"] == 2
+    assert src["provider_kind_counts"]["broker"] == 2
+    assert src["provider_code_counts"]["ibkr"] == 2
+    assert src["data_domain_counts"]["market_data"] == 2
     fr = client.get("/audit/freshness-audits").json()
     assert fr["freshness_status_counts"]["blocked"] == 1
     assert fr["reason_code_counts"]["stale"] == 1
