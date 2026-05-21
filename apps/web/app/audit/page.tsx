@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { apiClient, type FreshnessAuditListResponse, type ProviderSourceListResponse, type RequestLogListResponse } from "@/lib/apiClient";
-import { buildProviderOptions, buildStatusOptions, countFilteredItems, formatDateTime, matchesAuditSearch, safetySummaryLabel } from "./auditFormatting";
+import { buildProviderOptions, buildStatusOptions, countFilteredItems, matchesAuditSearch, safetySummaryLabel } from "./auditFormatting";
 
 export default function AuditPage() {
   const [logs, setLogs] = useState<RequestLogListResponse | null>(null); const [sources, setSources] = useState<ProviderSourceListResponse | null>(null); const [freshness, setFreshness] = useState<FreshnessAuditListResponse | null>(null);
