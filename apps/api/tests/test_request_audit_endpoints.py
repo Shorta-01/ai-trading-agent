@@ -42,6 +42,15 @@ def test_list_endpoints_empty(monkeypatch) -> None:
         payload = client.get(path).json()
         assert payload["items"] == []
         assert payload["total_count"] == 0
+        if "chain_complete_count" in payload:
+            assert payload["chain_complete_count"] == 0
+            assert payload["chain_partial_count"] == 0
+            assert payload["chain_missing_links_count"] == 0
+            assert payload["chain_metadata_only_count"] == 0
+        if "metadata_complete_count" in payload:
+            assert payload["metadata_complete_count"] == 0
+            assert payload["metadata_partial_count"] == 0
+            assert payload["metadata_unknown_count"] == 0
         _assert_boundary(payload["help_nl"])
 
 
@@ -186,6 +195,8 @@ def test_summary_counts_populated(monkeypatch) -> None:
     assert req["blocked_for_suggestions_count"] == req["total_count"]
     assert req["blocked_for_action_drafts_count"] == req["total_count"]
     assert req["request_status_counts"]["blocked"] == 1
+    assert "chain_completeness_status" in req["items"][0]
+    assert req["chain_missing_links_count"] == 2
     src = client.get("/audit/provider-sources").json()
     assert src["total_count"] == 2
     assert src["disabled_count"] == 0
@@ -193,9 +204,11 @@ def test_summary_counts_populated(monkeypatch) -> None:
     assert src["provider_kind_counts"]["broker"] == 2
     assert src["provider_code_counts"]["ibkr"] == 2
     assert src["data_domain_counts"]["market_data"] == 2
+    assert src["metadata_complete_count"] == 2
     fr = client.get("/audit/freshness-audits").json()
     assert fr["freshness_status_counts"]["blocked"] == 1
     assert fr["reason_code_counts"]["stale"] == 1
+    assert fr["chain_missing_links_count"] == 2
 
 
 def test_detail_endpoints_404(monkeypatch) -> None:
@@ -300,3 +313,26 @@ def test_mapper_endpoints_contract_regression(monkeypatch) -> None:
     assert freshness['safe_for_analysis'] is False
     assert freshness['safe_for_suggestions'] is False
     assert freshness['safe_for_action_drafts'] is False
+
+
+def test_detail_and_list_contract_fields(monkeypatch) -> None:
+    now = datetime.now(UTC)
+    req = RequestLogRecord(request_log_id="r9", correlation_id="c9", request_family="audit", request_purpose="status", created_at=now, completed_at=None, provider_code="ibkr", provider_account_mode="paper", provider_environment="sandbox", source_type="broker", data_domain="market_data", request_kind="list", request_target="/audit", request_status="blocked", initiated_by="api", pacing_weight=0, provider_request_budget_remaining=0, retry_count=0, received_record_count=0, stored_record_count=0, rejected_record_count=0, safe_for_analysis=False, safe_for_suggestions=False, safe_for_action_drafts=False, explanation_nl="x")
+    src = ProviderSourceRecord(provider_source_id="p9", provider_code="ibkr", provider_kind="broker", data_domain="market_data", source_type="feed", provider_environment="sandbox", provider_account_mode="paper", source_effective_from=None, source_effective_to=None, created_at=now, updated_at=now, explanation_nl="x")
+    fr = FreshnessAuditRecord(freshness_audit_id="f9", evaluated_at=now, data_domain="market_data", freshness_policy_code="snapshot", freshness_status="blocked", snapshot_as_of=now, stale_after=now, expires_at=None, age_seconds=10, freshness_window_seconds=5, safe_for_analysis=False, safe_for_suggestions=False, safe_for_action_drafts=False, explanation_nl="x")
+    class Repo:
+        def list_request_logs(self): return _List([req])
+        def list_provider_sources(self): return _List([src])
+        def list_freshness_audits(self): return _List([fr])
+        def get_request_log(self, _id: str): return _Read(req)
+        def get_provider_source(self, _id: str): return _Read(src)
+        def get_freshness_audit(self, _id: str): return _Read(fr)
+    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
+    for p in ["/audit/request-logs", "/audit/provider-sources", "/audit/freshness-audits", "/audit/request-logs/r9", "/audit/provider-sources/p9", "/audit/freshness-audits/f9"]:
+        payload = client.get(p).json()
+        text = str(payload).lower()
+        assert "latest price" not in text
+        assert "runtime-fetch active" not in text
+        assert "decision package" not in text
+        assert "orders" in text
+

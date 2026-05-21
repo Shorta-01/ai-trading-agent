@@ -22,3 +22,9 @@ export const buildProviderOptions = (values: string[]): string[] => [...new Set(
 export const buildStatusOptions = (values: string[]): string[] => [...new Set(values.filter(Boolean))].sort();
 export const countFilteredItems = (count: number, total: number): string => `${count} van ${total} records getoond`;
 export const safetySummaryLabel = (label: string, value: number): string => `${label}: ${value}`;
+
+export const chainCompletenessLabel = (value: string): string => value || "Alleen metadata/status";
+export const statusQualityLabel = (value: string): string => value || "Onbekend";
+export const missingLinksLabel = (items: string[]): string => items.length ? items.join(", ") : "Geen";
+export const missingMetadataFieldsLabel = missingLinksLabel;
+export const statusQualityBadgeClass = (value: string): string => `status-badge status-${value}`;
