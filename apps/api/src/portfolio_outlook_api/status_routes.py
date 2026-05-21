@@ -432,12 +432,20 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
                     evaluated_at=evaluated_at,
                 )
             record = result.record
-            status = LatestSnapshotStatus.STALE_SNAPSHOT if record.freshness_status == "stale" else LatestSnapshotStatus.SNAPSHOT_AVAILABLE
+            status = (
+                LatestSnapshotStatus.STALE_SNAPSHOT
+                if record.freshness_status == "stale"
+                else LatestSnapshotStatus.SNAPSHOT_AVAILABLE
+            )
             response = build_latest_snapshot_response(
                 ibkr_conid,
                 None,
                 status=status,
-                status_nl="Data verouderd" if status is LatestSnapshotStatus.STALE_SNAPSHOT else "Snapshot beschikbaar",
+                status_nl=(
+                    "Data verouderd"
+                    if status is LatestSnapshotStatus.STALE_SNAPSHOT
+                    else "Snapshot beschikbaar"
+                ),
                 evaluated_at=evaluated_at,
             )
             response.provider_code = record.provider_code
@@ -454,8 +462,14 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
             response.last_price = str(record.last_price) if record.last_price is not None else None
             response.bid_price = str(record.bid_price) if record.bid_price is not None else None
             response.ask_price = str(record.ask_price) if record.ask_price is not None else None
-            response.close_price = str(record.close_price) if record.close_price is not None else None
-            response.day_change_percent = str(record.day_change_percent) if record.day_change_percent is not None else None
+            response.close_price = (
+                str(record.close_price) if record.close_price is not None else None
+            )
+            response.day_change_percent = (
+                str(record.day_change_percent)
+                if record.day_change_percent is not None
+                else None
+            )
             response.currency = record.currency
             response.next_step_nl = "Alleen status. Nog geen analyse."
             response.help_nl = "Nog geen suggesties mogelijk."
