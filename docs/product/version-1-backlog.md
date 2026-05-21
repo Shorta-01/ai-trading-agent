@@ -232,3 +232,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 - Task 96 afgerond: read-only terminologie/contract harmonisatie voor readiness/watchlist/latest-snapshot; geen runtime-uitbreidingen toegevoegd.
 - Volgende conservatieve stap: Task 97 — read-only contract hardening van readiness boundary-velden in API-documentatie/UI labelconsumptie (zonder runtime-activatie).
+
+
+- [x] Task 98 — Read-only readiness UI/API contractinventaris (documentatie-only): nieuw inventarisdocument voor resterende UI-schermen + API/client contracten met veilige/onveilige labelpatronen en conservatieve follow-up governance; geen runtime market-data/latest-price fetching/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data.

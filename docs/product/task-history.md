@@ -1,3 +1,14 @@
+## Task 98 — Read-only readiness UI/API contract inventory for remaining screens
+
+- Status: afgerond (documentatie/inventaris-only).
+- Nieuw document toegevoegd: `docs/product/read-only-readiness-ui-contract-inventory.md`.
+- Inventaris dekt resterende UI-schermen + API/client readiness-contracten en legt vast:
+  - veilige read-only labelpatronen;
+  - onveilige termen die alleen met expliciete negatie mogen voorkomen;
+  - conservative follow-up kandidaten zonder runtime-uitbreiding.
+- Productdocs bijgewerkt voor traceability (current-state/backlog/scope-register/next-task).
+- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
+
 ## Task 96 — Conservatieve market-data readiness/latest-snapshot/watchlist terminologieharmonisatie
 
 - Status: afgerond (read-only API/tests/docs scope).
