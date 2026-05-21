@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from ai_trading_agent_storage import FreshnessAuditRecord, ProviderSourceRecord, RequestLogRecord
+from ai_trading_agent_storage import (
+    FreshnessAuditRecord,
+    ProviderSourceRecord,
+    RequestLogRecord,
+)
 
 
 class _Read:
@@ -60,7 +64,12 @@ def make_request_log_record(
     )
 
 
-def make_provider_source_record(*, provider_source_id: str = "src-1", created_at: datetime | None = None, **overrides: Any) -> ProviderSourceRecord:
+def make_provider_source_record(
+    *,
+    provider_source_id: str = "src-1",
+    created_at: datetime | None = None,
+    **overrides: Any,
+) -> ProviderSourceRecord:
     ts = _base_timestamp(created_at)
     return ProviderSourceRecord(
         provider_source_id=provider_source_id,
@@ -79,7 +88,13 @@ def make_provider_source_record(*, provider_source_id: str = "src-1", created_at
     )
 
 
-def make_freshness_audit_record(*, freshness_audit_id: str = "fr-1", freshness_status: str = "blocked", evaluated_at: datetime | None = None, **overrides: Any) -> FreshnessAuditRecord:
+def make_freshness_audit_record(
+    *,
+    freshness_audit_id: str = "fr-1",
+    freshness_status: str = "blocked",
+    evaluated_at: datetime | None = None,
+    **overrides: Any,
+) -> FreshnessAuditRecord:
     ts = _base_timestamp(evaluated_at)
     return FreshnessAuditRecord(
         freshness_audit_id=freshness_audit_id,
@@ -100,25 +115,74 @@ def make_freshness_audit_record(*, freshness_audit_id: str = "fr-1", freshness_s
     )
 
 
-def make_request_audit_records_bundle() -> tuple[list[RequestLogRecord], list[ProviderSourceRecord], list[FreshnessAuditRecord]]:
+def make_request_audit_records_bundle() -> tuple[
+    list[RequestLogRecord],
+    list[ProviderSourceRecord],
+    list[FreshnessAuditRecord],
+]:
     return (
         [make_request_log_record(request_log_id="req-1", request_status="blocked")],
         [make_provider_source_record(provider_source_id="src-1")],
-        [make_freshness_audit_record(freshness_audit_id="fr-1", freshness_status="blocked")],
+        [
+            make_freshness_audit_record(
+                freshness_audit_id="fr-1",
+                freshness_status="blocked",
+            )
+        ],
     )
 
 
-def make_request_audit_repo(*, request_logs: list[RequestLogRecord] | None = None, provider_sources: list[ProviderSourceRecord] | None = None, freshness_audits: list[FreshnessAuditRecord] | None = None):
+def make_request_audit_repo(
+    *,
+    request_logs: list[RequestLogRecord] | None = None,
+    provider_sources: list[ProviderSourceRecord] | None = None,
+    freshness_audits: list[FreshnessAuditRecord] | None = None,
+):
     req = request_logs or []
     src = provider_sources or []
     fr = freshness_audits or []
 
     class Repo:
-        def list_request_logs(self): return _List(req)
-        def list_provider_sources(self): return _List(src)
-        def list_freshness_audits(self): return _List(fr)
-        def get_request_log(self, request_log_id: str): return _Read(next((r for r in req if r.request_log_id == request_log_id), None))
-        def get_provider_source(self, provider_source_id: str): return _Read(next((r for r in src if r.provider_source_id == provider_source_id), None))
-        def get_freshness_audit(self, freshness_audit_id: str): return _Read(next((r for r in fr if r.freshness_audit_id == freshness_audit_id), None))
+        def list_request_logs(self):
+            return _List(req)
+
+        def list_provider_sources(self):
+            return _List(src)
+
+        def list_freshness_audits(self):
+            return _List(fr)
+
+        def get_request_log(self, request_log_id: str):
+            record = next(
+                (
+                    record
+                    for record in req
+                    if record.request_log_id == request_log_id
+                ),
+                None,
+            )
+            return _Read(record)
+
+        def get_provider_source(self, provider_source_id: str):
+            record = next(
+                (
+                    record
+                    for record in src
+                    if record.provider_source_id == provider_source_id
+                ),
+                None,
+            )
+            return _Read(record)
+
+        def get_freshness_audit(self, freshness_audit_id: str):
+            record = next(
+                (
+                    record
+                    for record in fr
+                    if record.freshness_audit_id == freshness_audit_id
+                ),
+                None,
+            )
+            return _Read(record)
 
     return Repo()

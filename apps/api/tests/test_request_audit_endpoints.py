@@ -1,5 +1,10 @@
 from dataclasses import fields
 
+from ai_trading_agent_storage.repository_contracts import (
+    FreshnessAuditRecord,
+    ProviderSourceRecord,
+    RequestLogRecord,
+)
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.main import app
@@ -11,11 +16,7 @@ from portfolio_outlook_api.request_audit import (
     RequestLogListResponse,
     RequestLogResponse,
 )
-from ai_trading_agent_storage.repository_contracts import (
-    FreshnessAuditRecord,
-    ProviderSourceRecord,
-    RequestLogRecord,
-)
+
 from .request_audit_fixtures import (
     make_freshness_audit_record,
     make_provider_source_record,
@@ -35,19 +36,37 @@ def _patch_repo(monkeypatch, **kwargs):
 
 def test_list_endpoints_empty(monkeypatch) -> None:
     _patch_repo(monkeypatch)
-    for path in ["/audit/request-logs", "/audit/provider-sources", "/audit/freshness-audits"]:
+    for path in [
+        "/audit/request-logs",
+        "/audit/provider-sources",
+        "/audit/freshness-audits",
+    ]:
         payload = client.get(path).json()
         assert payload["items"] == []
         assert payload["total_count"] == 0
 
 
 def test_contract_harness_response_field_alignment() -> None:
-    assert set(RequestLogRecord.__dataclass_fields__.keys()).issubset(set(RequestLogResponse.model_fields.keys()))
-    assert set(ProviderSourceRecord.__dataclass_fields__.keys()).issubset(set(ProviderSourceResponse.model_fields.keys()) | {"explanation_nl"})
+    request_log_record_fields = set(RequestLogRecord.__dataclass_fields__)
+    request_log_response_fields = set(RequestLogResponse.model_fields)
+    assert request_log_record_fields.issubset(request_log_response_fields)
 
-    freshness_response_fields = set(FreshnessAuditResponse.model_fields.keys())
+    provider_source_record_fields = set(ProviderSourceRecord.__dataclass_fields__)
+    provider_source_response_fields = set(ProviderSourceResponse.model_fields)
+    assert provider_source_record_fields.issubset(
+        provider_source_response_fields | {"explanation_nl"}
+    )
+
+    freshness_response_fields = set(FreshnessAuditResponse.model_fields)
+    compatibility_fields = {
+        "freshness_policy_code",
+        "snapshot_as_of",
+        "stale_after",
+        "age_seconds",
+        "freshness_window_seconds",
+    }
     for name in [f.name for f in fields(FreshnessAuditRecord) if f.name != "explanation_nl"]:
-        assert name in freshness_response_fields or name in {"freshness_policy_code", "snapshot_as_of", "stale_after", "age_seconds", "freshness_window_seconds"}
+        assert name in freshness_response_fields or name in compatibility_fields
 
     assert "items" in RequestLogListResponse.model_fields
     assert "items" in ProviderSourceListResponse.model_fields
@@ -55,10 +74,36 @@ def test_contract_harness_response_field_alignment() -> None:
 
 
 def test_summary_counts_populated(monkeypatch) -> None:
-    reqs = [make_request_log_record(request_log_id="r1", request_status="blocked"), make_request_log_record(request_log_id="r2", request_status="ok", correlation_id="c2")]
-    srcs = [make_provider_source_record(provider_source_id="p1"), make_provider_source_record(provider_source_id="p2")]
-    frs = [make_freshness_audit_record(freshness_audit_id="f1", freshness_status="blocked", explanation_nl="stale"), make_freshness_audit_record(freshness_audit_id="f2", freshness_status="ok", explanation_nl="fresh")]
-    _patch_repo(monkeypatch, request_logs=reqs, provider_sources=srcs, freshness_audits=frs)
+    reqs = [
+        make_request_log_record(request_log_id="r1", request_status="blocked"),
+        make_request_log_record(
+            request_log_id="r2",
+            request_status="ok",
+            correlation_id="c2",
+        ),
+    ]
+    srcs = [
+        make_provider_source_record(provider_source_id="p1"),
+        make_provider_source_record(provider_source_id="p2"),
+    ]
+    frs = [
+        make_freshness_audit_record(
+            freshness_audit_id="f1",
+            freshness_status="blocked",
+            explanation_nl="stale",
+        ),
+        make_freshness_audit_record(
+            freshness_audit_id="f2",
+            freshness_status="ok",
+            explanation_nl="fresh",
+        ),
+    ]
+    _patch_repo(
+        monkeypatch,
+        request_logs=reqs,
+        provider_sources=srcs,
+        freshness_audits=frs,
+    )
     assert client.get("/audit/request-logs").status_code == 200
     assert client.get("/audit/provider-sources").status_code == 200
     assert client.get("/audit/freshness-audits").status_code == 200
