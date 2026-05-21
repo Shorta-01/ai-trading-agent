@@ -289,10 +289,7 @@ def build_freshness_audit_summary(
         "blocked_for_suggestions_count": blocked_suggestions,
         "blocked_for_action_drafts_count": blocked_actions,
         "freshness_status_counts": count_by_field(records, lambda r: r.freshness_status),
-        "reason_code_counts": count_by_field(
-            records,
-            lambda r: r.freshness_policy_code,
-        ),
+        "reason_code_counts": count_by_field(records, _freshness_reason_code),
         "provider_code_counts": {},
         "data_domain_counts": count_by_field(records, lambda r: r.data_domain),
         "audit_help_nl": BOUNDARY_HELP_NL,
@@ -316,9 +313,32 @@ def _provider_source_response(record: ProviderSourceRecord) -> ProviderSourceRes
     )
 
 
+def _freshness_reason_code(record: FreshnessAuditRecord) -> str | None:
+    if record.freshness_status.lower() == "blocked":
+        return "stale"
+    if record.freshness_status.lower() == "ok":
+        return "fresh"
+    return record.freshness_policy_code
+
+
 def _freshness_response(record: FreshnessAuditRecord) -> FreshnessAuditResponse:
+    reason_code = _freshness_reason_code(record)
     return FreshnessAuditResponse(
-        **record.__dict__,
+        freshness_audit_id=record.freshness_audit_id,
+        request_log_id=None,
+        provider_source_id=None,
+        data_domain=record.data_domain,
+        audit_scope=record.data_domain,
+        freshness_status=record.freshness_status,
+        reason_code=reason_code,
+        evaluated_at=record.evaluated_at,
+        expected_max_age_seconds=record.freshness_window_seconds,
+        observed_age_seconds=record.age_seconds,
+        source_timestamp=record.snapshot_as_of,
+        expires_at=record.expires_at,
+        safe_for_analysis=record.safe_for_analysis,
+        safe_for_suggestions=record.safe_for_suggestions,
+        safe_for_action_drafts=record.safe_for_action_drafts,
         status_nl="Read-only freshness-auditstatus.",
         help_nl=BOUNDARY_HELP_NL,
         audit_help_nl=BOUNDARY_HELP_NL,
