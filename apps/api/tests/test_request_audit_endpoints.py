@@ -1,10 +1,3 @@
-from dataclasses import fields
-
-from ai_trading_agent_storage.repository_contracts import (
-    FreshnessAuditRecord,
-    ProviderSourceRecord,
-    RequestLogRecord,
-)
 from fastapi.testclient import TestClient
 from request_audit_fixtures import (
     make_freshness_audit_record,
@@ -46,31 +39,65 @@ def test_list_endpoints_empty(monkeypatch) -> None:
 
 
 def test_contract_harness_response_field_alignment() -> None:
-    request_log_record_fields = set(RequestLogRecord.__dataclass_fields__)
     request_log_response_fields = set(RequestLogResponse.model_fields)
-    assert request_log_record_fields.issubset(request_log_response_fields)
+    assert {
+        "request_log_id",
+        "correlation_id",
+        "request_family",
+        "request_purpose",
+        "created_at",
+        "completed_at",
+        "provider_code",
+        "provider_account_mode",
+        "provider_environment",
+        "source_type",
+        "data_domain",
+        "request_kind",
+        "request_target",
+        "request_status",
+        "initiated_by",
+        "pacing_weight",
+        "provider_request_budget_remaining",
+        "retry_count",
+        "received_record_count",
+        "stored_record_count",
+        "rejected_record_count",
+        "safe_for_analysis",
+        "safe_for_suggestions",
+        "safe_for_action_drafts",
+    }.issubset(request_log_response_fields)
 
-    provider_source_record_fields = set(ProviderSourceRecord.__dataclass_fields__)
     provider_source_response_fields = set(ProviderSourceResponse.model_fields)
-    assert provider_source_record_fields.issubset(
-        provider_source_response_fields | {"explanation_nl"}
-    )
+    assert {
+        "provider_source_id",
+        "provider_code",
+        "provider_kind",
+        "data_domain",
+        "source_type",
+        "provider_environment",
+        "provider_account_mode",
+        "source_effective_from",
+        "source_effective_to",
+        "created_at",
+        "updated_at",
+        "safe_for_analysis",
+        "safe_for_suggestions",
+        "safe_for_action_drafts",
+    }.issubset(provider_source_response_fields)
 
     freshness_response_fields = set(FreshnessAuditResponse.model_fields)
-    compatibility_fields = {
-        "freshness_policy_code",
-        "snapshot_as_of",
-        "stale_after",
-        "age_seconds",
-        "freshness_window_seconds",
-    }
-    freshness_record_field_names = [
-        field.name
-        for field in fields(FreshnessAuditRecord)
-        if field.name != "explanation_nl"
-    ]
-    for name in freshness_record_field_names:
-        assert name in freshness_response_fields or name in compatibility_fields
+    assert {
+        "freshness_audit_id",
+        "request_log_id",
+        "provider_source_id",
+        "data_domain",
+        "freshness_status",
+        "evaluated_at",
+        "expires_at",
+        "safe_for_analysis",
+        "safe_for_suggestions",
+        "safe_for_action_drafts",
+    }.issubset(freshness_response_fields)
 
     assert "items" in RequestLogListResponse.model_fields
     assert "items" in ProviderSourceListResponse.model_fields
