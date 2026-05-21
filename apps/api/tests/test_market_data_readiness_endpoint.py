@@ -325,7 +325,7 @@ def test_market_data_readiness_stored_snapshot_metadata_is_read_only(monkeypatch
     assert row["analysis_ready"] is False
     assert row["suggestions_allowed"] is False
     assert row["action_drafts_allowed"] is False
-    assert "order" not in str(row).lower()
+    assert "geen orders" in row_text or "geen acties/orders" in row_text
     assert "price" not in row["latest_snapshot_metadata"]
     assert "recommendation" not in row["latest_snapshot_metadata"]
 
