@@ -1,3 +1,7 @@
+## Task 110E update
+
+- Task 110E voltooid: read-only/status API exposure toegevoegd voor `/audit/request-logs`, `/audit/provider-sources` en `/audit/freshness-audits` (incl. detail endpoints), met API tests en producttracking bijgewerkt; non-runtime grenzen en conservatieve safety booleans (`false`) behouden.
+
 # Ai Trading Agent — Version 1 Scope Register
 
 Zie ook `docs/product/final-solution-vision.md` voor het einddoel.

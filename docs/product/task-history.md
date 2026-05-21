@@ -1,3 +1,7 @@
+## Task 110E update
+
+- Task 110E voltooid: read-only/status API exposure toegevoegd voor `/audit/request-logs`, `/audit/provider-sources` en `/audit/freshness-audits` (incl. detail endpoints), met API tests en producttracking bijgewerkt; non-runtime grenzen en conservatieve safety booleans (`false`) behouden.
+
 # Task History (concise)
 
 ## Task 109 — request-log/provider/source/freshness contract preflight (documentation/design only)

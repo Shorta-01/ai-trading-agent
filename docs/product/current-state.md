@@ -1,7 +1,9 @@
-# Current State (na Task 109)
+# Current State (na Task 110E)
 
 ## 1) Current status summary
 
+
+- Task 110E: **completed** — resterende Task 110 scope afgerond met read-only/status API exposure voor request logs, provider/source metadata en freshness-audit records inclusief API tests en producttracking-updates. Task 110 is hiermee volledig afgerond: metadata-tabellen, Alembic migratie 0023, migration readiness registration, repository dataclasses/protocols, SQL repository skeleton, public exports, storage tests, read-only/status API endpoints en API tests. Alles blijft non-runtime; geen provider calls, geen market-data runtime, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen historical fetching, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen IBKR connectie/orders en geen fake data toegevoegd. Safety booleans blijven conservatief false/blocked.
 
 - Task 109: **completed** — documentatie/design-only contract preflight afgerond (`docs/product/request-log-provider-freshness-contract-preflight-task-109.md`). Candidate contractcatalogi vastgelegd voor request logs, provider/source metadata en freshness-audit records inclusief status/reason-code proposals, traceability-linking en readiness-relatiemapping. Geen storagetabellen, migrations, endpoints, schedulers, runtime-fetching, latest-price fetching, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd. Task 107 tracking-drift preventieregel expliciet gevolgd.
 
@@ -15,7 +17,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 109**.
+- Huidige toestand: **na Task 110E**.
 - Task 101: **completed** — documentatie/cross-link/terminologie-anchor-only update. Task 100-termenset is verankerd in handover + locked decisions + lichte cross-links. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 102: **completed** — conservatieve documentatie-only read-only wording drift check na Task 101. Productdocs zijn gecontroleerd tegen de vergrendelde termenset in `locked-decisions.md`; kleine tracking/plaatsingsdrift is hersteld (current-state titel + backlogplaatsing/next-step wording). Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 103: **completed** — conservatieve documentatie-only product-doc consistentiecheck na Task 102. Productdocs zijn gericht gecontroleerd tegen de vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift is hersteld (current-state na-Task-102 tracking + follow-up logging). Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime/actiedrafts/orders en geen fake data toegevoegd.
