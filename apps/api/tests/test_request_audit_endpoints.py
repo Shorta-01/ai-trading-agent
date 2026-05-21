@@ -397,5 +397,20 @@ def test_detail_and_list_contract_fields(monkeypatch) -> None:
         text = str(payload).lower()
         assert "latest price" not in text
         assert "runtime-fetch active" not in text
-        assert "decision package" not in text
+        assert "geen decision packages" in text
+        for forbidden in [
+            "decision packages ready",
+            "decision packages available",
+            "decision package ready",
+            "decision package available",
+            "decision package enabled",
+            "decision packages enabled",
+            "decision package created",
+            "decision packages created",
+            "decision package unlocked",
+            "decision packages unlocked",
+            "decision package runtime active",
+            "decision packages runtime active",
+        ]:
+            assert forbidden not in text
         assert "orders" in text
