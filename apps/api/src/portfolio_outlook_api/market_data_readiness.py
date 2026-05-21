@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ReadinessWatchlistItemLike(Protocol):
@@ -38,7 +38,13 @@ class ReadinessAssetListingGate(BaseModel):
     blocks_market_data: bool
     status_nl: str
     next_step_nl: str
-    audit_help_nl: str
+    audit_help_nl: str = Field(
+        description=(
+            "Nederlandse auditgrens-tekst voor read-only status: geen market-data "
+            "runtime, runtime-fetch, analysevrijgave, suggesties, "
+            "Decision Packages, actiedrafts of orders."
+        )
+    )
 
 
 class ReadinessStatus(StrEnum):
@@ -125,24 +131,41 @@ class ReadinessRow(BaseModel):
     required_identity_fields: list[str]
     missing_identity_fields: list[str]
     validation_status: ReadinessValidationStatus
-    asset_listing_gate: ReadinessAssetListingGate
+    asset_listing_gate: ReadinessAssetListingGate = Field(
+        description=(
+            "Read-only AssetListing-gate status only. Geen market-data runtime "
+            "of runtime-fetch; geen analysevrijgave, suggesties, Decision "
+            "Packages, actiedrafts of orders."
+        )
+    )
     evaluated_at: str
-    latest_snapshot_metadata: ReadinessSnapshotMetadata | None
+    latest_snapshot_metadata: ReadinessSnapshotMetadata | None = Field(
+        default=None,
+        description=(
+            "Read-only latest-snapshot metadata/status only; geen "
+            "live/current/latest prijs, geen market-data runtime en "
+            "geen runtime-fetch."
+        ),
+    )
     snapshot_metadata_present: bool
     next_step_nl: str
-    audit_help_nl: str
-    help_nl: str
-    analysis_ready: bool
-    suggestions_allowed: bool
-    action_drafts_allowed: bool
+    audit_help_nl: str = Field(description="Nederlandse auditgrens-tekst voor read-only status.")
+    help_nl: str = Field(description="Nederlandse helptekst voor read-only readiness/snapshot.")
+    analysis_ready: bool = Field(description="Altijd false: geen analysevrijgave.")
+    suggestions_allowed: bool = Field(
+        description="Altijd false: geen suggesties of Decision Packages runtime."
+    )
+    action_drafts_allowed: bool = Field(
+        description="Altijd false: geen actiedrafts of orders."
+    )
 
 
 class ReadinessListResponse(BaseModel):
     items: list[ReadinessRow]
-    help_nl: str
-    analysis_ready: bool
-    suggestions_allowed: bool
-    action_drafts_allowed: bool
+    help_nl: str = Field(description="Nederlandse helptekst voor read-only readiness/snapshot.")
+    analysis_ready: bool = Field(description="Altijd false: geen analysevrijgave.")
+    suggestions_allowed: bool = Field(description="Altijd false: geen suggesties.")
+    action_drafts_allowed: bool = Field(description="Altijd false: geen actiedrafts/orders.")
 
 
 class ReadinessDetailResponse(BaseModel):
@@ -154,15 +177,21 @@ class LatestSnapshotResponse(BaseModel):
     ibkr_conid: str
     status: LatestSnapshotStatus
     status_nl: str
-    latest_snapshot_metadata: ReadinessSnapshotMetadata | None
+    latest_snapshot_metadata: ReadinessSnapshotMetadata | None = Field(
+        default=None,
+        description=(
+            "Read-only latest-snapshot metadata/status only; geen "
+            "live/current/latest prijs, market-data runtime of runtime-fetch."
+        ),
+    )
     evaluated_at: str
     missing_reason: str | None = None
     blocker_reason: str | None = None
     next_step_nl: str
-    help_nl: str
-    analysis_ready: bool
-    suggestions_allowed: bool
-    action_drafts_allowed: bool
+    help_nl: str = Field(description="Nederlandse helptekst voor read-only snapshotstatus.")
+    analysis_ready: bool = Field(description="Altijd false: geen analysevrijgave.")
+    suggestions_allowed: bool = Field(description="Altijd false: geen suggesties.")
+    action_drafts_allowed: bool = Field(description="Altijd false: geen actiedrafts/orders.")
 
 
 def utc_now_iso() -> str:
@@ -251,7 +280,7 @@ def build_readiness_snapshot_metadata(record: object) -> ReadinessSnapshotMetada
 
 def build_latest_snapshot_response(
     ibkr_conid: str,
-    latest_snapshot_metadata: ReadinessSnapshotMetadata | None,
+    latest_snapshot_metadata: ReadinessSnapshotMetadata | None = None,
     *,
     status: LatestSnapshotStatus,
     status_nl: str,

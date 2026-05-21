@@ -417,6 +417,29 @@ export type WatchlistItemResponse = {
   } | null;
   ibkr_status_label_nl: string;
   analysis_readiness_label_nl: string;
+  asset_listing_readiness: WatchlistAssetListingReadiness;
+};
+
+export type WatchlistAssetListingReadiness = {
+  link_status: string;
+  listing_id: string | null;
+  asset_id: string | null;
+  ibkr_conid: string | null;
+  symbol: string | null;
+  security_type: string | null;
+  exchange: string | null;
+  primary_exchange: string | null;
+  currency: string | null;
+  validation_status: string | null;
+  validated_at: string | null;
+  market_data_ready: boolean;
+  analysis_ready: boolean;
+  suggestions_allowed: boolean;
+  action_drafts_allowed: boolean;
+  blocker_code: string | null;
+  status_nl: string;
+  next_step_nl: string;
+  audit_help_nl: string;
 };
 
 

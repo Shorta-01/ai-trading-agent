@@ -29,6 +29,8 @@ export default function Page() {
 
   async function load() { const res = await listWatchlistItems(); if (res.ok) setItems(res.data.items); }
   useEffect(() => { void load(); }, []);
+  const getReadinessStatus = (wrapped: WatchlistItemResponse) => wrapped.asset_listing_readiness.status_nl;
+  const getReadinessHelp = (wrapped: WatchlistItemResponse) => wrapped.asset_listing_readiness.next_step_nl;
 
   return <main className="page-wrap"><h2>Volglijst</h2><p>Geen actief Volglijst-item zonder IBKR-contract.</p>
     <h3>Importeren uit IBKR-watchlist</h3>
@@ -50,6 +52,6 @@ export default function Page() {
       <button type="submit">Toevoegen aan Volglijst</button>
     </form>
     {error ? <p>{error}</p> : null}
-    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; return <tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Niet beschikbaar"}</td><td>{wrapped.ibkr_status_label_nl}</td><td>{wrapped.analysis_readiness_label_nl}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
+    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; return <tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Niet beschikbaar"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
   </main>;
 }
