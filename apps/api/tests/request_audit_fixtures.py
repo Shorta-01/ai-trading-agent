@@ -72,21 +72,22 @@ def make_provider_source_record(
     **overrides: Any,
 ) -> ProviderSourceRecord:
     ts = _base_timestamp(created_at)
-    return ProviderSourceRecord(
-        provider_source_id=provider_source_id,
-        provider_code="ibkr",
-        provider_kind="broker",
-        data_domain="market_data",
-        source_type="feed",
-        provider_environment="sandbox",
-        provider_account_mode="paper",
-        source_effective_from=None,
-        source_effective_to=None,
-        created_at=ts,
-        updated_at=ts,
-        explanation_nl="Read-only bronmetadata.",
-        **overrides,
-    )
+    values = {
+        "provider_source_id": provider_source_id,
+        "provider_code": "ibkr",
+        "provider_kind": "broker",
+        "data_domain": "market_data",
+        "source_type": "feed",
+        "provider_environment": "sandbox",
+        "provider_account_mode": "paper",
+        "source_effective_from": None,
+        "source_effective_to": None,
+        "created_at": ts,
+        "updated_at": ts,
+        "explanation_nl": "Read-only bronmetadata.",
+    }
+    values.update(overrides)
+    return ProviderSourceRecord(**values)
 
 
 def make_freshness_audit_record(
@@ -97,23 +98,24 @@ def make_freshness_audit_record(
     **overrides: Any,
 ) -> FreshnessAuditRecord:
     ts = _base_timestamp(evaluated_at)
-    return FreshnessAuditRecord(
-        freshness_audit_id=freshness_audit_id,
-        evaluated_at=ts,
-        data_domain="market_data",
-        freshness_policy_code="snapshot",
-        freshness_status=freshness_status,
-        snapshot_as_of=ts,
-        stale_after=ts,
-        expires_at=None,
-        age_seconds=1,
-        freshness_window_seconds=300,
-        safe_for_analysis=False,
-        safe_for_suggestions=False,
-        safe_for_action_drafts=False,
-        explanation_nl="Read-only freshnessstatus.",
-        **overrides,
-    )
+    values = {
+        "freshness_audit_id": freshness_audit_id,
+        "evaluated_at": ts,
+        "data_domain": "market_data",
+        "freshness_policy_code": "snapshot",
+        "freshness_status": freshness_status,
+        "snapshot_as_of": ts,
+        "stale_after": ts,
+        "expires_at": None,
+        "age_seconds": 1,
+        "freshness_window_seconds": 300,
+        "safe_for_analysis": False,
+        "safe_for_suggestions": False,
+        "safe_for_action_drafts": False,
+        "explanation_nl": "Read-only freshnessstatus.",
+    }
+    values.update(overrides)
+    return FreshnessAuditRecord(**values)
 
 
 def make_request_audit_records_bundle() -> tuple[
