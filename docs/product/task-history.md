@@ -1,3 +1,13 @@
+## Task 96 — Conservatieve market-data readiness/latest-snapshot/watchlist terminologieharmonisatie
+
+- Status: afgerond (read-only API/tests/docs scope).
+- Watchlist `asset_listing_readiness`, market-data readiness `asset_listing_gate` en latest-snapshot responses gebruiken nu geharmoniseerde NL boundary-terminologie: read-only status, geen market-data runtime, geen runtime-fetch, geen analysevrijgave, geen suggesties, geen Decision Packages, geen actiedrafts en geen orders.
+- Latest snapshot blijft read-only metadata/status-only en impliceert geen live/current marktprijs of runtime-fetch.
+- Missing/unvalidated AssetListing blijft blocked; validated AssetListing blijft identity/status-only.
+- Geen storage migration of nieuwe tabel.
+- Geen market-data runtime/fetching/historical fetching/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/IBKR-ordergedrag toegevoegd.
+- Geen fake market prices, fake broker data of fake recommendations toegevoegd.
+
 ## Task 95 — Conservatieve market-data readiness AssetListing validation-gate harmonisatie
 
 - Status: afgerond (read-only API/tests/docs scope).

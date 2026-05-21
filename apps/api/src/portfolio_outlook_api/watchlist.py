@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.market_data_readiness import READINESS_BOUNDARY_TEXT_NL
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
@@ -208,10 +209,7 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
                 "Configureer opslag om AssetListing-identiteit aan de volglijst "
                 "te koppelen."
             ),
-            audit_help_nl=(
-                "Read-only koppelstatus; geen runtime market data, analyse, "
-                "suggesties of acties."
-            ),
+            audit_help_nl="Read-only koppelstatus. " + READINESS_BOUNDARY_TEXT_NL,
         )
     if not item.ibkr_conid:
         return WatchlistAssetListingReadiness(
@@ -227,7 +225,10 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
                 "Voeg eerst een gevalideerd IBKR-contract (conid) toe en koppel "
                 "daarna een AssetListing."
             ),
-            audit_help_nl="Zonder contractidentiteit blijft alles geblokkeerd.",
+            audit_help_nl=(
+                "Zonder contractidentiteit blijft alles geblokkeerd. "
+                + READINESS_BOUNDARY_TEXT_NL
+            ),
         )
 
     ibkr_conid = item.ibkr_conid
@@ -250,7 +251,10 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
                 "Maak of koppel een AssetListing op basis van dit IBKR-contract "
                 "vóór latere market-data/analysestappen."
             ),
-            audit_help_nl="Read-only status: geen runtime activatie of fetch.",
+            audit_help_nl=(
+                "AssetListing ontbreekt; status blijft read-only. "
+                + READINESS_BOUNDARY_TEXT_NL
+            ),
         )
 
     validated = listing.validation_status == "valid" and listing.safe_to_use_for_market_data
@@ -274,13 +278,10 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
             blocker_code="listing_not_validated_or_safe",
             status_nl="AssetListing nog niet veilig gevalideerd",
             next_step_nl=(
-                "Valideer de listing-identiteit en veiligheidsvlaggen; runtime "
-                "blijft daarna nog steeds uit."
+                "Valideer de listing-identiteit en veiligheidsvlaggen; dit blijft daarna "
+                "nog steeds read-only zonder analysevrijgave of runtime-fetch."
             ),
-            audit_help_nl=(
-                "Contractstatus-only: geen market-data runtime, analyse, "
-                "suggesties of acties."
-            ),
+            audit_help_nl="Contractstatus-only. " + READINESS_BOUNDARY_TEXT_NL,
         )
 
     return WatchlistAssetListingReadiness(
@@ -302,13 +303,10 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
         blocker_code="runtime_not_active",
         status_nl="AssetListing gevalideerd (read-only)",
         next_step_nl=(
-            "Contractstatus gekend, maar market-data runtime/scheduler/analyse "
-            "staan nog niet actief."
+            "Contractstatus gekend, maar dit blijft read-only zonder market-data runtime, "
+            "runtime-fetch of analysevrijgave."
         ),
-        audit_help_nl=(
-            "Read-only status zonder runtime-fetch, suggesties, Decision Packages "
-            "of actiedrafts."
-        ),
+        audit_help_nl="Read-only status. " + READINESS_BOUNDARY_TEXT_NL,
     )
 
 

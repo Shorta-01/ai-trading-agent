@@ -228,3 +228,7 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 - [x] Task 94 — Conservatieve AssetListing-to-watchlist readiness wiring (API/tests/docs, read-only): watchlist list/detail response bevat typed AssetListing readiness/status via `ibkr_conid`; missing/unvalidated listings blijven blocked voor market data/analysis/suggesties/action drafts; gevalideerde listing blijft status-only zonder runtime unlock. Geen market-data runtime/fetching/historical/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data toegevoegd.
 - [x] Task 95 — Conservatieve market-data readiness AssetListing validation-gate harmonisatie (API/tests/docs, read-only): readiness list/detail tonen nu expliciete typed `asset_listing_gate` (`storage_unavailable`, `missing_ibkr_conid`, `missing_listing`, `unvalidated_listing`, `validated_listing`) met geharmoniseerde NL teksten; missing/unvalidated blijft blocked, validated blijft status-only. Geen storage migratie/tabel en geen runtime market-data fetch/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data.
+
+
+- Task 96 afgerond: read-only terminologie/contract harmonisatie voor readiness/watchlist/latest-snapshot; geen runtime-uitbreidingen toegevoegd.
+- Volgende conservatieve stap: Task 97 — read-only contract hardening van readiness boundary-velden in API-documentatie/UI labelconsumptie (zonder runtime-activatie).

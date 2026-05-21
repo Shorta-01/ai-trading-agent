@@ -6,6 +6,21 @@ from portfolio_outlook_api.watchlist import STORE
 client = TestClient(app)
 
 
+def _assert_boundary_terms(text: str) -> None:
+    lower = text.lower()
+    for term in [
+        "read-only",
+        "geen market-data runtime",
+        "geen runtime-fetch",
+        "geen analyse",
+        "geen suggesties",
+        "geen decision packages",
+        "geen actiedrafts",
+        "geen orders",
+    ]:
+        assert term in lower
+
+
 def setup_function() -> None:
     STORE.clear()
 
@@ -99,7 +114,9 @@ def test_watchlist_asset_listing_missing(monkeypatch) -> None:
     assert readiness["analysis_ready"] is False
     assert readiness["suggestions_allowed"] is False
     assert readiness["action_drafts_allowed"] is False
+    _assert_boundary_terms(readiness["audit_help_nl"])
     assert "market-data/analysestappen" in readiness["next_step_nl"]
+    _assert_boundary_terms(readiness["audit_help_nl"])
     assert "market_price" not in payload
     assert "recommendation" not in payload
 
@@ -129,6 +146,7 @@ def test_watchlist_asset_listing_unvalidated(monkeypatch) -> None:
     assert readiness["analysis_ready"] is False
     assert readiness["suggestions_allowed"] is False
     assert readiness["action_drafts_allowed"] is False
+    _assert_boundary_terms(readiness["audit_help_nl"])
 
 
 def test_watchlist_asset_listing_validated_still_blocked_for_runtime(monkeypatch) -> None:
@@ -157,6 +175,7 @@ def test_watchlist_asset_listing_validated_still_blocked_for_runtime(monkeypatch
     assert readiness["suggestions_allowed"] is False
     assert readiness["action_drafts_allowed"] is False
     assert "runtime" in readiness["next_step_nl"]
+    _assert_boundary_terms(readiness["audit_help_nl"])
 
 
 def test_watchlist_asset_listing_storage_unavailable(monkeypatch) -> None:
