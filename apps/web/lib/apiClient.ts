@@ -527,9 +527,23 @@ export type WatchlistAssetListingReadiness = {
   audit_help_nl: string;
 };
 
+export type MarketDataLatestSnapshotStatusResponse = {
+  ibkr_conid: string;
+  status: string;
+  status_nl: string;
+  next_step_nl: string;
+  help_nl: string;
+  analysis_ready: boolean;
+  suggestions_allowed: boolean;
+  action_drafts_allowed: boolean;
+};
+
 
 export type IbkrWatchlistSummary = { ibkr_watchlist_id: string; name: string; read_only: boolean | null; watchlist_scope: string | null; };
 export type IbkrWatchlistInstrument = { ibkr_watchlist_id: string; ibkr_conid: string | null; symbol: string | null; name: string | null; asset_class: string | null; exchange: string | null; currency: string | null; validation_status: string; import_status: string; };
 export async function listIbkrWatchlists(): Promise<FetchState<{status: string; configured: boolean; items: IbkrWatchlistSummary[]; message_nl: string}>> { return getJson("/ibkr/watchlists"); }
 export async function listIbkrWatchlistInstruments(id: string): Promise<FetchState<{status: string; configured: boolean; items: IbkrWatchlistInstrument[]; message_nl: string}>> { return getJson(`/ibkr/watchlists/${encodeURIComponent(id)}/instruments`); }
 export async function importIbkrWatchlist(id: string): Promise<FetchState<{status: string; run: {import_run_id: string}; candidates: IbkrWatchlistInstrument[]; message_nl: string}>> { return postJson(`/ibkr/watchlists/${encodeURIComponent(id)}/import`, {}); }
+export async function getMarketDataLatestSnapshotStatus(ibkrConid: string): Promise<FetchState<MarketDataLatestSnapshotStatusResponse>> {
+  return getJson(`/market-data/snapshots/latest/${encodeURIComponent(ibkrConid)}`);
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   archiveWatchlistItem,
   createWatchlistItem,
+  getMarketDataLatestSnapshotStatus,
   importIbkrWatchlist,
   listIbkrWatchlistInstruments,
   listIbkrWatchlists,
@@ -14,6 +15,7 @@ import {
   type IbkrWatchlistSummary,
   type WatchlistItemResponse,
 } from "@/lib/apiClient";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default function Page() {
   const [items, setItems] = useState<WatchlistItemResponse[]>([]);
@@ -26,8 +28,35 @@ export default function Page() {
   const [selectedWatchlist, setSelectedWatchlist] = useState<string>("");
   const [watchlistInstruments, setWatchlistInstruments] = useState<IbkrWatchlistInstrument[]>([]);
   const [ibkrStatus, setIbkrStatus] = useState<string>("");
+  const [marketDataStatusByConid, setMarketDataStatusByConid] = useState<Record<string, { label: string; help: string }>>({});
 
-  async function load() { const res = await listWatchlistItems(); if (res.ok) setItems(res.data.items); }
+  async function load() {
+    const res = await listWatchlistItems();
+    if (!res.ok) return;
+    setItems(res.data.items);
+    const entries = await Promise.all(
+      res.data.items
+        .map((wrapped) => wrapped.item.ibkr_conid)
+        .filter((conid): conid is string => Boolean(conid && conid.trim()))
+        .map(async (conid) => {
+          const status = await getMarketDataLatestSnapshotStatus(conid);
+          if (!status.ok) {
+            return [conid, { label: "Providerfout", help: "Status kon niet worden opgehaald." }] as const;
+          }
+          if (status.data.status === "snapshot_available") {
+            return [conid, { label: "Snapshot beschikbaar", help: "Alleen status. Nog geen analyse." }] as const;
+          }
+          if (status.data.status === "missing_snapshot") {
+            return [conid, { label: "Geen marktdata", help: "Nog geen snapshot. Alleen status." }] as const;
+          }
+          if (status.data.status === "not_configured") {
+            return [conid, { label: "Niet geconfigureerd", help: status.data.next_step_nl }] as const;
+          }
+          return [conid, { label: "Alleen status", help: status.data.next_step_nl }] as const;
+        })
+    );
+    setMarketDataStatusByConid(Object.fromEntries(entries));
+  }
   useEffect(() => { void load(); }, []);
   const getReadinessStatus = (wrapped: WatchlistItemResponse) => wrapped.asset_listing_readiness.status_nl;
   const getReadinessHelp = (wrapped: WatchlistItemResponse) => wrapped.asset_listing_readiness.next_step_nl;
@@ -52,6 +81,6 @@ export default function Page() {
       <button type="submit">Toevoegen aan Volglijst</button>
     </form>
     {error ? <p>{error}</p> : null}
-    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; return <tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Niet beschikbaar"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
+    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Marktdata</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; const marketStatus = i.ibkr_conid ? marketDataStatusByConid[i.ibkr_conid] : null; return <tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Geen contract"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td>{i.ibkr_conid ? <><StatusBadge label={marketStatus?.label ?? "Alleen status"} status="info" title={marketStatus?.help ?? "Nog geen analyse"} /><br /><small>{marketStatus?.help ?? "Nog geen analyse"}</small></> : <><StatusBadge label="Geen contract" status="geblokkeerd" title="Contract niet aanwezig of niet gevalideerd." /><br /><small>Contract niet gevalideerd</small></>}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
   </main>;
 }

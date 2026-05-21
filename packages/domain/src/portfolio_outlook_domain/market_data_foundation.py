@@ -16,6 +16,10 @@ class MarketDataFetchStatus(StrEnum):
     PACING_LIMITED = "pacing_limited"
     NO_SNAPSHOT = "no_snapshot"
     PROVIDER_ERROR = "provider_error"
+    STORAGE_ERROR = "storage_error"
+    STALE_SNAPSHOT = "stale_snapshot"
+    SNAPSHOT_AVAILABLE = "snapshot_available"
+    PROVIDER_NOT_CONFIGURED = "provider_not_configured"
 
 
 @dataclass(frozen=True)
