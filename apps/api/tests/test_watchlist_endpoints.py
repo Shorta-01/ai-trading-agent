@@ -77,3 +77,83 @@ def test_patch_watchlist_item_links_asset_and_unlinks(monkeypatch) -> None:
     unlinked = client.patch(f"/watchlist/items/{item_id}", json={"asset_id": None})
     assert unlinked.status_code == 200
     assert unlinked.json()["item"]["item"]["asset_id"] is None
+
+
+def test_watchlist_asset_listing_missing(monkeypatch) -> None:
+    created = client.post("/watchlist/items", json=_valid_payload())
+    assert created.status_code == 200
+
+    monkeypatch.setattr("portfolio_outlook_api.watchlist._with_repository", lambda op: None)
+    payload = client.get("/watchlist/items").json()["items"][0]
+    readiness = payload["asset_listing_readiness"]
+    assert readiness["link_status"] == "missing_listing"
+    assert readiness["analysis_ready"] is False
+    assert readiness["suggestions_allowed"] is False
+    assert readiness["action_drafts_allowed"] is False
+    assert "market-data/analysestappen" in readiness["next_step_nl"]
+    assert "market_price" not in payload
+    assert "recommendation" not in payload
+
+
+def test_watchlist_asset_listing_unvalidated(monkeypatch) -> None:
+    created = client.post("/watchlist/items", json=_valid_payload())
+    assert created.status_code == 200
+
+    class Listing:
+        listing_id = "lst-1"
+        asset_id = "asset-1"
+        ibkr_conid = "265598"
+        symbol = "AAPL"
+        security_type = "STK"
+        exchange = "SMART"
+        primary_exchange = "NASDAQ"
+        currency = "USD"
+        validation_status = "unvalidated"
+        validated_at = None
+        safe_to_use_for_market_data = False
+
+    monkeypatch.setattr("portfolio_outlook_api.watchlist._with_repository", lambda op: Listing())
+    readiness = client.get("/watchlist/items").json()["items"][0]["asset_listing_readiness"]
+    assert readiness["link_status"] == "unvalidated_listing"
+    assert readiness["blocker_code"] == "listing_not_validated_or_safe"
+    assert readiness["analysis_ready"] is False
+    assert readiness["suggestions_allowed"] is False
+    assert readiness["action_drafts_allowed"] is False
+
+
+def test_watchlist_asset_listing_validated_still_blocked_for_runtime(monkeypatch) -> None:
+    created = client.post("/watchlist/items", json=_valid_payload())
+    assert created.status_code == 200
+
+    class Listing:
+        listing_id = "lst-2"
+        asset_id = "asset-1"
+        ibkr_conid = "265598"
+        symbol = "AAPL"
+        security_type = "STK"
+        exchange = "SMART"
+        primary_exchange = "NASDAQ"
+        currency = "USD"
+        validation_status = "valid"
+        validated_at = None
+        safe_to_use_for_market_data = True
+
+    monkeypatch.setattr("portfolio_outlook_api.watchlist._with_repository", lambda op: Listing())
+    readiness = client.get("/watchlist/items").json()["items"][0]["asset_listing_readiness"]
+    assert readiness["link_status"] == "validated_listing"
+    assert readiness["market_data_ready"] is False
+    assert readiness["analysis_ready"] is False
+    assert readiness["suggestions_allowed"] is False
+    assert readiness["action_drafts_allowed"] is False
+    assert "runtime" in readiness["next_step_nl"]
+
+
+def test_watchlist_asset_listing_storage_unavailable(monkeypatch) -> None:
+    created = client.post("/watchlist/items", json=_valid_payload())
+    assert created.status_code == 200
+
+    monkeypatch.setattr("portfolio_outlook_api.watchlist.settings.storage.enabled", False)
+    readiness = client.get("/watchlist/items").json()["items"][0]["asset_listing_readiness"]
+    assert readiness["link_status"] == "storage_unavailable"
+    detail = client.get(f"/watchlist/items/{created.json()['item']['item']['watchlist_item_id']}").json()["item"]["asset_listing_readiness"]
+    assert detail["link_status"] == "storage_unavailable"

@@ -1,9 +1,3 @@
 # Next Task
 
-## CI status
-
-Task 93 lokaal geverifieerd met storage+api lint/type/tests en diff-check.
-
-## Next implementation task
-
-Task 94 — Conservatieve foundation-vervolgstap: AssetListing-to-watchlist readiness wiring (alleen contract/status-koppeling en blokkaderegels), nog steeds zonder market-data runtime/scheduler/forecast/AI/suggesties/actions/orders.
+Task 95 — Conservatieve vervolgstap: market-data readiness contracten expliciet laten verwijzen naar AssetListing-validation-gates (alleen read-only status/tekstharmonisatie en regressietests), zonder runtime market-data fetching, scheduler, forecast runtime, AI runtime, suggesties, Decision Packages, action drafts of orders.

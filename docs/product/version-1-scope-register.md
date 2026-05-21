@@ -140,3 +140,6 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/freshness/risk gates + approved modelversion actief zijn.
 
 - In scope afgerond: AssetListing identity foundation als aparte laag naast AssetMaster, inclusief listing-level IBKR conid representatie en blocked-by-default safetyvelden.
+
+
+- Task 94 (completed): watchlist API exposeert nu read-only AssetListing readiness/status per `ibkr_conid`; unresolved/unvalidated listings blijven hard geblokkeerd voor market data/analysis/suggesties/action drafts; geen runtime market-data/forecast/AI/actions/orders toegevoegd.

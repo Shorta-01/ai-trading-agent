@@ -1,3 +1,9 @@
+## Task 94 — Conservatieve AssetListing-to-watchlist readiness wiring
+- Status: completed
+- Scope: API + tests + docs (read-only readiness contract wiring)
+- Resultaat: watchlist list/detail response bevat typed AssetListing readiness/status gekoppeld via `ibkr_conid`; ontbrekende of ongevalideerde AssetListing houdt market data/analysis/suggesties/action drafts geblokkeerd; gevalideerde AssetListing toont alleen identity/status en activeert geen runtime.
+- Niet toegevoegd: geen market-data runtime/fetching/historical/scheduler, geen forecast/AI runtime, geen suggesties/Decision Packages/action drafts/orders, geen fake prijzen/broker/recommendaties.
+
 # Task History (concise)
 
 ## Task 92B — API pytest repair after Task 92 readiness hardening
