@@ -1,3 +1,10 @@
+## Task 104 — Conservatieve read-only tracking consistency mini-follow-up
+
+- Status: afgerond (documentation/review-hardening only).
+- Post-Task-103 producttrackingdocs gecontroleerd tegen vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Kleine trackingdrift hersteld in `docs/product/current-state.md` (na Task 103) en compacte notitie toegevoegd: `docs/product/read-only-readiness-tracking-consistency-task-104.md`.
+- Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
 ## Task 103 — Conservatieve read-only product-doc consistency follow-up
 
 - Status: afgerond (documentation/review-hardening only).

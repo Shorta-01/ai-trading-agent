@@ -176,6 +176,13 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
 
 
+## Task 104 tracking consistency mini-follow-up (documentation/review-hardening only)
+
+- Status: afgerond.
+- Post-Task-103 producttracking gecontroleerd tegen vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Kleine trackingdrift hersteld in `current-state.md` (na Task 103) en compacte notitie toegevoegd: `docs/product/read-only-readiness-tracking-consistency-task-104.md`.
+- Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
 ## Task 103 — conservatieve read-only product-doc consistency follow-up (documentation-only)
 
 - Status: afgerond.
