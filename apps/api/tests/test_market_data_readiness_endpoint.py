@@ -245,6 +245,10 @@ def test_market_data_readiness_asset_listing_gate_variants(monkeypatch) -> None:
         "portfolio_outlook_api.status_routes.SqlAlchemyResearchSourceArchiveRepository",
         _FakeAssetListingRepo,
     )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes._read_snapshot_metadata",
+        lambda _ibkr_conid: None,
+    )
 
     _FakeAssetListingRepo.state = "missing"
     row = client.get("/market-data/readiness/watchlist/w-1").json()["item"]
@@ -264,6 +268,7 @@ def test_market_data_readiness_asset_listing_gate_variants(monkeypatch) -> None:
     assert "read-only status" in row["asset_listing_gate"]["audit_help_nl"].lower()
     assert row["suggestions_allowed"] is False
     assert row["action_drafts_allowed"] is False
+
 
 def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled() -> None:
     response = client.get("/market-data/snapshots/latest/265598")
