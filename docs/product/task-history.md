@@ -1,3 +1,13 @@
+# Task History (concise)
+
+## Task 106 — Conservatieve read-only terminology lock discipline follow-up
+
+- Status: afgerond (documentation/review-hardening only).
+- Post-Task-105 producttrackingdocs gericht gecontroleerd tegen de vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Kleine tracking/wordingdrift hersteld in `docs/product/current-state.md` (titel + samenvattingsregel naar post-Task-105 status).
+- Compacte checknotitie toegevoegd: `docs/product/read-only-readiness-terminology-discipline-check-task-106.md`.
+- Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
 ## Task 105 — Conservatieve read-only terminology lock check follow-up
 
 - Status: afgerond (documentation/review-hardening only).
@@ -66,6 +76,14 @@
 - Niet toegevoegd: geen market-data runtime/fetching/historical/scheduler, geen forecast/AI runtime, geen suggesties/Decision Packages/action drafts/orders, geen fake prijzen/broker/recommendaties.
 
 # Task History (concise)
+
+## Task 106 — Conservatieve read-only terminology lock discipline follow-up
+
+- Status: afgerond (documentation/review-hardening only).
+- Post-Task-105 producttrackingdocs gericht gecontroleerd tegen de vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Kleine tracking/wordingdrift hersteld in `docs/product/current-state.md` (titel + samenvattingsregel naar post-Task-105 status).
+- Compacte checknotitie toegevoegd: `docs/product/read-only-readiness-terminology-discipline-check-task-106.md`.
+- Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
 
 ## Task 100 — Product-doc read-only readiness terminologie-audit
 
