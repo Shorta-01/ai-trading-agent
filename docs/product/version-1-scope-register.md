@@ -209,6 +209,9 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
 
 
+
+| Task 108 non-runtime foundation preflight | Contracted | N/A | N/A | N/A | Runtime pending | Grote documentatie/design-preflight uitgevoerd met kandidatenmatrix en exact één aanbevolen Task 109 (request-log/provider-metadata/freshness-audit contract preflight). Geen runtime-fetching/scheduler/AI/suggesties/Decision Packages/actiedrafts/orders/fake data. |
+
 ## Task 107 sustainability tracking guardrail (documentation/review-hardening only)
 
 - Status: afgerond.
