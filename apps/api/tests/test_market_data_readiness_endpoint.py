@@ -17,6 +17,21 @@ from portfolio_outlook_api.watchlist import STORE, WatchlistItem
 client = TestClient(app)
 
 
+def _assert_boundary_terms(text: str) -> None:
+    lower = text.lower()
+    for term in [
+        "read-only",
+        "geen market-data runtime",
+        "geen runtime-fetch",
+        "geen analyse",
+        "geen suggesties",
+        "geen decision packages",
+        "geen actiedrafts",
+        "geen orders",
+    ]:
+        assert term in lower
+
+
 def setup_function() -> None:
     STORE.clear()
 
@@ -65,7 +80,7 @@ def test_market_data_readiness_blocks_unvalidated_identity() -> None:
         assert row["asset_listing_gate"]["status"] == "storage_unavailable"
         assert row["snapshot_metadata_present"] is False
         assert row["latest_snapshot_metadata"] is None
-        assert "geen market-data runtime" in row["audit_help_nl"].lower()
+        _assert_boundary_terms(row["audit_help_nl"])
         assert "evaluated_at" in row
         assert "next_step_nl" in row
         assert "analyse" in row["blocker_reason_nl"].lower()
@@ -122,6 +137,7 @@ def test_market_data_readiness_list_response_contract() -> None:
     parsed = ReadinessListResponse.model_validate(response.json())
     assert parsed.help_nl
     assert parsed.analysis_ready is False
+    _assert_boundary_terms(parsed.help_nl)
     assert parsed.suggestions_allowed is False
     assert parsed.action_drafts_allowed is False
     assert parsed.items[0].status == ReadinessStatus.BLOCKED
@@ -265,7 +281,7 @@ def test_market_data_readiness_asset_listing_gate_variants(monkeypatch) -> None:
     row = response.json()["items"][0]
     assert row["asset_listing_gate"]["status"] == "validated_listing"
     assert row["asset_listing_gate"]["listing_id"] == "lst-1"
-    assert "read-only status" in row["asset_listing_gate"]["audit_help_nl"].lower()
+    _assert_boundary_terms(row["asset_listing_gate"]["audit_help_nl"])
     assert row["suggestions_allowed"] is False
     assert row["action_drafts_allowed"] is False
 
@@ -278,7 +294,7 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     assert parsed.status == LatestSnapshotStatus.NOT_CONFIGURED
     assert parsed.latest_snapshot_metadata is None
     assert parsed.missing_reason == "storage_not_configured"
-    assert "geen" in parsed.help_nl.lower()
+    _assert_boundary_terms(parsed.help_nl)
     assert parsed.analysis_ready is False
     assert parsed.suggestions_allowed is False
     assert parsed.action_drafts_allowed is False
@@ -338,6 +354,7 @@ def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatc
     assert parsed.missing_reason == "snapshot_not_found"
     assert parsed.latest_snapshot_metadata is None
     assert parsed.analysis_ready is False
+    _assert_boundary_terms(parsed.help_nl)
 
 
 def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch) -> None:
@@ -368,7 +385,7 @@ def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch
     assert parsed.status == LatestSnapshotStatus.STORAGE_FAILURE
     assert parsed.blocker_reason == "storage_connection_failed"
     assert parsed.latest_snapshot_metadata is None
-    assert "orders" in parsed.help_nl.lower()
+    _assert_boundary_terms(parsed.help_nl)
     assert parsed.action_drafts_allowed is False
 
 
@@ -379,9 +396,8 @@ def test_market_data_readiness_missing_snapshot_includes_dutch_audit_fields() ->
     assert response.status_code == 200
     row = response.json()["item"]
     assert row["freshness_status"] == "missing_snapshot"
-    assert "read-only" in row["audit_help_nl"].lower()
-    assert "geen market-data fetch" in row["help_nl"].lower()
-    assert "suggestie" in row["audit_help_nl"].lower()
+    _assert_boundary_terms(row["audit_help_nl"])
+    _assert_boundary_terms(row["help_nl"])
 
 
 def test_market_data_readiness_missing_conid_remains_blocked() -> None:
@@ -448,7 +464,7 @@ def test_market_data_readiness_stored_snapshot_metadata_is_read_only(monkeypatch
     assert row["latest_snapshot_metadata"]["snapshot_id"] == "snap-1"
     assert "alleen metadata" in row["latest_snapshot_metadata"]["explanation_nl"].lower()
     assert "read-only" in row["audit_help_nl"].lower()
-    assert "geen market-data fetch" in row["help_nl"].lower()
+    _assert_boundary_terms(row["help_nl"])
     row_text = str(row).lower()
     assert "forecast" not in row_text
     assert "geen decision packages" in row_text
@@ -534,3 +550,5 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
     assert parsed.status == LatestSnapshotStatus.SNAPSHOT_AVAILABLE
     assert parsed.latest_snapshot_metadata is not None
     assert parsed.analysis_ready is False
+    _assert_boundary_terms(parsed.help_nl)
+    assert "geen live/current marktprijs" in parsed.help_nl.lower()

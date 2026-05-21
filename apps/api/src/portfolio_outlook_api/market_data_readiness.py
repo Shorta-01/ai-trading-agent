@@ -84,14 +84,31 @@ class ReadinessSnapshotMetadata(BaseModel):
     explanation_nl: str
 
 
+READINESS_BOUNDARY_TEXT_NL = (
+    "Read-only status: geen market-data runtime, geen runtime-fetch, "
+    "geen analysevrijgave, geen suggesties, geen Decision Packages, "
+    "geen actiedrafts en geen orders."
+)
+
+READINESS_NO_RUNTIME_TEXT_NL = (
+    "Dit blijft read-only contractstatus zonder live/current marktprijs of runtime-fetch."
+)
+
 READINESS_HELP_NL = (
-    "Read-only readinessstatus: geen market-data fetch, geen analyse, geen suggesties, "
-    "geen Decision Packages, geen actiedrafts en geen orders."
+    "Read-only readinessstatus met auditgrenzen: " + READINESS_BOUNDARY_TEXT_NL
 )
 
 READINESS_AUDIT_HELP_NL = (
-    "Dit is read-only status/auditinformatie: geen market-data runtime, geen runtime-fetch, "
-    "geen analysevrijgave, geen suggesties en geen acties/orders."
+    "Dit is read-only status/auditinformatie. " + READINESS_BOUNDARY_TEXT_NL
+)
+
+LATEST_SNAPSHOT_HELP_NL = (
+    "Latest-snapshot is read-only metadata/status, geen live/current marktprijs en geen "
+    "runtime-fetch. " + READINESS_BOUNDARY_TEXT_NL
+)
+
+ASSET_LISTING_GATE_AUDIT_HELP_NL = (
+    "AssetListing-gate is read-only contractstatus. " + READINESS_BOUNDARY_TEXT_NL
 )
 
 
@@ -219,7 +236,7 @@ def build_readiness_row(
         snapshot_metadata_present=snapshot_metadata is not None,
         next_step_nl=next_step_nl,
         audit_help_nl=READINESS_AUDIT_HELP_NL,
-        help_nl=READINESS_HELP_NL,
+        help_nl=LATEST_SNAPSHOT_HELP_NL,
         analysis_ready=False,
         suggestions_allowed=False,
         action_drafts_allowed=False,
@@ -258,7 +275,7 @@ def build_latest_snapshot_response(
         missing_reason=missing_reason,
         blocker_reason=blocker_reason,
         next_step_nl=next_step_nl,
-        help_nl=READINESS_HELP_NL,
+        help_nl=LATEST_SNAPSHOT_HELP_NL,
         analysis_ready=False,
         suggestions_allowed=False,
         action_drafts_allowed=False,
@@ -286,12 +303,13 @@ def build_asset_listing_gate(
         ),
         ReadinessAssetListingGateStatus.MISSING_LISTING: (
             "AssetListing ontbreekt",
-            "Maak of koppel eerst een AssetListing-identiteit "
-            "voordat toekomstige market-data runtime kan worden vrijgegeven.",
+            "Maak of koppel eerst een AssetListing-identiteit; dit blijft read-only status "
+            "zonder runtime-fetch of analysevrijgave.",
         ),
         ReadinessAssetListingGateStatus.UNVALIDATED_LISTING: (
             "AssetListing is nog niet veilig gevalideerd",
-            "Werk de AssetListing-validatie bij tot de listing veilig is voor market data.",
+            "Werk de AssetListing-validatie bij; daarna blijft dit nog read-only zonder "
+            "runtime-fetch of analysevrijgave.",
         ),
         ReadinessAssetListingGateStatus.VALIDATED_LISTING: (
             "AssetListing is gevalideerd, maar dit is nog geen runtime market-data fetch",
@@ -310,8 +328,5 @@ def build_asset_listing_gate(
         blocks_market_data=blocks_market_data,
         status_nl=status_nl,
         next_step_nl=next_step_nl,
-        audit_help_nl=(
-            "Read-only status: geen market-data runtime, geen analyse, geen suggesties, "
-            "geen Decision Packages, geen actiedrafts en geen orders."
-        ),
+        audit_help_nl=ASSET_LISTING_GATE_AUDIT_HELP_NL,
     )
