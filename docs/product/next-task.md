@@ -1,12 +1,12 @@
 # Next Task
 
-## Task 102 — Conservatieve read-only wording drift check in nieuwe productupdates
+## Task 103 — Conservatieve read-only product-doc consistency follow-up
 
 Doel:
-- Beperk scope tot documentatie/review-hardening: verifieer bij nieuw toegevoegde productteksten dat de vergrendelde read-only terminology uit Task 101 intact blijft.
-- Voeg alleen kleine tracking-updates toe waar wording-drift kan ontstaan.
+- Houd scope documentatie-only en bevestig dat nieuwe productupdates de vergrendelde read-only terminology uit `docs/product/locked-decisions.md` blijven volgen.
+- Werk alleen kleine tracking- of wordingdrift bij als die reviewers kan misleiden.
 
-Niet doen in Task 102:
+Niet doen in Task 103:
 - geen market-data runtime of runtime-fetch;
 - geen latest-price fetching;
 - geen scheduler/background jobs;

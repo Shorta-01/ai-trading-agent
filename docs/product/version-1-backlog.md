@@ -219,11 +219,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - AI explanation/RAG: Dutch schema-based uitleg met evidence-only numerics;
 - AI dissent challenger: confidence modulation only;
 
-## I) Task 101 update (documentation-only)
-
-- Task 101 is afgerond als documentatie/cross-link/terminologie-anchor-only follow-up.
-- Task 100-termenset is verankerd in `project-handover.md` en `locked-decisions.md`, met lichte navigatiecross-links tussen inventory/checklist/product-doc audit/locked decision.
-- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
 - validation spine: walk-forward, purged CV, CPCV, DSR, PBO, holdout;
 - monitoring/drift: PSI/KS, IC decay, CRPS, pinball, retraining triggers;
 - Decision Package: immutable evidence/model/gate bundle;
@@ -238,7 +233,7 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 - Task 96 afgerond: read-only terminologie/contract harmonisatie voor readiness/watchlist/latest-snapshot; geen runtime-uitbreidingen toegevoegd.
 - Task 100 afgerond: beperkte product-doc terminologie-audit + tracking-harmonisatie buiten UI/API-inventaris (`docs/product/read-only-readiness-product-doc-terminology-audit.md`), zonder runtime-activatie.
-- Volgende conservatieve stap: Task 101 — documentatie-only verfijning van read-only readiness governance/koppelingen, zonder start van market-data runtime.
+- Volgende conservatieve stap: Task 103 — conservatieve documentatie-review op read-only consistentie voor nieuwe productupdates, zonder start van market-data runtime.
 
 
 - [x] Task 98 — Read-only readiness UI/API contractinventaris (documentatie-only): nieuw inventarisdocument voor resterende UI-schermen + API/client contracten met veilige/onveilige labelpatronen en conservatieve follow-up governance; geen runtime market-data/latest-price fetching/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data.

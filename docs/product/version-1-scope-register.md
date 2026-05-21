@@ -165,3 +165,12 @@ Stale trackingverwijzingen zijn conservatief geharmoniseerd waar nodig; geen run
 ## Task 101 update (documentation-only)
 
 Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-koppelpunten (handover, locked decision, cross-links). Dit is een review-/terminologieguardrail en geen runtimefeature. Geen market-data/latest-price runtime-fetching, geen scheduler/background jobs, geen forecast/AI runtime, geen suggesties/Decision Packages/actiedrafts/orders, geen fake data.
+
+
+## Task 102 — conservatieve read-only wording drift check (documentation-only)
+
+- Status: afgerond.
+- Productdocs gecontroleerd op post-Task-101 wording/tracking drift tegen de vergrendelde termenset in `docs/product/locked-decisions.md`.
+- Gericht hersteld: current-state titel (“na Task 101”), backlog-plaatsing van Task 101 update en stale next-step wording.
+- Driftchecknotitie toegevoegd: `docs/product/read-only-readiness-drift-check-task-102.md`.
+- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
