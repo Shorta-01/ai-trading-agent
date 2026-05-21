@@ -443,3 +443,6 @@ Bevestiging scope:
 - Gericht hersteld: current-state titel (“na Task 101”), backlog-plaatsing van Task 101 update en stale next-step wording.
 - Driftchecknotitie toegevoegd: `docs/product/read-only-readiness-drift-check-task-102.md`.
 - Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
+
+- Task 113 afgerond: read-only audit summary/count contracten + usability verbeteringen; geen runtime-unlock.
