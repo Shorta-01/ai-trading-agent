@@ -68,3 +68,5 @@ body { margin:0; background:#f3f6fb; color:#0f172a; }
 .portfolio-table th { color:#475569; font-weight:600; }
 .sync-button { border:1px solid #93c5fd; background:#eff6ff; color:#1e3a8a; border-radius:8px; padding:.4rem .65rem; cursor:pointer; }
 .sync-button:disabled { opacity:.65; cursor:not-allowed; }
+.audit-grid { display:grid; gap:.75rem; grid-template-columns:1fr; }
+.audit-help { background:#fff; border:1px solid #dbe3ee; border-radius:10px; padding:.6rem .8rem; }
