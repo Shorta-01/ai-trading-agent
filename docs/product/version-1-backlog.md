@@ -259,3 +259,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 
 - Task 113 afgerond: read-only audit summary/count contracten + usability verbeteringen; geen runtime-unlock.
+
+
+- Task 114 afgerond: read-only audit linked-record coverage/navigation hardening en web type-alignment; geen runtimegedrag toegevoegd.

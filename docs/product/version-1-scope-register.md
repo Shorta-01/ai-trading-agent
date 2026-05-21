@@ -233,3 +233,6 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 
 
 - Task 113 afgerond: read-only audit summary/count contracten + usability verbeteringen; geen runtime-unlock.
+
+
+- Task 114 afgerond: read-only audit linked-record coverage/navigation hardening en web type-alignment; geen runtimegedrag toegevoegd.
