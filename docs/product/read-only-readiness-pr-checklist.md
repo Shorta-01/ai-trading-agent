@@ -88,3 +88,8 @@ Die PR moet expliciet:
 - safety gates benoemen en uitbreiden;
 - teststrategie en testdekking toevoegen;
 - `docs/product/next-task.md` scope en rationale bijwerken.
+
+
+## G) Locked decision referentie (Task 101)
+
+Na checklist-review, verifieer de vergrendelde termenset in `docs/product/locked-decisions.md` (sectie **Read-only readiness terminology lock (Task 101)**). Gebruik daarnaast de productdoc-audit voor cross-doc context: `docs/product/read-only-readiness-product-doc-terminology-audit.md`.
