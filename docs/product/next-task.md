@@ -1,6 +1,5 @@
-# Next Task — Task 115
+# Next Task — Task 116
 
-## Task 115 — Conservative audit viewer status-quality and contract consistency hardening
+## Task 116 — Conservative audit viewer contract test harness and CI reliability hardening
 
-Versterk read-only auditviewer contractconsistentie en statuskwaliteit met extra API/web contracttests en compacte audit chain-completeness indicatoren op basis van bestaande opgeslagen velden.
-Grenzen blijven strikt: geen runtime-fetch, geen suggesties, geen actiedrafts, geen orders.
+Centraliseer request-audit fixture builders, voeg contractvalidatiehelpers toe voor responsemodel vs storage-dataclass consistentie, en verlaag CI-drift risico. Scope blijft read-only/non-runtime: geen runtime-fetch, geen suggesties, geen actiedrafts en geen orders.
