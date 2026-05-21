@@ -256,8 +256,8 @@ export type ProviderSourceResponse = {
   provider_account_mode: string;
   created_at: string;
   updated_at: string;
-  disabled_at: string | null;
-  disabled_reason: string | null;
+  disabled_at?: string | null;
+  disabled_reason?: string | null;
   status_nl: string;
   help_nl: string;
   audit_help_nl: string;

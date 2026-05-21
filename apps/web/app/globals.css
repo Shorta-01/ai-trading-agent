@@ -76,3 +76,7 @@ body { margin:0; background:#f3f6fb; color:#0f172a; }
 .boundary-notice{border-left:4px solid #93c5fd;padding:.55rem .7rem;background:#eff6ff;border-radius:8px}
 .status-row-compact{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap}
 .audit-toolbar{display:flex;gap:.5rem;flex-wrap:wrap}.audit-search{min-width:240px;padding:.4rem .5rem;border:1px solid #cbd5e1;border-radius:8px}.audit-summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.6rem}.filtered-count{color:#475569;font-size:.85rem}.reset-button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:.35rem .6rem}.no-data-guidance{border:1px dashed #cbd5e1;background:#f8fafc;padding:.6rem;border-radius:8px}
+.audit-record-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem}
+.audit-record-card{border:1px solid #dbe3ee;background:#fff;border-radius:10px;padding:.6rem}
+.audit-record-card p{margin:.2rem 0}
+.fallback-text{color:#64748b}

@@ -2,9 +2,11 @@
 
 - Task 112: **completed** — read-only request-audit detail drilldown pages toegevoegd voor request logs, provider/sources en freshness-audits, inclusief cross-links tussen request logs en freshness-audits waar linked IDs bestaan, plus web API client detail-contract hardening. Scope bleef non-runtime: geen provider calls, geen market-data runtime, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen historical fetching, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen IBKR connectie/orders en geen fake data. Task 107 tracking-drift preventieregel gevolgd; CI-check uitgevoerd vóór implementatie.
 
-# Current State (na Task 113)
+# Current State (na Task 114)
 
 ## 1) Current status summary
+
+- Task 114: **completed** — linked-record API regressiedekking toegevoegd voor request-audit responsemodellen, auditoverzicht verhard met zichtbare read-only recordkaarten en detaillinks, detail-fallbacknavigatie verbeterd, web API types uitgelijnd met Task 113H contract. Scope bleef strikt read-only/non-runtime zonder provider calls, market-data runtime, runtime-fetch, latest-price fetching, scheduler/background jobs, historical fetching, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, IBKR connectie/orders of fake data. CI-check vóór implementatie vastgelegd op run #455 baseline (GitHub API niet bereikbaar in deze omgeving).
 
 
 - Task 110E: **completed** — resterende Task 110 scope afgerond met read-only/status API exposure voor request logs, provider/source metadata en freshness-audit records inclusief API tests en producttracking-updates. Task 110 is hiermee volledig afgerond: metadata-tabellen, Alembic migratie 0023, migration readiness registration, repository dataclasses/protocols, SQL repository skeleton, public exports, storage tests, read-only/status API endpoints en API tests. Alles blijft non-runtime; geen provider calls, geen market-data runtime, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen historical fetching, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen IBKR connectie/orders en geen fake data toegevoegd. Safety booleans blijven conservatief false/blocked.
@@ -21,7 +23,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 113**.
+- Huidige toestand: **na Task 114**.
 - Task 101: **completed** — documentatie/cross-link/terminologie-anchor-only update. Task 100-termenset is verankerd in handover + locked decisions + lichte cross-links. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 102: **completed** — conservatieve documentatie-only read-only wording drift check na Task 101. Productdocs zijn gecontroleerd tegen de vergrendelde termenset in `locked-decisions.md`; kleine tracking/plaatsingsdrift is hersteld (current-state titel + backlogplaatsing/next-step wording). Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 103: **completed** — conservatieve documentatie-only product-doc consistentiecheck na Task 102. Productdocs zijn gericht gecontroleerd tegen de vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift is hersteld (current-state na-Task-102 tracking + follow-up logging). Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime/actiedrafts/orders en geen fake data toegevoegd.

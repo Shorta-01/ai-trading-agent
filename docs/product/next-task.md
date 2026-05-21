@@ -1,6 +1,6 @@
-# Next Task — Task 114
+# Next Task — Task 115
 
-## Task 114 — Conservative audit viewer linked-record test coverage and navigation hardening
+## Task 115 — Conservative audit viewer status-quality and contract consistency hardening
 
-Breid read-only linked-record API/UI testdekking uit en verhard fallbacknavigatie.
+Versterk read-only auditviewer contractconsistentie en statuskwaliteit met extra API/web contracttests en compacte audit chain-completeness indicatoren op basis van bestaande opgeslagen velden.
 Grenzen blijven strikt: geen runtime-fetch, geen suggesties, geen actiedrafts, geen orders.
