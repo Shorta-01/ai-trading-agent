@@ -57,9 +57,6 @@ class RequestLogResponse(BaseModel):
     chain_completeness_status: str
     chain_completeness_nl: str
     missing_chain_links: list[str]
-    metadata_quality_status: str
-    metadata_quality_nl: str
-    missing_metadata_fields: list[str]
 
 
 class ProviderSourceResponse(BaseModel):
