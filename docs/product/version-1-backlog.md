@@ -184,7 +184,8 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 88B — CI-repair na Task 88: import-boundary/type-fix in readiness-contract module (protocol i.p.v. route-model import), zonder runtimewijzigingen of scope-uitbreiding.
 - [x] Task 88G — Documenteer CI-platformblokkade na PR #171: 6 normale CI jobs + CI Diagnostic falen; diagnostische workflow faalt vóór logs/artifacts; geen geverifieerde application-code root cause.
 - [x] Task 88L — CI unblock task afgerond (repository visibility change naar public; GitHub Actions execution/logging hersteld). CI run #358 groen met 6 geslaagde jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`).
-- [ ] Task 89 — volgende implementatietaak; mag starten onder normale regel: alleen bij groene CI.
+- [x] Task 89 — conservatieve API-readiness contract hardening (read-only/API-contract/tests): extra response-contract regressietests + expliciete typed snapshot-detail coverage; geen runtime fetching/analyse/scheduler/AI/suggesties/Decision Packages/action drafts/orders/fake data.
+- [ ] Task 90 — volgende implementatietaak; conservatieve typed contract-hardening voor snapshot-latest endpoint varianten (read-only).
 
 
 - [x] Task 88H — tijdelijke CI-diagnostische workflow verwijderd (`.github/workflows/ci-diagnostic.yml`) na bevestiging dat failure buiten normale project test/lint/build-output ligt; CI-blokkade blijft gedocumenteerd, normale CI blijft rood en Task 89 blijft geblokkeerd tot CI groen is.
