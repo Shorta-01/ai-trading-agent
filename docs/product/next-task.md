@@ -1,18 +1,16 @@
 # Next Task
 
-## Task 110 — Conservatieve storage/API contract skeleton voor request logs, provider/source metadata en freshness-audit records
+## Task 111 — Conservatieve audit viewer/API visibility foundation voor request-audit records
 
 Doel:
-- Implementeer een veilige non-runtime skeleton op basis van Task 109 contractpreflight voor request logs, provider/source metadata en freshness-audit records.
+- Bouw een eenvoudige read-only zichtbaarheidsslag bovenop Task 110E API-endpoints voor request logs, provider/source metadata en freshness-audit records.
 
-In scope (nog steeds non-runtime):
-- storage models/contracts voor de drie domeinen;
-- Alembic migration alleen indien aantoonbaar nodig voor skeleton-opslag;
-- repositoryfuncties voor create/read/list status- en auditrecords;
-- read-only/status API exposure voor auditcontracten indien scherp afgebakend;
-- storage/API tests met conservatieve blocked-defaults voor safety booleans.
+In scope (non-runtime):
+- eenvoudige read-only web/admin zichtbaarheid voor auditrecords;
+- API-visibility hardening waar nodig;
+- duidelijke Nederlandse helpteksten met read-only grenzen.
 
-Niet doen in Task 110:
+Niet doen in Task 111:
 - geen provider calls;
 - geen market-data runtime of runtime-fetch;
 - geen latest-price fetching;
@@ -25,8 +23,3 @@ Niet doen in Task 110:
 - geen actiedrafts;
 - geen IBKR connectie of orders;
 - geen fake data.
-
-Acceptatie:
-- Contracts volgen Task 109 veld-/status-/reason-code preflight.
-- Safety booleans defaulten conservatief op blocked/false tot gates bestaan.
-- `git diff --check` groen en relevante storage/API checks groen.
