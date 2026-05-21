@@ -25,6 +25,7 @@ from portfolio_outlook_api.market_data_readiness import (
     ReadinessDetailResponse,
     ReadinessListResponse,
     ReadinessRow,
+    ReadinessSnapshotMetadata,
     build_readiness_row,
     utc_now_iso,
 )
@@ -284,7 +285,7 @@ def validate_contract(payload: dict[str, object]) -> dict[str, object]:
     )
 
 
-def _read_snapshot_metadata(ibkr_conid: str | None) -> dict[str, object] | None:
+def _read_snapshot_metadata(ibkr_conid: str | None) -> ReadinessSnapshotMetadata | None:
     if not ibkr_conid:
         return None
     storage_settings = settings.storage
@@ -299,7 +300,7 @@ def _read_snapshot_metadata(ibkr_conid: str | None) -> dict[str, object] | None:
             result = repo.get_latest_by_ibkr_conid(ibkr_conid)
             if result.record is None:
                 return None
-            return dict(result.record.__dict__)
+            return ReadinessSnapshotMetadata.model_validate(result.record.__dict__)
     except StorageConnectionError:
         return None
 

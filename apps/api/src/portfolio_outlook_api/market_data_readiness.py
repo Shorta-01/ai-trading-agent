@@ -33,7 +33,7 @@ class ReadinessRow(BaseModel):
     missing_identity_fields: list[str]
     validation_status: ReadinessValidationStatus
     evaluated_at: str
-    latest_snapshot_metadata: dict[str, object] | None
+    latest_snapshot_metadata: "ReadinessSnapshotMetadata" | None
     snapshot_metadata_present: bool
     next_step_nl: str
     audit_help_nl: str
@@ -50,13 +50,35 @@ class ReadinessDetailResponse(BaseModel):
     message_nl: str | None = None
 
 
+class ReadinessSnapshotMetadata(BaseModel):
+    snapshot_id: str
+    watchlist_item_id: str
+    asset_id: str | None
+    ibkr_conid: str
+    symbol: str
+    security_type: str
+    exchange: str | None
+    primary_exchange: str | None
+    currency: str
+    provider_name: str
+    data_kind: str
+    captured_at: datetime
+    source_timestamp: datetime | None
+    stored_at: datetime
+    freshness_status: str
+    validation_status: str
+    blocked_reason: str | None
+    raw_reference: str | None
+    explanation_nl: str
+
+
 def utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def build_readiness_row(
     item: ReadinessWatchlistItemLike,
-    snapshot_metadata: dict[str, object] | None,
+    snapshot_metadata: ReadinessSnapshotMetadata | None,
     *,
     evaluated_at: str,
 ) -> ReadinessRow:

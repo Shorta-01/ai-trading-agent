@@ -1,6 +1,11 @@
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.main import app
+from portfolio_outlook_api.market_data_readiness import (
+    ReadinessDetailResponse,
+    ReadinessListResponse,
+    ReadinessSnapshotMetadata,
+)
 from portfolio_outlook_api.watchlist import STORE, WatchlistItem
 
 client = TestClient(app)
@@ -43,6 +48,7 @@ def test_market_data_readiness_blocks_unvalidated_identity() -> None:
         assert "geen market-data runtime" in row["audit_help_nl"].lower()
         assert "evaluated_at" in row
         assert "next_step_nl" in row
+        assert "analyse" in row["blocker_reason_nl"].lower()
 
 
 def test_market_data_readiness_ready_for_validated_identity_only() -> None:
@@ -69,6 +75,27 @@ def test_market_data_readiness_watchlist_detail_endpoint() -> None:
     assert response.json()["item"]["audit_help_nl"]
 
 
+def test_market_data_readiness_list_response_contract() -> None:
+    STORE["w-1"] = _item("w-1", conid="", validation_status=None)
+
+    response = client.get("/market-data/readiness")
+    assert response.status_code == 200
+
+    parsed = ReadinessListResponse.model_validate(response.json())
+    assert parsed.help_nl
+    assert parsed.items[0].status == "blocked"
+    assert parsed.items[0].validation_status.ibkr_conid_present is False
+
+
+def test_market_data_readiness_detail_response_contract_for_missing_item() -> None:
+    response = client.get("/market-data/readiness/watchlist/unknown")
+    assert response.status_code == 200
+
+    parsed = ReadinessDetailResponse.model_validate(response.json())
+    assert parsed.item is None
+    assert parsed.message_nl == "Volglijst-item niet gevonden."
+
+
 def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled() -> None:
     response = client.get("/market-data/snapshots/latest/265598")
     assert response.status_code == 200
@@ -85,3 +112,58 @@ def test_market_data_readiness_missing_snapshot_includes_dutch_audit_fields() ->
     assert "read-only" in row["audit_help_nl"].lower()
     assert "geen market-data runtime" in row["help_nl"].lower()
     assert "suggestie" in row["audit_help_nl"].lower()
+
+
+def test_market_data_readiness_missing_conid_remains_blocked() -> None:
+    STORE["w-1"] = _item("w-1", conid=None, validation_status="valid")
+
+    response = client.get("/market-data/readiness/watchlist/w-1")
+    assert response.status_code == 200
+    row = response.json()["item"]
+    assert row["status"] == "blocked"
+    assert row["blocker_code"] == "missing_or_unvalidated_ibkr_contract"
+    assert "ibkr_conid" in row["missing_identity_fields"]
+
+
+def test_market_data_readiness_stored_snapshot_metadata_is_read_only(monkeypatch) -> None:
+    STORE["w-1"] = _item("w-1", conid="265598", validation_status="valid")
+
+    def _fake_snapshot_metadata(_: str | None) -> ReadinessSnapshotMetadata | None:
+        return ReadinessSnapshotMetadata(
+            snapshot_id="snap-1",
+            watchlist_item_id="w-1",
+            asset_id=None,
+            ibkr_conid="265598",
+            symbol="AAPL",
+            security_type="STK",
+            exchange="NASDAQ",
+            primary_exchange="NASDAQ",
+            currency="USD",
+            provider_name="manual",
+            data_kind="quote_snapshot",
+            captured_at="2026-05-20T00:00:00Z",
+            source_timestamp="2026-05-20T00:00:00Z",
+            stored_at="2026-05-20T00:01:00Z",
+            freshness_status="fresh",
+            validation_status="validated",
+            blocked_reason=None,
+            raw_reference=None,
+            explanation_nl="Alleen metadata voor audit.",
+        )
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes._read_snapshot_metadata",
+        _fake_snapshot_metadata,
+    )
+
+    response = client.get("/market-data/readiness/watchlist/w-1")
+    assert response.status_code == 200
+    row = response.json()["item"]
+    assert row["status"] == "ready"
+    assert row["snapshot_metadata_present"] is True
+    assert row["latest_snapshot_metadata"]["snapshot_id"] == "snap-1"
+    assert "read-only" in row["audit_help_nl"].lower()
+    assert "geen market-data runtime" in row["help_nl"].lower()
+    assert "forecast" not in str(row).lower()
+    assert "decision package" not in str(row).lower()
+    assert "order" not in str(row).lower()

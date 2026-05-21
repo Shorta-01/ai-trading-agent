@@ -1,4 +1,4 @@
-# Current State (na Task 88L)
+# Current State (na Task 89)
 
 ## 1) Current status summary
 
@@ -11,7 +11,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 88L**.
+- Huidige toestand: **na Task 89**.
 - CI-status: **hersteld en groen** na repository visibility change naar public; GitHub Actions execution/logging is weer zichtbaar en bruikbaar.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -86,6 +86,7 @@
 ## 5) Latest task sequence status
 
 
+- Task 89: **completed** — conservatieve API-readiness contract hardening afgerond: typed snapshot-detail coverage toegevoegd en regressietests uitgebreid voor readiness list/detail varianten (blocked/missing/stored metadata). Read-only scope behouden; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 88L: **completed (documentation-only)** — CI-herstel vastgelegd na repository visibility change naar public. CI run #358 is groen met 6 geslaagde jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`); logs/steps weer zichtbaar. Geen code/tests/migraties/package metadata/workflows gewijzigd.
 - Task 88G: **completed (documentation-only)** — historische diagnose van eerdere GitHub Actions execution/logging blokkade. Deze blokkade is intussen opgelost na visibility change naar public (zie Task 88L).
 
