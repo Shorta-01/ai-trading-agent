@@ -1,37 +1,32 @@
 # Next Task
 
-## Task 109 — Conservatieve storage/API contract preflight voor request logs, provider/source metadata en freshness-audit records
+## Task 110 — Conservatieve storage/API contract skeleton voor request logs, provider/source metadata en freshness-audit records
 
 Doel:
-- Definieer één scherpe non-runtime contractbasis voor drie foundationdomeinen:
-  - request-log structuur (pacing/context/audit);
-  - provider/source metadata-structuur;
-  - freshness-audit recordstructuur.
-- Leg expliciet vast welke velden/statussen later runtime-implementatie veilig moeten ondersteunen, zonder runtime nu te starten.
+- Implementeer een veilige non-runtime skeleton op basis van Task 109 contractpreflight voor request logs, provider/source metadata en freshness-audit records.
 
-In scope (documentation/design-only):
-- Nieuw preflightdocument met:
-  - candidate field catalog;
-  - minimale required vs optional contractvelden;
-  - status/reason-code voorstel voor freshness-audit;
-  - audit-linking en traceability voorstel;
-  - dependency mapping naar bestaande read-only readiness contracten.
-- Producttrackingupdates in dezelfde PR.
+In scope (nog steeds non-runtime):
+- storage models/contracts voor de drie domeinen;
+- Alembic migration alleen indien aantoonbaar nodig voor skeleton-opslag;
+- repositoryfuncties voor create/read/list status- en auditrecords;
+- read-only/status API exposure voor auditcontracten indien scherp afgebakend;
+- storage/API tests met conservatieve blocked-defaults voor safety booleans.
 
-Niet doen in Task 109:
+Niet doen in Task 110:
+- geen provider calls;
 - geen market-data runtime of runtime-fetch;
 - geen latest-price fetching;
 - geen scheduler/background jobs;
 - geen historical fetching;
 - geen forecast runtime;
 - geen AI runtime;
-- geen suggesties/Decision Packages runtime/actiedrafts/orders;
-- geen IBKR connectie/orderflow;
-- geen fake data;
-- geen code/migration/API-runtimewijzigingen.
+- geen suggesties;
+- geen Decision Packages runtime;
+- geen actiedrafts;
+- geen IBKR connectie of orders;
+- geen fake data.
 
 Acceptatie:
-- Documentatie-only diff onder `docs/product/`.
-- Expliciete read-only terminology lock check tegen `docs/product/locked-decisions.md`.
-- Expliciete bevestiging dat geen runtime unlock plaatsvond.
-- `git diff --check` is groen.
+- Contracts volgen Task 109 veld-/status-/reason-code preflight.
+- Safety booleans defaulten conservatief op blocked/false tot gates bestaan.
+- `git diff --check` groen en relevante storage/API checks groen.

@@ -116,3 +116,8 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    - `next-task.md` mag geen nieuwe drift-only taak plannen tenzij er echte trackingdrift te herstellen is.
    - Als de enige noodzakelijke fix een tasknummercorrectie in `current-state.md` is, bundel die correctie in dezelfde PR in plaats van een losse vervolgtask.
    - Dit is een documentatie/review-discipline-regel en **geen** geautomatiseerde CI-regel.
+
+## Task 109 follow-up CI/doc guardrail (documentation-only)
+
+- Bij toekomstige implementatie van request-log/provider/freshness storage/API-contracten: update publieke exports, API typechecks en migratiestatus-tests in dezelfde PR.
+- Safety booleans (`safe_for_analysis`, `safe_for_suggestions`, `safe_for_action_drafts`) moeten default blocked/false blijven tot expliciete runtime gates bestaan.
