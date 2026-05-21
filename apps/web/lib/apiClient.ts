@@ -224,6 +224,67 @@ export type ResearchExtractTextResponse = {
   can_be_used_in_suggestions: boolean;
   record: Record<string, unknown>;
 };
+export type RequestLogResponse = {
+  request_log_id: string;
+  correlation_id: string;
+  request_family: string;
+  request_purpose: string;
+  created_at: string;
+  completed_at: string | null;
+  provider_code: string;
+  provider_account_mode: string;
+  provider_environment: string;
+  source_type: string;
+  data_domain: string;
+  request_kind: string;
+  request_target: string;
+  request_status: string;
+  safe_for_analysis: boolean;
+  safe_for_suggestions: boolean;
+  safe_for_action_drafts: boolean;
+  status_nl: string;
+  help_nl: string;
+  audit_help_nl: string;
+};
+export type ProviderSourceResponse = {
+  provider_source_id: string;
+  provider_code: string;
+  provider_kind: string;
+  data_domain: string;
+  source_type: string;
+  provider_environment: string;
+  provider_account_mode: string;
+  created_at: string;
+  updated_at: string;
+  disabled_at: string | null;
+  disabled_reason: string | null;
+  status_nl: string;
+  help_nl: string;
+  audit_help_nl: string;
+};
+export type FreshnessAuditResponse = {
+  freshness_audit_id: string;
+  request_log_id: string | null;
+  provider_source_id: string | null;
+  data_domain: string;
+  audit_scope: string;
+  freshness_status: string;
+  reason_code: string | null;
+  evaluated_at: string;
+  expected_max_age_seconds: number | null;
+  observed_age_seconds: number | null;
+  source_timestamp: string | null;
+  expires_at: string | null;
+  safe_for_analysis: boolean;
+  safe_for_suggestions: boolean;
+  safe_for_action_drafts: boolean;
+  status_nl: string;
+  help_nl: string;
+  audit_help_nl: string;
+};
+export type RequestLogListResponse = { items: RequestLogResponse[]; status_nl: string; help_nl: string };
+export type ProviderSourceListResponse = { items: ProviderSourceResponse[]; status_nl: string; help_nl: string };
+export type FreshnessAuditListResponse = { items: FreshnessAuditResponse[]; status_nl: string; help_nl: string };
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 async function getJson<T>(path: string): Promise<FetchState<T>> { /* unchanged */
@@ -306,6 +367,21 @@ export const apiClient = {
   getIbkrCash: () => getJson<{ items: IbkrCashSnapshot[] }>("/ibkr/account/cash"),
   getIbkrOpenOrders: () => getJson<{ items: IbkrOpenOrderSnapshot[] }>("/ibkr/orders/open"),
   getIbkrExecutions: () => getJson<{ items: IbkrExecutionSnapshot[] }>("/ibkr/executions"),
+  getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
+  getRequestAuditRequestLog: (requestLogId: string) =>
+    getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),
+  getRequestAuditProviderSources: () =>
+    getJson<ProviderSourceListResponse>("/audit/provider-sources"),
+  getRequestAuditProviderSource: (providerSourceId: string) =>
+    getJson<ProviderSourceResponse>(
+      `/audit/provider-sources/${encodeURIComponent(providerSourceId)}`,
+    ),
+  getRequestAuditFreshnessAudits: () =>
+    getJson<FreshnessAuditListResponse>("/audit/freshness-audits"),
+  getRequestAuditFreshnessAudit: (freshnessAuditId: string) =>
+    getJson<FreshnessAuditResponse>(
+      `/audit/freshness-audits/${encodeURIComponent(freshnessAuditId)}`,
+    ),
   runIbkrSync: () => postJson<{ status: string }>("/ibkr/sync/run"),
   updateTradingSettings: (payload: TradingSettingsUpdateInput) => putJson<TradingSettingsResponse>("/settings/trading", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),

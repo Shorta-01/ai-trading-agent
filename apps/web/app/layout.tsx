@@ -19,6 +19,7 @@ const navItems = [
   ["/ibkr-acties", "IBKR Acties"],
   ["/onderzoek", "Onderzoek"],
   ["/historiek", "Historiek"],
+  ["/audit", "Audit"],
   ["/instellingen", "Instellingen"],
 ] as const;
 

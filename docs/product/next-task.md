@@ -1,25 +1,7 @@
-# Next Task
+# Next Task — Task 112
 
-## Task 111 — Conservatieve audit viewer/API visibility foundation voor request-audit records
+## Task 112 — Conservative request-audit detail drilldown and cross-link visibility foundation
 
-Doel:
-- Bouw een eenvoudige read-only zichtbaarheidsslag bovenop Task 110E API-endpoints voor request logs, provider/source metadata en freshness-audit records.
+Voeg read-only detailpagina's toe voor request logs, provider sources en freshness audits, inclusief kruiskoppelingen tussen gelinkte records waar beschikbaar.
 
-In scope (non-runtime):
-- eenvoudige read-only web/admin zichtbaarheid voor auditrecords;
-- API-visibility hardening waar nodig;
-- duidelijke Nederlandse helpteksten met read-only grenzen.
-
-Niet doen in Task 111:
-- geen provider calls;
-- geen market-data runtime of runtime-fetch;
-- geen latest-price fetching;
-- geen scheduler/background jobs;
-- geen historical fetching;
-- geen forecast runtime;
-- geen AI runtime;
-- geen suggesties;
-- geen Decision Packages runtime;
-- geen actiedrafts;
-- geen IBKR connectie of orders;
-- geen fake data.
+Grenzen blijven strikt: geen runtime-fetch, geen analyses, geen suggesties, geen actiedrafts, geen orders.
