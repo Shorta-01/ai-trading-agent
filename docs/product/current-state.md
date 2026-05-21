@@ -1,4 +1,4 @@
-# Current State (na Task 99)
+# Current State (na Task 100)
 
 ## 1) Current status summary
 
@@ -11,7 +11,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 97**.
+- Huidige toestand: **na Task 100**.
 - CI-status: **hersteld en groen** na repository visibility change naar public; GitHub Actions execution/logging is weer zichtbaar en bruikbaar.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -30,6 +30,7 @@
 - Task 98: **completed** — documentatie/inventaris-only read-only readiness UI/API contractinventaris toegevoegd (`docs/product/read-only-readiness-ui-contract-inventory.md`) voor resterende schermen en readiness-contracten. Labelpatronen voor "veilig", "onveilig tenzij ontkend" en follow-up governance zijn expliciet vastgelegd. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 
 - Task 99: **completed** — documentatie/review-guardrail-only hardening toegevoegd met compacte PR-checklist + term-review rubric (`docs/product/read-only-readiness-pr-checklist.md`) en koppeling vanuit de read-only readiness inventaris/CI kwaliteitsregels. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
+- Task 100: **completed** — beperkte product-doc terminologie-audit uitgevoerd buiten de UI/API-inventaris; nieuw auditnote-document toegevoegd (`docs/product/read-only-readiness-product-doc-terminology-audit.md`) en stale read-only readiness trackingterminologie geharmoniseerd waar nodig. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 
 ## 2) Implemented foundations
 

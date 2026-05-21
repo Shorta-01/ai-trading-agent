@@ -45,6 +45,15 @@
 
 # Task History (concise)
 
+## Task 100 — Product-doc read-only readiness terminologie-audit
+
+- Status: afgerond (documentatie/audit/harmonisatie-only).
+- Nieuw document toegevoegd: `docs/product/read-only-readiness-product-doc-terminology-audit.md`.
+- Scope: beperkte terminologie-audit op productdocs buiten de UI/API inventory, met `docs/product/read-only-readiness-ui-contract-inventory.md` als referentiebron.
+- Focus: wording die ten onrechte runtime-readiness zou impliceren (live/current/latest prijs, market-data runtime/fetch, analysevrijgave, suggesties, Decision Packages runtime, actiedrafts, orders, AI-advies of fake data-acceptatie).
+- Harmonisatie uitgevoerd op stale trackingverwijzingen waar nodig (o.a. current-state/scope/backlog/next-task verwijzingen).
+- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
+
 ## Task 92B — API pytest repair after Task 92 readiness hardening
 
 - Status: completed.
