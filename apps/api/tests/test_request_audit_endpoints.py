@@ -271,8 +271,6 @@ def test_mapper_endpoints_contract_regression(monkeypatch) -> None:
         safe_for_suggestions=False,
         safe_for_action_drafts=False,
         explanation_nl='stale',
-        request_log_id='r1',
-        provider_source_id='p1',
     )
 
     class Repo:
@@ -292,8 +290,8 @@ def test_mapper_endpoints_contract_regression(monkeypatch) -> None:
     freshness = client.get('/audit/freshness-audits').json()['items'][0]
     assert logs['request_log_id'] == 'r1'
     assert provider['provider_source_id'] == 'p1'
-    assert freshness['request_log_id'] == 'r1'
-    assert freshness['provider_source_id'] == 'p1'
+    assert freshness['request_log_id'] is None
+    assert freshness['provider_source_id'] is None
     assert freshness['audit_scope']
     assert freshness['reason_code'] == 'stale'
     assert freshness['expected_max_age_seconds'] == 1
