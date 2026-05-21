@@ -13,3 +13,12 @@ def test_research_source_records_used_by_api_are_exported() -> None:
     assert hasattr(storage, "ResearchSourceConflictFindingRecord")
     assert hasattr(storage, "SourceToAssetLinkRecord")
     assert hasattr(storage, "AssetListingRecord")
+
+    assert hasattr(storage, "RequestLogRecord")
+    assert hasattr(storage, "ProviderSourceRecord")
+    assert hasattr(storage, "FreshnessAuditRecord")
+    assert hasattr(storage, "RequestAuditRepository")
+    assert hasattr(storage, "SqlAlchemyRequestAuditRepository")
+    assert hasattr(storage, "request_logs")
+    assert hasattr(storage, "provider_sources")
+    assert hasattr(storage, "freshness_audit_records")

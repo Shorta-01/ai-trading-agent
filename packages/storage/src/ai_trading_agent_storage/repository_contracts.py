@@ -1265,6 +1265,111 @@ class MarketDataSnapshotRecord:
             _require_non_empty(getattr(self, field_name), field_name)
 
 
+
+
+@dataclass(frozen=True)
+class RequestLogRecord:
+    request_log_id: str
+    correlation_id: str
+    request_family: str
+    request_purpose: str
+    created_at: datetime
+    completed_at: datetime | None
+    provider_code: str
+    provider_account_mode: str
+    provider_environment: str
+    source_type: str
+    data_domain: str
+    request_kind: str
+    request_target: str
+    request_status: str
+    initiated_by: str
+    pacing_weight: int | None
+    provider_request_budget_remaining: int | None
+    retry_count: int | None
+    received_record_count: int | None
+    stored_record_count: int | None
+    rejected_record_count: int | None
+    safe_for_analysis: bool = False
+    safe_for_suggestions: bool = False
+    safe_for_action_drafts: bool = False
+    explanation_nl: str = "Read-only audit/status record."
+
+    def __post_init__(self) -> None:
+        for n in ("request_log_id","correlation_id","request_family","request_purpose","provider_code","provider_account_mode","provider_environment","source_type","data_domain","request_kind","request_target","request_status","initiated_by","explanation_nl"):
+            _require_non_empty(getattr(self,n), n)
+        if self.completed_at is not None:
+            _require_ordered_datetimes(self.created_at, self.completed_at, "created_at", "completed_at")
+        for n in ("pacing_weight","provider_request_budget_remaining","retry_count","received_record_count","stored_record_count","rejected_record_count"):
+            _require_non_negative_int(getattr(self,n), n)
+        if self.safe_for_analysis or self.safe_for_suggestions or self.safe_for_action_drafts:
+            raise ValueError("All safe_for_* fields must remain false in this non-runtime skeleton.")
+
+
+@dataclass(frozen=True)
+class ProviderSourceRecord:
+    provider_source_id: str
+    provider_code: str
+    provider_kind: str
+    data_domain: str
+    source_type: str
+    provider_environment: str
+    provider_account_mode: str
+    source_effective_from: datetime | None
+    source_effective_to: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for n in ("provider_source_id","provider_code","provider_kind","data_domain","source_type","provider_environment","provider_account_mode","explanation_nl"):
+            _require_non_empty(getattr(self,n), n)
+        _require_ordered_datetimes(self.created_at, self.updated_at, "created_at", "updated_at")
+        if self.source_effective_from and self.source_effective_to:
+            _require_ordered_datetimes(self.source_effective_from, self.source_effective_to, "source_effective_from", "source_effective_to")
+
+
+@dataclass(frozen=True)
+class FreshnessAuditRecord:
+    freshness_audit_id: str
+    evaluated_at: datetime
+    data_domain: str
+    freshness_policy_code: str
+    freshness_status: str
+    snapshot_as_of: datetime | None
+    stale_after: datetime | None
+    expires_at: datetime | None
+    age_seconds: int | None
+    freshness_window_seconds: int | None
+    safe_for_analysis: bool = False
+    safe_for_suggestions: bool = False
+    safe_for_action_drafts: bool = False
+    explanation_nl: str = "Read-only audit/status record."
+
+    def __post_init__(self) -> None:
+        for n in ("freshness_audit_id","data_domain","freshness_policy_code","freshness_status","explanation_nl"):
+            _require_non_empty(getattr(self,n), n)
+        _require_non_negative_int(self.age_seconds, "age_seconds")
+        _require_non_negative_int(self.freshness_window_seconds, "freshness_window_seconds")
+        if self.snapshot_as_of and self.stale_after:
+            _require_ordered_datetimes(self.snapshot_as_of, self.stale_after, "snapshot_as_of", "stale_after")
+        if self.stale_after and self.expires_at:
+            _require_ordered_datetimes(self.stale_after, self.expires_at, "stale_after", "expires_at")
+        if self.safe_for_analysis or self.safe_for_suggestions or self.safe_for_action_drafts:
+            raise ValueError("All safe_for_* fields must remain false in this non-runtime skeleton.")
+
+
+class RequestAuditRepository(Protocol):
+    def save_request_log(self, record: RequestLogRecord) -> StorageWriteResult: ...
+    def get_request_log(self, request_log_id: str) -> StorageReadResult[RequestLogRecord]: ...
+    def list_request_logs(self, limit: int = 100) -> StorageListResult[RequestLogRecord]: ...
+    def save_provider_source(self, record: ProviderSourceRecord) -> StorageWriteResult: ...
+    def get_provider_source(self, provider_source_id: str) -> StorageReadResult[ProviderSourceRecord]: ...
+    def list_provider_sources(self, limit: int = 100) -> StorageListResult[ProviderSourceRecord]: ...
+    def save_freshness_audit(self, record: FreshnessAuditRecord) -> StorageWriteResult: ...
+    def get_freshness_audit(self, freshness_audit_id: str) -> StorageReadResult[FreshnessAuditRecord]: ...
+    def list_freshness_audits(self, limit: int = 100) -> StorageListResult[FreshnessAuditRecord]: ...
+
 class MarketDataSnapshotRepository(Protocol):
     def get_latest_by_ibkr_conid(
         self,

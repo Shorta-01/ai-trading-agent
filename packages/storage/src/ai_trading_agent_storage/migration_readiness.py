@@ -227,6 +227,16 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Opslagfundament voor listing/instrument/conid-identiteit (reference/status-only)."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0023_request_log_provider_freshness_contracts",
+        previous_revision_id="0022_asset_listing_identity_foundation",
+        filename="0023_request_log_provider_freshness_contracts.py",
+        label_nl="Request/provider/freshness audit skeleton",
+        description_nl=(
+            "Non-runtime audit/status skeleton voor request logs, provider/source metadata en "
+            "freshness-audit records; voegt geen fetchgedrag toe."
+        ),
+    ),
 )
 
 
