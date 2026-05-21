@@ -155,5 +155,7 @@ def test_watchlist_asset_listing_storage_unavailable(monkeypatch) -> None:
     monkeypatch.setattr("portfolio_outlook_api.watchlist.settings.storage.enabled", False)
     readiness = client.get("/watchlist/items").json()["items"][0]["asset_listing_readiness"]
     assert readiness["link_status"] == "storage_unavailable"
-    detail = client.get(f"/watchlist/items/{created.json()['item']['item']['watchlist_item_id']}").json()["item"]["asset_listing_readiness"]
+    watchlist_item_id = created.json()["item"]["item"]["watchlist_item_id"]
+    detail_response = client.get(f"/watchlist/items/{watchlist_item_id}")
+    detail = detail_response.json()["item"]["asset_listing_readiness"]
     assert detail["link_status"] == "storage_unavailable"
