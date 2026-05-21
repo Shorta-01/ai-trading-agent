@@ -22,6 +22,7 @@ from portfolio_outlook_api.ibkr_watchlists import (
     list_ibkr_watchlists,
 )
 from portfolio_outlook_api.market_data_readiness import (
+    READINESS_HELP_NL,
     LatestSnapshotResponse,
     LatestSnapshotStatus,
     ReadinessDetailResponse,
@@ -331,10 +332,10 @@ def _build_market_data_readiness_rows() -> list[ReadinessRow]:
 def read_market_data_readiness() -> ReadinessListResponse:
     return ReadinessListResponse(
         items=_build_market_data_readiness_rows(),
-        help_nl=(
-            "Task 85 foundation: geen market-data fetch, geen prijzen, "
-            "alleen conid-gated readinessstatus."
-        ),
+        help_nl=READINESS_HELP_NL,
+        analysis_ready=False,
+        suggestions_allowed=False,
+        action_drafts_allowed=False,
     )
 
 

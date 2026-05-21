@@ -63,6 +63,17 @@ class ReadinessSnapshotMetadata(BaseModel):
     explanation_nl: str
 
 
+READINESS_HELP_NL = (
+    "Read-only readinessstatus: geen market-data fetch, geen analyse, geen suggesties, "
+    "geen Decision Packages, geen actiedrafts en geen orders."
+)
+
+READINESS_AUDIT_HELP_NL = (
+    "Dit is alleen status/auditinformatie. Geen runtime-fetch, geen analysevrijgave, "
+    "geen suggesties en geen acties/orders."
+)
+
+
 class ReadinessRow(BaseModel):
     watchlist_item_id: str
     asset_id: str | None
@@ -82,11 +93,17 @@ class ReadinessRow(BaseModel):
     next_step_nl: str
     audit_help_nl: str
     help_nl: str
+    analysis_ready: bool
+    suggestions_allowed: bool
+    action_drafts_allowed: bool
 
 
 class ReadinessListResponse(BaseModel):
     items: list[ReadinessRow]
     help_nl: str
+    analysis_ready: bool
+    suggestions_allowed: bool
+    action_drafts_allowed: bool
 
 
 class ReadinessDetailResponse(BaseModel):
@@ -104,6 +121,9 @@ class LatestSnapshotResponse(BaseModel):
     blocker_reason: str | None = None
     next_step_nl: str
     help_nl: str
+    analysis_ready: bool
+    suggestions_allowed: bool
+    action_drafts_allowed: bool
 
 
 def utc_now_iso() -> str:
@@ -174,11 +194,11 @@ def build_readiness_row(
         latest_snapshot_metadata=snapshot_metadata,
         snapshot_metadata_present=snapshot_metadata is not None,
         next_step_nl=next_step_nl,
-        audit_help_nl=(
-            "Dit is een read-only audit/statuscontrole. Geen market-data runtime, "
-            "geen fetch, geen analyse en geen suggestievrijgave."
-        ),
-        help_nl="Geen market-data runtime actief; alleen readiness/foundation-status.",
+        audit_help_nl=READINESS_AUDIT_HELP_NL,
+        help_nl=READINESS_HELP_NL,
+        analysis_ready=False,
+        suggestions_allowed=False,
+        action_drafts_allowed=False,
     )
 
 
@@ -208,8 +228,8 @@ def build_latest_snapshot_response(
         missing_reason=missing_reason,
         blocker_reason=blocker_reason,
         next_step_nl=next_step_nl,
-        help_nl=(
-            "Read-only snapshotmetadata-status; geen runtime fetch, geen analyse, "
-            "geen suggesties, geen Decision Packages en geen acties/orders."
-        ),
+        help_nl=READINESS_HELP_NL,
+        analysis_ready=False,
+        suggestions_allowed=False,
+        action_drafts_allowed=False,
     )
