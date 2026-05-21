@@ -64,7 +64,12 @@ def test_contract_harness_response_field_alignment() -> None:
         "age_seconds",
         "freshness_window_seconds",
     }
-    for name in [f.name for f in fields(FreshnessAuditRecord) if f.name != "explanation_nl"]:
+    freshness_record_field_names = [
+        field.name
+        for field in fields(FreshnessAuditRecord)
+        if field.name != "explanation_nl"
+    ]
+    for name in freshness_record_field_names:
         assert name in freshness_response_fields or name in compatibility_fields
 
     assert "items" in RequestLogListResponse.model_fields
