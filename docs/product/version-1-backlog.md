@@ -225,3 +225,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - paper action workflow: future, LMT-only, user-approved, paper-only.
 
 - [x] Task 93 — AssetListing identity foundation verdieping (storage/API/tests/docs), zonder runtime market data/forecast/AI/suggesties/actions/orders.
+
+- [x] Task 94 — Conservatieve AssetListing-to-watchlist readiness wiring (API/tests/docs, read-only): watchlist list/detail response bevat typed AssetListing readiness/status via `ibkr_conid`; missing/unvalidated listings blijven blocked voor market data/analysis/suggesties/action drafts; gevalideerde listing blijft status-only zonder runtime unlock. Geen market-data runtime/fetching/historical/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data toegevoegd.

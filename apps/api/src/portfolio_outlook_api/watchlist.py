@@ -13,6 +13,7 @@ from ai_trading_agent_storage import (
 )
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from enum import StrEnum
 
 from portfolio_outlook_api.config import settings
 
@@ -67,12 +68,42 @@ class WatchlistItem(BaseModel):
     ibkr_validation_source: str | None = None
 
 
+class WatchlistAssetListingLinkStatus(StrEnum):
+    MISSING_LISTING = "missing_listing"
+    UNVALIDATED_LISTING = "unvalidated_listing"
+    VALIDATED_LISTING = "validated_listing"
+    STORAGE_UNAVAILABLE = "storage_unavailable"
+
+
+class WatchlistAssetListingReadiness(BaseModel):
+    link_status: WatchlistAssetListingLinkStatus
+    listing_id: str | None = None
+    asset_id: str | None = None
+    ibkr_conid: str | None = None
+    symbol: str | None = None
+    security_type: str | None = None
+    exchange: str | None = None
+    primary_exchange: str | None = None
+    currency: str | None = None
+    validation_status: str | None = None
+    validated_at: str | None = None
+    market_data_ready: bool
+    analysis_ready: bool
+    suggestions_allowed: bool
+    action_drafts_allowed: bool
+    blocker_code: str | None = None
+    status_nl: str
+    next_step_nl: str
+    audit_help_nl: str
+
+
 class WatchlistItemResponse(BaseModel):
     item: WatchlistItem
     link_status: str
     linked_asset: AssetIdentitySummary | None = None
     ibkr_status_label_nl: str
     analysis_readiness_label_nl: str
+    asset_listing_readiness: WatchlistAssetListingReadiness
 
 
 class CreateWatchlistItemRequest(BaseModel):
@@ -162,6 +193,100 @@ def _analysis_readiness(item: WatchlistItem) -> str:
     return "Niet klaar voor analyse"
 
 
+
+
+def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadiness:
+    if not settings.storage.enabled or not settings.storage.database_url:
+        return WatchlistAssetListingReadiness(
+            link_status=WatchlistAssetListingLinkStatus.STORAGE_UNAVAILABLE,
+            ibkr_conid=item.ibkr_conid,
+            market_data_ready=False,
+            analysis_ready=False,
+            suggestions_allowed=False,
+            action_drafts_allowed=False,
+            blocker_code="storage_unavailable",
+            status_nl="AssetListing-opslag niet beschikbaar",
+            next_step_nl="Configureer opslag om AssetListing-identiteit aan de volglijst te koppelen.",
+            audit_help_nl="Read-only koppelstatus; geen runtime market data, analyse, suggesties of acties.",
+        )
+    if not item.ibkr_conid:
+        return WatchlistAssetListingReadiness(
+            link_status=WatchlistAssetListingLinkStatus.MISSING_LISTING,
+            ibkr_conid=None,
+            market_data_ready=False,
+            analysis_ready=False,
+            suggestions_allowed=False,
+            action_drafts_allowed=False,
+            blocker_code="missing_ibkr_conid",
+            status_nl="Geen IBKR-contract gekoppeld",
+            next_step_nl="Voeg eerst een gevalideerd IBKR-contract (conid) toe en koppel daarna een AssetListing.",
+            audit_help_nl="Zonder contractidentiteit blijft alles geblokkeerd.",
+        )
+
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository):
+        return repo.get_asset_listing_by_ibkr_conid(item.ibkr_conid)
+
+    listing = _with_repository(op)
+    if listing is None:
+        return WatchlistAssetListingReadiness(
+            link_status=WatchlistAssetListingLinkStatus.MISSING_LISTING,
+            ibkr_conid=item.ibkr_conid,
+            market_data_ready=False,
+            analysis_ready=False,
+            suggestions_allowed=False,
+            action_drafts_allowed=False,
+            blocker_code="missing_asset_listing",
+            status_nl="AssetListing ontbreekt",
+            next_step_nl="Maak of koppel een AssetListing op basis van dit IBKR-contract vóór latere market-data/analysestappen.",
+            audit_help_nl="Read-only status: geen runtime activatie of fetch.",
+        )
+
+    validated = listing.validation_status == "valid" and listing.safe_to_use_for_market_data
+    if not validated:
+        return WatchlistAssetListingReadiness(
+            link_status=WatchlistAssetListingLinkStatus.UNVALIDATED_LISTING,
+            listing_id=listing.listing_id,
+            asset_id=listing.asset_id,
+            ibkr_conid=listing.ibkr_conid,
+            symbol=listing.symbol,
+            security_type=listing.security_type,
+            exchange=listing.exchange,
+            primary_exchange=listing.primary_exchange,
+            currency=listing.currency,
+            validation_status=listing.validation_status,
+            validated_at=listing.validated_at.isoformat() if listing.validated_at else None,
+            market_data_ready=False,
+            analysis_ready=False,
+            suggestions_allowed=False,
+            action_drafts_allowed=False,
+            blocker_code="listing_not_validated_or_safe",
+            status_nl="AssetListing nog niet veilig gevalideerd",
+            next_step_nl="Valideer de listing-identiteit en veiligheidsvlaggen; runtime blijft daarna nog steeds uit.",
+            audit_help_nl="Contractstatus-only: geen market-data runtime, analyse, suggesties of acties.",
+        )
+
+    return WatchlistAssetListingReadiness(
+        link_status=WatchlistAssetListingLinkStatus.VALIDATED_LISTING,
+        listing_id=listing.listing_id,
+        asset_id=listing.asset_id,
+        ibkr_conid=listing.ibkr_conid,
+        symbol=listing.symbol,
+        security_type=listing.security_type,
+        exchange=listing.exchange,
+        primary_exchange=listing.primary_exchange,
+        currency=listing.currency,
+        validation_status=listing.validation_status,
+        validated_at=listing.validated_at.isoformat() if listing.validated_at else None,
+        market_data_ready=False,
+        analysis_ready=False,
+        suggestions_allowed=False,
+        action_drafts_allowed=False,
+        blocker_code="runtime_not_active",
+        status_nl="AssetListing gevalideerd (read-only)",
+        next_step_nl="Contractstatus gekend, maar market-data runtime/scheduler/analyse staan nog niet actief.",
+        audit_help_nl="Read-only status zonder runtime-fetch, suggesties, Decision Packages of actiedrafts.",
+    )
+
 def _serialize_item(item: WatchlistItem) -> WatchlistItemResponse:
     linked_asset = _resolve_asset_summary(item.asset_id, fail_if_missing=False)
     return WatchlistItemResponse(
@@ -172,6 +297,7 @@ def _serialize_item(item: WatchlistItem) -> WatchlistItemResponse:
         linked_asset=linked_asset,
         ibkr_status_label_nl=_ibkr_status_label(item.ibkr_validation_status),
         analysis_readiness_label_nl=_analysis_readiness(item),
+        asset_listing_readiness=_asset_listing_readiness(item),
     )
 
 
