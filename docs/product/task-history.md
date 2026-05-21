@@ -1,5 +1,24 @@
 # Task History (concise)
 
+## Task 92 — Conservative market-data readiness explainability and boundary consistency hardening
+
+Resultaat: afgerond (read-only API-contract/test/docs).
+
+Wat is opgeleverd:
+- Deterministische blocked/ready/snapshot-semantiek voor market-data readiness verder gehard in list/detail contracts.
+- Stabiele Nederlandse status/helpteksten gecentraliseerd voor readiness en latest-snapshot varianten.
+- Expliciete non-implication boundaryvelden toegevoegd en vastgezet op `false`: `analysis_ready`, `suggestions_allowed`, `action_drafts_allowed`.
+- Regressietests uitgebreid voor blocked identity, identity-ready zonder snapshot, snapshot metadata beschikbaar, detail endpoint en latest-snapshot varianten (`not_configured`, `missing_snapshot`, `snapshot_available`, `storage_failure`).
+- Extra regressies bewijzen dat responses read-only status/auditmetadata blijven en geen analyse/suggesties/Decision Packages/action drafts/orders of fake prijs/recommendation-data impliceren.
+
+Niet gedaan (bewuste scopegrens):
+- Geen market-data runtime fetching.
+- Geen historical fetching.
+- Geen scheduler/background jobs.
+- Geen AI runtime.
+- Geen suggesties, Decision Packages, action drafts of IBKR-order behavior.
+- Geen fake market prices, broker data of recommendations.
+
 ## Task 91 — Conservative market-data readiness status enum normalization and regression hardening
 
 - Status: completed.

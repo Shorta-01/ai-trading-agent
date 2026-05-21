@@ -1,4 +1,4 @@
-# Current State (na Task 91)
+# Current State (na Task 92)
 
 ## 1) Current status summary
 
@@ -11,7 +11,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 91**.
+- Huidige toestand: **na Task 92**.
 - CI-status: **hersteld en groen** na repository visibility change naar public; GitHub Actions execution/logging is weer zichtbaar en bruikbaar.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -86,6 +86,7 @@
 ## 5) Latest task sequence status
 
 
+- Task 92: **completed** — conservatieve market-data readiness explainability en boundary-consistency hardening afgerond: list/detail/latest-snapshot responses bevatten nu stabiele NL help/status-teksten en expliciete non-implication boundaryvelden (`analysis_ready=false`, `suggestions_allowed=false`, `action_drafts_allowed=false`). Blocked/ready/snapshot-metadata semantiek is deterministischer en regressie-getest, inclusief detail endpoint en alle latest-snapshot varianten. Snapshotmetadata blijft read-only status/auditmetadata en impliceert geen analyse, suggesties, Decision Packages, action drafts of orders. Scope bleef read-only API-contract/test/docs hardening; geen market-data runtime, historical fetching, scheduler, AI runtime, suggesties, Decision Packages, action drafts, IBKR-ordergedrag of fake market/broker/recommendation data toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 91: **completed** — conservatieve market-data readiness status-normalisatie afgerond: list/detail readiness-statusvelden zijn nu expliciet getypeerd en genormaliseerd (`blocked`/`ready`, `missing_snapshot`/`snapshot_available`, `missing_or_unvalidated_ibkr_contract`) met regressietests op stabiele Nederlandse help/statusvelden en deterministische blocked/missing-snapshot paden. Latest-snapshot statusvarianten (`not_configured`, `missing_snapshot`, `snapshot_available`, `storage_failure`) blijven expliciet en getest. Scope bleef read-only API-contract/test hardening; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 90: **completed** — conservatieve market-data readiness API cleanup afgerond: snapshot-latest endpoint gebruikt nu expliciet typed responsecontract met vaste statusvarianten (`snapshot_available`, `missing_snapshot`, `not_configured`, `storage_failure`) en regressietests dekken not-configured/storage-failure/missing-snapshot + read-only metadata-only semantiek. Scope bleef read-only API-contract/test hardening; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 88L: **completed (documentation-only)** — CI-herstel vastgelegd na repository visibility change naar public. CI run #358 is groen met 6 geslaagde jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`); logs/steps weer zichtbaar. Geen code/tests/migraties/package metadata/workflows gewijzigd.

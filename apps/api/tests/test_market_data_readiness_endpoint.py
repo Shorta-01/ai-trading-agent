@@ -68,6 +68,9 @@ def test_market_data_readiness_blocks_unvalidated_identity() -> None:
         assert "evaluated_at" in row
         assert "next_step_nl" in row
         assert "analyse" in row["blocker_reason_nl"].lower()
+        assert row["analysis_ready"] is False
+        assert row["suggestions_allowed"] is False
+        assert row["action_drafts_allowed"] is False
 
 
 def test_market_data_readiness_ready_for_validated_identity_only() -> None:
@@ -84,6 +87,9 @@ def test_market_data_readiness_ready_for_validated_identity_only() -> None:
     assert row["validation_status"]["ibkr_conid_present"] is True
     assert row["validation_status"]["ibkr_contract_validated"] is True
     assert "snapshot" in row["next_step_nl"].lower()
+    assert row["analysis_ready"] is False
+    assert row["suggestions_allowed"] is False
+    assert row["action_drafts_allowed"] is False
 
 
 def test_market_data_readiness_excludes_inactive_items() -> None:
@@ -112,6 +118,9 @@ def test_market_data_readiness_list_response_contract() -> None:
 
     parsed = ReadinessListResponse.model_validate(response.json())
     assert parsed.help_nl
+    assert parsed.analysis_ready is False
+    assert parsed.suggestions_allowed is False
+    assert parsed.action_drafts_allowed is False
     assert parsed.items[0].status == ReadinessStatus.BLOCKED
     assert parsed.items[0].readiness_status == ReadinessStatus.BLOCKED
     assert parsed.items[0].freshness_status == ReadinessFreshnessStatus.MISSING_SNAPSHOT
@@ -140,6 +149,9 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     assert parsed.latest_snapshot_metadata is None
     assert parsed.missing_reason == "storage_not_configured"
     assert "geen" in parsed.help_nl.lower()
+    assert parsed.analysis_ready is False
+    assert parsed.suggestions_allowed is False
+    assert parsed.action_drafts_allowed is False
 
 
 def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatch) -> None:
@@ -195,6 +207,7 @@ def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatc
     assert parsed.status_nl == "Nog geen snapshotmetadata opgeslagen."
     assert parsed.missing_reason == "snapshot_not_found"
     assert parsed.latest_snapshot_metadata is None
+    assert parsed.analysis_ready is False
 
 
 def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch) -> None:
@@ -226,6 +239,7 @@ def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch
     assert parsed.blocker_reason == "storage_connection_failed"
     assert parsed.latest_snapshot_metadata is None
     assert "orders" in parsed.help_nl.lower()
+    assert parsed.action_drafts_allowed is False
 
 
 def test_market_data_readiness_missing_snapshot_includes_dutch_audit_fields() -> None:
@@ -236,7 +250,7 @@ def test_market_data_readiness_missing_snapshot_includes_dutch_audit_fields() ->
     row = response.json()["item"]
     assert row["freshness_status"] == "missing_snapshot"
     assert "read-only" in row["audit_help_nl"].lower()
-    assert "geen market-data runtime" in row["help_nl"].lower()
+    assert "geen market-data fetch" in row["help_nl"].lower()
     assert "suggestie" in row["audit_help_nl"].lower()
 
 
@@ -300,9 +314,89 @@ def test_market_data_readiness_stored_snapshot_metadata_is_read_only(monkeypatch
     row = response.json()["item"]
     assert row["status"] == "ready"
     assert row["snapshot_metadata_present"] is True
+    assert row["freshness_status"] == "snapshot_available"
     assert row["latest_snapshot_metadata"]["snapshot_id"] == "snap-1"
+    assert "alleen metadata" in row["latest_snapshot_metadata"]["explanation_nl"].lower()
     assert "read-only" in row["audit_help_nl"].lower()
-    assert "geen market-data runtime" in row["help_nl"].lower()
+    assert "geen market-data fetch" in row["help_nl"].lower()
     assert "forecast" not in str(row).lower()
     assert "decision package" not in str(row).lower()
     assert "order" not in str(row).lower()
+    assert "price" not in row["latest_snapshot_metadata"]
+    assert "recommendation" not in row["latest_snapshot_metadata"]
+
+
+def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypatch) -> None:
+    class _FakeStorageSettings:
+        enabled = True
+        database_url = "sqlite:///fake"
+
+    class _FakeContext:
+        def __enter__(self) -> object:
+            class _Checked:
+                connection = object()
+                readiness = object()
+
+            return _Checked()
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+    class _GoodProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool) -> _FakeContext:
+            assert require_writable is False
+            return _FakeContext()
+
+    class _Record:
+        snapshot_id = "snap-2"
+        watchlist_item_id = "w-2"
+        asset_id = None
+        ibkr_conid = "265598"
+        symbol = "AAPL"
+        security_type = "STK"
+        exchange = "NASDAQ"
+        primary_exchange = "NASDAQ"
+        currency = "USD"
+        provider_name = "manual"
+        data_kind = "quote_snapshot"
+        captured_at = "2026-05-20T00:00:00Z"
+        source_timestamp = "2026-05-20T00:00:00Z"
+        stored_at = "2026-05-20T00:01:00Z"
+        freshness_status = "fresh"
+        validation_status = "validated"
+        blocked_reason = None
+        raw_reference = None
+        explanation_nl = "Read-only metadata."
+
+    class _FakeRepo:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def get_latest_by_ibkr_conid(self, _ibkr_conid: str) -> object:
+            class _Result:
+                record = _Record()
+
+            return _Result()
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.StorageConnectionProvider",
+        _GoodProvider,
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.SqlAlchemyMarketDataSnapshotRepository",
+        _FakeRepo,
+    )
+
+    response = client.get("/market-data/snapshots/latest/265598")
+    assert response.status_code == 200
+    parsed = LatestSnapshotResponse.model_validate(response.json())
+    assert parsed.status == LatestSnapshotStatus.SNAPSHOT_AVAILABLE
+    assert parsed.latest_snapshot_metadata is not None
+    assert parsed.analysis_ready is False
