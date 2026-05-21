@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from ai_trading_agent_storage import StorageConnectionError
 from fastapi.testclient import TestClient
 
@@ -292,7 +294,8 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     parsed = LatestSnapshotResponse.model_validate(response.json())
     assert parsed.ibkr_conid == "265598"
     assert parsed.status == LatestSnapshotStatus.NOT_CONFIGURED
-    assert parsed.latest_snapshot_metadata is None
+    assert parsed.snapshot_available is False
+    assert parsed.stale is False
     assert parsed.missing_reason == "storage_not_configured"
     _assert_boundary_terms(parsed.help_nl)
     assert parsed.analysis_ready is False
@@ -328,7 +331,7 @@ def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatc
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-        def get_latest_by_ibkr_conid(self, _ibkr_conid: str) -> object:
+        def get_latest_market_data_snapshot_by_conid(self, _ibkr_conid: str) -> object:
             class _Result:
                 record = None
 
@@ -350,9 +353,10 @@ def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatc
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
     assert parsed.status == LatestSnapshotStatus.MISSING_SNAPSHOT
-    assert parsed.status_nl == "Nog geen snapshotmetadata opgeslagen."
+    assert parsed.status_nl == "Geen marktdata"
     assert parsed.missing_reason == "snapshot_not_found"
-    assert parsed.latest_snapshot_metadata is None
+    assert parsed.snapshot_available is False
+    assert parsed.stale is False
     assert parsed.analysis_ready is False
     _assert_boundary_terms(parsed.help_nl)
 
@@ -384,7 +388,8 @@ def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch
     parsed = LatestSnapshotResponse.model_validate(response.json())
     assert parsed.status == LatestSnapshotStatus.STORAGE_FAILURE
     assert parsed.blocker_reason == "storage_connection_failed"
-    assert parsed.latest_snapshot_metadata is None
+    assert parsed.snapshot_available is False
+    assert parsed.stale is False
     _assert_boundary_terms(parsed.help_nl)
     assert parsed.action_drafts_allowed is False
 
@@ -501,31 +506,27 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
             return _FakeContext()
 
     class _Record:
-        snapshot_id = "snap-2"
-        watchlist_item_id = "w-2"
-        asset_id = None
-        ibkr_conid = "265598"
-        symbol = "AAPL"
-        security_type = "STK"
-        exchange = "NASDAQ"
-        primary_exchange = "NASDAQ"
-        currency = "USD"
-        provider_name = "manual"
-        data_kind = "quote_snapshot"
-        captured_at = "2026-05-20T00:00:00Z"
-        source_timestamp = "2026-05-20T00:00:00Z"
+        provider_code = "ibkr"
+        provider_environment = "paper"
+        provider_account_mode = "paper"
+        market_data_type = "snapshot"
+        requested_at = "2026-05-20T00:00:00Z"
+        received_at = "2026-05-20T00:00:01Z"
+        provider_as_of = "2026-05-20T00:00:01Z"
         stored_at = "2026-05-20T00:01:00Z"
         freshness_status = "fresh"
-        validation_status = "validated"
-        blocked_reason = None
-        raw_reference = None
-        explanation_nl = "Read-only metadata."
+        last_price = Decimal("189.12")
+        bid_price = Decimal("189.10")
+        ask_price = Decimal("189.14")
+        close_price = Decimal("188.50")
+        day_change_percent = Decimal("0.33")
+        currency = "USD"
 
     class _FakeRepo:
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             pass
 
-        def get_latest_by_ibkr_conid(self, _ibkr_conid: str) -> object:
+        def get_latest_market_data_snapshot_by_conid(self, _ibkr_conid: str) -> object:
             class _Result:
                 record = _Record()
 
@@ -548,7 +549,99 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
     assert parsed.status == LatestSnapshotStatus.SNAPSHOT_AVAILABLE
-    assert parsed.latest_snapshot_metadata is not None
+    assert parsed.snapshot_available is True
     assert parsed.analysis_ready is False
     _assert_boundary_terms(parsed.help_nl)
-    assert "geen live/current marktprijs" in parsed.help_nl.lower()
+    assert parsed.status_nl == "Snapshot beschikbaar"
+    assert parsed.stale is False
+    assert parsed.provider_code == "ibkr"
+    assert parsed.provider_environment == "paper"
+    assert parsed.provider_account_mode == "paper"
+    assert parsed.market_data_type == "snapshot"
+    assert parsed.freshness_status == "fresh"
+    assert parsed.last_price == "189.12"
+    assert parsed.bid_price == "189.10"
+    assert parsed.ask_price == "189.14"
+    assert parsed.close_price == "188.50"
+    assert parsed.day_change_percent == "0.33"
+    assert parsed.currency == "USD"
+    assert parsed.suggestions_allowed is False
+    assert parsed.action_drafts_allowed is False
+    assert parsed.next_step_nl == "Alleen status. Nog geen analyse."
+    assert parsed.help_nl == "Nog geen suggesties mogelijk."
+
+
+def test_market_data_snapshot_latest_returns_stale_snapshot_variant(monkeypatch) -> None:
+    class _FakeStorageSettings:
+        enabled = True
+        database_url = "sqlite:///fake"
+
+    class _FakeContext:
+        def __enter__(self) -> object:
+            class _Checked:
+                connection = object()
+                readiness = object()
+
+            return _Checked()
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+    class _GoodProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool) -> _FakeContext:
+            assert require_writable is False
+            return _FakeContext()
+
+    class _Record:
+        provider_code = "ibkr"
+        provider_environment = "paper"
+        provider_account_mode = "paper"
+        market_data_type = "snapshot"
+        requested_at = "2026-05-20T00:00:00Z"
+        received_at = "2026-05-20T00:00:01Z"
+        provider_as_of = "2026-05-20T00:00:01Z"
+        stored_at = "2026-05-20T00:01:00Z"
+        freshness_status = "stale"
+        last_price = Decimal("189.12")
+        bid_price = Decimal("189.10")
+        ask_price = Decimal("189.14")
+        close_price = Decimal("188.50")
+        day_change_percent = Decimal("0.33")
+        currency = "USD"
+
+    class _FakeRepo:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def get_latest_market_data_snapshot_by_conid(self, _ibkr_conid: str) -> object:
+            class _Result:
+                record = _Record()
+
+            return _Result()
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.StorageConnectionProvider",
+        _GoodProvider,
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.SqlAlchemyMarketDataSnapshotRepository",
+        _FakeRepo,
+    )
+
+    response = client.get("/market-data/snapshots/latest/265598")
+    assert response.status_code == 200
+    parsed = LatestSnapshotResponse.model_validate(response.json())
+    assert parsed.status == LatestSnapshotStatus.STALE_SNAPSHOT
+    assert parsed.status_nl == "Data verouderd"
+    assert parsed.snapshot_available is True
+    assert parsed.stale is True
+    assert parsed.analysis_ready is False
+    assert parsed.suggestions_allowed is False
+    assert parsed.action_drafts_allowed is False
