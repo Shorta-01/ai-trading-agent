@@ -70,3 +70,8 @@ body { margin:0; background:#f3f6fb; color:#0f172a; }
 .sync-button:disabled { opacity:.65; cursor:not-allowed; }
 .audit-grid { display:grid; gap:.75rem; grid-template-columns:1fr; }
 .audit-help { background:#fff; border:1px solid #dbe3ee; border-radius:10px; padding:.6rem .8rem; }
+.audit-detail-card{padding:.9rem}
+.audit-field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.5rem}
+.cross-link-block{margin-top:.8rem;padding:.6rem;border:1px solid #dbe3ee;border-radius:8px;background:#f8fafc}
+.boundary-notice{border-left:4px solid #93c5fd;padding:.55rem .7rem;background:#eff6ff;border-radius:8px}
+.status-row-compact{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap}

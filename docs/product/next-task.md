@@ -1,7 +1,7 @@
-# Next Task — Task 112
+# Next Task — Task 113
 
-## Task 112 — Conservative request-audit detail drilldown and cross-link visibility foundation
+## Task 113 — Conservative audit viewer usability and contract coverage expansion
 
-Voeg read-only detailpagina's toe voor request logs, provider sources en freshness audits, inclusief kruiskoppelingen tussen gelinkte records waar beschikbaar.
+Voeg grotere read-only bruikbaarheidsverbeteringen toe in de audit viewer: lichte client-side filtering/zoeking, row counts/status-samenvattingen, no-data guidance en gerichte API-contract coverage-uitbreiding waar nodig.
 
-Grenzen blijven strikt: geen runtime-fetch, geen analyses, geen suggesties, geen actiedrafts, geen orders.
+Grenzen blijven strikt: read-only, geen runtime-fetch, geen suggesties, geen actiedrafts, geen orders.
