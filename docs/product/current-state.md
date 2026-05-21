@@ -11,12 +11,14 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 94**.
+- Huidige toestand: **na Task 95**.
 - CI-status: **hersteld en groen** na repository visibility change naar public; GitHub Actions execution/logging is weer zichtbaar en bruikbaar.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
 - Moderne web app shell + dashboard foundation bestaat nu met eerlijke empty states (geen fake data).
+
+- Task 95: **completed** — read-only market-data readiness / AssetListing validation-gate harmonisatie afgerond (API/tests/docs). Readiness list/detail responses bevatten nu expliciet typed `asset_listing_gate` met statusvarianten `storage_unavailable`, `missing_ibkr_conid`, `missing_listing`, `unvalidated_listing`, `validated_listing` en eenvoudige Nederlandse status/next-step/audit-tekst. Missing of unvalidated AssetListing blijft market data/analysis/suggesties/action drafts blokkeren; gevalideerde AssetListing blijft identity/status-only en start geen runtime market-data fetching. Geen market-data runtime/fetching/historical/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data toegevoegd.
 
 ## 2) Implemented foundations
 

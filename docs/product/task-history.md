@@ -1,3 +1,12 @@
+## Task 95 — Conservatieve market-data readiness AssetListing validation-gate harmonisatie
+
+- Status: afgerond (read-only API/tests/docs scope).
+- Market-data readiness list/detail responses bevatten nu een expliciete typed `asset_listing_gate` met statussen: `storage_unavailable`, `missing_ibkr_conid`, `missing_listing`, `unvalidated_listing`, `validated_listing`.
+- Nederlandse status/helptekst geharmoniseerd met duidelijke read-only boundary: geen market-data runtime, geen analyse, geen suggesties, geen Decision Packages, geen actiedrafts, geen orders.
+- Missing/unvalidated AssetListing blijft gate die market data/analysis/suggesties/action drafts blokkeert.
+- Validated AssetListing blijft identity/listing gate-status en start geen runtime-fetching.
+- Geen storage migratie, geen nieuwe tabel, geen market-data runtime/fetching/historical/scheduler, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag, geen fake data.
+
 ## Task 94 — Conservatieve AssetListing-to-watchlist readiness wiring
 - Status: completed
 - Scope: API + tests + docs (read-only readiness contract wiring)

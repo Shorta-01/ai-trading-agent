@@ -20,6 +20,27 @@ class ReadinessValidationStatus(BaseModel):
     ibkr_contract_validated: bool
 
 
+class ReadinessAssetListingGateStatus(StrEnum):
+    STORAGE_UNAVAILABLE = "storage_unavailable"
+    MISSING_IBKR_CONID = "missing_ibkr_conid"
+    MISSING_LISTING = "missing_listing"
+    UNVALIDATED_LISTING = "unvalidated_listing"
+    VALIDATED_LISTING = "validated_listing"
+
+
+class ReadinessAssetListingGate(BaseModel):
+    status: ReadinessAssetListingGateStatus
+    listing_id: str | None
+    asset_id: str | None
+    ibkr_conid: str | None
+    validation_status: str | None
+    safe_to_use_for_market_data: bool
+    blocks_market_data: bool
+    status_nl: str
+    next_step_nl: str
+    audit_help_nl: str
+
+
 class ReadinessStatus(StrEnum):
     BLOCKED = "blocked"
     READY = "ready"
@@ -87,6 +108,7 @@ class ReadinessRow(BaseModel):
     required_identity_fields: list[str]
     missing_identity_fields: list[str]
     validation_status: ReadinessValidationStatus
+    asset_listing_gate: ReadinessAssetListingGate
     evaluated_at: str
     latest_snapshot_metadata: ReadinessSnapshotMetadata | None
     snapshot_metadata_present: bool
@@ -133,6 +155,7 @@ def utc_now_iso() -> str:
 def build_readiness_row(
     item: ReadinessWatchlistItemLike,
     snapshot_metadata: ReadinessSnapshotMetadata | None,
+    asset_listing_gate: ReadinessAssetListingGate,
     *,
     evaluated_at: str,
 ) -> ReadinessRow:
@@ -190,6 +213,7 @@ def build_readiness_row(
             ibkr_conid_present=conid_present,
             ibkr_contract_validated=validation_ok,
         ),
+        asset_listing_gate=asset_listing_gate,
         evaluated_at=evaluated_at,
         latest_snapshot_metadata=snapshot_metadata,
         snapshot_metadata_present=snapshot_metadata is not None,
@@ -238,4 +262,56 @@ def build_latest_snapshot_response(
         analysis_ready=False,
         suggestions_allowed=False,
         action_drafts_allowed=False,
+    )
+
+
+def build_asset_listing_gate(
+    *,
+    status: ReadinessAssetListingGateStatus,
+    ibkr_conid: str | None,
+    listing_id: str | None = None,
+    asset_id: str | None = None,
+    validation_status: str | None = None,
+    safe_to_use_for_market_data: bool = False,
+    blocks_market_data: bool = True,
+) -> ReadinessAssetListingGate:
+    status_map = {
+        ReadinessAssetListingGateStatus.STORAGE_UNAVAILABLE: (
+            "AssetListing-gate niet controleerbaar: storage niet beschikbaar",
+            "Configureer storage om AssetListing-validatie te controleren.",
+        ),
+        ReadinessAssetListingGateStatus.MISSING_IBKR_CONID: (
+            "IBKR conid ontbreekt",
+            "Koppel eerst een gevalideerd IBKR-contract aan dit volglijst-item.",
+        ),
+        ReadinessAssetListingGateStatus.MISSING_LISTING: (
+            "AssetListing ontbreekt",
+            "Maak of koppel eerst een AssetListing-identiteit "
+            "voordat toekomstige market-data runtime kan worden vrijgegeven.",
+        ),
+        ReadinessAssetListingGateStatus.UNVALIDATED_LISTING: (
+            "AssetListing is nog niet veilig gevalideerd",
+            "Werk de AssetListing-validatie bij tot de listing veilig is voor market data.",
+        ),
+        ReadinessAssetListingGateStatus.VALIDATED_LISTING: (
+            "AssetListing is gevalideerd, maar dit is nog geen runtime market-data fetch",
+            "Read-only status: wacht op een latere, expliciet geactiveerde "
+            "market-data runtime-stap.",
+        ),
+    }
+    status_nl, next_step_nl = status_map[status]
+    return ReadinessAssetListingGate(
+        status=status,
+        listing_id=listing_id,
+        asset_id=asset_id,
+        ibkr_conid=ibkr_conid,
+        validation_status=validation_status,
+        safe_to_use_for_market_data=safe_to_use_for_market_data,
+        blocks_market_data=blocks_market_data,
+        status_nl=status_nl,
+        next_step_nl=next_step_nl,
+        audit_help_nl=(
+            "Read-only status: geen market-data runtime, geen analyse, geen suggesties, "
+            "geen Decision Packages, geen actiedrafts en geen orders."
+        ),
     )

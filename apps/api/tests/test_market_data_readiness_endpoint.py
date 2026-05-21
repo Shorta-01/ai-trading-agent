@@ -62,6 +62,7 @@ def test_market_data_readiness_blocks_unvalidated_identity() -> None:
         assert row["blocker_code"] == "missing_or_unvalidated_ibkr_contract"
         assert "blocker_reason_nl" in row
         assert "missing_identity_fields" in row
+        assert row["asset_listing_gate"]["status"] == "storage_unavailable"
         assert row["snapshot_metadata_present"] is False
         assert row["latest_snapshot_metadata"] is None
         assert "geen market-data runtime" in row["audit_help_nl"].lower()
@@ -71,6 +72,7 @@ def test_market_data_readiness_blocks_unvalidated_identity() -> None:
         assert row["analysis_ready"] is False
         assert row["suggestions_allowed"] is False
         assert row["action_drafts_allowed"] is False
+    assert row["asset_listing_gate"]["status"] == "storage_unavailable"
 
 
 def test_market_data_readiness_ready_for_validated_identity_only() -> None:
@@ -108,6 +110,7 @@ def test_market_data_readiness_watchlist_detail_endpoint() -> None:
     assert response.status_code == 200
     assert response.json()["item"]["watchlist_item_id"] == "w-1"
     assert response.json()["item"]["audit_help_nl"]
+    assert response.json()["item"]["asset_listing_gate"]["status"] == "storage_unavailable"
 
 
 def test_market_data_readiness_list_response_contract() -> None:
@@ -139,6 +142,129 @@ def test_market_data_readiness_detail_response_contract_for_missing_item() -> No
     assert parsed.item is None
     assert parsed.message_nl == "Volglijst-item niet gevonden."
 
+
+
+
+def test_market_data_readiness_storage_configured_missing_ibkr_conid_gate(monkeypatch) -> None:
+    STORE["w-1"] = _item("w-1", conid=None, validation_status="valid")
+
+    class _FakeStorageSettings:
+        enabled = True
+        database_url = "sqlite:///fake"
+
+    class _FakeContext:
+        def __enter__(self) -> object:
+            class _Checked:
+                connection = object()
+                readiness = object()
+
+            return _Checked()
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+    class _GoodProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool) -> _FakeContext:
+            assert require_writable is False
+            return _FakeContext()
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.StorageConnectionProvider",
+        _GoodProvider,
+    )
+
+    response = client.get("/market-data/readiness/watchlist/w-1")
+    row = response.json()["item"]
+    assert row["asset_listing_gate"]["status"] == "missing_ibkr_conid"
+    assert row["analysis_ready"] is False
+
+
+def test_market_data_readiness_asset_listing_gate_variants(monkeypatch) -> None:
+    STORE["w-1"] = _item("w-1", conid="265598", validation_status="valid")
+
+    class _FakeStorageSettings:
+        enabled = True
+        database_url = "sqlite:///fake"
+
+    class _FakeContext:
+        def __enter__(self) -> object:
+            class _Checked:
+                connection = object()
+                readiness = object()
+
+            return _Checked()
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+    class _GoodProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool) -> _FakeContext:
+            assert require_writable is False
+            return _FakeContext()
+
+    class _Listing:
+        def __init__(self, *, safe: bool, blocked: bool) -> None:
+            self.listing_id = "lst-1"
+            self.asset_id = "ast-1"
+            self.ibkr_conid = "265598"
+            self.validation_status = "valid" if safe else "pending"
+            self.safe_to_use_for_market_data = safe
+            self.blocks_market_data = blocked
+
+    class _FakeAssetListingRepo:
+        state = "missing"
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def get_asset_listing_by_ibkr_conid(self, _ibkr_conid: str) -> object:
+            if self.state == "missing":
+                return None
+            if self.state == "unvalidated":
+                return _Listing(safe=False, blocked=True)
+            return _Listing(safe=True, blocked=False)
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.StorageConnectionProvider",
+        _GoodProvider,
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.SqlAlchemyAssetListingRepository",
+        _FakeAssetListingRepo,
+    )
+
+    _FakeAssetListingRepo.state = "missing"
+    row = client.get("/market-data/readiness/watchlist/w-1").json()["item"]
+    assert row["asset_listing_gate"]["status"] == "missing_listing"
+    assert "assetlisting" in row["asset_listing_gate"]["status_nl"].lower()
+
+    _FakeAssetListingRepo.state = "unvalidated"
+    row = client.get("/market-data/readiness/watchlist/w-1").json()["item"]
+    assert row["asset_listing_gate"]["status"] == "unvalidated_listing"
+    assert row["analysis_ready"] is False
+
+    _FakeAssetListingRepo.state = "validated"
+    response = client.get("/market-data/readiness")
+    row = response.json()["items"][0]
+    assert row["asset_listing_gate"]["status"] == "validated_listing"
+    assert row["asset_listing_gate"]["listing_id"] == "lst-1"
+    assert "read-only status" in row["asset_listing_gate"]["audit_help_nl"].lower()
+    assert row["suggestions_allowed"] is False
+    assert row["action_drafts_allowed"] is False
 
 def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled() -> None:
     response = client.get("/market-data/snapshots/latest/265598")

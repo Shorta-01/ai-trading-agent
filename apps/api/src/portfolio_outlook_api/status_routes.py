@@ -3,6 +3,7 @@
 from typing import Annotated
 
 from ai_trading_agent_storage import (
+    SqlAlchemyAssetListingRepository,
     SqlAlchemyMarketDataSnapshotRepository,
     StorageConnectionError,
     StorageConnectionProvider,
@@ -25,10 +26,13 @@ from portfolio_outlook_api.market_data_readiness import (
     READINESS_HELP_NL,
     LatestSnapshotResponse,
     LatestSnapshotStatus,
+    ReadinessAssetListingGate,
+    ReadinessAssetListingGateStatus,
     ReadinessDetailResponse,
     ReadinessListResponse,
     ReadinessRow,
     ReadinessSnapshotMetadata,
+    build_asset_listing_gate,
     build_latest_snapshot_response,
     build_readiness_row,
     build_readiness_snapshot_metadata,
@@ -309,6 +313,52 @@ def _read_snapshot_metadata(ibkr_conid: str | None) -> ReadinessSnapshotMetadata
     except StorageConnectionError:
         return None
 
+
+
+def _read_asset_listing_gate(item: object) -> ReadinessAssetListingGate:
+    ibkr_conid = str(getattr(item, "ibkr_conid", "") or "").strip() or None
+    storage_settings = settings.storage
+    if not storage_settings.enabled or not storage_settings.database_url:
+        return build_asset_listing_gate(
+            status=ReadinessAssetListingGateStatus.STORAGE_UNAVAILABLE,
+            ibkr_conid=ibkr_conid,
+        )
+    if ibkr_conid is None:
+        return build_asset_listing_gate(
+            status=ReadinessAssetListingGateStatus.MISSING_IBKR_CONID,
+            ibkr_conid=None,
+        )
+    provider = StorageConnectionProvider(
+        build_database_connection_settings(storage_settings.database_url)
+    )
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyAssetListingRepository(checked.connection, checked.readiness)
+            listing = repo.get_asset_listing_by_ibkr_conid(ibkr_conid)
+            if listing is None:
+                return build_asset_listing_gate(
+                    status=ReadinessAssetListingGateStatus.MISSING_LISTING,
+                    ibkr_conid=ibkr_conid,
+                )
+            gate_status = (
+                ReadinessAssetListingGateStatus.VALIDATED_LISTING
+                if listing.safe_to_use_for_market_data and not listing.blocks_market_data
+                else ReadinessAssetListingGateStatus.UNVALIDATED_LISTING
+            )
+            return build_asset_listing_gate(
+                status=gate_status,
+                listing_id=listing.listing_id,
+                asset_id=listing.asset_id,
+                ibkr_conid=listing.ibkr_conid,
+                validation_status=listing.validation_status,
+                safe_to_use_for_market_data=listing.safe_to_use_for_market_data,
+                blocks_market_data=listing.blocks_market_data,
+            )
+    except StorageConnectionError:
+        return build_asset_listing_gate(
+            status=ReadinessAssetListingGateStatus.STORAGE_UNAVAILABLE,
+            ibkr_conid=ibkr_conid,
+        )
 def _build_market_data_readiness_rows() -> list[ReadinessRow]:
     from portfolio_outlook_api.watchlist import STORE
 
@@ -323,6 +373,7 @@ def _build_market_data_readiness_rows() -> list[ReadinessRow]:
             build_readiness_row(
                 item,
                 snapshot_metadata,
+                _read_asset_listing_gate(item),
                 evaluated_at=evaluated_at,
             )
         )
