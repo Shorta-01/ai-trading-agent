@@ -1,3 +1,11 @@
+## Task 103 — Conservatieve read-only product-doc consistency follow-up
+
+- Status: afgerond (documentation/review-hardening only).
+- Post-Task-102 productupdates gericht gecontroleerd tegen de vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Kleine tracking/wordingdrift hersteld in producttrackingdocs (o.a. current-state na-Task-102 status en conservatieve vervolgstap).
+- Compacte notitie toegevoegd: `docs/product/read-only-readiness-consistency-check-task-103.md`.
+- Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
 ## Task 99 — Read-only readiness PR checklist en term-review rubric
 
 - Status: afgerond (documentatie/review-guardrail-only).
