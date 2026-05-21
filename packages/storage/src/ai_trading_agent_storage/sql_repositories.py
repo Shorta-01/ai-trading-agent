@@ -23,6 +23,7 @@ from ai_trading_agent_storage.metadata import (
     broker_sync_runs,
     external_broker_activities,
     market_data_snapshots,
+    market_data_latest_snapshots,
     paper_portfolio_setups,
     request_logs,
     provider_sources,
@@ -66,6 +67,7 @@ from ai_trading_agent_storage.repository_contracts import (
     CreatePaperPortfolioSetupRequest,
     CreateSystemEventRequest,
     ExternalBrokerActivityRecord,
+    MarketDataLatestSnapshotRecord,
     MarketDataSnapshotRecord,
     PaperPortfolioSetupRecord,
     RequestLogRecord,
@@ -608,6 +610,43 @@ class SqlAlchemyBrokerSnapshotRepository(_Base):
 
 
 class SqlAlchemyMarketDataSnapshotRepository(_Base):
+    def save_latest_market_data_snapshot(self, record: MarketDataLatestSnapshotRecord) -> StorageWriteResult:
+        self._insert(market_data_latest_snapshots, asdict(record))
+        return StorageWriteResult(True, record.snapshot_id, market_data_latest_snapshots.name, True, "Latest market-data snapshot opgeslagen.")
+
+    def get_latest_market_data_snapshot_by_conid(self, ibkr_conid: str) -> StorageReadResult[MarketDataLatestSnapshotRecord]:
+        row = (
+            self._connection.execute(
+                select(market_data_latest_snapshots)
+                .where(market_data_latest_snapshots.c.ibkr_conid == ibkr_conid)
+                .order_by(market_data_latest_snapshots.c.stored_at.desc(), market_data_latest_snapshots.c.provider_as_of.desc().nullslast())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return StorageReadResult(False, None, market_data_latest_snapshots.name, "Geen latest market-data snapshot gevonden voor conid.")
+        return StorageReadResult(True, MarketDataLatestSnapshotRecord(**dict(row)), market_data_latest_snapshots.name, "Latest market-data snapshot opgehaald voor conid.")
+
+    def list_latest_market_data_snapshots_by_conids(self, conids: tuple[str, ...]) -> StorageListResult[MarketDataLatestSnapshotRecord]:
+        if not conids:
+            return StorageListResult((), market_data_latest_snapshots.name, "Geen conids opgegeven.")
+        rows = (
+            self._connection.execute(
+                select(market_data_latest_snapshots)
+                .where(market_data_latest_snapshots.c.ibkr_conid.in_(conids))
+                .order_by(market_data_latest_snapshots.c.ibkr_conid.asc(), market_data_latest_snapshots.c.stored_at.desc(), market_data_latest_snapshots.c.provider_as_of.desc().nullslast())
+            )
+            .mappings()
+            .all()
+        )
+        latest: dict[str, MarketDataLatestSnapshotRecord] = {}
+        for row in rows:
+            rec = MarketDataLatestSnapshotRecord(**dict(row))
+            latest.setdefault(rec.ibkr_conid, rec)
+        return StorageListResult(tuple(latest.values()), market_data_latest_snapshots.name, "Latest market-data snapshots opgehaald voor conids.")
+
     def get_latest_by_ibkr_conid(
         self,
         ibkr_conid: str,

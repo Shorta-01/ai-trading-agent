@@ -66,6 +66,7 @@ class LatestSnapshotStatus(StrEnum):
     MISSING_SNAPSHOT = "missing_snapshot"
     SNAPSHOT_AVAILABLE = "snapshot_available"
     STORAGE_FAILURE = "storage_failure"
+    STALE_SNAPSHOT = "stale_snapshot"
 
 
 class ReadinessSnapshotMetadata(BaseModel):
@@ -177,13 +178,23 @@ class LatestSnapshotResponse(BaseModel):
     ibkr_conid: str
     status: LatestSnapshotStatus
     status_nl: str
-    latest_snapshot_metadata: ReadinessSnapshotMetadata | None = Field(
-        default=None,
-        description=(
-            "Read-only latest-snapshot metadata/status only; geen "
-            "live/current/latest prijs, market-data runtime of runtime-fetch."
-        ),
-    )
+    provider_code: str | None = None
+    provider_environment: str | None = None
+    provider_account_mode: str | None = None
+    market_data_type: str | None = None
+    requested_at: datetime | None = None
+    received_at: datetime | None = None
+    provider_as_of: datetime | None = None
+    stored_at: datetime | None = None
+    freshness_status: str | None = None
+    snapshot_available: bool = False
+    stale: bool = False
+    last_price: str | None = None
+    bid_price: str | None = None
+    ask_price: str | None = None
+    close_price: str | None = None
+    day_change_percent: str | None = None
+    currency: str | None = None
     evaluated_at: str
     missing_reason: str | None = None
     blocker_reason: str | None = None
@@ -299,7 +310,6 @@ def build_latest_snapshot_response(
         ibkr_conid=ibkr_conid,
         status=status,
         status_nl=status_nl,
-        latest_snapshot_metadata=latest_snapshot_metadata,
         evaluated_at=evaluated_at,
         missing_reason=missing_reason,
         blocker_reason=blocker_reason,

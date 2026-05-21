@@ -237,6 +237,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "freshness-audit records; voegt geen fetchgedrag toe."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0024_market_data_latest_snapshots",
+        previous_revision_id="0023_request_log_provider_freshness_contracts",
+        filename="0024_market_data_latest_snapshots.py",
+        label_nl="Market data latest snapshot storage",
+        description_nl="Latest market-data snapshotopslag met status/veiligheidsvelden (read-only).",
+    ),
 )
 
 

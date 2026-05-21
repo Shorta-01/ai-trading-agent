@@ -1265,6 +1265,47 @@ class MarketDataSnapshotRecord:
             _require_non_empty(getattr(self, field_name), field_name)
 
 
+@dataclass(frozen=True)
+class MarketDataLatestSnapshotRecord:
+    snapshot_id: str
+    ibkr_conid: str
+    symbol: str | None
+    currency: str | None
+    asset_class: str | None
+    exchange: str | None
+    primary_exchange: str | None
+    provider_code: str | None
+    provider_environment: str | None
+    provider_account_mode: str | None
+    market_data_type: str | None
+    requested_at: datetime | None
+    received_at: datetime | None
+    provider_as_of: datetime | None
+    stored_at: datetime
+    last_price: Decimal | None
+    bid_price: Decimal | None
+    ask_price: Decimal | None
+    close_price: Decimal | None
+    day_change_percent: Decimal | None
+    status: str
+    freshness_status: str | None
+    explanation_nl: str
+    request_log_id: str | None
+    provider_source_id: str | None
+    freshness_audit_id: str | None
+    safe_for_analysis: bool = False
+    safe_for_suggestions: bool = False
+    safe_for_action_drafts: bool = False
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.snapshot_id, "snapshot_id")
+        _require_non_empty(self.ibkr_conid, "ibkr_conid")
+        _require_non_empty(self.status, "status")
+        _require_non_empty(self.explanation_nl, "explanation_nl")
+        if self.safe_for_analysis or self.safe_for_suggestions or self.safe_for_action_drafts:
+            raise ValueError("All safe_for_* fields must remain false in this non-runtime skeleton.")
+
+
 
 
 @dataclass(frozen=True)
@@ -1371,6 +1412,15 @@ class RequestAuditRepository(Protocol):
     def list_freshness_audits(self, limit: int = 100) -> StorageListResult[FreshnessAuditRecord]: ...
 
 class MarketDataSnapshotRepository(Protocol):
+    def save_latest_market_data_snapshot(
+        self, record: MarketDataLatestSnapshotRecord
+    ) -> StorageWriteResult: ...
+    def get_latest_market_data_snapshot_by_conid(
+        self, ibkr_conid: str
+    ) -> StorageReadResult[MarketDataLatestSnapshotRecord]: ...
+    def list_latest_market_data_snapshots_by_conids(
+        self, conids: tuple[str, ...]
+    ) -> StorageListResult[MarketDataLatestSnapshotRecord]: ...
     def get_latest_by_ibkr_conid(
         self,
         ibkr_conid: str,
