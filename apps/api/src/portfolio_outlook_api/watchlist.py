@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from enum import StrEnum
+from typing import TypeVar
 from uuid import uuid4
 
 from ai_trading_agent_storage import (
+    AssetListingRecord,
     SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
     StorageConnectionProvider,
@@ -13,13 +16,14 @@ from ai_trading_agent_storage import (
 )
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from enum import StrEnum
 
 from portfolio_outlook_api.config import settings
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 VALID_STATUSES = {"valid", "unvalidated", "not_found", "ambiguous", "error", "unsupported"}
+
+T = TypeVar("T")
 
 
 class AssetIdentitySummary(BaseModel):
@@ -134,8 +138,8 @@ def _norm(value: str | None) -> str:
 
 
 def _with_repository(
-    operation: Callable[[SqlAlchemyResearchSourceArchiveRepository], AssetIdentitySummary | None],
-) -> AssetIdentitySummary | None:
+    operation: Callable[[SqlAlchemyResearchSourceArchiveRepository], T],
+) -> T | None:
     storage_settings = settings.storage
     if not storage_settings.enabled:
         return None
@@ -193,8 +197,6 @@ def _analysis_readiness(item: WatchlistItem) -> str:
     return "Niet klaar voor analyse"
 
 
-
-
 def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadiness:
     if not settings.storage.enabled or not settings.storage.database_url:
         return WatchlistAssetListingReadiness(
@@ -206,8 +208,14 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
             action_drafts_allowed=False,
             blocker_code="storage_unavailable",
             status_nl="AssetListing-opslag niet beschikbaar",
-            next_step_nl="Configureer opslag om AssetListing-identiteit aan de volglijst te koppelen.",
-            audit_help_nl="Read-only koppelstatus; geen runtime market data, analyse, suggesties of acties.",
+            next_step_nl=(
+                "Configureer opslag om AssetListing-identiteit aan de volglijst "
+                "te koppelen."
+            ),
+            audit_help_nl=(
+                "Read-only koppelstatus; geen runtime market data, analyse, "
+                "suggesties of acties."
+            ),
         )
     if not item.ibkr_conid:
         return WatchlistAssetListingReadiness(
@@ -219,11 +227,14 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
             action_drafts_allowed=False,
             blocker_code="missing_ibkr_conid",
             status_nl="Geen IBKR-contract gekoppeld",
-            next_step_nl="Voeg eerst een gevalideerd IBKR-contract (conid) toe en koppel daarna een AssetListing.",
+            next_step_nl=(
+                "Voeg eerst een gevalideerd IBKR-contract (conid) toe en koppel "
+                "daarna een AssetListing."
+            ),
             audit_help_nl="Zonder contractidentiteit blijft alles geblokkeerd.",
         )
 
-    def op(repo: SqlAlchemyResearchSourceArchiveRepository):
+    def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> AssetListingRecord | None:
         return repo.get_asset_listing_by_ibkr_conid(item.ibkr_conid)
 
     listing = _with_repository(op)
@@ -237,7 +248,10 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
             action_drafts_allowed=False,
             blocker_code="missing_asset_listing",
             status_nl="AssetListing ontbreekt",
-            next_step_nl="Maak of koppel een AssetListing op basis van dit IBKR-contract vóór latere market-data/analysestappen.",
+            next_step_nl=(
+                "Maak of koppel een AssetListing op basis van dit IBKR-contract "
+                "vóór latere market-data/analysestappen."
+            ),
             audit_help_nl="Read-only status: geen runtime activatie of fetch.",
         )
 
@@ -261,8 +275,14 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
             action_drafts_allowed=False,
             blocker_code="listing_not_validated_or_safe",
             status_nl="AssetListing nog niet veilig gevalideerd",
-            next_step_nl="Valideer de listing-identiteit en veiligheidsvlaggen; runtime blijft daarna nog steeds uit.",
-            audit_help_nl="Contractstatus-only: geen market-data runtime, analyse, suggesties of acties.",
+            next_step_nl=(
+                "Valideer de listing-identiteit en veiligheidsvlaggen; runtime "
+                "blijft daarna nog steeds uit."
+            ),
+            audit_help_nl=(
+                "Contractstatus-only: geen market-data runtime, analyse, "
+                "suggesties of acties."
+            ),
         )
 
     return WatchlistAssetListingReadiness(
@@ -283,9 +303,16 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
         action_drafts_allowed=False,
         blocker_code="runtime_not_active",
         status_nl="AssetListing gevalideerd (read-only)",
-        next_step_nl="Contractstatus gekend, maar market-data runtime/scheduler/analyse staan nog niet actief.",
-        audit_help_nl="Read-only status zonder runtime-fetch, suggesties, Decision Packages of actiedrafts.",
+        next_step_nl=(
+            "Contractstatus gekend, maar market-data runtime/scheduler/analyse "
+            "staan nog niet actief."
+        ),
+        audit_help_nl=(
+            "Read-only status zonder runtime-fetch, suggesties, Decision Packages "
+            "of actiedrafts."
+        ),
     )
+
 
 def _serialize_item(item: WatchlistItem) -> WatchlistItemResponse:
     linked_asset = _resolve_asset_summary(item.asset_id, fail_if_missing=False)
