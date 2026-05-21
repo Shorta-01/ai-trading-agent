@@ -216,20 +216,63 @@ def test_detail_endpoints_404(monkeypatch) -> None:
 def test_mapper_endpoints_contract_regression(monkeypatch) -> None:
     now = datetime.now(UTC)
     req = RequestLogRecord(
-        request_log_id='r1', correlation_id='c1', request_family='audit', request_purpose='status', created_at=now, completed_at=None,
-        provider_code='ibkr', provider_account_mode='paper', provider_environment='sandbox', source_type='broker', data_domain='market_data',
-        request_kind='list', request_target='/audit', request_status='blocked', initiated_by='api', pacing_weight=0, provider_request_budget_remaining=0,
-        retry_count=0, received_record_count=0, stored_record_count=0, rejected_record_count=0, safe_for_analysis=False, safe_for_suggestions=False,
-        safe_for_action_drafts=False, explanation_nl='blocked',
+        request_log_id='r1',
+        correlation_id='c1',
+        request_family='audit',
+        request_purpose='status',
+        created_at=now,
+        completed_at=None,
+        provider_code='ibkr',
+        provider_account_mode='paper',
+        provider_environment='sandbox',
+        source_type='broker',
+        data_domain='market_data',
+        request_kind='list',
+        request_target='/audit',
+        request_status='blocked',
+        initiated_by='api',
+        pacing_weight=0,
+        provider_request_budget_remaining=0,
+        retry_count=0,
+        received_record_count=0,
+        stored_record_count=0,
+        rejected_record_count=0,
+        safe_for_analysis=False,
+        safe_for_suggestions=False,
+        safe_for_action_drafts=False,
+        explanation_nl='blocked',
     )
     src = ProviderSourceRecord(
-        provider_source_id='p1', provider_code='ibkr', provider_kind='broker', data_domain='market_data', source_type='feed', provider_environment='sandbox',
-        provider_account_mode='paper', source_effective_from=None, source_effective_to=None, created_at=now, updated_at=now, explanation_nl='meta',
+        provider_source_id='p1',
+        provider_code='ibkr',
+        provider_kind='broker',
+        data_domain='market_data',
+        source_type='feed',
+        provider_environment='sandbox',
+        provider_account_mode='paper',
+        source_effective_from=None,
+        source_effective_to=None,
+        created_at=now,
+        updated_at=now,
+        explanation_nl='meta',
     )
     fa = FreshnessAuditRecord(
-        freshness_audit_id='f1', evaluated_at=now, data_domain='market_data', freshness_policy_code='snapshot', freshness_status='blocked', snapshot_as_of=now,
-        stale_after=now, expires_at=None, age_seconds=3, freshness_window_seconds=1, safe_for_analysis=False, safe_for_suggestions=False,
-        safe_for_action_drafts=False, explanation_nl='stale', request_log_id='r1', provider_source_id='p1',
+        freshness_audit_id='f1',
+        evaluated_at=now,
+        data_domain='market_data',
+        freshness_policy_code='snapshot',
+        freshness_status='blocked',
+        snapshot_as_of=now,
+        stale_after=now,
+        expires_at=None,
+        age_seconds=3,
+        freshness_window_seconds=1,
+        safe_for_analysis=False,
+        safe_for_suggestions=False,
+        safe_for_action_drafts=False,
+        explanation_nl='stale',
+        request_log_id='r1',
+        provider_source_id='p1',
     )
 
     class Repo:
@@ -240,7 +283,10 @@ def test_mapper_endpoints_contract_regression(monkeypatch) -> None:
         def get_provider_source(self, _id: str): return _Read(src)
         def get_freshness_audit(self, _id: str): return _Read(fa)
 
-    monkeypatch.setattr('portfolio_outlook_api.request_audit._with_repository', lambda op: op(Repo()))
+    monkeypatch.setattr(
+        'portfolio_outlook_api.request_audit._with_repository',
+        lambda op: op(Repo()),
+    )
     logs = client.get('/audit/request-logs').json()['items'][0]
     provider = client.get('/audit/provider-sources').json()['items'][0]
     freshness = client.get('/audit/freshness-audits').json()['items'][0]
