@@ -105,3 +105,11 @@ Deze taak is documentatie/inventaris-only:
 - geen AI runtime;
 - geen suggesties/Decision Packages/actiedrafts/orders;
 - geen fake market/broker/recommendation data.
+
+## G) PR-review checklist koppeling (Task 99)
+
+De inventaris blijft de inhoudelijke referentiebron voor veilige read-only wording per scherm/contract.
+
+Gebruik voor PR-reviews aanvullend: `docs/product/read-only-readiness-pr-checklist.md`.
+- De inventaris = bron van termen/patronen en scopecontext.
+- De checklist = compacte reviewer-tool vóór merge.

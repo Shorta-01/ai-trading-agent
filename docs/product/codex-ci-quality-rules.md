@@ -97,3 +97,9 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    - Every new API route module must pass `mypy src` before merge.
    - API pytest must run after any new route module is added.
    - A PR that says API mypy or API pytest could not be validated is not ready.
+
+
+14. **Read-only readiness review guardrail voor UI/API wording**
+   - Wanneer een PR UI/API labels, help-tekst, status-tekst of response-contracten wijzigt, moeten reviewers `docs/product/read-only-readiness-pr-checklist.md` expliciet toepassen.
+   - Onveilige readiness-termen moeten afwezig zijn of expliciet ontkend worden.
+   - Dit is een documentatie/review-guardrail en **geen** geautomatiseerde CI-regel.

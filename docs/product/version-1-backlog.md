@@ -235,3 +235,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 
 - [x] Task 98 — Read-only readiness UI/API contractinventaris (documentatie-only): nieuw inventarisdocument voor resterende UI-schermen + API/client contracten met veilige/onveilige labelpatronen en conservatieve follow-up governance; geen runtime market-data/latest-price fetching/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data.
+
+
+- [x] Task 99 — documentatie/review-guardrail-only: compacte read-only readiness PR-checklist + term-review rubric toegevoegd en gekoppeld in productdocumentatie; geen runtime market-data fetching/latest-price fetching/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/orders/fake data.

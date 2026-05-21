@@ -150,3 +150,8 @@ Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/fr
 
 
 | Task 98 read-only readiness UI/API contract inventory | Contracted | N/A | N/A | N/A | Runtime pending | Documentatie/inventaris-only guardrail voor labelconsistentie in resterende schermen + readiness-contracten; geen runtime market-data/latest-price fetching/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data. |
+
+
+## Task 99 (documentation/review-guardrail only)
+
+Task 99 voegt een compacte read-only readiness PR-checklist en term-review rubric toe als documentatie/review-guardrail. Dit verandert geen runtimegedrag en unlockt geen market-data runtime, latest-price fetching, scheduler/background jobs, forecast runtime, AI runtime, suggesties, Decision Packages, action drafts of orders.

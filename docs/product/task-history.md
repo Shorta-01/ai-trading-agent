@@ -1,3 +1,12 @@
+## Task 99 — Read-only readiness PR checklist en term-review rubric
+
+- Status: afgerond (documentatie/review-guardrail-only).
+- Nieuw document toegevoegd: `docs/product/read-only-readiness-pr-checklist.md` met purpose, toepassingsscope, verplichte reviewerchecklist, term-review rubric, PR-body standaardtekst en escalatieregel.
+- Inventory-document gekoppeld als referentiebron + checklist als compacte PR-reviewtool.
+- CI quality rules-document aangevuld met expliciete documentatie/review-guardrail voor UI/API wording- en contractwijzigingen (niet geautomatiseerd in CI).
+- PR-template check uitgevoerd: geen bestaande PR-template gevonden onder `.github/`, dus geen templatewijziging gedaan.
+- Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
+
 ## Task 98 — Read-only readiness UI/API contract inventory for remaining screens
 
 - Status: afgerond (documentatie/inventaris-only).
