@@ -1,6 +1,7 @@
 """Typed read-only market-data readiness response contracts and builders."""
 
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Protocol
 
 from pydantic import BaseModel
@@ -17,6 +18,27 @@ class ReadinessWatchlistItemLike(Protocol):
 class ReadinessValidationStatus(BaseModel):
     ibkr_conid_present: bool
     ibkr_contract_validated: bool
+
+
+class ReadinessStatus(StrEnum):
+    BLOCKED = "blocked"
+    READY = "ready"
+
+
+class ReadinessFreshnessStatus(StrEnum):
+    MISSING_SNAPSHOT = "missing_snapshot"
+    SNAPSHOT_AVAILABLE = "snapshot_available"
+
+
+class ReadinessBlockerCode(StrEnum):
+    MISSING_OR_UNVALIDATED_IBKR_CONTRACT = "missing_or_unvalidated_ibkr_contract"
+
+
+class LatestSnapshotStatus(StrEnum):
+    NOT_CONFIGURED = "not_configured"
+    MISSING_SNAPSHOT = "missing_snapshot"
+    SNAPSHOT_AVAILABLE = "snapshot_available"
+    STORAGE_FAILURE = "storage_failure"
 
 
 class ReadinessSnapshotMetadata(BaseModel):
@@ -46,10 +68,10 @@ class ReadinessRow(BaseModel):
     asset_id: str | None
     ibkr_conid: str | None
     symbol: str
-    readiness_status: str
-    status: str
-    freshness_status: str
-    blocker_code: str | None
+    readiness_status: ReadinessStatus
+    status: ReadinessStatus
+    freshness_status: ReadinessFreshnessStatus
+    blocker_code: ReadinessBlockerCode | None
     blocker_reason_nl: str
     required_identity_fields: list[str]
     missing_identity_fields: list[str]
@@ -74,7 +96,7 @@ class ReadinessDetailResponse(BaseModel):
 
 class LatestSnapshotResponse(BaseModel):
     ibkr_conid: str
-    status: str
+    status: LatestSnapshotStatus
     status_nl: str
     latest_snapshot_metadata: ReadinessSnapshotMetadata | None
     evaluated_at: str
@@ -98,9 +120,15 @@ def build_readiness_row(
     conid_present = bool(conid)
     validation_ok = item.ibkr_validation_status == "valid"
     ready = validation_ok and conid_present
-    freshness_status = "snapshot_available" if snapshot_metadata else "missing_snapshot"
-    status = "ready" if ready else "blocked"
-    blocker_code = None if ready else "missing_or_unvalidated_ibkr_contract"
+    freshness_status = (
+        ReadinessFreshnessStatus.SNAPSHOT_AVAILABLE
+        if snapshot_metadata
+        else ReadinessFreshnessStatus.MISSING_SNAPSHOT
+    )
+    status = ReadinessStatus.READY if ready else ReadinessStatus.BLOCKED
+    blocker_code = (
+        None if ready else ReadinessBlockerCode.MISSING_OR_UNVALIDATED_IBKR_CONTRACT
+    )
 
     missing_identity_fields: list[str] = []
     if not conid_present:
@@ -158,7 +186,7 @@ def build_latest_snapshot_response(
     ibkr_conid: str,
     latest_snapshot_metadata: ReadinessSnapshotMetadata | None,
     *,
-    status: str,
+    status: LatestSnapshotStatus,
     status_nl: str,
     evaluated_at: str,
     missing_reason: str | None = None,

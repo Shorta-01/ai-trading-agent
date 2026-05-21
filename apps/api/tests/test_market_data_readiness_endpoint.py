@@ -4,9 +4,13 @@ from fastapi.testclient import TestClient
 from portfolio_outlook_api.main import app
 from portfolio_outlook_api.market_data_readiness import (
     LatestSnapshotResponse,
+    LatestSnapshotStatus,
+    ReadinessBlockerCode,
     ReadinessDetailResponse,
+    ReadinessFreshnessStatus,
     ReadinessListResponse,
     ReadinessSnapshotMetadata,
+    ReadinessStatus,
 )
 from portfolio_outlook_api.watchlist import STORE, WatchlistItem
 
@@ -27,6 +31,19 @@ def _item(item_id: str, *, conid: str | None, validation_status: str | None) -> 
         updated_at="2026-05-20T00:00:00Z",
         ibkr_conid=conid,
         ibkr_validation_status=validation_status,
+    )
+
+
+def _inactive_item(item_id: str) -> WatchlistItem:
+    return WatchlistItem(
+        watchlist_item_id=item_id,
+        symbol="AAPL",
+        status="inactive",
+        source="manual",
+        created_at="2026-05-20T00:00:00Z",
+        updated_at="2026-05-20T00:00:00Z",
+        ibkr_conid="265598",
+        ibkr_validation_status="valid",
     )
 
 
@@ -69,6 +86,16 @@ def test_market_data_readiness_ready_for_validated_identity_only() -> None:
     assert "snapshot" in row["next_step_nl"].lower()
 
 
+def test_market_data_readiness_excludes_inactive_items() -> None:
+    STORE["w-1"] = _item("w-1", conid="265598", validation_status="valid")
+    STORE["w-2"] = _inactive_item("w-2")
+    response = client.get("/market-data/readiness")
+    assert response.status_code == 200
+    payload = ReadinessListResponse.model_validate(response.json())
+    assert len(payload.items) == 1
+    assert payload.items[0].watchlist_item_id == "w-1"
+
+
 def test_market_data_readiness_watchlist_detail_endpoint() -> None:
     STORE["w-1"] = _item("w-1", conid="265598", validation_status="valid")
     response = client.get("/market-data/readiness/watchlist/w-1")
@@ -85,7 +112,13 @@ def test_market_data_readiness_list_response_contract() -> None:
 
     parsed = ReadinessListResponse.model_validate(response.json())
     assert parsed.help_nl
-    assert parsed.items[0].status == "blocked"
+    assert parsed.items[0].status == ReadinessStatus.BLOCKED
+    assert parsed.items[0].readiness_status == ReadinessStatus.BLOCKED
+    assert parsed.items[0].freshness_status == ReadinessFreshnessStatus.MISSING_SNAPSHOT
+    assert (
+        parsed.items[0].blocker_code
+        == ReadinessBlockerCode.MISSING_OR_UNVALIDATED_IBKR_CONTRACT
+    )
     assert parsed.items[0].validation_status.ibkr_conid_present is False
 
 
@@ -103,7 +136,7 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
     assert parsed.ibkr_conid == "265598"
-    assert parsed.status == "not_configured"
+    assert parsed.status == LatestSnapshotStatus.NOT_CONFIGURED
     assert parsed.latest_snapshot_metadata is None
     assert parsed.missing_reason == "storage_not_configured"
     assert "geen" in parsed.help_nl.lower()
@@ -158,7 +191,7 @@ def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatc
     response = client.get("/market-data/snapshots/latest/265598")
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
-    assert parsed.status == "missing_snapshot"
+    assert parsed.status == LatestSnapshotStatus.MISSING_SNAPSHOT
     assert parsed.status_nl == "Nog geen snapshotmetadata opgeslagen."
     assert parsed.missing_reason == "snapshot_not_found"
     assert parsed.latest_snapshot_metadata is None
@@ -189,7 +222,7 @@ def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch
     response = client.get("/market-data/snapshots/latest/265598")
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
-    assert parsed.status == "storage_failure"
+    assert parsed.status == LatestSnapshotStatus.STORAGE_FAILURE
     assert parsed.blocker_reason == "storage_connection_failed"
     assert parsed.latest_snapshot_metadata is None
     assert "orders" in parsed.help_nl.lower()
@@ -216,6 +249,19 @@ def test_market_data_readiness_missing_conid_remains_blocked() -> None:
     assert row["status"] == "blocked"
     assert row["blocker_code"] == "missing_or_unvalidated_ibkr_contract"
     assert "ibkr_conid" in row["missing_identity_fields"]
+
+
+def test_market_data_readiness_invalid_validation_status_is_blocked() -> None:
+    STORE["w-1"] = _item("w-1", conid="265598", validation_status="invalid")
+    response = client.get("/market-data/readiness/watchlist/w-1")
+    assert response.status_code == 200
+    parsed = ReadinessDetailResponse.model_validate(response.json())
+    assert parsed.item is not None
+    assert parsed.item.status == ReadinessStatus.BLOCKED
+    assert (
+        parsed.item.blocker_code
+        == ReadinessBlockerCode.MISSING_OR_UNVALIDATED_IBKR_CONTRACT
+    )
 
 
 def test_market_data_readiness_stored_snapshot_metadata_is_read_only(monkeypatch) -> None:

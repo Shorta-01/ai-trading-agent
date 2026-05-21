@@ -1,5 +1,20 @@
 # Task History (concise)
 
+## Task 91 — Conservative market-data readiness status enum normalization and regression hardening
+
+- Status: completed.
+- Scope: API-contract + tests + docs hardening only (read-only).
+- Readiness list/detail responses gebruiken nu expliciete typed statusnormalisatie voor readiness/freshness/blocker-codes.
+- Nederlandse help/statusvelden zijn centraal gestabiliseerd en regressie-getest.
+- Latest snapshot statusvarianten blijven genormaliseerd en regressie-getest: `not_configured`, `missing_snapshot`, `snapshot_available`, `storage_failure`.
+- Geen market-data runtime toegevoegd.
+- Geen historical fetching toegevoegd.
+- Geen scheduler toegevoegd.
+- Geen AI runtime toegevoegd.
+- Geen suggesties, Decision Packages, action drafts of IBKR-ordergedrag toegevoegd.
+- Geen fake market prices, brokerdata of recommendations toegevoegd.
+- Unresolved/unvalidated identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
+
 ## Task 90 — Conservative market-data readiness API cleanup
 
 - Status: completed.

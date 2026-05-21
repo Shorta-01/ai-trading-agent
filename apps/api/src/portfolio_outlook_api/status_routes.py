@@ -23,6 +23,7 @@ from portfolio_outlook_api.ibkr_watchlists import (
 )
 from portfolio_outlook_api.market_data_readiness import (
     LatestSnapshotResponse,
+    LatestSnapshotStatus,
     ReadinessDetailResponse,
     ReadinessListResponse,
     ReadinessRow,
@@ -356,7 +357,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
         return build_latest_snapshot_response(
             ibkr_conid,
             None,
-            status="not_configured",
+            status=LatestSnapshotStatus.NOT_CONFIGURED,
             status_nl="Storage niet geconfigureerd.",
             missing_reason="storage_not_configured",
             evaluated_at=evaluated_at,
@@ -372,7 +373,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
                 return build_latest_snapshot_response(
                     ibkr_conid,
                     None,
-                    status="missing_snapshot",
+                    status=LatestSnapshotStatus.MISSING_SNAPSHOT,
                     status_nl="Nog geen snapshotmetadata opgeslagen.",
                     missing_reason="snapshot_not_found",
                     evaluated_at=evaluated_at,
@@ -380,7 +381,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
             return build_latest_snapshot_response(
                 ibkr_conid,
                 ReadinessSnapshotMetadata.model_validate(result.record.__dict__),
-                status="snapshot_available",
+                status=LatestSnapshotStatus.SNAPSHOT_AVAILABLE,
                 status_nl="Snapshotmetadata beschikbaar.",
                 evaluated_at=evaluated_at,
             )
@@ -388,7 +389,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
         return build_latest_snapshot_response(
             ibkr_conid,
             None,
-            status="storage_failure",
+            status=LatestSnapshotStatus.STORAGE_FAILURE,
             status_nl="Storageverbinding mislukt.",
             blocker_reason="storage_connection_failed",
             evaluated_at=evaluated_at,
