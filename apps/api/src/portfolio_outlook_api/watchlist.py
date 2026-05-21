@@ -14,7 +14,7 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.market_data_readiness import READINESS_BOUNDARY_TEXT_NL
@@ -88,14 +88,34 @@ class WatchlistAssetListingReadiness(BaseModel):
     currency: str | None = None
     validation_status: str | None = None
     validated_at: str | None = None
-    market_data_ready: bool
-    analysis_ready: bool
-    suggestions_allowed: bool
-    action_drafts_allowed: bool
+    market_data_ready: bool = Field(
+        description=(
+            "Read-only status only: altijd false; geen market-data runtime, "
+            "geen runtime-fetch en geen live/current/latest prijs."
+        )
+    )
+    analysis_ready: bool = Field(
+        description="Read-only status only: altijd false; geen analysevrijgave."
+    )
+    suggestions_allowed: bool = Field(
+        description=(
+            "Read-only status only: altijd false; geen suggesties/"
+            "Decision Packages."
+        )
+    )
+    action_drafts_allowed: bool = Field(
+        description="Read-only status only: altijd false; geen actiedrafts/orders."
+    )
     blocker_code: str | None = None
     status_nl: str
     next_step_nl: str
-    audit_help_nl: str
+    audit_help_nl: str = Field(
+        description=(
+            "Nederlandse auditgrens-tekst: read-only, geen market-data runtime, "
+            "geen runtime-fetch, analysevrijgave, suggesties, Decision Packages, "
+            "actiedrafts of orders."
+        )
+    )
 
 
 class WatchlistItemResponse(BaseModel):

@@ -11,7 +11,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 96**.
+- Huidige toestand: **na Task 97**.
 - CI-status: **hersteld en groen** na repository visibility change naar public; GitHub Actions execution/logging is weer zichtbaar en bruikbaar.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
@@ -20,6 +20,9 @@
 
 - Task 95: **completed** — read-only market-data readiness / AssetListing validation-gate harmonisatie afgerond (API/tests/docs). Readiness list/detail responses bevatten nu expliciet typed `asset_listing_gate` met statusvarianten `storage_unavailable`, `missing_ibkr_conid`, `missing_listing`, `unvalidated_listing`, `validated_listing` en eenvoudige Nederlandse status/next-step/audit-tekst. Missing of unvalidated AssetListing blijft market data/analysis/suggesties/action drafts blokkeren; gevalideerde AssetListing blijft identity/status-only en start geen runtime market-data fetching. Geen market-data runtime/fetching/historical/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data toegevoegd.
 
+
+
+- Task 97: **completed** — API model-documentatie/type-metadata + web UI labelconsumptie + tests/docs hardening voor read-only readiness boundaries afgerond. Volglijst gebruikt nu `asset_listing_readiness.status_nl` + `next_step_nl` als hoofdstatus. Geen market-data runtime of runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen historical/forecast/AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 
 - Task 96: **completed** — conservatieve read-only terminologieharmonisatie afgerond voor watchlist AssetListing readiness, market-data readiness AssetListing-gate en latest-snapshot responses (API/tests/docs). NL boundary-tekst is nu geharmoniseerd rond read-only status: geen market-data runtime, geen runtime-fetch, geen analysevrijgave, geen suggesties, geen Decision Packages, geen actiedrafts en geen orders. Latest snapshot blijft metadata/status-only (geen live/current prijs). Missing/unvalidated AssetListing blijft blocked; validated AssetListing blijft identity/status-only. Geen market-data runtime/fetching/historical/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data toegevoegd.
 
