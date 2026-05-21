@@ -1,5 +1,3 @@
-# Next Task — Task 116
+# Next Task
 
-## Task 116 — Conservative audit viewer contract test harness and CI reliability hardening
-
-Centraliseer request-audit fixture builders, voeg contractvalidatiehelpers toe voor responsemodel vs storage-dataclass consistentie, en verlaag CI-drift risico. Scope blijft read-only/non-runtime: geen runtime-fetch, geen suggesties, geen actiedrafts en geen orders.
+Task 118 — Koppel Task 117 provider-statuscontracten aan storage request-log/freshness-audit + API/UI statusbadges voor portfolio/volglijst op conid-niveau (nog steeds zonder analyse/suggesties/action drafts unlock).
