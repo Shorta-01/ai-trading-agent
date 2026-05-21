@@ -1,7 +1,9 @@
+from ai_trading_agent_storage import StorageConnectionError
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.main import app
 from portfolio_outlook_api.market_data_readiness import (
+    LatestSnapshotResponse,
     ReadinessDetailResponse,
     ReadinessListResponse,
     ReadinessSnapshotMetadata,
@@ -99,7 +101,98 @@ def test_market_data_readiness_detail_response_contract_for_missing_item() -> No
 def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled() -> None:
     response = client.get("/market-data/snapshots/latest/265598")
     assert response.status_code == 200
-    assert response.json()["item"] is None
+    parsed = LatestSnapshotResponse.model_validate(response.json())
+    assert parsed.ibkr_conid == "265598"
+    assert parsed.status == "not_configured"
+    assert parsed.latest_snapshot_metadata is None
+    assert parsed.missing_reason == "storage_not_configured"
+    assert "geen" in parsed.help_nl.lower()
+
+
+def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatch) -> None:
+    class _FakeStorageSettings:
+        enabled = True
+        database_url = "sqlite:///fake"
+
+    class _FakeContext:
+        def __enter__(self) -> object:
+            class _Checked:
+                connection = object()
+                readiness = object()
+
+            return _Checked()
+
+        def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+            return None
+
+    class _GoodProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool) -> _FakeContext:
+            assert require_writable is False
+            return _FakeContext()
+
+    class _FakeRepo:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def get_latest_by_ibkr_conid(self, _ibkr_conid: str) -> object:
+            class _Result:
+                record = None
+
+            return _Result()
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.StorageConnectionProvider",
+        _GoodProvider,
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.SqlAlchemyMarketDataSnapshotRepository", _FakeRepo
+    )
+
+    response = client.get("/market-data/snapshots/latest/265598")
+    assert response.status_code == 200
+    parsed = LatestSnapshotResponse.model_validate(response.json())
+    assert parsed.status == "missing_snapshot"
+    assert parsed.status_nl == "Nog geen snapshotmetadata opgeslagen."
+    assert parsed.missing_reason == "snapshot_not_found"
+    assert parsed.latest_snapshot_metadata is None
+
+
+def test_market_data_snapshot_latest_returns_storage_failure_variant(monkeypatch) -> None:
+    class _FakeStorageSettings:
+        enabled = True
+        database_url = "sqlite:///fake"
+
+    class _FailingProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool) -> object:
+            assert require_writable is False
+            raise StorageConnectionError("boom")
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.StorageConnectionProvider",
+        _FailingProvider,
+    )
+
+    response = client.get("/market-data/snapshots/latest/265598")
+    assert response.status_code == 200
+    parsed = LatestSnapshotResponse.model_validate(response.json())
+    assert parsed.status == "storage_failure"
+    assert parsed.blocker_reason == "storage_connection_failed"
+    assert parsed.latest_snapshot_metadata is None
+    assert "orders" in parsed.help_nl.lower()
 
 
 def test_market_data_readiness_missing_snapshot_includes_dutch_audit_fields() -> None:

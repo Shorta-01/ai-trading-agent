@@ -72,6 +72,18 @@ class ReadinessDetailResponse(BaseModel):
     message_nl: str | None = None
 
 
+class LatestSnapshotResponse(BaseModel):
+    ibkr_conid: str
+    status: str
+    status_nl: str
+    latest_snapshot_metadata: ReadinessSnapshotMetadata | None
+    evaluated_at: str
+    missing_reason: str | None = None
+    blocker_reason: str | None = None
+    next_step_nl: str
+    help_nl: str
+
+
 def utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -139,4 +151,37 @@ def build_readiness_row(
             "geen fetch, geen analyse en geen suggestievrijgave."
         ),
         help_nl="Geen market-data runtime actief; alleen readiness/foundation-status.",
+    )
+
+
+def build_latest_snapshot_response(
+    ibkr_conid: str,
+    latest_snapshot_metadata: ReadinessSnapshotMetadata | None,
+    *,
+    status: str,
+    status_nl: str,
+    evaluated_at: str,
+    missing_reason: str | None = None,
+    blocker_reason: str | None = None,
+) -> LatestSnapshotResponse:
+    if latest_snapshot_metadata is None:
+        next_step_nl = (
+            "Controleer storageconfiguratie of wacht op eerste opgeslagen snapshotmetadata."
+        )
+    else:
+        next_step_nl = "Gebruik alleen metadata voor audit/status; dit is geen runtime-marktprijs."
+
+    return LatestSnapshotResponse(
+        ibkr_conid=ibkr_conid,
+        status=status,
+        status_nl=status_nl,
+        latest_snapshot_metadata=latest_snapshot_metadata,
+        evaluated_at=evaluated_at,
+        missing_reason=missing_reason,
+        blocker_reason=blocker_reason,
+        next_step_nl=next_step_nl,
+        help_nl=(
+            "Read-only snapshotmetadata-status; geen runtime fetch, geen analyse, "
+            "geen suggesties, geen Decision Packages en geen acties/orders."
+        ),
     )
