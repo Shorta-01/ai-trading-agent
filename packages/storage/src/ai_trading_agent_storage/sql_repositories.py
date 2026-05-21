@@ -71,7 +71,6 @@ from ai_trading_agent_storage.repository_contracts import (
     RequestLogRecord,
     ProviderSourceRecord,
     FreshnessAuditRecord,
-    RequestAuditRepository,
     RepositoryHealthStatus,
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
@@ -343,9 +342,6 @@ class SqlAlchemyPaperPortfolioSetupRepository(_Base):
     def create_setup(self, request: CreatePaperPortfolioSetupRequest) -> StorageWriteResult:
         self._insert(
             paper_portfolio_setups,
-    request_logs,
-    provider_sources,
-    freshness_audit_records,
             {
                 "setup_id": request.setup_id,
                 "portfolio_name": request.portfolio_name,
@@ -1557,42 +1553,116 @@ def _bounded_limit(limit: int) -> int:
 class SqlAlchemyRequestAuditRepository(_Base):
     def save_request_log(self, record: RequestLogRecord) -> StorageWriteResult:
         self._insert(request_logs, asdict(record))
-        return StorageWriteResult(True, record.request_log_id, request_logs.name, True, "Requestlog opgeslagen.")
+        return StorageWriteResult(
+            True, record.request_log_id, request_logs.name, True, "Requestlog opgeslagen."
+        )
 
     def get_request_log(self, request_log_id: str) -> StorageReadResult[RequestLogRecord]:
         row = _read_one_by_column(self._connection, request_logs, "request_log_id", request_log_id)
         if row is None:
             return StorageReadResult(False, None, request_logs.name, "Requestlog niet gevonden.")
-        return StorageReadResult(True, RequestLogRecord(**dict(row)), request_logs.name, "Requestlog gevonden.")
+        return StorageReadResult(
+            True, RequestLogRecord(**dict(row)), request_logs.name, "Requestlog gevonden."
+        )
 
     def list_request_logs(self, limit: int = 100) -> StorageListResult[RequestLogRecord]:
-        rows=self._connection.execute(select(request_logs).order_by(request_logs.c.created_at.desc()).limit(_bounded_limit(limit))).mappings().all()
-        return StorageListResult(tuple(RequestLogRecord(**dict(r)) for r in rows), request_logs.name, "Requestlogs opgehaald.")
+        rows = (
+            self._connection.execute(
+                select(request_logs)
+                .order_by(request_logs.c.created_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        return StorageListResult(
+            tuple(RequestLogRecord(**dict(r)) for r in rows),
+            request_logs.name,
+            "Requestlogs opgehaald.",
+        )
 
     def save_provider_source(self, record: ProviderSourceRecord) -> StorageWriteResult:
         self._insert(provider_sources, asdict(record))
-        return StorageWriteResult(True, record.provider_source_id, provider_sources.name, True, "Provider/source opgeslagen.")
+        return StorageWriteResult(
+            True,
+            record.provider_source_id,
+            provider_sources.name,
+            True,
+            "Provider/source opgeslagen.",
+        )
 
-    def get_provider_source(self, provider_source_id: str) -> StorageReadResult[ProviderSourceRecord]:
-        row=_read_one_by_column(self._connection, provider_sources, "provider_source_id", provider_source_id)
+    def get_provider_source(
+        self, provider_source_id: str
+    ) -> StorageReadResult[ProviderSourceRecord]:
+        row = _read_one_by_column(
+            self._connection, provider_sources, "provider_source_id", provider_source_id
+        )
         if row is None:
-            return StorageReadResult(False, None, provider_sources.name, "Provider/source niet gevonden.")
-        return StorageReadResult(True, ProviderSourceRecord(**dict(row)), provider_sources.name, "Provider/source gevonden.")
+            return StorageReadResult(
+                False, None, provider_sources.name, "Provider/source niet gevonden."
+            )
+        return StorageReadResult(
+            True,
+            ProviderSourceRecord(**dict(row)),
+            provider_sources.name,
+            "Provider/source gevonden.",
+        )
 
     def list_provider_sources(self, limit: int = 100) -> StorageListResult[ProviderSourceRecord]:
-        rows=self._connection.execute(select(provider_sources).order_by(provider_sources.c.updated_at.desc()).limit(_bounded_limit(limit))).mappings().all()
-        return StorageListResult(tuple(ProviderSourceRecord(**dict(r)) for r in rows), provider_sources.name, "Provider/sources opgehaald.")
+        rows = (
+            self._connection.execute(
+                select(provider_sources)
+                .order_by(provider_sources.c.updated_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        return StorageListResult(
+            tuple(ProviderSourceRecord(**dict(r)) for r in rows),
+            provider_sources.name,
+            "Provider/sources opgehaald.",
+        )
 
     def save_freshness_audit(self, record: FreshnessAuditRecord) -> StorageWriteResult:
         self._insert(freshness_audit_records, asdict(record))
-        return StorageWriteResult(True, record.freshness_audit_id, freshness_audit_records.name, True, "Freshness-audit opgeslagen.")
+        return StorageWriteResult(
+            True,
+            record.freshness_audit_id,
+            freshness_audit_records.name,
+            True,
+            "Freshness-audit opgeslagen.",
+        )
 
-    def get_freshness_audit(self, freshness_audit_id: str) -> StorageReadResult[FreshnessAuditRecord]:
-        row=_read_one_by_column(self._connection, freshness_audit_records, "freshness_audit_id", freshness_audit_id)
+    def get_freshness_audit(
+        self, freshness_audit_id: str
+    ) -> StorageReadResult[FreshnessAuditRecord]:
+        row = _read_one_by_column(
+            self._connection, freshness_audit_records, "freshness_audit_id", freshness_audit_id
+        )
         if row is None:
-            return StorageReadResult(False, None, freshness_audit_records.name, "Freshness-audit niet gevonden.")
-        return StorageReadResult(True, FreshnessAuditRecord(**dict(row)), freshness_audit_records.name, "Freshness-audit gevonden.")
+            return StorageReadResult(
+                False, None, freshness_audit_records.name, "Freshness-audit niet gevonden."
+            )
+        return StorageReadResult(
+            True,
+            FreshnessAuditRecord(**dict(row)),
+            freshness_audit_records.name,
+            "Freshness-audit gevonden.",
+        )
 
     def list_freshness_audits(self, limit: int = 100) -> StorageListResult[FreshnessAuditRecord]:
-        rows=self._connection.execute(select(freshness_audit_records).order_by(freshness_audit_records.c.evaluated_at.desc()).limit(_bounded_limit(limit))).mappings().all()
-        return StorageListResult(tuple(FreshnessAuditRecord(**dict(r)) for r in rows), freshness_audit_records.name, "Freshness-audits opgehaald.")
+        rows = (
+            self._connection.execute(
+                select(freshness_audit_records)
+                .order_by(freshness_audit_records.c.evaluated_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        return StorageListResult(
+            tuple(FreshnessAuditRecord(**dict(r)) for r in rows),
+            freshness_audit_records.name,
+            "Freshness-audits opgehaald.",
+        )
