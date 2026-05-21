@@ -319,8 +319,12 @@ def test_market_data_readiness_stored_snapshot_metadata_is_read_only(monkeypatch
     assert "alleen metadata" in row["latest_snapshot_metadata"]["explanation_nl"].lower()
     assert "read-only" in row["audit_help_nl"].lower()
     assert "geen market-data fetch" in row["help_nl"].lower()
-    assert "forecast" not in str(row).lower()
-    assert "decision package" not in str(row).lower()
+    row_text = str(row).lower()
+    assert "forecast" not in row_text
+    assert "geen decision packages" in row_text
+    assert row["analysis_ready"] is False
+    assert row["suggestions_allowed"] is False
+    assert row["action_drafts_allowed"] is False
     assert "order" not in str(row).lower()
     assert "price" not in row["latest_snapshot_metadata"]
     assert "recommendation" not in row["latest_snapshot_metadata"]
