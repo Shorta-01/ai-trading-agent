@@ -23,6 +23,14 @@ def _valid_payload() -> dict[str, str]:
     }
 
 
+def _enable_storage_for_asset_listing(monkeypatch) -> None:
+    monkeypatch.setattr("portfolio_outlook_api.watchlist.settings.storage.enabled", True)
+    monkeypatch.setattr(
+        "portfolio_outlook_api.watchlist.settings.storage.database_url",
+        "sqlite:///:memory:",
+    )
+
+
 def test_watchlist_create_requires_validated_ibkr_contract() -> None:
     bad = client.post("/watchlist/items", json={"symbol": "ASML"})
     assert bad.status_code == 422
@@ -83,6 +91,7 @@ def test_watchlist_asset_listing_missing(monkeypatch) -> None:
     created = client.post("/watchlist/items", json=_valid_payload())
     assert created.status_code == 200
 
+    _enable_storage_for_asset_listing(monkeypatch)
     monkeypatch.setattr("portfolio_outlook_api.watchlist._with_repository", lambda op: None)
     payload = client.get("/watchlist/items").json()["items"][0]
     readiness = payload["asset_listing_readiness"]
@@ -98,6 +107,7 @@ def test_watchlist_asset_listing_missing(monkeypatch) -> None:
 def test_watchlist_asset_listing_unvalidated(monkeypatch) -> None:
     created = client.post("/watchlist/items", json=_valid_payload())
     assert created.status_code == 200
+    _enable_storage_for_asset_listing(monkeypatch)
 
     class Listing:
         listing_id = "lst-1"
@@ -124,6 +134,7 @@ def test_watchlist_asset_listing_unvalidated(monkeypatch) -> None:
 def test_watchlist_asset_listing_validated_still_blocked_for_runtime(monkeypatch) -> None:
     created = client.post("/watchlist/items", json=_valid_payload())
     assert created.status_code == 200
+    _enable_storage_for_asset_listing(monkeypatch)
 
     class Listing:
         listing_id = "lst-2"
