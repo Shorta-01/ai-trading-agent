@@ -68,8 +68,8 @@ class ProviderSourceResponse(BaseModel):
     source_effective_to: datetime | None
     created_at: datetime
     updated_at: datetime
-    disabled_at: datetime | None
-    disabled_reason: str | None
+    disabled_at: datetime | None = None
+    disabled_reason: str | None = None
     safe_for_analysis: bool = False
     safe_for_suggestions: bool = False
     safe_for_action_drafts: bool = False
