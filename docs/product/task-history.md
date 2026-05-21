@@ -1,5 +1,16 @@
 # Task History (concise)
 
+## Task 92B — API pytest repair after Task 92 readiness hardening
+
+- Status: completed.
+- Scope: focused API/test/docs repair only.
+- Root causes opgelost: (1) drift in gecentraliseerde readiness audit/help-tekst, en (2) snapshot metadata-validatie via `record.__dict__` die faalde voor attribute-based test doubles.
+- Herstel: stabiele audit boundarytekst bevat nu expliciet `read-only` en `geen market-data runtime`; snapshot metadata wordt via attribute-based validatie opgebouwd voor zowel normale storage records als test doubles.
+- API-gedrag blijft read-only; geen market-data runtime, historical fetching, scheduler/background job of AI runtime toegevoegd.
+- Geen suggesties, Decision Packages, action drafts of IBKR-ordergedrag toegevoegd.
+- Geen fake market prices, brokerdata of recommendations toegevoegd.
+- Unresolved/unvalidated identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
+
 ## Task 92 — Conservative market-data readiness explainability and boundary consistency hardening
 
 Resultaat: afgerond (read-only API-contract/test/docs).

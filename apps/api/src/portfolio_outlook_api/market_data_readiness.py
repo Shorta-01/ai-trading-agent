@@ -69,8 +69,8 @@ READINESS_HELP_NL = (
 )
 
 READINESS_AUDIT_HELP_NL = (
-    "Dit is alleen status/auditinformatie. Geen runtime-fetch, geen analysevrijgave, "
-    "geen suggesties en geen acties/orders."
+    "Dit is read-only status/auditinformatie: geen market-data runtime, geen runtime-fetch, "
+    "geen analysevrijgave, geen suggesties en geen acties/orders."
 )
 
 
@@ -200,6 +200,12 @@ def build_readiness_row(
         suggestions_allowed=False,
         action_drafts_allowed=False,
     )
+
+
+def build_readiness_snapshot_metadata(record: object) -> ReadinessSnapshotMetadata:
+    """Build typed snapshot metadata from repository records or attribute-based test doubles."""
+
+    return ReadinessSnapshotMetadata.model_validate(record, from_attributes=True)
 
 
 def build_latest_snapshot_response(
