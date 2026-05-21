@@ -19,37 +19,6 @@ class ReadinessValidationStatus(BaseModel):
     ibkr_contract_validated: bool
 
 
-class ReadinessRow(BaseModel):
-    watchlist_item_id: str
-    asset_id: str | None
-    ibkr_conid: str | None
-    symbol: str
-    readiness_status: str
-    status: str
-    freshness_status: str
-    blocker_code: str | None
-    blocker_reason_nl: str
-    required_identity_fields: list[str]
-    missing_identity_fields: list[str]
-    validation_status: ReadinessValidationStatus
-    evaluated_at: str
-    latest_snapshot_metadata: "ReadinessSnapshotMetadata" | None
-    snapshot_metadata_present: bool
-    next_step_nl: str
-    audit_help_nl: str
-    help_nl: str
-
-
-class ReadinessListResponse(BaseModel):
-    items: list[ReadinessRow]
-    help_nl: str
-
-
-class ReadinessDetailResponse(BaseModel):
-    item: ReadinessRow | None
-    message_nl: str | None = None
-
-
 class ReadinessSnapshotMetadata(BaseModel):
     snapshot_id: str
     watchlist_item_id: str
@@ -70,6 +39,37 @@ class ReadinessSnapshotMetadata(BaseModel):
     blocked_reason: str | None
     raw_reference: str | None
     explanation_nl: str
+
+
+class ReadinessRow(BaseModel):
+    watchlist_item_id: str
+    asset_id: str | None
+    ibkr_conid: str | None
+    symbol: str
+    readiness_status: str
+    status: str
+    freshness_status: str
+    blocker_code: str | None
+    blocker_reason_nl: str
+    required_identity_fields: list[str]
+    missing_identity_fields: list[str]
+    validation_status: ReadinessValidationStatus
+    evaluated_at: str
+    latest_snapshot_metadata: ReadinessSnapshotMetadata | None
+    snapshot_metadata_present: bool
+    next_step_nl: str
+    audit_help_nl: str
+    help_nl: str
+
+
+class ReadinessListResponse(BaseModel):
+    items: list[ReadinessRow]
+    help_nl: str
+
+
+class ReadinessDetailResponse(BaseModel):
+    item: ReadinessRow | None
+    message_nl: str | None = None
 
 
 def utc_now_iso() -> str:
