@@ -1,12 +1,12 @@
 # Next Task
 
-## Task 105 — Conservatieve read-only terminology lock check follow-up
+## Task 106 — Conservatieve read-only terminology lock discipline follow-up
 
 Doel:
-- Houd scope documentatie-only en voer een korte lock-check uit op nieuwe producttrackingupdates na Task 104.
+- Houd scope documentatie-only en voer een korte lock-check uit op nieuwe producttrackingupdates na Task 105.
 - Bevestig dat `docs/product/locked-decisions.md` leidend blijft voor read-only status, metadata/status-only en expliciete “geen runtime” formuleringen.
 
-Niet doen in Task 105:
+Niet doen in Task 106:
 - geen market-data runtime of runtime-fetch;
 - geen latest-price fetching;
 - geen scheduler/background jobs;
