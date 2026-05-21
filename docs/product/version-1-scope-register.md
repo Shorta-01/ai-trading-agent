@@ -230,3 +230,6 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Compacte sustainability-checknotitie toegevoegd: `docs/product/read-only-readiness-sustainability-check-task-107.md`.
 - Tracking-drift preventieregel toegevoegd aan `docs/product/project-handover.md` en `docs/product/codex-ci-quality-rules.md` als documentatie/review discipline (geen CI-automatisering).
 - Geen runtime market-data fetching, runtime-fetch, latest-price fetching, scheduler/background jobs, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd.
+
+
+- Task 113 afgerond: read-only audit summary/count contracten + usability verbeteringen; geen runtime-unlock.

@@ -282,9 +282,9 @@ export type FreshnessAuditResponse = {
   help_nl: string;
   audit_help_nl: string;
 };
-export type RequestLogListResponse = { items: RequestLogResponse[]; status_nl: string; help_nl: string };
-export type ProviderSourceListResponse = { items: ProviderSourceResponse[]; status_nl: string; help_nl: string };
-export type FreshnessAuditListResponse = { items: FreshnessAuditResponse[]; status_nl: string; help_nl: string };
+export type RequestLogListResponse = { items: RequestLogResponse[]; total_count:number; safe_for_analysis_count:number; safe_for_suggestions_count:number; safe_for_action_drafts_count:number; blocked_for_analysis_count:number; blocked_for_suggestions_count:number; blocked_for_action_drafts_count:number; request_status_counts:Record<string,number>; provider_code_counts:Record<string,number>; data_domain_counts:Record<string,number>; audit_help_nl:string; status_nl: string; help_nl: string };
+export type ProviderSourceListResponse = { items: ProviderSourceResponse[]; total_count:number; provider_kind_counts:Record<string,number>; provider_code_counts:Record<string,number>; data_domain_counts:Record<string,number>; disabled_count:number; active_metadata_count:number; audit_help_nl:string; status_nl: string; help_nl: string };
+export type FreshnessAuditListResponse = { items: FreshnessAuditResponse[]; total_count:number; safe_for_analysis_count:number; safe_for_suggestions_count:number; safe_for_action_drafts_count:number; blocked_for_analysis_count:number; blocked_for_suggestions_count:number; blocked_for_action_drafts_count:number; freshness_status_counts:Record<string,number>; reason_code_counts:Record<string,number>; provider_code_counts:Record<string,number>; data_domain_counts:Record<string,number>; audit_help_nl:string; status_nl: string; help_nl: string };
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 async function getJson<T>(path: string): Promise<FetchState<T>> { /* unchanged */

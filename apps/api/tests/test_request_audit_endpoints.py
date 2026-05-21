@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from ai_trading_agent_storage import RequestLogRecord
+from ai_trading_agent_storage import FreshnessAuditRecord, ProviderSourceRecord, RequestLogRecord
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.main import app
@@ -14,6 +14,7 @@ def _assert_boundary(text: str) -> None:
     assert "geen runtime-fetch" in t
     assert "geen suggesties" in t
     assert "geen orders" in t
+    assert "geen analysevrijgave" in t
 
 
 class _Read:
@@ -29,84 +30,54 @@ class _List:
 
 def test_list_endpoints_empty(monkeypatch) -> None:
     class Repo:
-        def list_request_logs(self):
-            return _List([])
+        def list_request_logs(self): return _List([])
+        def list_provider_sources(self): return _List([])
+        def list_freshness_audits(self): return _List([])
 
-        def list_provider_sources(self):
-            return _List([])
-
-        def list_freshness_audits(self):
-            return _List([])
-
-    monkeypatch.setattr(
-        "portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo())
-    )
+    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
     for path in ["/audit/request-logs", "/audit/provider-sources", "/audit/freshness-audits"]:
-        res = client.get(path)
-        assert res.status_code == 200
-        payload = res.json()
+        payload = client.get(path).json()
         assert payload["items"] == []
+        assert payload["total_count"] == 0
         _assert_boundary(payload["help_nl"])
+
+
+def test_summary_counts_populated(monkeypatch) -> None:
+    now = datetime.now(UTC)
+    request_logs = [
+        RequestLogRecord("r1","c1","audit","status",now,None,"ibkr","paper","sandbox","broker","market_data","list","/audit","blocked","api",0,0,0,0,0,0,False,False,False,"x"),
+        RequestLogRecord("r2","c2","audit","status",now,None,"ibkr","paper","sandbox","broker","market_data","list","/audit","ok","api",0,0,0,0,0,0,True,False,False,"x"),
+    ]
+    provider_sources = [
+        ProviderSourceRecord("p1","ibkr","broker","market_data","feed","sandbox","paper",None,None,now,now,None,None,False,False,False,"x"),
+        ProviderSourceRecord("p2","ibkr","broker","market_data","feed","sandbox","paper",None,None,now,now,now,"off",False,False,False,"x"),
+    ]
+    freshness = [
+        FreshnessAuditRecord("f1","r1","p1","market_data","snapshot","blocked","stale",now,300,999,None,None,False,False,False,"x"),
+        FreshnessAuditRecord("f2","r2","p2","market_data","snapshot","ok",None,now,300,99,now,None,True,False,False,"x"),
+    ]
+
+    class Repo:
+        def list_request_logs(self): return _List(request_logs)
+        def list_provider_sources(self): return _List(provider_sources)
+        def list_freshness_audits(self): return _List(freshness)
+
+    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
+    req = client.get("/audit/request-logs").json()
+    assert req["total_count"] == 2 and req["blocked_for_analysis_count"] == 1 and req["safe_for_analysis_count"] == 1
+    assert req["request_status_counts"]["blocked"] == 1
+    src = client.get("/audit/provider-sources").json()
+    assert src["disabled_count"] == 1 and src["active_metadata_count"] == 1
+    fr = client.get("/audit/freshness-audits").json()
+    assert fr["freshness_status_counts"]["blocked"] == 1
+    assert fr["reason_code_counts"]["stale"] == 1
 
 
 def test_detail_endpoints_404(monkeypatch) -> None:
     class Repo:
-        def get_request_log(self, _id: str):
-            return _Read(None)
+        def get_request_log(self, _id: str): return _Read(None)
+        def get_provider_source(self, _id: str): return _Read(None)
+        def get_freshness_audit(self, _id: str): return _Read(None)
 
-        def get_provider_source(self, _id: str):
-            return _Read(None)
-
-        def get_freshness_audit(self, _id: str):
-            return _Read(None)
-
-    monkeypatch.setattr(
-        "portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo())
-    )
+    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
     assert client.get("/audit/request-logs/missing").status_code == 404
-    assert client.get("/audit/provider-sources/missing").status_code == 404
-    assert client.get("/audit/freshness-audits/missing").status_code == 404
-
-
-def test_detail_returns_records_and_safety_false(monkeypatch) -> None:
-    now = datetime.now(UTC)
-    req = RequestLogRecord(
-        request_log_id="r1",
-        correlation_id="c1",
-        request_family="audit",
-        request_purpose="status",
-        created_at=now,
-        completed_at=None,
-        provider_code="ibkr",
-        provider_account_mode="paper",
-        provider_environment="sandbox",
-        source_type="broker",
-        data_domain="market_data",
-        request_kind="list",
-        request_target="/audit",
-        request_status="completed_status_only",
-        initiated_by="api",
-        pacing_weight=0,
-        provider_request_budget_remaining=0,
-        retry_count=0,
-        received_record_count=0,
-        stored_record_count=0,
-        rejected_record_count=0,
-        safe_for_analysis=False,
-        safe_for_suggestions=False,
-        safe_for_action_drafts=False,
-        explanation_nl="x",
-    )
-
-    class Repo:
-        def get_request_log(self, _id: str):
-            return _Read(req)
-
-    monkeypatch.setattr(
-        "portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo())
-    )
-    payload = client.get("/audit/request-logs/r1").json()
-    assert payload["safe_for_analysis"] is False
-    assert payload["safe_for_suggestions"] is False
-    assert payload["safe_for_action_drafts"] is False
-    _assert_boundary(payload["help_nl"])

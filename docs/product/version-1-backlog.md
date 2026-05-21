@@ -256,3 +256,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 
 - [x] Task 99 — documentatie/review-guardrail-only: compacte read-only readiness PR-checklist + term-review rubric toegevoegd en gekoppeld in productdocumentatie; geen runtime market-data fetching/latest-price fetching/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/orders/fake data.
+
+
+- Task 113 afgerond: read-only audit summary/count contracten + usability verbeteringen; geen runtime-unlock.
