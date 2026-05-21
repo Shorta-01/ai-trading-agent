@@ -24,3 +24,10 @@ def test_identity_ok_returns_none() -> None:
         block_if_identity_invalid(MarketDataIdentity(ibkr_conid="123", identity_validated=True))
         is None
     )
+
+
+def test_market_data_fetch_status_contains_storage_and_stale_variants() -> None:
+    assert MarketDataFetchStatus.STORAGE_ERROR.value == "storage_error"
+    assert MarketDataFetchStatus.STALE_SNAPSHOT.value == "stale_snapshot"
+    assert MarketDataFetchStatus.SNAPSHOT_AVAILABLE.value == "snapshot_available"
+    assert MarketDataFetchStatus.PROVIDER_NOT_CONFIGURED.value == "provider_not_configured"
