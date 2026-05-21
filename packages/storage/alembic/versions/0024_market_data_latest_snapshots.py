@@ -4,8 +4,8 @@ Revision ID: 0024_market_data_latest_snapshots
 Revises: 0023_request_log_provider_freshness_contracts
 Create Date: 2026-05-21
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "0024_market_data_latest_snapshots"
 down_revision = "0023_request_log_provider_freshness_contracts"
@@ -44,9 +44,18 @@ def upgrade() -> None:
         sa.Column("freshness_audit_id", sa.Text(), nullable=True),
         sa.Column("safe_for_analysis", sa.Boolean(), server_default=sa.false(), nullable=False),
         sa.Column("safe_for_suggestions", sa.Boolean(), server_default=sa.false(), nullable=False),
-        sa.Column("safe_for_action_drafts", sa.Boolean(), server_default=sa.false(), nullable=False),
-        sa.CheckConstraint("ibkr_conid <> ''", name="ck_market_data_latest_snapshots_ibkr_conid_not_empty"),
+        sa.Column(
+            "safe_for_action_drafts",
+            sa.Boolean(),
+            server_default=sa.false(),
+            nullable=False,
+        ),
+        sa.CheckConstraint(
+            "ibkr_conid <> ''",
+            name="ck_market_data_latest_snapshots_ibkr_conid_not_empty",
+        ),
     )
+
 
 def downgrade() -> None:
     op.drop_table("market_data_latest_snapshots")

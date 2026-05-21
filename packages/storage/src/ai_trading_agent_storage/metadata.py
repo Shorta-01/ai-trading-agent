@@ -1250,5 +1250,8 @@ market_data_latest_snapshots = Table(
     Column("safe_for_analysis", Boolean, nullable=False, server_default=sa_false()),
     Column("safe_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
     Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
-    CheckConstraint("ibkr_conid <> ''", name="ck_market_data_latest_snapshots_ibkr_conid_not_empty"),
+    CheckConstraint(
+        "ibkr_conid <> ''",
+        name="ck_market_data_latest_snapshots_ibkr_conid_not_empty",
+    ),
 )
