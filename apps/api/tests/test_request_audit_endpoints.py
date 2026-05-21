@@ -34,7 +34,10 @@ def test_list_endpoints_empty(monkeypatch) -> None:
         def list_provider_sources(self): return _List([])
         def list_freshness_audits(self): return _List([])
 
-    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
+    monkeypatch.setattr(
+        "portfolio_outlook_api.request_audit._with_repository",
+        lambda op: op(Repo()),
+    )
     for path in ["/audit/request-logs", "/audit/provider-sources", "/audit/freshness-audits"]:
         payload = client.get(path).json()
         assert payload["items"] == []
@@ -62,12 +65,18 @@ def test_summary_counts_populated(monkeypatch) -> None:
         def list_provider_sources(self): return _List(provider_sources)
         def list_freshness_audits(self): return _List(freshness)
 
-    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
+    monkeypatch.setattr(
+        "portfolio_outlook_api.request_audit._with_repository",
+        lambda op: op(Repo()),
+    )
     req = client.get("/audit/request-logs").json()
-    assert req["total_count"] == 2 and req["blocked_for_analysis_count"] == 1 and req["safe_for_analysis_count"] == 1
+    assert req["total_count"] == 2
+    assert req["blocked_for_analysis_count"] == 1
+    assert req["safe_for_analysis_count"] == 1
     assert req["request_status_counts"]["blocked"] == 1
     src = client.get("/audit/provider-sources").json()
-    assert src["disabled_count"] == 1 and src["active_metadata_count"] == 1
+    assert src["disabled_count"] == 1
+    assert src["active_metadata_count"] == 1
     fr = client.get("/audit/freshness-audits").json()
     assert fr["freshness_status_counts"]["blocked"] == 1
     assert fr["reason_code_counts"]["stale"] == 1
@@ -79,5 +88,8 @@ def test_detail_endpoints_404(monkeypatch) -> None:
         def get_provider_source(self, _id: str): return _Read(None)
         def get_freshness_audit(self, _id: str): return _Read(None)
 
-    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
+    monkeypatch.setattr(
+        "portfolio_outlook_api.request_audit._with_repository",
+        lambda op: op(Repo()),
+    )
     assert client.get("/audit/request-logs/missing").status_code == 404

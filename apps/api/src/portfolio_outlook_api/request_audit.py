@@ -183,9 +183,18 @@ def count_safety_flags[T](records: list[T], get_flag: Callable[[T], bool]) -> tu
 
 
 def build_request_log_summary(records: list[RequestLogRecord]) -> dict[str, object]:
-    safe_analysis, blocked_analysis = count_safety_flags(records, lambda r: r.safe_for_analysis)
-    safe_suggestions, blocked_suggestions = count_safety_flags(records, lambda r: r.safe_for_suggestions)
-    safe_actions, blocked_actions = count_safety_flags(records, lambda r: r.safe_for_action_drafts)
+    safe_analysis, blocked_analysis = count_safety_flags(
+        records,
+        lambda r: r.safe_for_analysis,
+    )
+    safe_suggestions, blocked_suggestions = count_safety_flags(
+        records,
+        lambda r: r.safe_for_suggestions,
+    )
+    safe_actions, blocked_actions = count_safety_flags(
+        records,
+        lambda r: r.safe_for_action_drafts,
+    )
     return {
         "total_count": len(records),
         "safe_for_analysis_count": safe_analysis,
@@ -215,9 +224,18 @@ def build_provider_source_summary(records: list[ProviderSourceRecord]) -> dict[s
 
 
 def build_freshness_audit_summary(records: list[FreshnessAuditRecord]) -> dict[str, object]:
-    safe_analysis, blocked_analysis = count_safety_flags(records, lambda r: r.safe_for_analysis)
-    safe_suggestions, blocked_suggestions = count_safety_flags(records, lambda r: r.safe_for_suggestions)
-    safe_actions, blocked_actions = count_safety_flags(records, lambda r: r.safe_for_action_drafts)
+    safe_analysis, blocked_analysis = count_safety_flags(
+        records,
+        lambda r: r.safe_for_analysis,
+    )
+    safe_suggestions, blocked_suggestions = count_safety_flags(
+        records,
+        lambda r: r.safe_for_suggestions,
+    )
+    safe_actions, blocked_actions = count_safety_flags(
+        records,
+        lambda r: r.safe_for_action_drafts,
+    )
     return {
         "total_count": len(records),
         "safe_for_analysis_count": safe_analysis,
