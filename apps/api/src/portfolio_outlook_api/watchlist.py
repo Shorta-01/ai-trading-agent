@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import TypeVar
 from uuid import uuid4
 
 from ai_trading_agent_storage import (
@@ -22,9 +21,6 @@ from portfolio_outlook_api.config import settings
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 VALID_STATUSES = {"valid", "unvalidated", "not_found", "ambiguous", "error", "unsupported"}
-
-T = TypeVar("T")
-
 
 class AssetIdentitySummary(BaseModel):
     asset_id: str
@@ -137,7 +133,7 @@ def _norm(value: str | None) -> str:
     return (value or "").strip().upper()
 
 
-def _with_repository(
+def _with_repository[T](
     operation: Callable[[SqlAlchemyResearchSourceArchiveRepository], T],
 ) -> T | None:
     storage_settings = settings.storage
