@@ -101,7 +101,8 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 
 | Task 88 readiness-contract consolidatie | Contracted | Bestaande storage-read contracten hergebruikt | API implemented (typed readiness responsecontracten/helpers gecentraliseerd) | UI N/A | Runtime pending | Read-only consolidatie; geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag; unresolved identities blijven blocked. |
 | Task 88B CI-repair na Task 88 | Contracted | N/A | API import-boundary/type repair uitgevoerd (protocol-based input contract in readiness helper) | UI N/A | Runtime onveranderd | CI/type repair only; geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag; geen fake data; unresolved identities blijven blocked. |
-| Task 88G CI-diagnose lock | Locked | N/A | N/A | N/A | CI execution/logging blocked buiten app-code (vermoed platform/account/repository-level) | 6 normale CI jobs falen; tijdelijke diagnostic workflow is na bevestiging verwijderd wegens geen bruikbare logs/artifacts; geen featurewerk/Task 89 tot CI hersteld is. |
+| Task 88G CI-diagnose lock | Completed (historical) | N/A | N/A | N/A | Historische diagnose van eerdere CI execution/logging blokkade buiten app-code | Vastgelegd als eerdere blokkade; opgelost in Task 88L na visibility change naar public. |
+| Task 88L CI restoration record | Completed (documentation-only) | N/A | N/A | N/A | CI restored; run #358 passed | 6 normale jobs groen (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`); logs/steps weer zichtbaar; normale feature-gate blijft groene CI. |
 
 
 ## Planned capability additions from architecture audit (Task 88I)

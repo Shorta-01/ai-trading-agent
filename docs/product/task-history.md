@@ -1,10 +1,18 @@
 # Task History (concise)
 
+## Task 88L — CI restored after repository visibility change (documentation-only)
+
+- Status: completed (documentation-only).
+- Repository visibility changed from private to public; de eerdere GitHub Actions execution/logging blokkade is opgelost.
+- CI run **#358** is groen met 6 geslaagde jobs: `domain`, `storage`, `portfolio`, `api`, `worker`, `web`.
+- GitHub Actions logs en step-details zijn opnieuw zichtbaar.
+- Geen code gewijzigd, geen tests gewijzigd, geen migraties gewijzigd, geen package metadata gewijzigd en geen workflows gewijzigd.
+
 ## Task 88I — Documentation-only roadmap update from Claude architecture audit
 
 - Status: completed (documentation-only).
 - Claude architecture/roadmap audit is reviewed; accepted bevindingen zijn vertaald naar backlog/locks/scope/next-task documentatie.
-- CI-context ongewijzigd: GitHub Actions execution/logging blocker blijft actief; **Task 89 blijft geblokkeerd**.
+- Historische context ten tijde van Task 88I: toen was de GitHub Actions execution/logging blocker nog actief (later opgelost in Task 88L).
 - Geen app-code, tests, migraties, package metadata of workflows aangepast.
 
 ## Task 88G — GitHub Actions platform-level failure diagnosis
@@ -14,7 +22,7 @@
 - De minimale CI Diagnostic workflow faalde vóór bruikbare step logs en vóór artifact publicatie.
 - Diagnose: geen geverifieerde repository/application-code root cause; blokkade zit waarschijnlijk op GitHub Actions platform/account/repository niveau (execution/logging/runner/quota/settings).
 - Besluit: geen blind code-repair attempts uitvoeren zolang logging/executie niet hersteld is.
-- Gate: geen featurewerk en **Task 89 mag niet starten** zolang CI rood blijft.
+- Gate op dat moment: geen featurewerk en **Task 89 mocht niet starten** zolang CI rood bleef.
 - Vervolgstatus: de tijdelijke diagnostische workflow is verwijderd nadat ze de blokkade bevestigde zonder bruikbare logs/artifacts; verwachte zichtbare failures na merge: terug naar 6 (alleen normale CI).
 
 

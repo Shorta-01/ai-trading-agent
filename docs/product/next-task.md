@@ -1,33 +1,16 @@
 # Next Task
 
-## Blocker first (required)
+## CI status
 
-CI is momenteel geblokkeerd door een GitHub Actions execution/logging probleem dat eerder ook in de minimale diagnostische workflow optrad. Die tijdelijke workflow is intussen verwijderd na bevestiging van dezelfde blokkade zonder bruikbare logs/artifacts. Eerst herstellen:
+CI is nu hersteld en groen. Na de repository visibility change van private naar public is de eerdere GitHub Actions execution/logging blokkade opgelost.
 
-1. GitHub Actions repository/settings controleren.
-2. Billing/quota limieten controleren.
-3. Runner-beschikbaarheid en permissies controleren.
-4. Log/artifact-toegang herstellen zodat failures weer diagnoseerbaar zijn.
+- CI run **#358** is succesvol afgerond.
+- Alle 6 normale CI-jobs zijn groen: `domain`, `storage`, `portfolio`, `api`, `worker`, `web`.
+- GitHub Actions logs en step-details zijn opnieuw zichtbaar.
+- Normale regel blijft gelden: nieuwe featuretaken vereisen groene CI.
 
-Zolang CI rood blijft en diagnostische logging ontbreekt:
-
-- geen blind codeherstel;
-- geen featurewerk;
-- **Task 89 blijft geblokkeerd**.
-
-## Daarna pas
+## Next implementation task
 
 Task 89 — Conservatieve API-readiness contract hardening: kleine vervolgstap met extra response-contract regressietests en expliciete typed coverage voor snapshot-detailvarianten (read-only, geen runtime).
 
-
-## Nota na Task 88I
-
-- Claude architecture-audit bevindingen zijn geaccepteerd en als roadmap/lock-updates gedocumenteerd.
-- Volgorde na CI-herstel: eerst conservatieve identity/gateway/readiness hardening (AssetListing-model, IBKR gateway skeleton, market-data freshness/pacing gates, usable-cash contract, AI enforcement foundation, Decision Package/state-machine ontwerp) vóór runtime-uitbreiding.
-- Task 89 blijft geblokkeerd tot CI groen is; Task 89 start niet binnen Task 88I.
-
-## Nota na Task 88J
-
-- De volledige prediction-engine roadmap staat nu gedocumenteerd en is leidend voor vervolgtaken na CI-herstel.
-- Prioriteit blijft ongewijzigd: eerst CI execution/logging herstellen.
-- Task 89 blijft geblokkeerd zolang CI rood is.
+Task 89 wordt **niet** in deze documentatie-taak geïmplementeerd.

@@ -183,8 +183,8 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 88 — Conservatieve readiness-contract consolidatie (API-only, read-only): typed readiness responsemodellen/helpers gecentraliseerd, regressietests uitgebreid; geen runtimegedrag toegevoegd.
 - [x] Task 88B — CI-repair na Task 88: import-boundary/type-fix in readiness-contract module (protocol i.p.v. route-model import), zonder runtimewijzigingen of scope-uitbreiding.
 - [x] Task 88G — Documenteer CI-platformblokkade na PR #171: 6 normale CI jobs + CI Diagnostic falen; diagnostische workflow faalt vóór logs/artifacts; geen geverifieerde application-code root cause.
-- [ ] CI unblock task (GitHub Actions settings/billing/quota/runner/log-access onderzoek en herstel) — **must complete before any feature task**.
-- [ ] Task 89 — mag niet starten zolang CI rood is en diagnostische logs/executie niet hersteld zijn.
+- [x] Task 88L — CI unblock task afgerond (repository visibility change naar public; GitHub Actions execution/logging hersteld). CI run #358 groen met 6 geslaagde jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`).
+- [ ] Task 89 — volgende implementatietaak; mag starten onder normale regel: alleen bij groene CI.
 
 
 - [x] Task 88H — tijdelijke CI-diagnostische workflow verwijderd (`.github/workflows/ci-diagnostic.yml`) na bevestiging dat failure buiten normale project test/lint/build-output ligt; CI-blokkade blijft gedocumenteerd, normale CI blijft rood en Task 89 blijft geblokkeerd tot CI groen is.
@@ -192,7 +192,7 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 
 ## Accepted architecture-audit todo items (Task 88I)
 
-- **CI blijft directe blocker**: geen featurewerk zolang GitHub Actions execution/logging geblokkeerd is; **Task 89 blijft geblokkeerd** tot CI opnieuw groen en bruikbaar is.
+- **CI-blocker opgelost in Task 88L**: GitHub Actions logs/executie zijn hersteld na visibility change naar public; normale regel blijft: featurewerk alleen bij groene CI.
 - **Asset identity hardening vóór serieuze runtime**: roadmap voegt expliciete `AssetMaster` (entiteit/bedrijf) + `AssetListing` (verhandelbare listing/instrument) splitsing toe. IBKR `conid` hoort op listing-niveau; model moet conid-history, primary/routing exchange, listing/settlement currency, ADR-underlying relaties, corporate-action identity changes en unresolved identity blockers ondersteunen.
 - **Geen serieuze analyse op losse tickertekst**: geen market data, suggesties of action-drafts op ambiguë/onopgeloste identiteit.
 - **IBKR Gateway skeleton (read-only/safe boundary) gepland**: centrale sessiestatus, auth/account-mode status, tickle/keepalive, request logging, pacing awareness, foutafhandeling, paper-only enforcement en latere order-serialisatiegrens.

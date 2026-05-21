@@ -1,4 +1,4 @@
-# Current State (na Task 88J)
+# Current State (na Task 88L)
 
 ## 1) Current status summary
 
@@ -11,8 +11,8 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 88J**.
-- CI-status: **geblokkeerd door GitHub Actions platform/account/repository-level failure** (niet geverifieerd als applicatiecodefout).
+- Huidige toestand: **na Task 88L**.
+- CI-status: **hersteld en groen** na repository visibility change naar public; GitHub Actions execution/logging is weer zichtbaar en bruikbaar.
 - Projectstatus: nog foundation-heavy; Version 1 is niet compleet.
 - Meest volwassen deel: Onderzoeksbibliotheek / Research Library foundations.
 - Suggestion runtime, probabilistische forecast runtime, AI runtime, market-data runtime en IBKR runtime bestaan nog niet.
@@ -85,7 +85,9 @@
 
 ## 5) Latest task sequence status
 
-- Task 88G: **completed (documentation-only)** — post-merge diagnose vastgelegd dat GitHub Actions momenteel op platform/account/repository-niveau faalt. Alle 6 normale CI-jobs falen; de tijdelijke minimale `ci-diagnostic.yml` bevestigde eerder dezelfde blokkade en is daarna verwijderd om extra ruis te stoppen. Geen repository-gestuurde applicatiecode-root-cause geverifieerd. Featurewerk blijft geblokkeerd tot CI-executie/logging hersteld is; Task 89 mag niet starten zolang CI rood blijft.
+
+- Task 88L: **completed (documentation-only)** — CI-herstel vastgelegd na repository visibility change naar public. CI run #358 is groen met 6 geslaagde jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`); logs/steps weer zichtbaar. Geen code/tests/migraties/package metadata/workflows gewijzigd.
+- Task 88G: **completed (documentation-only)** — historische diagnose van eerdere GitHub Actions execution/logging blokkade. Deze blokkade is intussen opgelost na visibility change naar public (zie Task 88L).
 
 - Task 88: **completed** — API-only readiness-contract consolidatie voltooid: typed readiness responsemodellen/helpers gecentraliseerd (`market_data_readiness.py`), readiness-routes verdund en regressietests uitgebreid. Read-only scope behouden; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts/IBKR-ordergedrag en geen fake prices/broker/recommendations toegevoegd. Ongevalideerde of onopgeloste identiteiten blijven blocked voor market data/analysis/suggesties/action drafts.
 - Task 88B: **completed** — CI/type/import-boundary repair na Task 88: `market_data_readiness.py` koppelt niet langer aan `watchlist.py` modelimport en gebruikt nu een minimale typed protocol-input voor readiness-row build. Dit voorkomt onnodige route/store dependency-koppeling in response-contract code. Geen runtimegedrag toegevoegd; geen market-data runtime, geen historical fetching, geen scheduler, geen AI runtime, geen suggesties/Decision Packages/action drafts of IBKR-ordergedrag toegevoegd. Geen fake market prices, brokerdata of aanbevelingen toegevoegd. Ongevalideerde/onopgeloste identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
@@ -128,14 +130,13 @@
 
 - Task 83: Volglijst add-flow omgezet naar IBKR contractpicker; actieve creatie vereist gevalideerde IBKR-contractidentiteit. Bestaande losse records zonder contract blijven niet-gevalideerd en niet klaar voor analyse. Geen market-data runtime, historical fetching, schedulers, suggesties, Decision Packages, action drafts, IBKR-ordergedrag, AI runtime, forecast runtime of fake data toegevoegd.
 
-## Current CI blocker
+## Current CI status (restored)
 
-- Normale CI (`ci.yml`) faalt momenteel in alle 6 jobs.
-- De tijdelijke diagnostische workflow (`ci-diagnostic.yml`) is verwijderd nadat die dezelfde blokkade bevestigde.
-- De diagnostische runs leverden geen bruikbare staplogs en geen artifact op.
-- Dit wijst op een waarschijnlijke oorzaak buiten applicatiecode (GitHub Actions execution/logging laag).
-- Vereiste vervolgstap: onderzoek GitHub Actions settings, billing/quota, runner-beschikbaarheid en log/artifact-toegang op account/repository/platformniveau.
-- Tot CI-executie en logging hersteld zijn: **geen blind codeherstel, geen featurewerk, Task 89 blijft geblokkeerd**.
+- Repository visibility is aangepast van private naar public; de eerdere GitHub Actions execution/logging blokkade is daarmee opgelost.
+- CI run **#358** is succesvol afgerond.
+- Alle 6 normale CI-jobs zijn groen: `domain`, `storage`, `portfolio`, `api`, `worker`, `web`.
+- GitHub Actions logs en step-output zijn opnieuw zichtbaar.
+- Normale gate blijft gelden: nieuwe featuretaken starten alleen bij groene CI.
 
 ## Task 84 update
 
@@ -162,5 +163,5 @@
 - Task 88J uitgevoerd als documentatie-only roadmapuitbreiding.
 - Geen runtimegedrag gewijzigd.
 - Geen applicatiecode/tests/migraties/package metadata/workflows gewijzigd door functionele implementatie.
-- CI blijft rood door bekende GitHub Actions execution/logging blocker.
-- Task 89 blijft geblokkeerd tot CI-herstel.
+- CI is hersteld en groen (run #358; alle 6 jobs geslaagd).
+- Task 89 mag als volgende implementatietaak weer doorgaan onder de normale groene-CI gate.
