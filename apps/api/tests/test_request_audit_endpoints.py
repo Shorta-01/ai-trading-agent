@@ -6,6 +6,12 @@ from ai_trading_agent_storage.repository_contracts import (
     RequestLogRecord,
 )
 from fastapi.testclient import TestClient
+from request_audit_fixtures import (
+    make_freshness_audit_record,
+    make_provider_source_record,
+    make_request_audit_repo,
+    make_request_log_record,
+)
 
 from portfolio_outlook_api.main import app
 from portfolio_outlook_api.request_audit import (
@@ -15,13 +21,6 @@ from portfolio_outlook_api.request_audit import (
     ProviderSourceResponse,
     RequestLogListResponse,
     RequestLogResponse,
-)
-
-from .request_audit_fixtures import (
-    make_freshness_audit_record,
-    make_provider_source_record,
-    make_request_audit_repo,
-    make_request_log_record,
 )
 
 client = TestClient(app)
