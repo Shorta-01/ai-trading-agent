@@ -3,8 +3,8 @@
 from typing import Annotated
 
 from ai_trading_agent_storage import (
-    SqlAlchemyAssetListingRepository,
     SqlAlchemyMarketDataSnapshotRepository,
+    SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -333,7 +333,7 @@ def _read_asset_listing_gate(item: object) -> ReadinessAssetListingGate:
     )
     try:
         with provider.checked_connection(require_writable=False) as checked:
-            repo = SqlAlchemyAssetListingRepository(checked.connection, checked.readiness)
+            repo = SqlAlchemyResearchSourceArchiveRepository(checked.connection, checked.readiness)
             listing = repo.get_asset_listing_by_ibkr_conid(ibkr_conid)
             if listing is None:
                 return build_asset_listing_gate(
