@@ -230,14 +230,16 @@ def _asset_listing_readiness(item: WatchlistItem) -> WatchlistAssetListingReadin
             audit_help_nl="Zonder contractidentiteit blijft alles geblokkeerd.",
         )
 
+    ibkr_conid = item.ibkr_conid
+
     def op(repo: SqlAlchemyResearchSourceArchiveRepository) -> AssetListingRecord | None:
-        return repo.get_asset_listing_by_ibkr_conid(item.ibkr_conid)
+        return repo.get_asset_listing_by_ibkr_conid(ibkr_conid)
 
     listing = _with_repository(op)
     if listing is None:
         return WatchlistAssetListingReadiness(
             link_status=WatchlistAssetListingLinkStatus.MISSING_LISTING,
-            ibkr_conid=item.ibkr_conid,
+            ibkr_conid=ibkr_conid,
             market_data_ready=False,
             analysis_ready=False,
             suggestions_allowed=False,
