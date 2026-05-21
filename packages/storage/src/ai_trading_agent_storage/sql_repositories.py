@@ -121,7 +121,6 @@ def _json_list_or_none(value: tuple[str, ...] | list[str] | None) -> list[str] |
     return list(value)
 
 
-
 def _row_to_source_to_asset_link_record(row: RowMapping) -> SourceToAssetLinkRecord:
     raw_audit_context = row["audit_context_json"]
     audit_context_json: dict[str, str] | None = None
@@ -144,6 +143,7 @@ def _row_to_source_to_asset_link_record(row: RowMapping) -> SourceToAssetLinkRec
         created_by=str(row["created_by"]),
         explanation_nl=str(row["explanation_nl"]),
     )
+
 
 def _row_to_gate_outcome_record(row: Any) -> ResearchGateOutcomeRecord:
     values = dict(row)
@@ -188,7 +188,9 @@ def _row_to_asset_master_record(row: Any) -> AssetMasterRecord:
 
 def _row_to_asset_listing_record(row: Any) -> AssetListingRecord:
     values = dict(row)
-    values["source_reference_ids_json"] = _json_tuple_or_none(values.get("source_reference_ids_json"))
+    values["source_reference_ids_json"] = _json_tuple_or_none(
+        values.get("source_reference_ids_json")
+    )
     values["audit_context_json"] = (
         None if values.get("audit_context_json") is None else dict(values["audit_context_json"])
     )
@@ -864,7 +866,11 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         statement = select(asset_listings)
         if asset_id is not None:
             statement = statement.where(asset_listings.c.asset_id == asset_id)
-        rows = self._connection.execute(statement.order_by(asset_listings.c.listing_id.asc())).mappings().all()
+        rows = (
+            self._connection.execute(statement.order_by(asset_listings.c.listing_id.asc()))
+            .mappings()
+            .all()
+        )
         return tuple(_row_to_asset_listing_record(row) for row in rows)
 
     def search_asset_listings(self, query: str, limit: int = 20) -> tuple[AssetListingRecord, ...]:
@@ -1014,10 +1020,7 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
         row = self._connection.execute(statement).mappings().first()
         return None if row is None else ResearchDocumentClassificationRecord(**dict(row))
 
-
-    def save_source_to_asset_link(
-        self, record: SourceToAssetLinkRecord
-    ) -> SourceToAssetLinkRecord:
+    def save_source_to_asset_link(self, record: SourceToAssetLinkRecord) -> SourceToAssetLinkRecord:
         values = asdict(record)
         values["audit_context_json"] = (
             None if record.audit_context_json is None else json.dumps(record.audit_context_json)

@@ -39,9 +39,15 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("source_reference_ids_json", sa.JSON(), nullable=True),
         sa.Column("audit_context_json", sa.JSON(), nullable=True),
-        sa.Column("safe_to_use_for_market_data", sa.Boolean(), server_default=sa.false(), nullable=False),
-        sa.Column("safe_to_use_for_analysis", sa.Boolean(), server_default=sa.false(), nullable=False),
-        sa.Column("safe_to_use_for_suggestions", sa.Boolean(), server_default=sa.false(), nullable=False),
+        sa.Column(
+            "safe_to_use_for_market_data", sa.Boolean(), server_default=sa.false(), nullable=False
+        ),
+        sa.Column(
+            "safe_to_use_for_analysis", sa.Boolean(), server_default=sa.false(), nullable=False
+        ),
+        sa.Column(
+            "safe_to_use_for_suggestions", sa.Boolean(), server_default=sa.false(), nullable=False
+        ),
         sa.Column("blocks_market_data", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column("blocks_analysis", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column("blocks_suggestions", sa.Boolean(), server_default=sa.true(), nullable=False),

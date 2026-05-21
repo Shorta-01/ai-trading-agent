@@ -1,5 +1,4 @@
 """Offline-safe migration readiness contracts and helpers.
-
 This module defines expected migration inventory contracts for storage readiness
 without creating database engines/sessions or reading runtime environment values.
 """
@@ -112,8 +111,7 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         filename="0007_system_events.py",
         label_nl="Systeemmeldingen",
         description_nl=(
-            "Tabellen voor centrale systeemmeldingen, fouten, waarschuwingen en "
-            "blokkeringen."
+            "Tabellen voor centrale systeemmeldingen, fouten, waarschuwingen en blokkeringen."
         ),
     ),
     MigrationRevisionInfo(
@@ -219,17 +217,17 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Conservatief opslagfundament voor conid-gebaseerde market-data snapshotmetadata "
             "en freshness/readinessblokkade-info (zonder runtime fetch)."
         ),
-
+    ),
     MigrationRevisionInfo(
         revision_id="0022_asset_listing_identity_foundation",
         previous_revision_id="0021_market_data_storage_foundation",
         filename="0022_asset_listing_identity_foundation.py",
         label_nl="AssetListing identity foundation",
-        description_nl="Opslagfundament voor listing/instrument/conid-identiteit (reference/status-only).",
-    ),
+        description_nl=(
+            "Opslagfundament voor listing/instrument/conid-identiteit (reference/status-only)."
+        ),
     ),
 )
-
 
 
 def expected_migration_revisions() -> tuple[MigrationRevisionInfo, ...]:
@@ -239,13 +237,11 @@ def expected_migration_revisions() -> tuple[MigrationRevisionInfo, ...]:
 def _is_expected_chain_valid(revisions: tuple[MigrationRevisionInfo, ...]) -> bool:
     if not revisions:
         return False
-
     for index, revision in enumerate(revisions):
         if index == 0 and revision.previous_revision_id is not None:
             return False
         if index > 0 and revision.previous_revision_id != revisions[index - 1].revision_id:
             return False
-
     return True
 
 
@@ -286,13 +282,11 @@ def build_database_not_connected_readiness_report() -> MigrationReadinessReport:
 def check_offline_migration_inventory() -> MigrationReadinessReport:
     inventory = build_expected_migration_inventory()
     versions_dir = Path(__file__).resolve().parents[2] / "alembic" / "versions"
-
     missing_files = [
         revision.filename
         for revision in inventory.expected_revisions
         if not (versions_dir / revision.filename).is_file()
     ]
-
     if inventory.inventory_valid and not missing_files:
         return MigrationReadinessReport(
             status=MigrationReadinessStatus.OFFLINE_INVENTORY_VALID,
@@ -309,7 +303,6 @@ def check_offline_migration_inventory() -> MigrationReadinessReport:
                 "gemigreerd is."
             ),
         )
-
     missing_text = ", ".join(missing_files) if missing_files else "onbekende mismatch"
     return MigrationReadinessReport(
         status=MigrationReadinessStatus.OFFLINE_INVENTORY_INVALID,
@@ -344,7 +337,6 @@ def read_database_alembic_revision(connection: Connection) -> str | None:
 
 def check_online_migration_readiness(connection: Connection) -> MigrationReadinessReport:
     inventory = build_expected_migration_inventory()
-
     try:
         database_revision_id = read_database_alembic_revision(connection)
     except ValueError:
@@ -375,7 +367,6 @@ def check_online_migration_readiness(connection: Connection) -> MigrationReadine
                 "De database-readiness check is mislukt. Runtime writes blijven geblokkeerd."
             ),
         )
-
     if database_revision_id is None:
         return MigrationReadinessReport(
             status=MigrationReadinessStatus.MIGRATIONS_UNKNOWN,
@@ -391,7 +382,6 @@ def check_online_migration_readiness(connection: Connection) -> MigrationReadine
                 "Runtime writes blijven geblokkeerd."
             ),
         )
-
     known_revisions = {revision.revision_id for revision in inventory.expected_revisions}
     if database_revision_id == inventory.latest_expected_revision_id and inventory.inventory_valid:
         return MigrationReadinessReport(
@@ -408,7 +398,6 @@ def check_online_migration_readiness(connection: Connection) -> MigrationReadine
                 "Persistence mag pas gebruikt worden door toekomstige repository-implementaties."
             ),
         )
-
     if database_revision_id in known_revisions:
         return MigrationReadinessReport(
             status=MigrationReadinessStatus.MIGRATIONS_BEHIND,
@@ -424,7 +413,6 @@ def check_online_migration_readiness(connection: Connection) -> MigrationReadine
                 "Runtime writes blijven geblokkeerd."
             ),
         )
-
     return MigrationReadinessReport(
         status=MigrationReadinessStatus.MIGRATIONS_UNKNOWN,
         database_connected=True,
