@@ -87,6 +87,15 @@ class Settings(BaseSettings):
     ibkr_gateway_url: str | None = None
     ibkr_connection_timeout_seconds: int = 10
     ibkr_status_check_enabled: bool = False
+    ibkr_market_data_enabled: bool = False
+    ibkr_market_data_host: str | None = None
+    ibkr_market_data_port: int | None = None
+    ibkr_market_data_client_id: int | None = None
+    ibkr_market_data_readonly: bool = True
+    ibkr_market_data_account_mode: str = "paper"
+    ibkr_market_data_type: str = "delayed"
+    ibkr_market_data_snapshot_timeout_seconds: int = 5
+    ibkr_market_data_provider_code: str = "ibkr"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

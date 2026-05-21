@@ -1,3 +1,3 @@
 # Next Task
 
-Task 118 — Koppel Task 117 provider-statuscontracten aan storage request-log/freshness-audit + API/UI statusbadges voor portfolio/volglijst op conid-niveau (nog steeds zonder analyse/suggesties/action drafts unlock).
+Task 121 — Voeg veilige market-data freshness/readiness policy en watchlist/portfolio valuation-readiness laag toe op basis van enkel opgeslagen echte snapshots, zonder suggesties of AI-runtime.

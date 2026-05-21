@@ -10,9 +10,14 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 from fastapi import APIRouter, Body, HTTPException
+from portfolio_outlook_domain.market_data_foundation import (
+    MarketDataFetchStatus,
+    MarketDataIdentity,
+)
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
+from portfolio_outlook_api.ibkr_market_data import IbkrMarketDataAdapter, settings_from_runtime
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync import read_status, run_sync
 from portfolio_outlook_api.ibkr_watchlists import (
@@ -402,6 +407,50 @@ def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> Readine
     return ReadinessDetailResponse(item=None, message_nl="Volglijst-item niet gevonden.")
 
 
+
+
+@router.post(
+    "/market-data/snapshots/latest/{ibkr_conid}/fetch",
+    response_model=LatestSnapshotResponse,
+)
+def fetch_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
+    evaluated_at = utc_now_iso()
+    adapter = IbkrMarketDataAdapter(settings_from_runtime(settings))
+    from portfolio_outlook_api.watchlist import STORE
+    item = next(
+        (
+            w
+            for w in STORE.values()
+            if (w.ibkr_conid or "").strip() == ibkr_conid and w.status == "active"
+        ),
+        None,
+    )
+    identity_validated = bool(item and item.ibkr_validation_status == "valid")
+    result = adapter.fetch_latest_snapshot(
+        MarketDataIdentity(ibkr_conid=ibkr_conid, identity_validated=identity_validated)
+    )
+    response = build_latest_snapshot_response(
+        ibkr_conid,
+        None,
+        status=(
+            LatestSnapshotStatus.NOT_CONFIGURED
+            if result.status == MarketDataFetchStatus.NOT_CONFIGURED
+            else LatestSnapshotStatus.MISSING_SNAPSHOT
+        ),
+        status_nl=(
+            "Niet geconfigureerd"
+            if result.status == MarketDataFetchStatus.NOT_CONFIGURED
+            else "Geen marktdata"
+        ),
+        evaluated_at=evaluated_at,
+    )
+    response.provider_code = settings.ibkr_market_data_provider_code
+    response.provider_environment = settings.ibkr_expected_environment
+    response.provider_account_mode = settings.ibkr_market_data_account_mode
+    response.market_data_type = settings.ibkr_market_data_type
+    response.next_step_nl = "Alleen status. Nog geen analyse."
+    response.help_nl = "Nog geen suggesties mogelijk."
+    return response
 @router.get("/market-data/snapshots/latest/{ibkr_conid}", response_model=LatestSnapshotResponse)
 def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
     evaluated_at = utc_now_iso()
