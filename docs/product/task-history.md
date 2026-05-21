@@ -1,5 +1,13 @@
 # Task History (concise)
 
+## Task 108 — non-runtime foundation preflight (documentation/design only)
+
+- Status: afgerond.
+- Nieuw preflightdocument toegevoegd: `docs/product/non-runtime-foundation-preflight-task-108.md` met brede kandidatenreview en matrix.
+- Exact één conservatieve volgende stap geselecteerd: Task 109 request-log/provider-metadata/freshness-audit storage/API contract preflight (zonder runtime).
+- Task 107 tracking-drift preventieregel expliciet nageleefd in dezelfde PR (current-state, task-history, scope-register, backlog, next-task).
+- Geen runtime market-data fetching, runtime-fetch, latest-price fetching, scheduler/background jobs, historical fetching, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd.
+
 ## Task 107 — Read-only terminology sustainability tracking guardrail
 
 - Status: afgerond (documentation/review-hardening only).

@@ -1,7 +1,9 @@
-# Current State (na Task 106)
+# Current State (na Task 108)
 
 ## 1) Current status summary
 
+
+- Task 108: **completed** — grote conservatieve non-runtime implementatie-prep audit afgerond (`docs/product/non-runtime-foundation-preflight-task-108.md`). Exact één betekenisvolle Task 109 aanbevolen (request-log/provider-metadata/freshness-audit storage/API contract preflight, documentatie/design-only). Task 107 tracking-drift preventieregel expliciet gevolgd (current-state titel + Huidige toestand + completionregel + task-history + scope-register + backlog + next-task in dezelfde PR geüpdatet). Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen historical fetching, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
 
 - Task 81 is documentation-only en vergrendelt dat actieve Volglijst-items IBKR-contract-based moeten zijn.
 - Task 81 voegt geen IBKR-runtime toe.
@@ -11,7 +13,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 106**.
+- Huidige toestand: **na Task 108**.
 - Task 101: **completed** — documentatie/cross-link/terminologie-anchor-only update. Task 100-termenset is verankerd in handover + locked decisions + lichte cross-links. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 102: **completed** — conservatieve documentatie-only read-only wording drift check na Task 101. Productdocs zijn gecontroleerd tegen de vergrendelde termenset in `locked-decisions.md`; kleine tracking/plaatsingsdrift is hersteld (current-state titel + backlogplaatsing/next-step wording). Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 103: **completed** — conservatieve documentatie-only product-doc consistentiecheck na Task 102. Productdocs zijn gericht gecontroleerd tegen de vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift is hersteld (current-state na-Task-102 tracking + follow-up logging). Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime/actiedrafts/orders en geen fake data toegevoegd.
