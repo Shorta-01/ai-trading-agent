@@ -1,5 +1,14 @@
 # Task History (concise)
 
+## Task 107 — Read-only terminology sustainability tracking guardrail
+
+- Status: afgerond (documentation/review-hardening only).
+- Post-Task-106 producttrackingdocs gecontroleerd tegen de vergrendelde read-only terminology in `docs/product/locked-decisions.md`.
+- Bekende drift hersteld in `docs/product/current-state.md` (titel + `Huidige toestand:` naar post-Task-106).
+- Compacte sustainability-checknotitie toegevoegd: `docs/product/read-only-readiness-sustainability-check-task-107.md`.
+- Compacte tracking-drift preventieregel toegevoegd in `docs/product/project-handover.md` en `docs/product/codex-ci-quality-rules.md` (documentation/review discipline, geen CI-automatisering).
+- Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties, geen Decision Packages runtime, geen actiedrafts, geen orders en geen fake data toegevoegd.
+
 ## Task 106 — Conservatieve read-only terminology lock discipline follow-up
 
 - Status: afgerond (documentation/review-hardening only).

@@ -103,3 +103,16 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
    - Wanneer een PR UI/API labels, help-tekst, status-tekst of response-contracten wijzigt, moeten reviewers `docs/product/read-only-readiness-pr-checklist.md` expliciet toepassen.
    - Onveilige readiness-termen moeten afwezig zijn of expliciet ontkend worden.
    - Dit is een documentatie/review-guardrail en **geen** geautomatiseerde CI-regel.
+
+15. **Producttracking drift-preventieregel (documentation/review discipline)**
+   - Wanneer een taak als afgerond wordt vastgelegd in productdocs, moet dezelfde PR altijd expliciet controleren en zo nodig bijwerken:
+     - `docs/product/current-state.md` titel
+     - `Huidige toestand:`-regel in `docs/product/current-state.md`
+     - task completion-regel in `docs/product/current-state.md`
+     - `docs/product/task-history.md`
+     - `docs/product/version-1-scope-register.md`
+     - `docs/product/version-1-backlog.md`
+     - `docs/product/next-task.md`
+   - `next-task.md` mag geen nieuwe drift-only taak plannen tenzij er echte trackingdrift te herstellen is.
+   - Als de enige noodzakelijke fix een tasknummercorrectie in `current-state.md` is, bundel die correctie in dezelfde PR in plaats van een losse vervolgtask.
+   - Dit is een documentatie/review-discipline-regel en **geen** geautomatiseerde CI-regel.
