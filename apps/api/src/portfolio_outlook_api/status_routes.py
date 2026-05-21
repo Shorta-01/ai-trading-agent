@@ -31,6 +31,7 @@ from portfolio_outlook_api.market_data_readiness import (
     ReadinessSnapshotMetadata,
     build_latest_snapshot_response,
     build_readiness_row,
+    build_readiness_snapshot_metadata,
     utc_now_iso,
 )
 from portfolio_outlook_api.online_storage_status import (
@@ -304,7 +305,7 @@ def _read_snapshot_metadata(ibkr_conid: str | None) -> ReadinessSnapshotMetadata
             result = repo.get_latest_by_ibkr_conid(ibkr_conid)
             if result.record is None:
                 return None
-            return ReadinessSnapshotMetadata.model_validate(result.record.__dict__)
+            return build_readiness_snapshot_metadata(result.record)
     except StorageConnectionError:
         return None
 
@@ -381,7 +382,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
                 )
             return build_latest_snapshot_response(
                 ibkr_conid,
-                ReadinessSnapshotMetadata.model_validate(result.record.__dict__),
+                build_readiness_snapshot_metadata(result.record),
                 status=LatestSnapshotStatus.SNAPSHOT_AVAILABLE,
                 status_nl="Snapshotmetadata beschikbaar.",
                 evaluated_at=evaluated_at,
