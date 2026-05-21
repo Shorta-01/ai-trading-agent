@@ -30,6 +30,8 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Source-to-asset linking foundation (Task 72) | Contracted | Storage implemented | API implemented | UI pending | Runtime pending (asset detection/matching runtime pending) | Blocked for suggestions; audit/reference-only; geen AI/watchlist/portfolio/IBKR/order gedrag |
 | CI quality governance rules | Locked | N/A | N/A | N/A | Implemented as mandatory workflow docs | Geen safety gate verzwakking toegestaan |
 
+| Task 109 request-log/provider/source/freshness contract preflight | Contracted | N/A | N/A | N/A | Runtime pending | Documentatie/design-only preflight met kandidaatveldencatalogi, status/reason-code voorstellen en traceability-linking (`docs/product/request-log-provider-freshness-contract-preflight-task-109.md`); geen storagetabellen/migrations/endpoints/schedulers/runtime-fetching/latest-price fetching/forecast runtime/AI runtime/suggesties/Decision Packages runtime/actiedrafts/orders/fake data. |
+
 | Portfolio sync from IBKR | Core workflow | Planned | Planned | UI pending | Runtime pending | Geen runtime-implementatie; IBKR blijft operationele waarheid |
 | Watchlist assets (manuele toevoeging, gescheiden van portfolio) | Core workflow | Planned | Planned | Planned | Runtime pending | Suggesties mogelijk na gates; geen automatische orders |
 | Decision Package | Core workflow | Planned | Planned | Planned | Runtime pending | Kernobject voor auditbare suggesties; nog niet geïmplementeerd |

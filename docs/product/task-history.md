@@ -1,5 +1,13 @@
 # Task History (concise)
 
+## Task 109 — request-log/provider/source/freshness contract preflight (documentation/design only)
+
+- Status: afgerond.
+- Nieuw preflightdocument toegevoegd: `docs/product/request-log-provider-freshness-contract-preflight-task-109.md`.
+- Candidate contractcatalogi vastgelegd voor request logs, provider/source metadata en freshness-audit records inclusief status-/reason-code proposals, traceability-linking en relatie naar bestaande read-only readiness contracten.
+- Task 107 tracking-drift preventieregel nageleefd in dezelfde PR (current-state titel + `Huidige toestand:` + completionregel + task-history + scope-register + backlog + next-task geüpdatet).
+- Geen storagetabellen, migrations, endpoints, schedulers, runtime-fetching, latest-price fetching, forecast runtime, AI runtime, suggesties, Decision Packages runtime, actiedrafts, orders of fake data toegevoegd.
+
 ## Task 108 — non-runtime foundation preflight (documentation/design only)
 
 - Status: afgerond.
