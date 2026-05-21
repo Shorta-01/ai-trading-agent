@@ -144,7 +144,6 @@ def test_market_data_readiness_detail_response_contract_for_missing_item() -> No
 
 
 
-
 def test_market_data_readiness_storage_configured_missing_ibkr_conid_gate(monkeypatch) -> None:
     STORE["w-1"] = _item("w-1", conid=None, validation_status="valid")
 
@@ -243,7 +242,7 @@ def test_market_data_readiness_asset_listing_gate_variants(monkeypatch) -> None:
         _GoodProvider,
     )
     monkeypatch.setattr(
-        "portfolio_outlook_api.status_routes.SqlAlchemyAssetListingRepository",
+        "portfolio_outlook_api.status_routes.SqlAlchemyResearchSourceArchiveRepository",
         _FakeAssetListingRepo,
     )
 
