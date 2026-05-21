@@ -147,3 +147,6 @@ Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/fr
 - Task 95 (completed): market-data readiness list/detail bevat expliciete typed AssetListing validation-gate status in read-only contract; missing/unvalidated listing blijft blocked; validated listing blijft status-only zonder runtime-fetch. Geen runtime market-data/forecast/AI/suggesties/Decision Packages/action drafts/orders toegevoegd.
 
 | Task 96 readiness/watchlist/latest-snapshot terminologieharmonisatie | Contracted | Bestaande storage-read contracten hergebruikt | API implemented (geharmoniseerde read-only NL boundary-terminologie + regressietests) | UI N/A | Runtime pending | Geen market-data runtime/fetching/historical/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders; latest snapshot blijft metadata/status-only; missing/unvalidated listings blijven blocked. |
+
+
+| Task 98 read-only readiness UI/API contract inventory | Contracted | N/A | N/A | N/A | Runtime pending | Documentatie/inventaris-only guardrail voor labelconsistentie in resterende schermen + readiness-contracten; geen runtime market-data/latest-price fetching/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data. |

@@ -1,4 +1,4 @@
-# Current State (na Task 92)
+# Current State (na Task 98)
 
 ## 1) Current status summary
 
@@ -25,6 +25,9 @@
 - Task 97: **completed** — API model-documentatie/type-metadata + web UI labelconsumptie + tests/docs hardening voor read-only readiness boundaries afgerond. Volglijst gebruikt nu `asset_listing_readiness.status_nl` + `next_step_nl` als hoofdstatus. Geen market-data runtime of runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen historical/forecast/AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 
 - Task 96: **completed** — conservatieve read-only terminologieharmonisatie afgerond voor watchlist AssetListing readiness, market-data readiness AssetListing-gate en latest-snapshot responses (API/tests/docs). NL boundary-tekst is nu geharmoniseerd rond read-only status: geen market-data runtime, geen runtime-fetch, geen analysevrijgave, geen suggesties, geen Decision Packages, geen actiedrafts en geen orders. Latest snapshot blijft metadata/status-only (geen live/current prijs). Missing/unvalidated AssetListing blijft blocked; validated AssetListing blijft identity/status-only. Geen market-data runtime/fetching/historical/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data toegevoegd.
+
+
+- Task 98: **completed** — documentatie/inventaris-only read-only readiness UI/API contractinventaris toegevoegd (`docs/product/read-only-readiness-ui-contract-inventory.md`) voor resterende schermen en readiness-contracten. Labelpatronen voor "veilig", "onveilig tenzij ontkend" en follow-up governance zijn expliciet vastgelegd. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 
 ## 2) Implemented foundations
 
