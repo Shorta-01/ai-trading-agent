@@ -49,7 +49,7 @@ def test_summary_counts_populated(monkeypatch) -> None:
     now = datetime.now(UTC)
     request_logs = [
         RequestLogRecord("r1","c1","audit","status",now,None,"ibkr","paper","sandbox","broker","market_data","list","/audit","blocked","api",0,0,0,0,0,0,False,False,False,"x"),
-        RequestLogRecord("r2","c2","audit","status",now,None,"ibkr","paper","sandbox","broker","market_data","list","/audit","ok","api",0,0,0,0,0,0,True,False,False,"x"),
+        RequestLogRecord("r2","c2","audit","status",now,None,"ibkr","paper","sandbox","broker","market_data","list","/audit","ok","api",0,0,0,0,0,0,False,False,False,"x"),
     ]
     provider_sources = [
         ProviderSourceRecord("p1","ibkr","broker","market_data","feed","sandbox","paper",None,None,now,now,None,None,False,False,False,"x"),
@@ -57,7 +57,7 @@ def test_summary_counts_populated(monkeypatch) -> None:
     ]
     freshness = [
         FreshnessAuditRecord("f1","r1","p1","market_data","snapshot","blocked","stale",now,300,999,None,None,False,False,False,"x"),
-        FreshnessAuditRecord("f2","r2","p2","market_data","snapshot","ok",None,now,300,99,now,None,True,False,False,"x"),
+        FreshnessAuditRecord("f2","r2","p2","market_data","snapshot","ok",None,now,300,99,now,None,False,False,False,"x"),
     ]
 
     class Repo:
@@ -71,8 +71,12 @@ def test_summary_counts_populated(monkeypatch) -> None:
     )
     req = client.get("/audit/request-logs").json()
     assert req["total_count"] == 2
-    assert req["blocked_for_analysis_count"] == 1
-    assert req["safe_for_analysis_count"] == 1
+    assert req["safe_for_analysis_count"] == 0
+    assert req["safe_for_suggestions_count"] == 0
+    assert req["safe_for_action_drafts_count"] == 0
+    assert req["blocked_for_analysis_count"] == req["total_count"]
+    assert req["blocked_for_suggestions_count"] == req["total_count"]
+    assert req["blocked_for_action_drafts_count"] == req["total_count"]
     assert req["request_status_counts"]["blocked"] == 1
     src = client.get("/audit/provider-sources").json()
     assert src["disabled_count"] == 1
