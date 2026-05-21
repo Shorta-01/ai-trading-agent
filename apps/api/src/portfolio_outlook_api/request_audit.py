@@ -60,9 +60,6 @@ class RequestLogResponse(BaseModel):
     metadata_quality_status: str
     metadata_quality_nl: str
     missing_metadata_fields: list[str]
-    chain_completeness_status: str
-    chain_completeness_nl: str
-    missing_chain_links: list[str]
 
 
 class ProviderSourceResponse(BaseModel):
@@ -85,6 +82,9 @@ class ProviderSourceResponse(BaseModel):
     status_nl: str
     help_nl: str
     audit_help_nl: str
+    metadata_quality_status: str
+    metadata_quality_nl: str
+    missing_metadata_fields: list[str]
 
 
 class FreshnessAuditResponse(BaseModel):
@@ -106,6 +106,9 @@ class FreshnessAuditResponse(BaseModel):
     status_nl: str
     help_nl: str
     audit_help_nl: str
+    chain_completeness_status: str
+    chain_completeness_nl: str
+    missing_chain_links: list[str]
 
 
 class RequestLogListResponse(BaseModel):
@@ -426,13 +429,14 @@ def list_request_logs() -> RequestLogListResponse:
     records = _with_repository(lambda repo: repo.list_request_logs().records)
     record_list = list(records)
     items = [_request_log_response(r) for r in record_list]
+    chain_statuses = [item.chain_completeness_status for item in items]
     return RequestLogListResponse(
         items=items,
         **build_request_log_summary(record_list),
-        chain_complete_count=_count_statuses([i.chain_completeness_status for i in items], "complete"),
-        chain_partial_count=_count_statuses([i.chain_completeness_status for i in items], "partial"),
-        chain_missing_links_count=_count_statuses([i.chain_completeness_status for i in items], "missing_links"),
-        chain_metadata_only_count=_count_statuses([i.chain_completeness_status for i in items], "metadata_only"),
+        chain_complete_count=_count_statuses(chain_statuses, "complete"),
+        chain_partial_count=_count_statuses(chain_statuses, "partial"),
+        chain_missing_links_count=_count_statuses(chain_statuses, "missing_links"),
+        chain_metadata_only_count=_count_statuses(chain_statuses, "metadata_only"),
         status_nl="Requestlogs read-only opgehaald."
         if record_list
         else "Nog geen requestlogs beschikbaar.",
@@ -453,12 +457,13 @@ def list_provider_sources() -> ProviderSourceListResponse:
     records = _with_repository(lambda repo: repo.list_provider_sources().records)
     record_list = list(records)
     items = [_provider_source_response(r) for r in record_list]
+    metadata_statuses = [item.metadata_quality_status for item in items]
     return ProviderSourceListResponse(
         items=items,
         **build_provider_source_summary(record_list),
-        metadata_complete_count=_count_statuses([i.metadata_quality_status for i in items], "complete"),
-        metadata_partial_count=_count_statuses([i.metadata_quality_status for i in items], "partial"),
-        metadata_unknown_count=_count_statuses([i.metadata_quality_status for i in items], "unknown"),
+        metadata_complete_count=_count_statuses(metadata_statuses, "complete"),
+        metadata_partial_count=_count_statuses(metadata_statuses, "partial"),
+        metadata_unknown_count=_count_statuses(metadata_statuses, "unknown"),
         status_nl="Provider/sources read-only opgehaald."
         if record_list
         else "Nog geen provider/source records beschikbaar.",
@@ -479,13 +484,14 @@ def list_freshness_audits() -> FreshnessAuditListResponse:
     records = _with_repository(lambda repo: repo.list_freshness_audits().records)
     record_list = list(records)
     items = [_freshness_response(r) for r in record_list]
+    chain_statuses = [item.chain_completeness_status for item in items]
     return FreshnessAuditListResponse(
         items=items,
         **build_freshness_audit_summary(record_list),
-        chain_complete_count=_count_statuses([i.chain_completeness_status for i in items], "complete"),
-        chain_partial_count=_count_statuses([i.chain_completeness_status for i in items], "partial"),
-        chain_missing_links_count=_count_statuses([i.chain_completeness_status for i in items], "missing_links"),
-        chain_metadata_only_count=_count_statuses([i.chain_completeness_status for i in items], "metadata_only"),
+        chain_complete_count=_count_statuses(chain_statuses, "complete"),
+        chain_partial_count=_count_statuses(chain_statuses, "partial"),
+        chain_missing_links_count=_count_statuses(chain_statuses, "missing_links"),
+        chain_metadata_only_count=_count_statuses(chain_statuses, "metadata_only"),
         status_nl="Freshness-audits read-only opgehaald."
         if record_list
         else "Nog geen freshness-audits beschikbaar.",

@@ -317,9 +317,63 @@ def test_mapper_endpoints_contract_regression(monkeypatch) -> None:
 
 def test_detail_and_list_contract_fields(monkeypatch) -> None:
     now = datetime.now(UTC)
-    req = RequestLogRecord(request_log_id="r9", correlation_id="c9", request_family="audit", request_purpose="status", created_at=now, completed_at=None, provider_code="ibkr", provider_account_mode="paper", provider_environment="sandbox", source_type="broker", data_domain="market_data", request_kind="list", request_target="/audit", request_status="blocked", initiated_by="api", pacing_weight=0, provider_request_budget_remaining=0, retry_count=0, received_record_count=0, stored_record_count=0, rejected_record_count=0, safe_for_analysis=False, safe_for_suggestions=False, safe_for_action_drafts=False, explanation_nl="x")
-    src = ProviderSourceRecord(provider_source_id="p9", provider_code="ibkr", provider_kind="broker", data_domain="market_data", source_type="feed", provider_environment="sandbox", provider_account_mode="paper", source_effective_from=None, source_effective_to=None, created_at=now, updated_at=now, explanation_nl="x")
-    fr = FreshnessAuditRecord(freshness_audit_id="f9", evaluated_at=now, data_domain="market_data", freshness_policy_code="snapshot", freshness_status="blocked", snapshot_as_of=now, stale_after=now, expires_at=None, age_seconds=10, freshness_window_seconds=5, safe_for_analysis=False, safe_for_suggestions=False, safe_for_action_drafts=False, explanation_nl="x")
+    req = RequestLogRecord(
+        request_log_id="r9",
+        correlation_id="c9",
+        request_family="audit",
+        request_purpose="status",
+        created_at=now,
+        completed_at=None,
+        provider_code="ibkr",
+        provider_account_mode="paper",
+        provider_environment="sandbox",
+        source_type="broker",
+        data_domain="market_data",
+        request_kind="list",
+        request_target="/audit",
+        request_status="blocked",
+        initiated_by="api",
+        pacing_weight=0,
+        provider_request_budget_remaining=0,
+        retry_count=0,
+        received_record_count=0,
+        stored_record_count=0,
+        rejected_record_count=0,
+        safe_for_analysis=False,
+        safe_for_suggestions=False,
+        safe_for_action_drafts=False,
+        explanation_nl="x",
+    )
+    src = ProviderSourceRecord(
+        provider_source_id="p9",
+        provider_code="ibkr",
+        provider_kind="broker",
+        data_domain="market_data",
+        source_type="feed",
+        provider_environment="sandbox",
+        provider_account_mode="paper",
+        source_effective_from=None,
+        source_effective_to=None,
+        created_at=now,
+        updated_at=now,
+        explanation_nl="x",
+    )
+    fr = FreshnessAuditRecord(
+        freshness_audit_id="f9",
+        evaluated_at=now,
+        data_domain="market_data",
+        freshness_policy_code="snapshot",
+        freshness_status="blocked",
+        snapshot_as_of=now,
+        stale_after=now,
+        expires_at=None,
+        age_seconds=10,
+        freshness_window_seconds=5,
+        safe_for_analysis=False,
+        safe_for_suggestions=False,
+        safe_for_action_drafts=False,
+        explanation_nl="x",
+    )
     class Repo:
         def list_request_logs(self): return _List([req])
         def list_provider_sources(self): return _List([src])
@@ -327,12 +381,21 @@ def test_detail_and_list_contract_fields(monkeypatch) -> None:
         def get_request_log(self, _id: str): return _Read(req)
         def get_provider_source(self, _id: str): return _Read(src)
         def get_freshness_audit(self, _id: str): return _Read(fr)
-    monkeypatch.setattr("portfolio_outlook_api.request_audit._with_repository", lambda op: op(Repo()))
-    for p in ["/audit/request-logs", "/audit/provider-sources", "/audit/freshness-audits", "/audit/request-logs/r9", "/audit/provider-sources/p9", "/audit/freshness-audits/f9"]:
+    monkeypatch.setattr(
+        "portfolio_outlook_api.request_audit._with_repository",
+        lambda op: op(Repo()),
+    )
+    for p in [
+        "/audit/request-logs",
+        "/audit/provider-sources",
+        "/audit/freshness-audits",
+        "/audit/request-logs/r9",
+        "/audit/provider-sources/p9",
+        "/audit/freshness-audits/f9",
+    ]:
         payload = client.get(p).json()
         text = str(payload).lower()
         assert "latest price" not in text
         assert "runtime-fetch active" not in text
         assert "decision package" not in text
         assert "orders" in text
-
