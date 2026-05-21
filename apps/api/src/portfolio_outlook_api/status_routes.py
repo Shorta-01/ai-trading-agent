@@ -22,10 +22,12 @@ from portfolio_outlook_api.ibkr_watchlists import (
     list_ibkr_watchlists,
 )
 from portfolio_outlook_api.market_data_readiness import (
+    LatestSnapshotResponse,
     ReadinessDetailResponse,
     ReadinessListResponse,
     ReadinessRow,
     ReadinessSnapshotMetadata,
+    build_latest_snapshot_response,
     build_readiness_row,
     utc_now_iso,
 )
@@ -346,11 +348,19 @@ def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> Readine
     return ReadinessDetailResponse(item=None, message_nl="Volglijst-item niet gevonden.")
 
 
-@router.get("/market-data/snapshots/latest/{ibkr_conid}")
-def read_market_data_snapshot_latest(ibkr_conid: str) -> dict[str, object]:
+@router.get("/market-data/snapshots/latest/{ibkr_conid}", response_model=LatestSnapshotResponse)
+def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
+    evaluated_at = utc_now_iso()
     storage_settings = settings.storage
     if not storage_settings.enabled or not storage_settings.database_url:
-        return {"item": None, "message_nl": "Storage niet geconfigureerd."}
+        return build_latest_snapshot_response(
+            ibkr_conid,
+            None,
+            status="not_configured",
+            status_nl="Storage niet geconfigureerd.",
+            missing_reason="storage_not_configured",
+            evaluated_at=evaluated_at,
+        )
     provider = StorageConnectionProvider(
         build_database_connection_settings(storage_settings.database_url)
     )
@@ -358,6 +368,28 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> dict[str, object]:
         with provider.checked_connection(require_writable=False) as checked:
             repo = SqlAlchemyMarketDataSnapshotRepository(checked.connection, checked.readiness)
             result = repo.get_latest_by_ibkr_conid(ibkr_conid)
-            return {"item": None if result.record is None else result.record.__dict__}
+            if result.record is None:
+                return build_latest_snapshot_response(
+                    ibkr_conid,
+                    None,
+                    status="missing_snapshot",
+                    status_nl="Nog geen snapshotmetadata opgeslagen.",
+                    missing_reason="snapshot_not_found",
+                    evaluated_at=evaluated_at,
+                )
+            return build_latest_snapshot_response(
+                ibkr_conid,
+                ReadinessSnapshotMetadata.model_validate(result.record.__dict__),
+                status="snapshot_available",
+                status_nl="Snapshotmetadata beschikbaar.",
+                evaluated_at=evaluated_at,
+            )
     except StorageConnectionError:
-        return {"item": None, "message_nl": "Storageverbinding mislukt."}
+        return build_latest_snapshot_response(
+            ibkr_conid,
+            None,
+            status="storage_failure",
+            status_nl="Storageverbinding mislukt.",
+            blocker_reason="storage_connection_failed",
+            evaluated_at=evaluated_at,
+        )

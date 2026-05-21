@@ -1,5 +1,21 @@
 # Task History (concise)
 
+## Task 90 — Conservative market-data readiness API cleanup
+
+- Status: completed.
+- Scope: API-contract + tests hardening only (read-only).
+- Endpoint `/market-data/snapshots/latest/{ibkr_conid}` gebruikt nu een expliciet typed responsecontract met vaste statusvarianten: `snapshot_available`, `missing_snapshot`, `not_configured`, `storage_failure`.
+- Regressietests uitgebreid voor not-configured, missing-snapshot en storage-failure varianten + read-only metadata-only semantiek.
+- Contract blijft expliciet blokkeren dat deze endpoint runtime-marktdata, analyse, suggesties, Decision Packages, action drafts of orders zou impliceren.
+- Nederlandse status/help-tekst blijft eenvoudig en deterministisch.
+- Geen market-data runtime toegevoegd.
+- Geen historical fetching toegevoegd.
+- Geen scheduler toegevoegd.
+- Geen AI runtime toegevoegd.
+- Geen suggesties, Decision Packages, action drafts of IBKR-ordergedrag toegevoegd.
+- Geen fake market prices, brokerdata of recommendations toegevoegd.
+- Unresolved/unvalidated identiteiten blijven blocked voor market data, analyse, suggesties en action drafts.
+
 ## Task 89 — Conservative API-readiness contract hardening
 
 - Status: completed.
