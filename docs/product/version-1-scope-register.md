@@ -138,3 +138,5 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | V1.8 paper action workflow | Planned / **Paper-only future** |
 
 Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/freshness/risk gates + approved modelversion actief zijn.
+
+- In scope afgerond: AssetListing identity foundation als aparte laag naast AssetMaster, inclusief listing-level IBKR conid representatie en blocked-by-default safetyvelden.

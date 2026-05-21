@@ -11,6 +11,7 @@ from sqlalchemy.engine import Connection, RowMapping
 
 from ai_trading_agent_storage.metadata import (
     asset_identifier_aliases,
+    asset_listings,
     asset_master_records,
     broker_accounts,
     broker_cash_snapshots,
@@ -49,6 +50,7 @@ from ai_trading_agent_storage.migration_readiness import (
 )
 from ai_trading_agent_storage.repository_contracts import (
     AssetIdentifierAliasRecord,
+    AssetListingRecord,
     AssetMasterRecord,
     BrokerAccountRecord,
     BrokerCashSnapshotRecord,
@@ -182,6 +184,15 @@ def _row_to_asset_master_record(row: Any) -> AssetMasterRecord:
         None if values.get("audit_context_json") is None else dict(values["audit_context_json"])
     )
     return AssetMasterRecord(**values)
+
+
+def _row_to_asset_listing_record(row: Any) -> AssetListingRecord:
+    values = dict(row)
+    values["source_reference_ids_json"] = _json_tuple_or_none(values.get("source_reference_ids_json"))
+    values["audit_context_json"] = (
+        None if values.get("audit_context_json") is None else dict(values["audit_context_json"])
+    )
+    return AssetListingRecord(**values)
 
 
 def _read_one_by_column(
@@ -829,6 +840,55 @@ class SqlAlchemyResearchSourceArchiveRepository(_Base):
     def list_asset_master_records(self) -> tuple[AssetMasterRecord, ...]:
         rows = self._connection.execute(select(asset_master_records)).mappings().all()
         return tuple(_row_to_asset_master_record(row) for row in rows)
+
+    def save_asset_listing(self, record: AssetListingRecord) -> AssetListingRecord:
+        if self.get_asset_by_asset_id(record.asset_id) is None:
+            raise ValueError("asset_id moet verwijzen naar een bestaande asset master identiteit.")
+        values = asdict(record)
+        values["source_reference_ids_json"] = _json_list_or_none(record.source_reference_ids_json)
+        values["audit_context_json"] = (
+            None if record.audit_context_json is None else json.dumps(record.audit_context_json)
+        )
+        self._insert(asset_listings, values)
+        return record
+
+    def get_asset_listing_by_listing_id(self, listing_id: str) -> AssetListingRecord | None:
+        row = _read_one_by_column(self._connection, asset_listings, "listing_id", listing_id)
+        return None if row is None else _row_to_asset_listing_record(row)
+
+    def get_asset_listing_by_ibkr_conid(self, ibkr_conid: str) -> AssetListingRecord | None:
+        row = _read_one_by_column(self._connection, asset_listings, "ibkr_conid", ibkr_conid)
+        return None if row is None else _row_to_asset_listing_record(row)
+
+    def list_asset_listings(self, asset_id: str | None = None) -> tuple[AssetListingRecord, ...]:
+        statement = select(asset_listings)
+        if asset_id is not None:
+            statement = statement.where(asset_listings.c.asset_id == asset_id)
+        rows = self._connection.execute(statement.order_by(asset_listings.c.listing_id.asc())).mappings().all()
+        return tuple(_row_to_asset_listing_record(row) for row in rows)
+
+    def search_asset_listings(self, query: str, limit: int = 20) -> tuple[AssetListingRecord, ...]:
+        normalized = query.strip().lower()
+        matches: list[AssetListingRecord] = []
+        for record in self.list_asset_listings():
+            haystack = [
+                record.listing_id,
+                record.asset_id,
+                record.ibkr_conid or "",
+                record.symbol,
+                record.local_symbol or "",
+                record.trading_class or "",
+                record.exchange or "",
+                record.primary_exchange or "",
+                record.currency,
+                record.security_type,
+            ]
+            if normalized and not any(normalized in item.lower() for item in haystack):
+                continue
+            matches.append(record)
+            if len(matches) >= limit:
+                break
+        return tuple(matches)
 
     def save_asset_identifier_alias(
         self, record: AssetIdentifierAliasRecord

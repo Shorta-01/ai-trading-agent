@@ -168,3 +168,5 @@
 - Geen applicatiecode/tests/migraties/package metadata/workflows gewijzigd door functionele implementatie.
 - CI is hersteld en groen (run #358; alle 6 jobs geslaagd).
 - Task 89 mag als volgende implementatietaak weer doorgaan onder de normale groene-CI gate.
+
+- Task 93: **completed** — AssetListing identity foundation verdiept met aparte `asset_listings` storage- en API-basis (identity/reference/status-only). AssetListing is expliciet gescheiden van AssetMaster; IBKR conid hoort op listing/instrumentniveau. Tickertekst alleen blijft onvoldoende voor actieve watchlist, market data, analyse, suggesties of action drafts. Onopgeloste/niet-gevalideerde listings blijven blocked (`safe_to_use_* = false`, `blocks_* = true`). Geen market-data runtime/fetching, geen scheduler, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake market/broker/recommendation data toegevoegd.

@@ -219,6 +219,14 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Conservatief opslagfundament voor conid-gebaseerde market-data snapshotmetadata "
             "en freshness/readinessblokkade-info (zonder runtime fetch)."
         ),
+
+    MigrationRevisionInfo(
+        revision_id="0022_asset_listing_identity_foundation",
+        previous_revision_id="0021_market_data_storage_foundation",
+        filename="0022_asset_listing_identity_foundation.py",
+        label_nl="AssetListing identity foundation",
+        description_nl="Opslagfundament voor listing/instrument/conid-identiteit (reference/status-only).",
+    ),
     ),
 )
 

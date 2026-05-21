@@ -2,8 +2,8 @@
 
 ## CI status
 
-CI blijft groen na Task 92 contract-hardening (lokale checks geslaagd; vervolg via normale CI-run op PR).
+Task 93 lokaal geverifieerd met storage+api lint/type/tests en diff-check.
 
 ## Next implementation task
 
-Task 93 — Conservatieve grotere foundationstap: AssetListing identity foundation verdieping (contract- en opslagfundering voor rijkere, auditbare asset-identiteit los van tickertekst), nog steeds zonder market-data runtime/scheduler/forecast/AI/suggesties/actions.
+Task 94 — Conservatieve foundation-vervolgstap: AssetListing-to-watchlist readiness wiring (alleen contract/status-koppeling en blokkaderegels), nog steeds zonder market-data runtime/scheduler/forecast/AI/suggesties/actions/orders.
