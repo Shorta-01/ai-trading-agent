@@ -8,28 +8,45 @@ import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusCard } from "@/components/StatusCard";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
-import { apiClient, IbkrStatusResponse, IbkrSyncStatusResponse, SystemStatusSummary } from "@/lib/apiClient";
+import { UiStatus } from "@/components/StatusBadge";
+import { apiClient, IbkrStatusResponse, IbkrSyncStatusResponse, PortfolioValuationReadinessResponse, SystemStatusSummary } from "@/lib/apiClient";
 
-const metrics = [
-  "Totale portefeuillewaarde",
-  "Dagresultaat",
-  "Totaal resultaat",
-  "Beschikbare cash",
-  "Actieve suggesties",
-  "Te keuren acties",
-] as const;
+function formatValuationValue(baseCurrency: string | null, value: string | null, available: boolean): string {
+  if (!available || !value) {
+    return "Geen veilige totaalwaarde";
+  }
+  return baseCurrency ? `${baseCurrency} ${value}` : value;
+}
+
+function getValuationDisplayStatus(readiness: PortfolioValuationReadinessResponse | null): UiStatus {
+  if (!readiness) return "niet-beschikbaar";
+  if (readiness.conversion_total_status.includes("blocked")) return "geblokkeerd";
+  if (readiness.conversion_total_status.includes("control_needed")) return "aandacht";
+  if (readiness.conversion_total_status === "conversion_not_required") return "info";
+  if (readiness.conversion_total_status === "conversion_ready") return "ok";
+  return "wacht";
+}
 
 export default function HomePage() {
   const [systemStatus, setSystemStatus] = useState<SystemStatusSummary | null>(null);
   const [ibkrStatus, setIbkrStatus] = useState<IbkrStatusResponse | null>(null);
   const [ibkrSyncStatus, setIbkrSyncStatus] = useState<IbkrSyncStatusResponse | null>(null);
+  const [valuationReadiness, setValuationReadiness] = useState<PortfolioValuationReadinessResponse | null>(null);
+  const [valuationLoading, setValuationLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [system, ibkr, ibkrSync] = await Promise.all([apiClient.getSystemStatus(), apiClient.getIbkrStatus(), apiClient.getIbkrSyncStatus()]);
+      const [system, ibkr, ibkrSync, valuation] = await Promise.all([
+        apiClient.getSystemStatus(),
+        apiClient.getIbkrStatus(),
+        apiClient.getIbkrSyncStatus(),
+        apiClient.getPortfolioValuationReadiness(),
+      ]);
       setSystemStatus(system.ok ? system.data : null);
       setIbkrStatus(ibkr.ok ? ibkr.data : null);
       setIbkrSyncStatus(ibkrSync.ok ? ibkrSync.data : null);
+      setValuationReadiness(valuation.ok ? valuation.data : null);
+      setValuationLoading(false);
     }
     void load();
   }, []);
@@ -40,17 +57,47 @@ export default function HomePage() {
     return { label: "Nog geen IBKR-sync", status: "aandacht" as const, help: ibkrStatus.message_nl };
   }, [ibkrStatus]);
 
+  const valuationStatus = getValuationDisplayStatus(valuationReadiness);
+  const valuationHelp = valuationLoading
+    ? "Waardering wordt geladen. Er worden geen waarden verzonnen."
+    : valuationReadiness?.conversion_total_help_nl ?? "De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen.";
+
   return (
     <main className="page-wrap">
       <section className="metrics-grid">
-        {metrics.map((title) => (
-          <MetricCard key={title} title={title} value="Niet beschikbaar" status="niet-beschikbaar" help="Deze waarde verschijnt zodra echte gegevens beschikbaar zijn." />
-        ))}
+        <MetricCard
+          title="Totale portefeuillewaarde"
+          value={valuationLoading ? "Laden..." : formatValuationValue(valuationReadiness?.base_currency ?? null, valuationReadiness?.total_portfolio_value ?? null, valuationReadiness?.total_portfolio_value_available ?? false)}
+          status={valuationLoading ? "wacht" : valuationStatus}
+          help={valuationLoading ? "Waardering wordt geladen." : valuationHelp}
+        />
+        <MetricCard title="Dagresultaat" value="Niet beschikbaar" status="niet-beschikbaar" help="Deze waarde verschijnt zodra echte gegevens beschikbaar zijn." />
+        <MetricCard title="Totaal resultaat" value="Niet beschikbaar" status="niet-beschikbaar" help="Deze waarde verschijnt zodra echte gegevens beschikbaar zijn." />
+        <MetricCard
+          title="Cashwaarde"
+          value={valuationLoading ? "Laden..." : formatValuationValue(valuationReadiness?.base_currency ?? null, valuationReadiness?.total_cash_value ?? null, valuationReadiness?.total_cash_value_available ?? false)}
+          status={valuationLoading ? "wacht" : valuationStatus}
+          help={valuationHelp}
+        />
+        <MetricCard title="Actieve suggesties" value="Niet beschikbaar" status="niet-beschikbaar" help="Suggestion runtime bestaat nog niet." />
+        <MetricCard title="Te keuren acties" value="Niet beschikbaar" status="niet-beschikbaar" help="Action-draft runtime bestaat nog niet." />
       </section>
 
       <div className="dashboard-layout">
         <DashboardPanel title="Portefeuille-evolutie" help="Toont later waarde-evolutie, winst/verlies en markeringen voor koop/verkoop.">
           <ChartPlaceholder text="Portefeuille-evolutie verschijnt hier na IBKR-sync en marktdataverwerking." />
+        </DashboardPanel>
+
+        <DashboardPanel title="Waardering" help="Read-only status van waardering op basis van bestaande readiness-gegevens.">
+          {valuationLoading ? <EmptyState title="Waardering laden" message="Even wachten, er worden geen waarden verzonnen." /> : null}
+          {!valuationLoading && !valuationReadiness ? <EmptyState title="Waardering niet beschikbaar" message="De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen." /> : null}
+          {valuationReadiness ? (
+            <div className="status-list">
+              <StatusCard title="Totale marktwaarde" description={valuationReadiness.conversion_total_help_nl} statusLabel={formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_market_value, valuationReadiness.total_market_value_available)} status={valuationStatus} />
+              <StatusCard title="Cashwaarde" description={valuationReadiness.conversion_total_help_nl} statusLabel={formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_cash_value, valuationReadiness.total_cash_value_available)} status={valuationStatus} />
+              <StatusCard title="Omrekening" description={valuationReadiness.conversion_total_help_nl} statusLabel={valuationReadiness.conversion_total_status_nl} status={valuationStatus} />
+            </div>
+          ) : null}
         </DashboardPanel>
 
         <DashboardPanel title="Synchronisatie en status" help="Toont actuele status zonder fake succesmeldingen.">
@@ -61,18 +108,6 @@ export default function HomePage() {
             <SyncStatusBadge label="Suggesties" status="geblokkeerd" help="Suggestion runtime bestaat nog niet." />
             <SyncStatusBadge label="AI-briefing" status="geblokkeerd" help="AI runtime bestaat nog niet." />
           </div>
-        </DashboardPanel>
-
-        <DashboardPanel title="Samenstelling" help="Toont later verdeling per asset, sector, valuta en cash/invested.">
-          <EmptyState title="Nog leeg" message="Samenstelling verschijnt na portfolio-sync." />
-        </DashboardPanel>
-
-        <DashboardPanel title="Suggesties en aandacht" help="Toont later actieve, geblokkeerde en verlopen suggesties plus te keuren acties.">
-          <EmptyState title="Nog geen suggesties" message="Nog geen suggesties beschikbaar." />
-        </DashboardPanel>
-
-        <DashboardPanel title="Dagelijkse briefing" help="Toont later samenvatting van AI, nieuws en uploads.">
-          <EmptyState title="Briefing niet beschikbaar" message="Dagelijkse briefing verschijnt zodra AI-analyse en databronnen actief zijn." />
         </DashboardPanel>
 
         <DashboardPanel title="Systeemstatus" help="Samenvatting van huidige foundations.">
