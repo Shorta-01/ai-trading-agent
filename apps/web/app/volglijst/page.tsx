@@ -44,10 +44,10 @@ export default function Page() {
             return [conid, { label: "Providerfout", help: "Status kon niet worden opgehaald." }] as const;
           }
           if (status.data.status === "snapshot_available") {
-            return [conid, { label: "Snapshot beschikbaar", help: "Alleen status. Nog geen analyse." }] as const;
+            return [conid, { label: status.data.status_nl, help: `${status.data.price_basis_nl ?? "Alleen opgeslagen snapshot"}. ${status.data.valuation_readiness_status ?? "ready_for_status_only"}` }] as const;
           }
           if (status.data.status === "missing_snapshot") {
-            return [conid, { label: "Geen marktdata", help: "Nog geen snapshot. Alleen status." }] as const;
+            return [conid, { label: "Geen marktdata", help: "Waardering nog niet beschikbaar." }] as const;
           }
           if (status.data.status === "not_configured") {
             return [conid, { label: "Niet geconfigureerd", help: status.data.next_step_nl }] as const;

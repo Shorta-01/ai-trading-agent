@@ -176,6 +176,12 @@ class ReadinessDetailResponse(BaseModel):
 
 class LatestSnapshotResponse(BaseModel):
     ibkr_conid: str
+    freshness_status: str | None = None
+    valuation_readiness_status: str | None = None
+    price_basis: str | None = None
+    price_basis_nl: str | None = None
+    usable_price: str | None = None
+    snapshot_age_seconds: int | None = None
     status: LatestSnapshotStatus
     status_nl: str
     provider_code: str | None = None
@@ -186,7 +192,6 @@ class LatestSnapshotResponse(BaseModel):
     received_at: datetime | None = None
     provider_as_of: datetime | None = None
     stored_at: datetime | None = None
-    freshness_status: str | None = None
     snapshot_available: bool = False
     stale: bool = False
     last_price: str | None = None

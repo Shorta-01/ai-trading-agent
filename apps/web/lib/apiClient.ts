@@ -523,6 +523,12 @@ export type WatchlistAssetListingReadiness = {
   action_drafts_allowed: boolean;
   blocker_code: string | null;
   status_nl: string;
+  freshness_status?: string | null;
+  valuation_readiness_status?: string | null;
+  price_basis?: string | null;
+  price_basis_nl?: string | null;
+  usable_price?: string | null;
+  snapshot_age_seconds?: number | null;
   next_step_nl: string;
   audit_help_nl: string;
 };
@@ -531,6 +537,12 @@ export type MarketDataLatestSnapshotStatusResponse = {
   ibkr_conid: string;
   status: string;
   status_nl: string;
+  freshness_status?: string | null;
+  valuation_readiness_status?: string | null;
+  price_basis?: string | null;
+  price_basis_nl?: string | null;
+  usable_price?: string | null;
+  snapshot_age_seconds?: number | null;
   next_step_nl: string;
   help_nl: string;
   analysis_ready: boolean;

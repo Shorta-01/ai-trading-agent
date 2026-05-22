@@ -1,5 +1,6 @@
 """Routes for read-only status/settings summaries."""
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from ai_trading_agent_storage import (
@@ -13,6 +14,10 @@ from fastapi import APIRouter, Body, HTTPException
 from portfolio_outlook_domain.market_data_foundation import (
     MarketDataFetchStatus,
     MarketDataIdentity,
+    MarketDataPriceBasis,
+    MarketDataReadinessPolicy,
+    MarketDataSnapshot,
+    evaluate_market_data_readiness,
 )
 
 from portfolio_outlook_api.config import settings
@@ -520,6 +525,43 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
                 else None
             )
             response.currency = record.currency
+            snapshot = MarketDataSnapshot(
+                ibkr_conid=ibkr_conid,
+                symbol=record.symbol or "",
+                currency=record.currency or "",
+                requested_at=record.requested_at or record.stored_at,
+                received_at=record.received_at or record.stored_at,
+                provider_as_of=record.provider_as_of,
+                stored_at=record.stored_at,
+                provider_code=record.provider_code or "unknown",
+                provider_environment=record.provider_environment or "unknown",
+                provider_account_mode=record.provider_account_mode or "unknown",
+                data_domain="market_data",
+                request_kind=record.market_data_type or "snapshot",
+                source_type="stored_snapshot",
+                last_price=record.last_price,
+                bid_price=record.bid_price,
+                ask_price=record.ask_price,
+                day_change_percent=record.day_change_percent,
+            )
+            readiness = evaluate_market_data_readiness(
+                snapshot=snapshot, now=datetime.now(UTC), policy=MarketDataReadinessPolicy()
+            )
+            response.valuation_readiness_status = readiness.valuation_readiness_status.value
+            response.freshness_status = readiness.freshness_status.value
+            response.price_basis = readiness.price_basis.value
+            response.snapshot_age_seconds = readiness.snapshot_age_seconds
+            response.usable_price = (
+                str(readiness.usable_price)
+                if readiness.usable_price is not None
+                else None
+            )
+            response.price_basis_nl = {
+                MarketDataPriceBasis.LAST: "Laatste prijs",
+                MarketDataPriceBasis.MIDPOINT: "Midden van bied/laats",
+                MarketDataPriceBasis.CLOSE: "Slotkoers",
+                MarketDataPriceBasis.UNAVAILABLE: "Geen bruikbare prijs",
+            }[readiness.price_basis]
             response.next_step_nl = "Alleen status. Nog geen analyse."
             response.help_nl = "Nog geen suggesties mogelijk."
             return response
