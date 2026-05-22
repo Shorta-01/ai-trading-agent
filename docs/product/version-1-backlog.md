@@ -282,3 +282,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 ## Task 125B update: durable IBKR sync storage repository layer completed; runtime/API wiring deferred to 125C.
 
 - Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
+
+
+- Task 125H afgerond: FX snapshot durable storage foundation (read-only, no runtime fetch).

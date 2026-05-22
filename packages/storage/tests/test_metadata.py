@@ -51,6 +51,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "ibkr_position_snapshots",
         "ibkr_open_order_snapshots",
         "ibkr_execution_snapshots",
+        "fx_rate_snapshots",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
@@ -233,6 +234,15 @@ def test_broker_snapshot_tables_have_expected_columns() -> None:
     }
     assert set(metadata.tables["broker_position_snapshots"].c.keys()) == broker_position_expected
     assert set(metadata.tables["broker_cash_snapshots"].c.keys()) == broker_cash_expected
+
+
+def test_fx_rate_snapshot_table_has_expected_columns() -> None:
+    expected = {
+        "snapshot_id", "provider", "source", "base_currency", "quote_currency",
+        "pair", "rate", "rate_type", "as_of", "received_at", "stored_at",
+        "freshness_status", "validation_status", "reason_code", "metadata_json",
+    }
+    assert set(metadata.tables["fx_rate_snapshots"].c.keys()) == expected
 
 
 def test_broker_snapshot_numeric_columns_are_numeric_and_not_float() -> None:

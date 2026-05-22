@@ -15,6 +15,7 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerSyncRunRecord,
     CreatePaperPortfolioSetupRequest,
     CreateSystemEventRequest,
+    FxRateSnapshotRecord,
     IbkrAccountCashSnapshotRecord,
     IbkrExecutionSnapshotRecord,
     IbkrOpenOrderSnapshotRecord,
@@ -513,3 +514,60 @@ def test_trading_settings_write_blocked_until_readiness_safe() -> None:
                     updated_at=datetime.now(UTC),
                 )
             )
+
+
+def test_fx_rate_snapshot_roundtrip_and_latest_lookup() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    now = datetime.now(UTC)
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyIbkrSyncSnapshotRepository(conn, _report(True))
+        older = FxRateSnapshotRecord(
+            snapshot_id="fx-1",
+            provider="ecb",
+            source="daily",
+            base_currency="eur",
+            quote_currency="usd",
+            pair="eur/usd",
+            rate=Decimal("1.08765"),
+            rate_type="reference",
+            as_of=now,
+            received_at=now,
+            stored_at=now,
+            freshness_status="fresh",
+            validation_status="valid",
+            reason_code="ok",
+            metadata_json={"batch": "a"},
+        )
+        newer = FxRateSnapshotRecord(
+            snapshot_id="fx-2",
+            provider="ecb",
+            source="daily",
+            base_currency="EUR",
+            quote_currency="USD",
+            pair="EUR/USD",
+            rate=Decimal("1.09765"),
+            rate_type="reference",
+            as_of=now.replace(year=now.year),
+            received_at=now.replace(year=now.year),
+            stored_at=now.replace(year=now.year),
+            freshness_status="stale",
+            validation_status="invalid",
+            reason_code="old",
+            metadata_json=None,
+        )
+        repo.save_fx_rate_snapshot(older)
+        repo.save_fx_rate_snapshot(newer)
+        loaded = repo.get_fx_rate_snapshot("fx-1")
+        assert loaded is not None
+        assert loaded.base_currency == "EUR"
+        assert loaded.quote_currency == "USD"
+        assert loaded.pair == "EUR/USD"
+        assert isinstance(loaded.rate, Decimal)
+        assert loaded.rate == Decimal("1.08765")
+        latest = repo.get_latest_fx_rate_snapshot("eur", "usd")
+        assert latest is not None
+        assert latest.snapshot_id == "fx-2"
+        by_pairs = repo.list_latest_fx_rate_snapshots_by_pairs(("EUR/USD", "GBP/USD"))
+        assert len(by_pairs) == 1
+        assert by_pairs[0].snapshot_id == "fx-2"

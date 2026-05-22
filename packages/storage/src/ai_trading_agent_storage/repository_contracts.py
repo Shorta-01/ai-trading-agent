@@ -299,6 +299,25 @@ class IbkrExecutionSnapshotRecord:
 
 
 @dataclass(frozen=True)
+class FxRateSnapshotRecord:
+    snapshot_id: str
+    provider: str
+    source: str
+    base_currency: str
+    quote_currency: str
+    pair: str
+    rate: Decimal
+    rate_type: str
+    as_of: datetime
+    received_at: datetime
+    stored_at: datetime
+    freshness_status: str
+    validation_status: str
+    reason_code: str
+    metadata_json: dict[str, object] | None
+
+
+@dataclass(frozen=True)
 class BrokerReconciliationReportRecord:
     broker_reconciliation_report_id: str
     broker_sync_run_id: str
@@ -1554,6 +1573,18 @@ class MarketDataSnapshotRepository(Protocol):
         ...
 
 
+class FxRateSnapshotRepository(Protocol):
+    def save_fx_rate_snapshot(self, record: FxRateSnapshotRecord) -> None: ...
+    def get_fx_rate_snapshot(self, snapshot_id: str) -> FxRateSnapshotRecord | None: ...
+    def list_fx_rate_snapshots(self, limit: int = 100) -> list[FxRateSnapshotRecord]: ...
+    def get_latest_fx_rate_snapshot(
+        self, base_currency: str, quote_currency: str
+    ) -> FxRateSnapshotRecord | None: ...
+    def list_latest_fx_rate_snapshots_by_pairs(
+        self, pairs: tuple[str, ...]
+    ) -> list[FxRateSnapshotRecord]: ...
+
+
 class BrokerReconciliationRepository(Protocol):
     def get_report_by_id(
         self,
@@ -1650,6 +1681,7 @@ def repository_interfaces_are_defined() -> bool:
         BrokerSyncRunRepository,
         BrokerSnapshotRepository,
         MarketDataSnapshotRepository,
+        FxRateSnapshotRepository,
         BrokerReconciliationRepository,
         ExternalBrokerActivityRepository,
         BrokerStorageUnitOfWork,
@@ -1660,6 +1692,7 @@ def repository_interfaces_are_defined() -> bool:
         BrokerExecutionSnapshotRecord,
         BrokerCommissionSnapshotRecord,
         MarketDataSnapshotRecord,
+        FxRateSnapshotRecord,
         BrokerReconciliationReportRecord,
         BrokerReconciliationDifferenceRecord,
         ExternalBrokerActivityRecord,
