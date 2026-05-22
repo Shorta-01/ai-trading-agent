@@ -1,3 +1,9 @@
+## Task 125J — Valuation conversion-total preflight (document-first, read-only)
+- Nieuw document toegevoegd: `docs/product/valuation-conversion-total-preflight-task-125j.md`.
+- Definieert purpose/boundary, required stored inputs, base-currency rules, FX pair rules, calculation boundaries, Decimal/rounding-regels, candidate readiness/status-contract en audittrace-eisen.
+- Bevestigt expliciete non-goals: geen converted-total runtime, geen API calculation implementation, geen storage migration, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals/brokerdata.
+- Aanbevolen volgende smalle implementatieslice: Task 125K (pure Decimal-only conversion calculator module + unit tests, zonder API wiring en zonder runtime fetch).
+
 ## Task 125H — FX snapshot storage schema/repository contract (read-only)
 
 - Status: afgerond.
