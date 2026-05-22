@@ -15,12 +15,18 @@ from ai_trading_agent_storage.repository_contracts import (
     BrokerSyncRunRecord,
     CreatePaperPortfolioSetupRequest,
     CreateSystemEventRequest,
+    IbkrAccountCashSnapshotRecord,
+    IbkrExecutionSnapshotRecord,
+    IbkrOpenOrderSnapshotRecord,
+    IbkrPositionSnapshotRecord,
+    IbkrSyncRunRecord,
     SaveTradingSettingsRequest,
 )
 from ai_trading_agent_storage.sql_repositories import (
     SqlAlchemyBrokerAccountRepository,
     SqlAlchemyBrokerStorageUnitOfWork,
     SqlAlchemyBrokerSyncRunRepository,
+    SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyPaperPortfolioSetupRepository,
     SqlAlchemySystemEventRepository,
     SqlAlchemyTradingSettingsRepository,
@@ -354,6 +360,99 @@ def test_system_event_resolve_and_archive_hide_from_open_list() -> None:
         assert after_archive.record.status == "archived"
         assert after_archive.record.archived_at is not None
         assert repo.list_open_events().records == ()
+
+
+def test_ibkr_sync_repository_roundtrip_and_lists() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    now = datetime.now(UTC)
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyIbkrSyncSnapshotRepository(conn, _report(True))
+        run = IbkrSyncRunRecord(
+            sync_run_id="sync-1",
+            started_at=now,
+            completed_at=now,
+            provider_code="ibkr",
+            provider_environment="paper",
+            account_mode="paper",
+            readonly=True,
+            status="completed",
+            account_summary_status="ok",
+            positions_status="ok",
+            open_orders_status="ok",
+            executions_status="ok",
+            positions_count=1,
+            cash_values_count=1,
+            open_orders_count=1,
+            executions_count=1,
+            status_nl=None,
+            next_step_nl=None,
+            help_nl=None,
+            actions_allowed=False,
+            order_submission_allowed=False,
+            order_modification_allowed=False,
+            order_cancellation_allowed=False,
+            suggestions_allowed=False,
+            stored_at=now,
+        )
+        repo.save_ibkr_sync_run(run)
+        loaded_run = repo.get_ibkr_sync_run("sync-1")
+        assert loaded_run is not None
+        assert loaded_run.sync_run_id == run.sync_run_id
+        assert loaded_run.actions_allowed is False
+        assert repo.get_ibkr_sync_run("missing") is None
+        latest_run = repo.get_latest_ibkr_sync_run()
+        assert latest_run is not None
+        assert latest_run.sync_run_id == run.sync_run_id
+        assert len(repo.list_ibkr_sync_runs(limit=5)) == 1
+
+        cash = IbkrAccountCashSnapshotRecord(
+            "c1", "sync-1", None, "EUR", Decimal("1.2"), None, None, now, now
+        )
+        pos = IbkrPositionSnapshotRecord(
+            "p1",
+            "sync-1",
+            None,
+            None,
+            "AAPL",
+            "STK",
+            "USD",
+            None,
+            None,
+            Decimal("2"),
+            None,
+            now,
+            now,
+        )
+        order = IbkrOpenOrderSnapshotRecord(
+            "o1", "sync-1", None, 1, None, None, None, "AAPL", "STK", "USD",
+            None, None, "BUY", "LMT", Decimal("1"), None, None, None, "Submitted",
+            Decimal("0"), Decimal("1"), None, None, None, now, now
+        )
+        exe = IbkrExecutionSnapshotRecord(
+            "e1", "sync-1", None, "exec-1", None, None, "AAPL", "STK", "USD",
+            None, None, "BUY", Decimal("1"), Decimal("10"), now, None, None,
+            None, None, now, now
+        )
+
+        repo.save_ibkr_account_cash_snapshots("sync-1", [cash])
+        repo.save_ibkr_position_snapshots("sync-1", [pos])
+        repo.save_ibkr_open_order_snapshots("sync-1", [order])
+        repo.save_ibkr_execution_snapshots("sync-1", [exe])
+
+        loaded_cash = repo.list_ibkr_account_cash_snapshots("sync-1")
+        loaded_positions = repo.list_ibkr_position_snapshots("sync-1")
+        loaded_orders = repo.list_ibkr_open_order_snapshots("sync-1")
+        loaded_executions = repo.list_ibkr_execution_snapshots("sync-1")
+        assert loaded_cash[0].snapshot_id == "c1"
+        assert isinstance(loaded_cash[0].cash, Decimal)
+        assert loaded_cash[0].available_funds is None
+        assert loaded_positions[0].snapshot_id == "p1"
+        assert isinstance(loaded_positions[0].quantity, Decimal)
+        assert loaded_orders[0].snapshot_id == "o1"
+        assert isinstance(loaded_orders[0].quantity, Decimal)
+        assert loaded_executions[0].snapshot_id == "e1"
+        assert isinstance(loaded_executions[0].price, Decimal)
 
 
 def test_trading_settings_save_read_update_and_not_found() -> None:

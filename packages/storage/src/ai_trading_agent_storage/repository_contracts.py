@@ -185,6 +185,120 @@ class BrokerCommissionSnapshotRecord:
 
 
 @dataclass(frozen=True)
+class IbkrSyncRunRecord:
+    sync_run_id: str
+    started_at: datetime
+    completed_at: datetime | None
+    provider_code: str
+    provider_environment: str
+    account_mode: str
+    readonly: bool
+    status: str
+    account_summary_status: str
+    positions_status: str
+    open_orders_status: str
+    executions_status: str
+    positions_count: int
+    cash_values_count: int
+    open_orders_count: int
+    executions_count: int
+    status_nl: str | None
+    next_step_nl: str | None
+    help_nl: str | None
+    actions_allowed: bool
+    order_submission_allowed: bool
+    order_modification_allowed: bool
+    order_cancellation_allowed: bool
+    suggestions_allowed: bool
+    stored_at: datetime
+
+
+@dataclass(frozen=True)
+class IbkrAccountCashSnapshotRecord:
+    snapshot_id: str
+    sync_run_id: str
+    account_ref: str | None
+    base_currency: str
+    cash: Decimal | None
+    available_funds: Decimal | None
+    buying_power: Decimal | None
+    received_at: datetime
+    stored_at: datetime
+
+
+@dataclass(frozen=True)
+class IbkrPositionSnapshotRecord:
+    snapshot_id: str
+    sync_run_id: str
+    account_ref: str | None
+    conid: str | None
+    symbol: str
+    security_type: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    quantity: Decimal
+    average_cost: Decimal | None
+    received_at: datetime
+    stored_at: datetime
+
+
+@dataclass(frozen=True)
+class IbkrOpenOrderSnapshotRecord:
+    snapshot_id: str
+    sync_run_id: str
+    account_ref: str | None
+    ibkr_order_id: int
+    ibkr_perm_id: int | None
+    parent_order_id: int | None
+    client_id: int | None
+    symbol: str
+    security_type: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    action_side: str
+    order_type: str
+    quantity: Decimal
+    limit_price: Decimal | None
+    stop_price: Decimal | None
+    tif: str | None
+    status: str
+    filled_quantity: Decimal
+    remaining_quantity: Decimal
+    average_fill_price: Decimal | None
+    last_status_at: datetime | None
+    raw_status_reference: str | None
+    received_at: datetime
+    stored_at: datetime
+
+
+@dataclass(frozen=True)
+class IbkrExecutionSnapshotRecord:
+    snapshot_id: str
+    sync_run_id: str
+    account_ref: str | None
+    execution_id: str
+    ibkr_order_id: int | None
+    ibkr_perm_id: int | None
+    symbol: str
+    security_type: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    side: str
+    quantity: Decimal
+    price: Decimal
+    execution_time: datetime
+    commission: Decimal | None
+    commission_currency: str | None
+    realized_pnl: Decimal | None
+    raw_execution_reference: str | None
+    received_at: datetime
+    stored_at: datetime
+
+
+@dataclass(frozen=True)
 class BrokerReconciliationReportRecord:
     broker_reconciliation_report_id: str
     broker_sync_run_id: str
