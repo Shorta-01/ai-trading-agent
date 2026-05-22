@@ -262,3 +262,5 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
 
 | Task 125E cash/FX valuation readiness enrichment | Completed | Hergebruik bestaande IBKR sync + cash snapshots | API contract uitgebreid met read-only cash/FX readiness, geen runtime FX/market fetch | UI ongewijzigd | Runtime pending | Geen suggesties/action drafts/orders, geen fake cash/FX/totals; expliciete blocked/control-needed statussen. |
+
+| Task 125F FX snapshot contract inventory/readiness linkage | Completed | Inventaris van bestaande storage/API contracten | API valuation readiness uitgebreid met expliciete FX-opslagcontractstatus (`fx_snapshot_contract_missing` wanneer afwezig) | UI ongewijzigd | Runtime pending | Geen FX runtime fetch/market-data runtime/suggesties/action drafts/orders; geen fake FX rates of converted totals. |

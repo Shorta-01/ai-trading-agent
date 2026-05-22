@@ -78,6 +78,7 @@ def test_storage_unavailable_returns_blocked(monkeypatch) -> None:
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["status"] == "storage_unavailable"
     assert payload["blocked"] is True
+    assert payload["fx_snapshot_contract_status"] == "fx_snapshot_contract_missing"
 
 
 def test_no_latest_snapshot_returns_blocked(monkeypatch) -> None:
@@ -228,6 +229,7 @@ def test_cash_snapshot_exposed_decimal_safe(monkeypatch) -> None:
     assert payload["cash_values"][0]["cash"] == "50.10"
     assert payload["fx_required"] is False
     assert payload["fx_readiness_status"] == "fx_not_required"
+    assert payload["fx_snapshot_contract_available"] is False
     assert payload["missing_fx_pairs"] == []
     assert "fx_rates" not in payload["missing_total_value_inputs"]
 
@@ -288,6 +290,8 @@ def test_multi_currency_without_fx_rates_is_blocked(monkeypatch) -> None:
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["fx_required"] is True
     assert payload["fx_readiness_status"] == "fx_not_supported_yet"
+    assert payload["fx_snapshot_contract_status"] == "fx_snapshot_contract_missing"
+    assert payload["fx_snapshot_data_available"] is False
     assert payload["total_portfolio_value_available"] is False
 
 
@@ -389,6 +393,7 @@ def test_no_positions_multi_currency_cash_marks_fx_required(monkeypatch) -> None
     assert payload["status"] == "no_positions"
     assert payload["fx_required"] is True
     assert payload["fx_readiness_status"] == "fx_not_supported_yet"
+    assert payload["fx_snapshot_contract_available"] is False
     assert payload["missing_fx_pairs"] == ["all_required_pairs"]
     assert "fx_rates" in payload["missing_total_value_inputs"]
     assert payload["fx_rates_available"] is False
