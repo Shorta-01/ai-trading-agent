@@ -149,6 +149,10 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
     return read_status(settings) | {"sync_run_id": run_id}
 
 
+def _int_value(value: object) -> int:
+    return value if isinstance(value, int) else 0
+
+
 def read_status(settings: Settings) -> dict[str, object]:
     latest = STORE.runs[-1] if STORE.runs else None
     status = "disabled" if not settings.ibkr_sync_enabled else "configured_not_connected"
@@ -166,6 +170,8 @@ def read_status(settings: Settings) -> dict[str, object]:
         else:
             status_nl = "Read-only synchronisatie"
             next_step_nl = "Geen orders mogelijk"
+    positions_count = _int_value(latest["positions_count"]) if latest else 0
+    cash_values_count = _int_value(latest["cash_values_count"]) if latest else 0
 
     return {
         "status": status,
@@ -175,8 +181,8 @@ def read_status(settings: Settings) -> dict[str, object]:
         "readonly": settings.ibkr_sync_readonly,
         "account_summary_status": latest["account_summary_status"] if latest else "disabled",
         "positions_status": latest["positions_status"] if latest else "disabled",
-        "positions_count": int(latest["positions_count"]) if latest else 0,
-        "cash_values_count": int(latest["cash_values_count"]) if latest else 0,
+        "positions_count": positions_count,
+        "cash_values_count": cash_values_count,
         "started_at": latest["started_at"] if latest else None,
         "completed_at": latest["completed_at"] if latest else None,
         "status_nl": status_nl,
