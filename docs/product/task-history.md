@@ -472,3 +472,10 @@ Bevestiging scope:
 - API/runtime wiring blijft bewust uitgesteld naar Task 125C.
 
 ## Task 125A update: durable IBKR snapshot storage foundation added; runtime wiring deferred to 125B.
+
+## Task 125C-A — IBKR sync persistence mappers + façade scaffolding
+
+- Status: afgerond als kleine veilige implementatieslice na eerdere brede Task 125C rollback.
+- Toegevoegd: `apps/api/src/portfolio_outlook_api/ibkr_sync_persistence.py` met pure mappers (cash/position/open-order/execution/sync-run) en een minimale persistence-façade die Task 125B repository-methodes in vaste volgorde aanroept.
+- Toegevoegd: gerichte API-tests in `apps/api/tests/test_ibkr_sync_persistence.py` voor Decimal/None-preservatie, conid-conversie, safety booleans false en call-order van de façade met fake repository.
+- Niet gedaan in deze slice: geen endpoint runtime replacement, geen StorageConnectionProvider wiring vanuit sync endpoints, geen in-memory store vervanging, geen IBKR netwerkruntime, geen TWS/Gateway connectiecode, geen orders/suggesties/Decision Packages/AI runtime/forecasting/scheduler/market-data runtime/fake data.
