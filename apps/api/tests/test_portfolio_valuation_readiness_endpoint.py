@@ -226,7 +226,10 @@ def test_cash_snapshot_exposed_decimal_safe(monkeypatch) -> None:
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["cash_readiness_status"] == "cash_available"
     assert payload["cash_values"][0]["cash"] == "50.10"
+    assert payload["fx_required"] is False
     assert payload["fx_readiness_status"] == "fx_not_required"
+    assert payload["missing_fx_pairs"] == []
+    assert "fx_rates" not in payload["missing_total_value_inputs"]
 
 
 def test_multi_currency_without_fx_rates_is_blocked(monkeypatch) -> None:
@@ -286,3 +289,107 @@ def test_multi_currency_without_fx_rates_is_blocked(monkeypatch) -> None:
     assert payload["fx_required"] is True
     assert payload["fx_readiness_status"] == "fx_not_supported_yet"
     assert payload["total_portfolio_value_available"] is False
+
+
+def test_no_positions_single_currency_cash_fx_not_required(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(),
+            storage_help_nl=None,
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return []
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("USD")]
+
+    class Ctx:
+        def __enter__(self):
+            return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+        def __exit__(self, *_args):
+            return None
+
+    class FakeProvider:
+        def checked_connection(self, require_writable: bool = False):
+            return Ctx()
+
+    monkeypatch.setattr(
+        status_routes,
+        "StorageConnectionProvider",
+        lambda _settings: FakeProvider(),
+    )
+    monkeypatch.setattr(
+        status_routes,
+        "SqlAlchemyIbkrSyncSnapshotRepository",
+        lambda _c, _r: FakeRepo(),
+    )
+
+    payload = client.get("/portfolio/valuation/readiness").json()
+    assert payload["status"] == "no_positions"
+    assert payload["fx_required"] is False
+    assert payload["fx_readiness_status"] == "fx_not_required"
+    assert payload["missing_fx_pairs"] == []
+    assert "fx_rates" not in payload["missing_total_value_inputs"]
+
+
+def test_no_positions_multi_currency_cash_marks_fx_required(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(),
+            storage_help_nl=None,
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return []
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("EUR"), _cash("USD")]
+
+    class Ctx:
+        def __enter__(self):
+            return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+        def __exit__(self, *_args):
+            return None
+
+    class FakeProvider:
+        def checked_connection(self, require_writable: bool = False):
+            return Ctx()
+
+    monkeypatch.setattr(
+        status_routes,
+        "StorageConnectionProvider",
+        lambda _settings: FakeProvider(),
+    )
+    monkeypatch.setattr(
+        status_routes,
+        "SqlAlchemyIbkrSyncSnapshotRepository",
+        lambda _c, _r: FakeRepo(),
+    )
+
+    payload = client.get("/portfolio/valuation/readiness").json()
+    assert payload["status"] == "no_positions"
+    assert payload["fx_required"] is True
+    assert payload["fx_readiness_status"] == "fx_not_supported_yet"
+    assert payload["missing_fx_pairs"] == ["all_required_pairs"]
+    assert "fx_rates" in payload["missing_total_value_inputs"]
+    assert payload["fx_rates_available"] is False
+    assert payload["converted_totals_available"] is False
