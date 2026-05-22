@@ -30,11 +30,64 @@ class IbkrCash:
     buying_power: Decimal | None
 
 
+@dataclass(frozen=True)
+class IbkrOpenOrder:
+    account_ref: str
+    ibkr_order_id: int
+    ibkr_perm_id: int | None
+    parent_order_id: int | None
+    client_id: int | None
+    symbol: str
+    security_type: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    action_side: str
+    order_type: str
+    quantity: Decimal
+    limit_price: Decimal | None
+    stop_price: Decimal | None
+    tif: str | None
+    status: str
+    filled_quantity: Decimal
+    remaining_quantity: Decimal
+    average_fill_price: Decimal | None
+    last_status_at: datetime | None
+    raw_status_reference: str | None
+
+
+@dataclass(frozen=True)
+class IbkrExecution:
+    account_ref: str
+    execution_id: str
+    ibkr_order_id: int
+    ibkr_perm_id: int | None
+    symbol: str
+    security_type: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    side: str
+    quantity: Decimal
+    price: Decimal
+    execution_time: datetime
+    commission: Decimal | None
+    commission_currency: str | None
+    realized_pnl: Decimal | None
+    raw_execution_reference: str | None
+
+
 class IbkrReadOnlyAdapter:
     def sync_account_summary(self) -> list[IbkrCash]:
         raise NotImplementedError
 
     def sync_positions(self) -> list[IbkrPosition]:
+        raise NotImplementedError
+
+    def sync_open_orders(self) -> list[IbkrOpenOrder]:
+        raise NotImplementedError
+
+    def sync_executions(self) -> list[IbkrExecution]:
         raise NotImplementedError
 
 
@@ -45,12 +98,20 @@ class NotConfiguredIbkrAdapter(IbkrReadOnlyAdapter):
     def sync_positions(self) -> list[IbkrPosition]:
         return []
 
+    def sync_open_orders(self) -> list[IbkrOpenOrder]:
+        return []
+
+    def sync_executions(self) -> list[IbkrExecution]:
+        return []
+
 
 class InMemoryIbkrSyncStore:
     def __init__(self) -> None:
         self.runs: list[dict[str, object]] = []
         self.positions: list[dict[str, object]] = []
         self.cash: list[dict[str, object]] = []
+        self.open_orders: list[dict[str, object]] = []
+        self.executions: list[dict[str, object]] = []
 
 
 STORE = InMemoryIbkrSyncStore()
@@ -71,8 +132,12 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
     result_status = "disabled"
     account_summary_status = "disabled"
     positions_status = "disabled"
+    open_orders_status = "disabled"
+    executions_status = "disabled"
     positions: list[IbkrPosition] = []
     cash_items: list[IbkrCash] = []
+    open_orders: list[IbkrOpenOrder] = []
+    executions: list[IbkrExecution] = []
 
     if not settings.ibkr_sync_enabled:
         result_status = "disabled"
@@ -87,17 +152,27 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
         try:
             cash_items = active_adapter.sync_account_summary()
             positions = active_adapter.sync_positions()
+            open_orders = active_adapter.sync_open_orders()
+            executions = active_adapter.sync_executions()
             account_summary_status = "account_summary_received" if cash_items else "partial_data"
             positions_status = "positions_received" if positions else "partial_data"
-            result_status = "paper_account_confirmed"
+            open_orders_status = "open_orders_received" if open_orders else "no_open_orders"
+            executions_status = "executions_received" if executions else "no_executions"
+            result_status = "partial_data"
+            if cash_items and positions:
+                result_status = "paper_account_confirmed"
         except TimeoutError:
             result_status = "timeout"
             account_summary_status = "timeout"
             positions_status = "timeout"
+            open_orders_status = "timeout"
+            executions_status = "timeout"
         except Exception:
             result_status = "provider_error"
             account_summary_status = "provider_error"
             positions_status = "provider_error"
+            open_orders_status = "provider_error"
+            executions_status = "provider_error"
 
     STORE.runs.append(
         {
@@ -111,8 +186,12 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
             "status": result_status,
             "account_summary_status": account_summary_status,
             "positions_status": positions_status,
+            "open_orders_status": open_orders_status,
+            "executions_status": executions_status,
             "positions_count": len(positions),
             "cash_values_count": len(cash_items),
+            "open_orders_count": len(open_orders),
+            "executions_count": len(executions),
         }
     )
     for p in positions:
@@ -121,28 +200,34 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
                 "sync_run_id": run_id,
                 "symbol": p.symbol,
                 "quantity": str(p.quantity),
-                "average_cost": None if p.average_cost is None else str(p.average_cost),
-                "currency": p.currency,
-                "security_type": p.security_type,
-                "conid": p.conid,
-                "exchange": p.exchange,
-                "primary_exchange": p.primary_exchange,
-                "account_ref": p.account_ref,
-                "timestamp": now.isoformat(),
             }
         )
     for c in cash_items:
         STORE.cash.append(
             {
                 "sync_run_id": run_id,
-                "account_ref": c.account_ref,
-                "base_currency": c.base_currency,
                 "cash": str(c.cash),
-                "available_funds": (
-                    None if c.available_funds is None else str(c.available_funds)
-                ),
-                "buying_power": None if c.buying_power is None else str(c.buying_power),
-                "timestamp": now.isoformat(),
+                "account_ref": c.account_ref,
+            }
+        )
+    for order in open_orders:
+        STORE.open_orders.append(
+            {
+                "sync_run_id": run_id,
+                "ibkr_order_id": order.ibkr_order_id,
+                "symbol": order.symbol,
+                "quantity": str(order.quantity),
+                "status": order.status,
+            }
+        )
+    for execution in executions:
+        STORE.executions.append(
+            {
+                "sync_run_id": run_id,
+                "execution_id": execution.execution_id,
+                "symbol": execution.symbol,
+                "quantity": str(execution.quantity),
+                "price": str(execution.price),
             }
         )
 
@@ -156,10 +241,9 @@ def _int_value(value: object) -> int:
 def read_status(settings: Settings) -> dict[str, object]:
     latest = STORE.runs[-1] if STORE.runs else None
     status = "disabled" if not settings.ibkr_sync_enabled else "configured_not_connected"
-    if status == "disabled":
-        status_nl = "IBKR-sync niet geconfigureerd"
-        next_step_nl = "Activeer handmatig met paper-only instellingen."
-    else:
+    status_nl = "IBKR-sync niet geconfigureerd"
+    next_step_nl = "Activeer handmatig met paper-only instellingen."
+    if status != "disabled":
         status_nl = "Read-only synchronisatie"
         next_step_nl = "Start handmatige sync."
     if latest is not None:
@@ -170,8 +254,6 @@ def read_status(settings: Settings) -> dict[str, object]:
         else:
             status_nl = "Read-only synchronisatie"
             next_step_nl = "Geen orders mogelijk"
-    positions_count = _int_value(latest["positions_count"]) if latest else 0
-    cash_values_count = _int_value(latest["cash_values_count"]) if latest else 0
 
     return {
         "status": status,
@@ -181,8 +263,12 @@ def read_status(settings: Settings) -> dict[str, object]:
         "readonly": settings.ibkr_sync_readonly,
         "account_summary_status": latest["account_summary_status"] if latest else "disabled",
         "positions_status": latest["positions_status"] if latest else "disabled",
-        "positions_count": positions_count,
-        "cash_values_count": cash_values_count,
+        "open_orders_status": latest["open_orders_status"] if latest else "disabled",
+        "executions_status": latest["executions_status"] if latest else "disabled",
+        "positions_count": _int_value(latest["positions_count"]) if latest else 0,
+        "cash_values_count": _int_value(latest["cash_values_count"]) if latest else 0,
+        "open_orders_count": _int_value(latest["open_orders_count"]) if latest else 0,
+        "executions_count": _int_value(latest["executions_count"]) if latest else 0,
         "started_at": latest["started_at"] if latest else None,
         "completed_at": latest["completed_at"] if latest else None,
         "status_nl": status_nl,
@@ -191,5 +277,7 @@ def read_status(settings: Settings) -> dict[str, object]:
         "sync_allowed": True,
         "actions_allowed": False,
         "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
         "suggestions_allowed": False,
     }
