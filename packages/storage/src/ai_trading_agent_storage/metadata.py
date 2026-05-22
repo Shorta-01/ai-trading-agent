@@ -1376,3 +1376,23 @@ ibkr_execution_snapshots = Table(
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("stored_at", DateTime(timezone=True), nullable=False),
 )
+
+fx_rate_snapshots = Table(
+    "fx_rate_snapshots",
+    metadata,
+    Column("snapshot_id", Text, primary_key=True),
+    Column("provider", Text, nullable=False),
+    Column("source", Text, nullable=False),
+    Column("base_currency", Text, nullable=False),
+    Column("quote_currency", Text, nullable=False),
+    Column("pair", Text, nullable=False),
+    Column("rate", MONEY_NUMERIC, nullable=False),
+    Column("rate_type", Text, nullable=False),
+    Column("as_of", DateTime(timezone=True), nullable=False),
+    Column("received_at", DateTime(timezone=True), nullable=False),
+    Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("freshness_status", Text, nullable=False),
+    Column("validation_status", Text, nullable=False),
+    Column("reason_code", Text, nullable=False),
+    Column("metadata_json", JSON, nullable=True),
+)

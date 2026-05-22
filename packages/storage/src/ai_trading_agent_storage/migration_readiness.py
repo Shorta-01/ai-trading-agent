@@ -254,6 +254,13 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="IBKR sync snapshot durable opslag",
         description_nl="Duurzame opslagtabellen voor read-only IBKR sync snapshots.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0026_fx_rate_snapshot_storage",
+        previous_revision_id="0025_ibkr_sync_snapshot_storage",
+        filename="0026_fx_rate_snapshot_storage.py",
+        label_nl="FX rate snapshot durable opslag",
+        description_nl="Duurzame opslagtabel voor read-only FX koers snapshots per valutapaar.",
+    ),
 )
 
 

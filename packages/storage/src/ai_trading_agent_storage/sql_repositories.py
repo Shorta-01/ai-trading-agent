@@ -27,6 +27,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_open_order_snapshots,
     ibkr_position_snapshots,
     ibkr_sync_runs,
+    fx_rate_snapshots,
     market_data_snapshots,
     market_data_latest_snapshots,
     paper_portfolio_setups,
@@ -83,6 +84,7 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrOpenOrderSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
+    FxRateSnapshotRecord,
     RepositoryHealthStatus,
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
@@ -894,6 +896,68 @@ class SqlAlchemyIbkrSyncSnapshotRepository(_Base):
             .all()
         )
         return [IbkrExecutionSnapshotRecord(**dict(row)) for row in rows]
+
+    def save_fx_rate_snapshot(self, record: FxRateSnapshotRecord) -> None:
+        values = asdict(record)
+        normalized_base = record.base_currency.upper()
+        normalized_quote = record.quote_currency.upper()
+        values["base_currency"] = normalized_base
+        values["quote_currency"] = normalized_quote
+        values["pair"] = f"{normalized_base}/{normalized_quote}"
+        self._insert(fx_rate_snapshots, values)
+
+    def get_fx_rate_snapshot(self, snapshot_id: str) -> FxRateSnapshotRecord | None:
+        row = _read_one_by_column(self._connection, fx_rate_snapshots, "snapshot_id", snapshot_id)
+        return None if row is None else FxRateSnapshotRecord(**dict(row))
+
+    def list_fx_rate_snapshots(self, limit: int = 100) -> list[FxRateSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(fx_rate_snapshots)
+                .order_by(
+                    fx_rate_snapshots.c.as_of.desc(),
+                    fx_rate_snapshots.c.received_at.desc(),
+                    fx_rate_snapshots.c.stored_at.desc(),
+                    fx_rate_snapshots.c.snapshot_id.desc(),
+                )
+                .limit(limit)
+            )
+            .mappings()
+            .all()
+        )
+        return [FxRateSnapshotRecord(**dict(row)) for row in rows]
+
+    def get_latest_fx_rate_snapshot(
+        self, base_currency: str, quote_currency: str
+    ) -> FxRateSnapshotRecord | None:
+        row = (
+            self._connection.execute(
+                select(fx_rate_snapshots)
+                .where(fx_rate_snapshots.c.base_currency == base_currency.upper())
+                .where(fx_rate_snapshots.c.quote_currency == quote_currency.upper())
+                .order_by(
+                    fx_rate_snapshots.c.as_of.desc(),
+                    fx_rate_snapshots.c.received_at.desc(),
+                    fx_rate_snapshots.c.stored_at.desc(),
+                    fx_rate_snapshots.c.snapshot_id.desc(),
+                )
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        return None if row is None else FxRateSnapshotRecord(**dict(row))
+
+    def list_latest_fx_rate_snapshots_by_pairs(
+        self, pairs: tuple[str, ...]
+    ) -> list[FxRateSnapshotRecord]:
+        latest_records: list[FxRateSnapshotRecord] = []
+        for pair in pairs:
+            base_currency, quote_currency = pair.split("/", maxsplit=1)
+            latest = self.get_latest_fx_rate_snapshot(base_currency, quote_currency)
+            if latest is not None:
+                latest_records.append(latest)
+        return latest_records
 
 
 class SqlAlchemyBrokerReconciliationRepository(_Base):

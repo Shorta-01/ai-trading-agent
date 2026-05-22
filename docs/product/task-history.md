@@ -1,3 +1,9 @@
+## Task 125H — FX snapshot storage schema/repository contract (read-only)
+
+- Status: afgerond.
+- Toegevoegd: duurzame `fx_rate_snapshots` opslagtabel + migratie + storage repositorycontract/methodes + Decimal round-trip tests.
+- Grenzen bewaakt: geen runtime FX/provider fetch, geen market-data runtime, geen valuation conversion runtime, geen suggesties/action drafts/orders, geen fake FX-rates/converted totals.
+
 - Task 125F — read-only FX snapshot-contract inventaris + valuation readiness contractstatus toegevoegd; geen runtime fetch, geen fake FX/totals.
 - Task 125E — read-only valuation readiness verrijkt met cash/FX readiness (duurzame snapshots, geen runtime fetch, geen fake waarden).
 ## Task 127R2 — Final cleanup account-mode wording contradictions
