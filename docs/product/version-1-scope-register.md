@@ -250,3 +250,5 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Task 123 scope verwerkt: alleen read-only IBKR paper account/cash/positions sync via handmatige trigger; geen orderruntime.
 - Task 125B verwerkt: storage repository dataclasses/methodes voor duurzame IBKR sync snapshot-tabellen bestaan nu; API/runtime wiring blijft pending voor Task 125C.
 ## Task 125B update: durable IBKR sync storage repository layer completed; API/runtime wiring deferred to 125C.
+
+| Task 125C-A IBKR sync persistence scaffolding | Contracted | Task 125B storage records/repository methods hergebruikt | API implemented (pure mapper helpers + kleine persistence-façade) | UI N/A | Runtime pending | Geen endpoint runtime replacement; huidige `/ibkr/sync` en snapshot endpoints blijven bestaande behavior gebruiken; geen IBKR netwerkcode/TWS-Gateway connectiecode/orders/suggesties/Decision Packages/AI runtime/forecasting/scheduler/market-data runtime/fake data. |

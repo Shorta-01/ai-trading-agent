@@ -1,3 +1,3 @@
 # Next Task
 
-Task 125C — Wire IBKR read-only sync API/service runtime to durable storage, replacing in-memory persistence where storage is configured, with no orders, no suggestions, no fake broker data and no paid subscription dependency.
+Task 125C-B — Wire IBKR read-only sync manual-trigger runtime to durable storage behind a small persistence boundary, using Task 125C-A mappers, with in-memory fallback, no orders, no suggestions and no fake data.
