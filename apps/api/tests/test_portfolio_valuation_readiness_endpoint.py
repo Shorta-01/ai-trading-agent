@@ -59,12 +59,12 @@ def _position() -> IbkrPositionSnapshotRecord:
 
 
 def test_storage_unavailable_returns_blocked(monkeypatch) -> None:
-    from portfolio_outlook_api import ibkr_sync_read_model
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
 
-    api_settings.storage.enabled = True
-    api_settings.storage.database_url = "sqlite+pysqlite:///dummy.db"
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
     monkeypatch.setattr(
-        ibkr_sync_read_model,
+        status_routes,
         "read_latest_ibkr_sync_run",
         lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
             latest_run=None,
@@ -77,12 +77,12 @@ def test_storage_unavailable_returns_blocked(monkeypatch) -> None:
 
 
 def test_no_latest_snapshot_returns_blocked(monkeypatch) -> None:
-    from portfolio_outlook_api import ibkr_sync_read_model
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
 
-    api_settings.storage.enabled = False
-    api_settings.storage.database_url = None
+    monkeypatch.setattr(api_settings.storage, "enabled", False)
+    monkeypatch.setattr(api_settings.storage, "database_url", None)
     monkeypatch.setattr(
-        ibkr_sync_read_model,
+        status_routes,
         "read_latest_ibkr_sync_run",
         lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
             latest_run=None,
@@ -99,10 +99,10 @@ def test_no_latest_snapshot_returns_blocked(monkeypatch) -> None:
 def test_missing_market_data_blocks_valuation(monkeypatch) -> None:
     from portfolio_outlook_api import ibkr_sync_read_model, status_routes
 
-    api_settings.storage.enabled = True
-    api_settings.storage.database_url = "sqlite+pysqlite:///dummy.db"
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
     monkeypatch.setattr(
-        ibkr_sync_read_model,
+        status_routes,
         "read_latest_ibkr_sync_run",
         lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
             latest_run=_run(),
