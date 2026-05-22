@@ -13,6 +13,7 @@ from portfolio_outlook_api.ibkr_sync import (
     IbkrReadOnlyAdapter,
 )
 from portfolio_outlook_api.main import app
+from portfolio_outlook_api.status_routes import settings as api_settings
 
 client = TestClient(app)
 
@@ -99,6 +100,8 @@ def setup_function() -> None:
     ibkr_sync.STORE.cash.clear()
     ibkr_sync.STORE.open_orders.clear()
     ibkr_sync.STORE.executions.clear()
+    api_settings.storage.enabled = False
+    api_settings.storage.database_url = None
 
 
 def _base_settings(**kwargs):
@@ -163,3 +166,57 @@ def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
     body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
     assert body["persistence_mode"] == "durable"
     assert calls == {"runs": 1, "cash": 1, "positions": 1, "orders": 1, "executions": 1}
+
+
+def test_status_and_read_endpoints_use_memory_when_storage_disabled() -> None:
+    response = client.get("/ibkr/sync/status").json()
+    assert response["actions_allowed"] is False
+    assert response["suggestions_allowed"] is False
+    assert client.get("/ibkr/orders/open").json()["actions_allowed"] is False
+    assert client.get("/ibkr/executions").json()["actions_allowed"] is False
+
+
+def test_storage_enabled_but_not_configured_uses_memory_fallback() -> None:
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = None
+    response = client.get("/ibkr/sync/status").json()
+    assert response["help_nl"] == "Geen duurzame IBKR-syncrun gevonden."
+
+
+def test_storage_connection_error_falls_back_to_memory(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model
+
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "sqlite+pysqlite:///missing"
+    monkeypatch.setattr(
+        ibkr_sync_read_model,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=None,
+            storage_help_nl="Storage niet beschikbaar; geheugenfallback actief.",
+        ),
+    )
+    response = client.get("/ibkr/sync/status").json()
+    assert response["help_nl"] in {
+        "Storage niet beschikbaar; geheugenfallback actief.",
+        "Geen duurzame IBKR-syncrun gevonden.",
+    }
+
+
+def test_durable_no_run_returns_empty_items(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model
+
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "sqlite+pysqlite:///dummy.db"
+    monkeypatch.setattr(
+        ibkr_sync_read_model,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=None,
+            storage_help_nl="Geen duurzame IBKR-syncrun gevonden.",
+        ),
+    )
+    assert client.get("/ibkr/portfolio/positions").json()["items"] == []
+    assert client.get("/ibkr/account/cash").json()["items"] == []
+    assert client.get("/ibkr/orders/open").json()["items"] == []
+    assert client.get("/ibkr/executions").json()["items"] == []
