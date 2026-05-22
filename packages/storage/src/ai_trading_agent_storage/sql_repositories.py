@@ -22,6 +22,11 @@ from ai_trading_agent_storage.metadata import (
     broker_reconciliation_reports,
     broker_sync_runs,
     external_broker_activities,
+    ibkr_account_cash_snapshots,
+    ibkr_execution_snapshots,
+    ibkr_open_order_snapshots,
+    ibkr_position_snapshots,
+    ibkr_sync_runs,
     market_data_snapshots,
     market_data_latest_snapshots,
     paper_portfolio_setups,
@@ -73,6 +78,11 @@ from ai_trading_agent_storage.repository_contracts import (
     RequestLogRecord,
     ProviderSourceRecord,
     FreshnessAuditRecord,
+    IbkrAccountCashSnapshotRecord,
+    IbkrExecutionSnapshotRecord,
+    IbkrOpenOrderSnapshotRecord,
+    IbkrPositionSnapshotRecord,
+    IbkrSyncRunRecord,
     RepositoryHealthStatus,
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
@@ -746,6 +756,144 @@ class SqlAlchemyMarketDataSnapshotRepository(_Base):
             table_name=market_data_snapshots.name,
             explanation_nl="Market-data snapshots opgehaald voor volglijst-item.",
         )
+
+
+class SqlAlchemyIbkrSyncSnapshotRepository(_Base):
+    def save_ibkr_sync_run(self, record: IbkrSyncRunRecord) -> None:
+        self._insert(ibkr_sync_runs, asdict(record))
+
+    def get_ibkr_sync_run(self, sync_run_id: str) -> IbkrSyncRunRecord | None:
+        row = _read_one_by_column(self._connection, ibkr_sync_runs, "sync_run_id", sync_run_id)
+        return None if row is None else IbkrSyncRunRecord(**dict(row))
+
+    def get_latest_ibkr_sync_run(self) -> IbkrSyncRunRecord | None:
+        row = (
+            self._connection.execute(
+                select(ibkr_sync_runs).order_by(
+                    ibkr_sync_runs.c.completed_at.desc().nullslast(),
+                    ibkr_sync_runs.c.stored_at.desc(),
+                    ibkr_sync_runs.c.sync_run_id.desc(),
+                )
+            )
+            .mappings()
+            .first()
+        )
+        return None if row is None else IbkrSyncRunRecord(**dict(row))
+
+    def list_ibkr_sync_runs(self, limit: int = 50) -> list[IbkrSyncRunRecord]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_sync_runs)
+                .order_by(
+                    ibkr_sync_runs.c.completed_at.desc().nullslast(),
+                    ibkr_sync_runs.c.stored_at.desc(),
+                    ibkr_sync_runs.c.sync_run_id.desc(),
+                )
+                .limit(limit)
+            )
+            .mappings()
+            .all()
+        )
+        return [IbkrSyncRunRecord(**dict(row)) for row in rows]
+
+    def save_ibkr_account_cash_snapshots(
+        self,
+        sync_run_id: str,
+        records: list[IbkrAccountCashSnapshotRecord],
+    ) -> None:
+        for record in records:
+            if record.sync_run_id != sync_run_id:
+                raise ValueError("sync_run_id mismatch voor cash snapshot.")
+            self._insert(ibkr_account_cash_snapshots, asdict(record))
+
+    def list_ibkr_account_cash_snapshots(
+        self,
+        sync_run_id: str,
+    ) -> list[IbkrAccountCashSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_account_cash_snapshots)
+                .where(ibkr_account_cash_snapshots.c.sync_run_id == sync_run_id)
+                .order_by(
+                    ibkr_account_cash_snapshots.c.stored_at.asc(),
+                    ibkr_account_cash_snapshots.c.snapshot_id.asc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return [IbkrAccountCashSnapshotRecord(**dict(row)) for row in rows]
+
+    def save_ibkr_position_snapshots(
+        self, sync_run_id: str, records: list[IbkrPositionSnapshotRecord]
+    ) -> None:
+        for record in records:
+            if record.sync_run_id != sync_run_id:
+                raise ValueError("sync_run_id mismatch voor position snapshot.")
+            self._insert(ibkr_position_snapshots, asdict(record))
+
+    def list_ibkr_position_snapshots(self, sync_run_id: str) -> list[IbkrPositionSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_position_snapshots)
+                .where(ibkr_position_snapshots.c.sync_run_id == sync_run_id)
+                .order_by(
+                    ibkr_position_snapshots.c.stored_at.asc(),
+                    ibkr_position_snapshots.c.snapshot_id.asc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return [IbkrPositionSnapshotRecord(**dict(row)) for row in rows]
+
+    def save_ibkr_open_order_snapshots(
+        self, sync_run_id: str, records: list[IbkrOpenOrderSnapshotRecord]
+    ) -> None:
+        for record in records:
+            if record.sync_run_id != sync_run_id:
+                raise ValueError("sync_run_id mismatch voor open-order snapshot.")
+            self._insert(ibkr_open_order_snapshots, asdict(record))
+
+    def list_ibkr_open_order_snapshots(
+        self, sync_run_id: str
+    ) -> list[IbkrOpenOrderSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_open_order_snapshots)
+                .where(ibkr_open_order_snapshots.c.sync_run_id == sync_run_id)
+                .order_by(
+                    ibkr_open_order_snapshots.c.stored_at.asc(),
+                    ibkr_open_order_snapshots.c.snapshot_id.asc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return [IbkrOpenOrderSnapshotRecord(**dict(row)) for row in rows]
+
+    def save_ibkr_execution_snapshots(
+        self, sync_run_id: str, records: list[IbkrExecutionSnapshotRecord]
+    ) -> None:
+        for record in records:
+            if record.sync_run_id != sync_run_id:
+                raise ValueError("sync_run_id mismatch voor execution snapshot.")
+            self._insert(ibkr_execution_snapshots, asdict(record))
+
+    def list_ibkr_execution_snapshots(self, sync_run_id: str) -> list[IbkrExecutionSnapshotRecord]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_execution_snapshots)
+                .where(ibkr_execution_snapshots.c.sync_run_id == sync_run_id)
+                .order_by(
+                    ibkr_execution_snapshots.c.stored_at.asc(),
+                    ibkr_execution_snapshots.c.snapshot_id.asc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return [IbkrExecutionSnapshotRecord(**dict(row)) for row in rows]
 
 
 class SqlAlchemyBrokerReconciliationRepository(_Base):
