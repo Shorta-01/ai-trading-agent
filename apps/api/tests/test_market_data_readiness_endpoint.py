@@ -646,6 +646,9 @@ def test_market_data_snapshot_latest_returns_stale_snapshot_variant(monkeypatch)
     assert parsed.action_drafts_allowed is False
 
 def test_manual_fetch_latest_snapshot_not_configured_returns_status_only() -> None:
+    STORE.clear()
+    STORE['w-1'] = _item('w-1', conid='265598', validation_status='valid')
+
     response = client.post('/market-data/snapshots/latest/265598/fetch')
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
@@ -655,14 +658,20 @@ def test_manual_fetch_latest_snapshot_not_configured_returns_status_only() -> No
     assert parsed.suggestions_allowed is False
     assert parsed.action_drafts_allowed is False
 
+    latest_response = client.get('/market-data/snapshots/latest/265598')
+    latest_parsed = LatestSnapshotResponse.model_validate(latest_response.json())
+    assert latest_parsed.snapshot_available is False
+
 
 def test_manual_fetch_latest_snapshot_blocks_missing_identity_validation() -> None:
+    STORE.clear()
     STORE['w-1'] = _item('w-1', conid='265598', validation_status='invalid')
+
     response = client.post('/market-data/snapshots/latest/265598/fetch')
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())
-    assert parsed.status in (
-        LatestSnapshotStatus.MISSING_SNAPSHOT,
-        LatestSnapshotStatus.NOT_CONFIGURED,
-    )
+    assert parsed.status == LatestSnapshotStatus.MISSING_SNAPSHOT
     assert parsed.snapshot_available is False
+    assert parsed.analysis_ready is False
+    assert parsed.suggestions_allowed is False
+    assert parsed.action_drafts_allowed is False
