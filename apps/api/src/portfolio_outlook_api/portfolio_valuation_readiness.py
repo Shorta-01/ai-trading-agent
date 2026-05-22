@@ -5,6 +5,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from ai_trading_agent_storage import (
+    FxRateSnapshotRecord,
     IbkrAccountCashSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
@@ -87,6 +88,8 @@ class PortfolioValuationReadinessResponse(BaseModel):
     fx_snapshot_source: str | None = None
     fx_snapshot_count: int = 0
     fx_snapshot_pairs_available: list[str] = Field(default_factory=list)
+    stale_fx_pairs: list[str] = Field(default_factory=list)
+    invalid_fx_pairs: list[str] = Field(default_factory=list)
     total_market_value_available: bool = False
     total_cash_value_available: bool = False
     total_portfolio_value_available: bool = False
@@ -104,6 +107,19 @@ class PositionRowBuildInput:
 
 def _money(value: Decimal) -> str:
     return str(value)
+
+
+def _derive_required_fx_pairs(
+    *,
+    portfolio_currencies: list[str],
+    cash_currencies: list[str],
+    base_currency: str | None,
+) -> list[str]:
+    if base_currency is None:
+        return []
+    base = base_currency.upper()
+    candidates = sorted(set(portfolio_currencies) | set(cash_currencies))
+    return [f"{currency}/{base}" for currency in candidates if currency != base]
 
 
 def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadinessRow:
@@ -168,6 +184,7 @@ def build_portfolio_valuation_readiness(
     positions: list[IbkrPositionSnapshotRecord],
     market_by_conid: dict[str, MarketDataLatestSnapshotRecord],
     cash_snapshots: list[IbkrAccountCashSnapshotRecord],
+    fx_snapshots: list[FxRateSnapshotRecord],
     storage_available: bool,
 ) -> PortfolioValuationReadinessResponse:
     if not storage_available:
@@ -189,13 +206,10 @@ def build_portfolio_valuation_readiness(
             fx_readiness_status="fx_storage_unavailable",
             fx_readiness_status_nl="Valutastorage niet beschikbaar",
             fx_readiness_help_nl="Valutastatus kan niet bepaald worden zonder storage.",
-            fx_snapshot_contract_status="fx_snapshot_contract_missing",
-            fx_snapshot_contract_status_nl="FX-opslag ontbreekt",
-            fx_snapshot_contract_help_nl=(
-                "Er is nog geen opgeslagen FX-snapshotcontract beschikbaar voor "
-                "read-only waardering."
-            ),
-            fx_snapshot_contract_available=False,
+            fx_snapshot_contract_status="fx_snapshot_contract_available",
+            fx_snapshot_contract_status_nl="FX-opslag beschikbaar",
+            fx_snapshot_contract_help_nl="Opgeslagen FX-contract is beschikbaar.",
+            fx_snapshot_contract_available=True,
             fx_snapshot_data_available=False,
             fx_snapshot_source=None,
             fx_snapshot_count=0,
@@ -221,13 +235,10 @@ def build_portfolio_valuation_readiness(
             fx_readiness_status="fx_control_needed",
             fx_readiness_status_nl="Controle nodig",
             fx_readiness_help_nl="Valutastatus vereist eerst posities en cashsnapshot.",
-            fx_snapshot_contract_status="fx_snapshot_contract_missing",
-            fx_snapshot_contract_status_nl="FX-opslag ontbreekt",
-            fx_snapshot_contract_help_nl=(
-                "Er is nog geen opgeslagen FX-snapshotcontract beschikbaar voor "
-                "read-only waardering."
-            ),
-            fx_snapshot_contract_available=False,
+            fx_snapshot_contract_status="fx_snapshot_contract_available",
+            fx_snapshot_contract_status_nl="FX-opslag beschikbaar",
+            fx_snapshot_contract_help_nl="Opgeslagen FX-contract is beschikbaar.",
+            fx_snapshot_contract_available=True,
             fx_snapshot_data_available=False,
             fx_snapshot_source=None,
             fx_snapshot_count=0,
@@ -283,13 +294,10 @@ def build_portfolio_valuation_readiness(
             fx_readiness_status_nl=fx_status_nl,
             fx_readiness_help_nl=fx_help,
             fx_required=fx_required,
-            fx_snapshot_contract_status="fx_snapshot_contract_missing",
-            fx_snapshot_contract_status_nl="FX-opslag ontbreekt",
-            fx_snapshot_contract_help_nl=(
-                "Er is nog geen opgeslagen FX-snapshotcontract beschikbaar voor "
-                "read-only waardering."
-            ),
-            fx_snapshot_contract_available=False,
+            fx_snapshot_contract_status="fx_snapshot_contract_available",
+            fx_snapshot_contract_status_nl="FX-opslag beschikbaar",
+            fx_snapshot_contract_help_nl="Opgeslagen FX-contract is beschikbaar.",
+            fx_snapshot_contract_available=True,
             fx_snapshot_data_available=False,
             fx_snapshot_source=None,
             fx_snapshot_count=0,
@@ -341,13 +349,50 @@ def build_portfolio_valuation_readiness(
             }
         )
     fx_required = len(valuation_currencies) > 1
-    fx_status = "fx_not_required" if not fx_required else "fx_not_supported_yet"
-    fx_status_nl = "FX niet nodig" if not fx_required else "FX ontbreekt"
-    fx_help = (
-        "Alle waardering is in één valuta."
-        if not fx_required
-        else "Meerdere valuta zonder opgeslagen wisselkoers: controle nodig."
+    required_pairs = _derive_required_fx_pairs(
+        portfolio_currencies=portfolio_currencies,
+        cash_currencies=cash_currencies,
+        base_currency=base_currency,
     )
+    available_pairs = sorted({item.pair for item in fx_snapshots})
+    stale_fx_pairs = sorted(
+        {item.pair for item in fx_snapshots if item.freshness_status != "fresh"}
+    )
+    invalid_fx_pairs = sorted(
+        {item.pair for item in fx_snapshots if item.validation_status != "valid"}
+    )
+    missing_fx_pairs = [pair for pair in required_pairs if pair not in available_pairs]
+    fx_status = "fx_not_required"
+    fx_status_nl = "FX niet nodig"
+    fx_help = "Alle waardering is in één valuta."
+    fx_rates_available = False
+    fx_conversion_allowed = False
+    fx_snapshot_data_available = False
+    if fx_required:
+        if base_currency is None:
+            fx_status = "fx_control_needed"
+            fx_status_nl = "Controle nodig"
+            fx_help = "Basismunt ontbreekt; vereiste wisselkoersen zijn onbekend."
+            missing_fx_pairs = ["base_currency"]
+        elif missing_fx_pairs:
+            fx_status = "fx_snapshot_missing"
+            fx_status_nl = "Wisselkoers ontbreekt"
+            fx_help = "Niet alle vereiste opgeslagen wisselkoersen zijn aanwezig."
+        elif stale_fx_pairs:
+            fx_status = "fx_snapshot_stale"
+            fx_status_nl = "Wisselkoers verouderd"
+            fx_help = "Opgeslagen wisselkoers is verouderd."
+        elif invalid_fx_pairs:
+            fx_status = "fx_snapshot_invalid"
+            fx_status_nl = "Wisselkoers ongeldig"
+            fx_help = "Opgeslagen wisselkoers is ongeldig."
+        else:
+            fx_status = "fx_snapshot_available"
+            fx_status_nl = "Opgeslagen wisselkoers beschikbaar"
+            fx_help = "Alle vereiste opgeslagen wisselkoersen zijn vers en geldig."
+            fx_rates_available = True
+            fx_conversion_allowed = True
+            fx_snapshot_data_available = True
     missing_total_value_inputs = ["validated_cash_totals"]
     if fx_required:
         missing_total_value_inputs.insert(0, "fx_rates")
@@ -394,23 +439,22 @@ def build_portfolio_valuation_readiness(
         fx_readiness_status_nl=fx_status_nl,
         fx_readiness_help_nl=fx_help,
         fx_required=fx_required,
-        fx_snapshot_contract_status="fx_snapshot_contract_missing",
-        fx_snapshot_contract_status_nl="FX-opslag ontbreekt",
-        fx_snapshot_contract_help_nl=(
-            "Er is nog geen opgeslagen FX-snapshotcontract beschikbaar voor "
-            "read-only waardering."
-        ),
-        fx_snapshot_contract_available=False,
-        fx_snapshot_data_available=False,
+        fx_snapshot_contract_status="fx_snapshot_contract_available",
+        fx_snapshot_contract_status_nl="FX-opslag beschikbaar",
+        fx_snapshot_contract_help_nl="Opgeslagen FX-contract is beschikbaar.",
+        fx_snapshot_contract_available=True,
+        fx_snapshot_data_available=fx_snapshot_data_available,
         fx_snapshot_source=None,
-        fx_snapshot_count=0,
-        fx_snapshot_pairs_available=[],
+        fx_snapshot_count=len(fx_snapshots),
+        fx_snapshot_pairs_available=available_pairs,
+        stale_fx_pairs=stale_fx_pairs,
+        invalid_fx_pairs=invalid_fx_pairs,
         portfolio_currencies=portfolio_currencies,
         valuation_currencies=valuation_currencies,
         base_currency=base_currency,
-        missing_fx_pairs=[] if not fx_required else ["all_required_pairs"],
-        fx_rates_available=False,
-        fx_conversion_allowed=not fx_required,
+        missing_fx_pairs=[] if not fx_required else missing_fx_pairs,
+        fx_rates_available=fx_rates_available,
+        fx_conversion_allowed=fx_conversion_allowed if fx_required else True,
         converted_totals_available=False,
         total_market_value_available=not blocked,
         total_cash_value_available=False,

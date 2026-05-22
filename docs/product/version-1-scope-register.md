@@ -272,3 +272,5 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 
 
 - Task 125H afgerond: FX snapshot durable storage foundation (read-only, no runtime fetch).
+
+- In scope afgerond: Task 125I read-only consumption van opgeslagen FX snapshots in valuation readiness; buiten scope gebleven: runtime FX/provider fetch, market-data runtime, unsafe conversion totals, suggesties/action drafts/orders.

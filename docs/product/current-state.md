@@ -239,3 +239,5 @@
 ## Task 125B update: durable IBKR sync storage repository layer completed; API/runtime wiring deferred to 125C.
 
 - Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
+
+- Task 125I: **completed** — `GET /portfolio/valuation/readiness` consumeert nu alleen opgeslagen FX snapshots via storage repositorycontract (Task 125H), met conservatieve missing/stale/invalid statussemantiek; geen runtime FX/provider fetch, geen market-data runtime, geen unsafe converted totals, geen suggesties/action drafts/orders en geen fake FX-rates/totals toegevoegd.
