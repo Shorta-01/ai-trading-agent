@@ -78,7 +78,7 @@ def test_storage_unavailable_returns_blocked(monkeypatch) -> None:
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["status"] == "storage_unavailable"
     assert payload["blocked"] is True
-    assert payload["fx_snapshot_contract_status"] == "fx_snapshot_contract_missing"
+    assert payload["fx_snapshot_contract_status"] == "fx_snapshot_contract_available"
 
 
 def test_no_latest_snapshot_returns_blocked(monkeypatch) -> None:
@@ -120,6 +120,9 @@ def test_missing_market_data_blocks_valuation(monkeypatch) -> None:
             return [_position()]
 
         def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return []
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
             return []
 
     class FakeMarketRepo:
@@ -193,6 +196,9 @@ def test_cash_snapshot_exposed_decimal_safe(monkeypatch) -> None:
         def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
             return [_cash("USD")]
 
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
+
     class FakeMarketRepo:
         def list_latest_market_data_snapshots_by_conids(self, _conids):
             return type("R", (), {"records": ()})()
@@ -229,7 +235,7 @@ def test_cash_snapshot_exposed_decimal_safe(monkeypatch) -> None:
     assert payload["cash_values"][0]["cash"] == "50.10"
     assert payload["fx_required"] is False
     assert payload["fx_readiness_status"] == "fx_not_required"
-    assert payload["fx_snapshot_contract_available"] is False
+    assert payload["fx_snapshot_contract_available"] is True
     assert payload["missing_fx_pairs"] == []
     assert "fx_rates" not in payload["missing_total_value_inputs"]
 
@@ -255,6 +261,9 @@ def test_multi_currency_without_fx_rates_is_blocked(monkeypatch) -> None:
 
         def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
             return [_cash("EUR")]
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
 
     class FakeMarketRepo:
         def list_latest_market_data_snapshots_by_conids(self, _conids):
@@ -289,8 +298,8 @@ def test_multi_currency_without_fx_rates_is_blocked(monkeypatch) -> None:
 
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["fx_required"] is True
-    assert payload["fx_readiness_status"] == "fx_not_supported_yet"
-    assert payload["fx_snapshot_contract_status"] == "fx_snapshot_contract_missing"
+    assert payload["fx_readiness_status"] == "fx_snapshot_missing"
+    assert payload["fx_snapshot_contract_status"] == "fx_snapshot_contract_available"
     assert payload["fx_snapshot_data_available"] is False
     assert payload["total_portfolio_value_available"] is False
 
@@ -315,6 +324,9 @@ def test_no_positions_single_currency_cash_fx_not_required(monkeypatch) -> None:
 
         def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
             return [_cash("USD")]
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
 
     class Ctx:
         def __enter__(self):
@@ -367,6 +379,9 @@ def test_no_positions_multi_currency_cash_marks_fx_required(monkeypatch) -> None
         def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
             return [_cash("EUR"), _cash("USD")]
 
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
+
     class Ctx:
         def __enter__(self):
             return type("Checked", (), {"connection": object(), "readiness": object()})()
@@ -392,9 +407,9 @@ def test_no_positions_multi_currency_cash_marks_fx_required(monkeypatch) -> None
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["status"] == "no_positions"
     assert payload["fx_required"] is True
-    assert payload["fx_readiness_status"] == "fx_not_supported_yet"
-    assert payload["fx_snapshot_contract_available"] is False
-    assert payload["missing_fx_pairs"] == ["all_required_pairs"]
+    assert payload["fx_readiness_status"] == "fx_snapshot_missing"
+    assert payload["fx_snapshot_contract_available"] is True
+    assert payload["missing_fx_pairs"] == ["EUR/USD"]
     assert "fx_rates" in payload["missing_total_value_inputs"]
     assert payload["fx_rates_available"] is False
     assert payload["converted_totals_available"] is False

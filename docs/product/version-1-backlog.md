@@ -285,3 +285,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 
 - Task 125H afgerond: FX snapshot durable storage foundation (read-only, no runtime fetch).
+
+- Task 125I voltooid (read-only FX snapshot consumption in valuation readiness); vervolg blijft conservatief zonder runtime provider fetch.

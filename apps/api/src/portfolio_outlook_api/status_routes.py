@@ -343,6 +343,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
             positions=[],
             market_by_conid={},
             cash_snapshots=[],
+            fx_snapshots=[],
             storage_available=False,
         )
     if durable.latest_run is None:
@@ -351,6 +352,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
             positions=[],
             market_by_conid={},
             cash_snapshots=[],
+            fx_snapshots=[],
             storage_available=True,
         )
     provider = StorageConnectionProvider(
@@ -367,11 +369,26 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
         conids = tuple(item.conid for item in positions if item.conid)
         market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
         market_by_conid = {item.ibkr_conid: item for item in market_result.records}
+        cash_currencies = sorted({item.base_currency for item in cash_snapshots})
+        position_currencies = sorted(
+            {(item.currency or "").strip() for item in positions if item.currency}
+        )
+        valuation_currencies = sorted(set(cash_currencies) | set(position_currencies))
+        base_currency = cash_currencies[0] if len(cash_currencies) == 1 else None
+        required_pairs: tuple[str, ...] = ()
+        if len(valuation_currencies) > 1 and base_currency is not None:
+            required_pairs = tuple(
+                f"{currency}/{base_currency}"
+                for currency in valuation_currencies
+                if currency != base_currency
+            )
+        fx_snapshots = repo.list_latest_fx_rate_snapshots_by_pairs(required_pairs)
     return build_portfolio_valuation_readiness(
         latest_run=durable.latest_run,
         positions=positions,
         market_by_conid=market_by_conid,
         cash_snapshots=cash_snapshots,
+        fx_snapshots=fx_snapshots,
         storage_available=True,
     )
 
