@@ -42,6 +42,14 @@
 
 # Task History (concise)
 
+## Task 127R — documentation-only repair
+- Status: afgerond.
+- Task 127 documentatiedrift hersteld in bron-of-truth docs.
+- Stale paper-only productidentiteit-contradicties verwijderd en account-mode-aware richting vergrendeld.
+- Task 127 decision-lock document uitgebreid met volledige detailbesluiten.
+- Geen runtime wijzigingen, geen trading/execution gedrag, geen suggestieruntime, geen action-draftruntime, geen market-dataruntime.
+
+
 ## Task 109 — request-log/provider/source/freshness contract preflight (documentation/design only)
 
 - Status: afgerond.
@@ -143,6 +151,14 @@
 - Niet toegevoegd: geen market-data runtime/fetching/historical/scheduler, geen forecast/AI runtime, geen suggesties/Decision Packages/action drafts/orders, geen fake prijzen/broker/recommendaties.
 
 # Task History (concise)
+
+## Task 127R — documentation-only repair
+- Status: afgerond.
+- Task 127 documentatiedrift hersteld in bron-of-truth docs.
+- Stale paper-only productidentiteit-contradicties verwijderd en account-mode-aware richting vergrendeld.
+- Task 127 decision-lock document uitgebreid met volledige detailbesluiten.
+- Geen runtime wijzigingen, geen trading/execution gedrag, geen suggestieruntime, geen action-draftruntime, geen market-dataruntime.
+
 
 ## Task 106 — Conservatieve read-only terminology lock discipline follow-up
 

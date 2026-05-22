@@ -1,4 +1,3 @@
-- Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
 # Release 1 Functional Workflow Blueprint
 
 ## 1) Release 1 product intent
@@ -145,8 +144,9 @@ Uitlegregel:
 
 ## 8) IBKR Action Center
 
-IBKR Action Center bevat drie tabbladen:
-- Te keuren
+IBKR Action Center bevat vier tabbladen:
+- Systeemvoorstellen
+- Mijn eigen orders
 - Actief bij IBKR
 - Historiek
 
@@ -182,7 +182,7 @@ Regels:
 
 ## 10) Supported human order presets
 
-Belangrijke scope-opmerking: deze sectie beschrijft een toekomstige preset-catalogus. De eerste uitvoerbare paper-action flow blijft strikt LMT-only. Market orders, bracket orders, stop orders, trailing orders en conditionele orderpresets zijn niet toegestaan in de eerste uitvoerbare flow. Latere uitbreiding van orderpresets vereist aparte validatie, safety gates, user-approval workflow en expliciete product-lock update.
+Belangrijke scope-opmerking: deze sectie beschrijft een toekomstige preset-catalogus. De eerste uitvoerbare user-approved action flow blijft strikt LMT-only. Market orders, bracket orders, stop orders, trailing orders en conditionele orderpresets zijn niet toegestaan in de eerste uitvoerbare flow. Latere uitbreiding van orderpresets vereist aparte validatie, safety gates, user-approval workflow en expliciete product-lock update.
 
 Bedoelde eenvoudige menselijke presets in de toekomstige catalogus:
 - Buy with limit price.
@@ -375,4 +375,4 @@ Deze blueprint beschrijft vergrendelde functionele ontwerpwaarheid voor Release 
 
 Release 1 workflow wordt intern gefaseerd: V1.0 foundations → V1.1 baseline forecasting → V1.2 AI text-to-feature → V1.3 challengers → V1.4 AI uitleg/RAG → V1.5 dissent challenger → V1.6 monitoring/drift → V1.7 Decision Package + deterministic translator → V1.8 paper action workflow.
 
-Runtime-regel: suggestions, action drafts en paper actions blijven geblokkeerd tot V1.7 gates + Decision Package bestaan en gevalideerd zijn. Zie `docs/product/asset-value-prediction-engine-roadmap.md`.
+Runtime-regel: suggestions, action drafts en user-approved brokeracties blijven geblokkeerd tot V1.7 gates + Decision Package bestaan en gevalideerd zijn. Zie `docs/product/asset-value-prediction-engine-roadmap.md`.

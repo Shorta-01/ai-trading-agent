@@ -1,3 +1,10 @@
+# Current State
+
+## Task 127R update
+- Task 127 leverde de eerste decision-lock documentatie op, maar liet documentatiedrift achter.
+- Task 127R herstelt bron-of-truth productdocs, verwijdert paper-only identiteitscontradicties en breidt alle lockdetails uit.
+- Na Task 127R zijn er geen runtime code/tests/migrations/workflows/package metadata/UI/trading/execution wijzigingen toegevoegd.
+
 - Task 127: **completed** — documentatie-only productrichting uitgelijnd voor account-mode-aware suggestie/action-draft/Prediction Diary beslissingen; nieuw lockdocument toegevoegd (`docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md`) en productdocs geharmoniseerd. Geen runtime code, geen tests, geen migrations, geen workflows, geen UI-code en geen trading/execution runtime toegevoegd.
 - Task 126: **completed** — documentatie/research-only asset suggestion + financial algorithm roadmap toegevoegd (`docs/product/asset-suggestion-algorithm-roadmap.md`), inclusief gates/calculation/AI-scheidingsmodel en productbeslissing-pending notitie over bredere niet-paper-only eindrichting versus huidige Version-1 paper-only lock. Geen runtime, geen suggesties actief, geen market-data runtime, geen orders en geen live/real-money gedrag toegevoegd.
 - Task 125C-C: **completed** — duurzame IBKR sync read/status paden verhard met expliciete storage-unavailable/no-run/latest-run afhandeling en contracttests voor read-only endpoints; safety booleans blijven false; geen TWS/IB Gateway connectie, geen order submit/modify/cancel/bind, geen suggesties en geen fake data toegevoegd.

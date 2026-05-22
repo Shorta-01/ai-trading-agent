@@ -5,12 +5,12 @@
 Deze roadmap beschrijft welke data-, reken-, risk-, validatie- en uitlegfundamenten nodig zijn vóór het systeem betrouwbare actie-suggesties mag tonen. Het doel is **nauwkeurigheid, auditability en uitlegbaarheid**. Het systeem mag niet van gesynchroniseerde IBKR-data direct naar advies springen zonder gecontroleerde tussenlagen.
 
 ## 2. Current repository conflict note
-Er is een productrichting-verduidelijking: eindproduct hoeft conceptueel niet permanent paper-only te blijven. Tegelijk blijven huidige repository locks voor Version 1 expliciet paper-only.
+Er is een productrichting-verduidelijking: eindproduct hoeft conceptueel niet permanent account-mode-aware te blijven. Tegelijk blijven huidige repository locks voor Version 1 expliciet account-mode-aware.
 
 Deze taak:
 - wijzigt **geen runtimegedrag**;
 - voegt **geen** live/real-money execution toe;
-- registreert alleen “product decision pending” voor mogelijke latere real-account support;
+- registreert alleen “productrichting vergrendeld in Task 127” voor mogelijke latere real-account support;
 - bereidt alleen roadmap/documentatie voor.
 
 ## 3. Source-of-truth model

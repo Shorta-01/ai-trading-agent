@@ -31,12 +31,12 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 ## Kerncontext
 
-- Producttrackingstatus: Task 125B is merged (PR #258); volgende implementatiestap is Task 125C (runtime/API wiring naar duurzame opslag).
+- Producttrackingstatus: Task 125B is merged (PR #258); volgende implementatiestap is Task 125D (runtime/API wiring naar duurzame opslag).
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
 - Version 1 ondersteunt paper en real-money accountmodus als zichtbare veiligheidscontext; productidentiteit blijft account-mode-aware en user-approved.
-- Geen live trading, geen real-money execution, geen automatische orders.
+- Geen live trading, geen brokeractie zonder expliciete usergoedkeuring, geen automatische orders.
 - AI is uitleg/evidence-interpretatie; Python/modelcode berekent.
 
 ## Navigatie
@@ -62,3 +62,5 @@ Aanvullend:
 - `next-task.md` mag geen nieuwe drift-only taak plannen tenzij er echte trackingdrift te herstellen is.
 - Als de enige noodzakelijke fix een tasknummercorrectie in `current-state.md` is, moet die correctie in dezelfde PR worden meegebundeld en niet als losse volgende taak worden gepland.
 - Dit is een documentatie/review-discipline-regel en **geen** geautomatiseerde CI-regel.
+
+- Verplicht lezen: docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md
