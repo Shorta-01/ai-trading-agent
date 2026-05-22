@@ -11,14 +11,21 @@ import {
   IbkrOpenOrderSnapshot,
   IbkrPositionSnapshot,
   IbkrSyncStatusResponse,
+  PortfolioValuationReadinessResponse,
 } from "@/lib/apiClient";
 
 function displayValue(value: string | null | undefined): string {
   return value && value.trim().length > 0 ? value : "Niet beschikbaar";
 }
 
+function formatValuationValue(baseCurrency: string | null, value: string | null, available: boolean): string {
+  if (!available || !value) return "Geen veilige totaalwaarde beschikbaar";
+  return baseCurrency ? `${baseCurrency} ${value}` : value;
+}
+
 export default function PortfolioPage() {
   const [syncStatus, setSyncStatus] = useState<IbkrSyncStatusResponse | null>(null);
+  const [valuationReadiness, setValuationReadiness] = useState<PortfolioValuationReadinessResponse | null>(null);
   const [positions, setPositions] = useState<IbkrPositionSnapshot[]>([]);
   const [cashItems, setCashItems] = useState<IbkrCashSnapshot[]>([]);
   const [openOrders, setOpenOrders] = useState<IbkrOpenOrderSnapshot[]>([]);
@@ -29,16 +36,18 @@ export default function PortfolioPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const [statusRes, positionsRes, cashRes, ordersRes, executionsRes] = await Promise.all([
+    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes] = await Promise.all([
       apiClient.getIbkrSyncStatus(),
+      apiClient.getPortfolioValuationReadiness(),
       apiClient.getIbkrPositions(),
       apiClient.getIbkrCash(),
       apiClient.getIbkrOpenOrders(),
       apiClient.getIbkrExecutions(),
     ]);
 
-    setLoadFailed(!statusRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
+    setLoadFailed(!statusRes.ok && !valuationRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
     if (statusRes.ok) setSyncStatus(statusRes.data);
+    if (valuationRes.ok) setValuationReadiness(valuationRes.data);
     if (positionsRes.ok) setPositions(positionsRes.data.items ?? []);
     if (cashRes.ok) setCashItems(cashRes.data.items ?? []);
     if (ordersRes.ok) setOpenOrders(ordersRes.data.items ?? []);
@@ -57,6 +66,15 @@ export default function PortfolioPage() {
     return "ok" as const;
   }, [syncStatus]);
 
+  const valuationStatusTone = useMemo(() => {
+    if (!valuationReadiness) return "niet-beschikbaar" as const;
+    if (valuationReadiness.conversion_total_status.includes("blocked")) return "geblokkeerd" as const;
+    if (valuationReadiness.conversion_total_status.includes("control_needed")) return "aandacht" as const;
+    if (valuationReadiness.conversion_total_status === "conversion_ready") return "ok" as const;
+    if (valuationReadiness.conversion_total_status === "conversion_not_required") return "info" as const;
+    return "wacht" as const;
+  }, [valuationReadiness]);
+
   const runSync = async () => {
     setSyncing(true);
     await apiClient.runIbkrSync();
@@ -74,6 +92,24 @@ export default function PortfolioPage() {
           </button>
         </div>
         <p className="top-sub">Read-only weergave van laatst opgeslagen IBKR snapshots voor posities, cash, open orders en uitvoeringen.</p>
+
+        {loading ? <EmptyState title="Waardering laden" message="Even wachten, er worden geen waarden verzonnen." /> : null}
+        {!loading && !valuationReadiness ? <EmptyState title="Waardering niet beschikbaar" message="De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen." /> : null}
+        {valuationReadiness ? (
+          <div className="portfolio-meta-grid" style={{ marginBottom: "1rem" }}>
+            <div><strong>Totale portefeuillewaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_portfolio_value, valuationReadiness.total_portfolio_value_available)}</div>
+            <div><strong>Totale marktwaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_market_value, valuationReadiness.total_market_value_available)}</div>
+            <div><strong>Cashwaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_cash_value, valuationReadiness.total_cash_value_available)}</div>
+            <div><strong>Basismunt:</strong> {displayValue(valuationReadiness.base_currency)}</div>
+            <div><strong>Omrekening:</strong> <StatusBadge label={valuationReadiness.conversion_total_status_nl} status={valuationStatusTone} title={valuationReadiness.conversion_total_help_nl} /></div>
+            <div><strong>Toelichting:</strong> {valuationReadiness.conversion_total_help_nl}</div>
+            {valuationReadiness.missing_market_data_conids.length > 0 ? <div><strong>Marktdata ontbreekt:</strong> {valuationReadiness.missing_market_data_conids.join(", ")}</div> : null}
+            {valuationReadiness.missing_cash_inputs.length > 0 ? <div><strong>Cashsnapshot ontbreekt:</strong> {valuationReadiness.missing_cash_inputs.join(", ")}</div> : null}
+            {valuationReadiness.missing_fx_pairs.length > 0 ? <div><strong>Wisselkoers ontbreekt:</strong> {valuationReadiness.missing_fx_pairs.join(", ")}</div> : null}
+            {valuationReadiness.stale_fx_pairs.length > 0 ? <div><strong>Wisselkoers verouderd:</strong> {valuationReadiness.stale_fx_pairs.join(", ")}</div> : null}
+            {valuationReadiness.invalid_fx_pairs.length > 0 ? <div><strong>Wisselkoers ongeldig:</strong> {valuationReadiness.invalid_fx_pairs.join(", ")}</div> : null}
+          </div>
+        ) : null}
 
         <div className="portfolio-meta-grid">
           <div><strong>Status:</strong> <StatusBadge label={syncStatus?.status_nl ?? "Niet beschikbaar"} status={statusTone} title={syncStatus?.help_nl ?? "Nog geen syncstatus."} /></div>

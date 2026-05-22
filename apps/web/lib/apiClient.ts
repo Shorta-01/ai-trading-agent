@@ -268,6 +268,34 @@ export type ProviderSourceResponse = {
   metadata_quality_nl: string;
   missing_metadata_fields: string[];
 };
+
+
+export type PortfolioValuationReadinessResponse = {
+  conversion_total_status: string;
+  conversion_total_status_nl: string;
+  conversion_total_help_nl: string;
+  base_currency: string | null;
+  total_market_value_available: boolean;
+  total_market_value: string | null;
+  total_cash_value_available: boolean;
+  total_cash_value: string | null;
+  total_portfolio_value_available: boolean;
+  total_portfolio_value: string | null;
+  converted_totals_available: boolean;
+  converted_position_values_available: boolean;
+  converted_cash_values_available: boolean;
+  missing_total_value_inputs: string[];
+  missing_market_data_conids: string[];
+  missing_cash_inputs: string[];
+  missing_fx_pairs: string[];
+  stale_fx_pairs: string[];
+  invalid_fx_pairs: string[];
+  valuation_input_trace: Record<string, unknown> | null;
+  suggestions_allowed?: boolean;
+  action_drafts_allowed?: boolean;
+  orders_allowed?: boolean;
+};
+
 export type FreshnessAuditResponse = {
   freshness_audit_id: string;
   request_log_id: string | null;
@@ -372,6 +400,7 @@ export const apiClient = {
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),
+  getPortfolioValuationReadiness: () => getJson<PortfolioValuationReadinessResponse>("/portfolio/valuation/readiness"),
   getIbkrPositions: () => getJson<{ items: IbkrPositionSnapshot[] }>("/ibkr/portfolio/positions"),
   getIbkrCash: () => getJson<{ items: IbkrCashSnapshot[] }>("/ibkr/account/cash"),
   getIbkrOpenOrders: () => getJson<{ items: IbkrOpenOrderSnapshot[] }>("/ibkr/orders/open"),
