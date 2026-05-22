@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { PortfolioValuationReadinessResponse } from "@/lib/apiClient";
 
 type Primitive = string | number | boolean | null;
@@ -44,7 +45,7 @@ function hasBlockers(readiness: ValuationTraceDetailsProps["readiness"]): boolea
   ].some((items) => items.length > 0);
 }
 
-function renderBlockerSection(label: string, items: string[]): JSX.Element | null {
+function renderBlockerSection(label: string, items: string[]): ReactElement | null {
   if (items.length === 0) return null;
   return (
     <li>
