@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from ai_trading_agent_storage import StorageConnectionError
@@ -301,6 +302,10 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     assert parsed.analysis_ready is False
     assert parsed.suggestions_allowed is False
     assert parsed.action_drafts_allowed is False
+    assert parsed.freshness_status is not None
+    assert parsed.valuation_readiness_status is not None
+    assert parsed.price_basis is not None
+    assert parsed.price_basis_nl is not None
 
 
 def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatch) -> None:
@@ -506,21 +511,22 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
             return _FakeContext()
 
     class _Record:
+        symbol = "AAPL"
+        currency = "USD"
         provider_code = "ibkr"
         provider_environment = "paper"
         provider_account_mode = "paper"
         market_data_type = "snapshot"
-        requested_at = "2026-05-20T00:00:00Z"
-        received_at = "2026-05-20T00:00:01Z"
-        provider_as_of = "2026-05-20T00:00:01Z"
-        stored_at = "2026-05-20T00:01:00Z"
+        requested_at = datetime(2026, 5, 20, 0, 0, 0, tzinfo=UTC)
+        received_at = datetime(2026, 5, 20, 0, 0, 1, tzinfo=UTC)
+        provider_as_of = datetime(2026, 5, 20, 0, 0, 1, tzinfo=UTC)
+        stored_at = datetime(2026, 5, 20, 0, 1, 0, tzinfo=UTC)
         freshness_status = "fresh"
         last_price = Decimal("189.12")
         bid_price = Decimal("189.10")
         ask_price = Decimal("189.14")
         close_price = Decimal("188.50")
         day_change_percent = Decimal("0.33")
-        currency = "USD"
 
     class _FakeRepo:
         def __init__(self, *_args: object, **_kwargs: object) -> None:
@@ -558,6 +564,10 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
     assert parsed.provider_account_mode == "paper"
     assert parsed.market_data_type == "snapshot"
     assert parsed.freshness_status == "fresh"
+    assert parsed.valuation_readiness_status is not None
+    assert parsed.price_basis is not None
+    assert parsed.price_basis_nl is not None
+    assert parsed.snapshot_age_seconds is not None
     assert parsed.last_price == "189.12"
     assert parsed.bid_price == "189.10"
     assert parsed.ask_price == "189.14"
@@ -595,21 +605,22 @@ def test_market_data_snapshot_latest_returns_stale_snapshot_variant(monkeypatch)
             return _FakeContext()
 
     class _Record:
+        symbol = "AAPL"
+        currency = "USD"
         provider_code = "ibkr"
         provider_environment = "paper"
         provider_account_mode = "paper"
         market_data_type = "snapshot"
-        requested_at = "2026-05-20T00:00:00Z"
-        received_at = "2026-05-20T00:00:01Z"
-        provider_as_of = "2026-05-20T00:00:01Z"
-        stored_at = "2026-05-20T00:01:00Z"
+        requested_at = datetime(2026, 5, 20, 0, 0, 0, tzinfo=UTC)
+        received_at = datetime(2026, 5, 20, 0, 0, 1, tzinfo=UTC)
+        provider_as_of = datetime(2026, 5, 20, 0, 0, 1, tzinfo=UTC)
+        stored_at = datetime(2026, 5, 20, 0, 1, 0, tzinfo=UTC)
         freshness_status = "stale"
         last_price = Decimal("189.12")
         bid_price = Decimal("189.10")
         ask_price = Decimal("189.14")
         close_price = Decimal("188.50")
         day_change_percent = Decimal("0.33")
-        currency = "USD"
 
     class _FakeRepo:
         def __init__(self, *_args: object, **_kwargs: object) -> None:
