@@ -1,3 +1,3 @@
 # Next Task
 
-Task 121 — Voeg veilige market-data freshness/readiness policy en watchlist/portfolio valuation-readiness laag toe op basis van enkel opgeslagen echte snapshots, zonder suggesties of AI-runtime.
+Task 123 — Add read-only IBKR paper account/positions/cash sync runtime behind explicit manual trigger and disabled-by-default config, with no orders/suggestions/fake data.

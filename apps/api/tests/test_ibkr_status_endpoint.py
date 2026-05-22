@@ -15,17 +15,26 @@ def test_ibkr_status_endpoint_placeholder() -> None:
     assert payload["enabled"] is False
     assert payload["provider"] == "ibkr"
     assert payload["configured"] is False
-    assert payload["connection_status"] == "not_connected"
+    assert payload["connection_status"] == "disabled"
     assert payload["account_mode_status"] == "unknown"
     assert payload["expected_environment"] == "paper"
     assert payload["account_id_hint_present"] is False
     assert payload["gateway_url_configured"] is False
     assert payload["status_check_enabled"] is False
+    assert payload["paper_only_enforced"] is True
+    assert payload["readonly"] is True
+    assert payload["host_configured"] is False
+    assert payload["port_configured"] is False
+    assert payload["client_id_configured"] is False
+    assert payload["sync_allowed"] is False
+    assert payload["actions_allowed"] is False
+    assert payload["order_submission_allowed"] is False
+    assert payload["suggestions_allowed"] is False
     assert payload["can_submit_orders"] is False
     assert payload["blocks_orders"] is True
-    assert payload["status_nl"] == "Niet gekoppeld"
-    assert "nog geen IBKR API-calls" in payload["message_nl"]
-    assert "paper-only" in payload["help_nl"]
+    assert payload["status_nl"] == "IBKR uitgeschakeld"
+    assert "geen verbindingen" in payload["message_nl"]
+    assert "Alleen papiermodus toegestaan" in payload["help_nl"]
 
 
 def test_ibkr_status_endpoint_exposes_no_secrets() -> None:
@@ -46,6 +55,12 @@ def test_ibkr_status_placeholder_keeps_unknown_with_paper_environment() -> None:
     assert payload["expected_environment"] == "paper"
     assert payload["can_submit_orders"] is False
     assert payload["blocks_orders"] is True
+
+
+def test_ibkr_session_status_endpoint_available() -> None:
+    response = client.get("/ibkr/session/status")
+    assert response.status_code == 200
+    assert response.json()["connection_status"] == "disabled"
 
 
 def test_ibkr_status_placeholder_keeps_unknown_with_gateway_and_account_hint() -> None:
