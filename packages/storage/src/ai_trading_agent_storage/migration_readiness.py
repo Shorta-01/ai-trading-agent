@@ -248,9 +248,9 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         ),
     ),
     MigrationRevisionInfo(
-        revision_id="0023_ibkr_sync_snapshot_storage",
-        previous_revision_id="0022_asset_listing_identity_foundation",
-        filename="0023_ibkr_sync_snapshot_storage.py",
+        revision_id="0025_ibkr_sync_snapshot_storage",
+        previous_revision_id="0024_market_data_latest_snapshots",
+        filename="0025_ibkr_sync_snapshot_storage.py",
         label_nl="IBKR sync snapshot durable opslag",
         description_nl="Duurzame opslagtabellen voor read-only IBKR sync snapshots.",
     ),

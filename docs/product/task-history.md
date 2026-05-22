@@ -1,3 +1,9 @@
+## Task 125A-R — Repair IBKR sync storage migration readiness
+- Herstelde foutieve dubbele migratierevisie door `0023_ibkr_sync_snapshot_storage` te verplaatsen naar `0025_ibkr_sync_snapshot_storage` met `down_revision=0024_market_data_latest_snapshots`.
+- Herstelde storage-readiness contracten (inventory/latest revision/count) en bijbehorende storage/API tests.
+- Breidde de migratie uit zodat alle vijf IBKR snapshot-tabellen uit metadata worden aangemaakt en in veilige volgorde weer verwijderd.
+- Geen API runtime wiring toegevoegd; geen IBKR netwerkcode; geen orders; geen scheduler; geen fake data.
+
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
 - Task 120: **completed** — disabled-by-default IBKR paper marktdata-adapter skeleton en handmatige latest-snapshot fetch route toegevoegd (status-first, read-only, geen scheduler/background fetch, geen fake data, safety booleans false).

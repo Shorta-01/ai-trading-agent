@@ -1,3 +1,7 @@
+## Task 125A-R scope update
+- Binnen scope: CI-repair en schema/migratie-consistentie voor read-only IBKR snapshotopslag.
+- Buiten scope (blijft uitgesteld): repository-dataclasses/methodes voor nieuwe IBKR snapshot-tabellen (Task 125B), API runtime wiring, orders, suggesties, AI, forecasting, background sync.
+
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
 - Task 120: **completed** — disabled-by-default IBKR paper marktdata-adapter skeleton en handmatige latest-snapshot fetch route toegevoegd (status-first, read-only, geen scheduler/background fetch, geen fake data, safety booleans false).
