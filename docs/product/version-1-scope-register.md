@@ -1,5 +1,9 @@
 - Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
 | Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Task 127/127R heeft de oude paper-only richting vervangen door account-mode-aware productrichting met zichtbare account mode en safety gates |
+## Task 125J — valuation conversion-total preflight
+- In scope: document-first/read-only preflight voor toekomstige converted valuation totals met Decimal-only criteria, required stored inputs, base-currency + FX-pair regels, calculation boundaries, candidate readiness/status-contract en teststrategie.
+- Buiten scope: converted-total runtime, API calculation implementation, storage migrations, runtime FX/provider fetch, market-data runtime, scheduler/background jobs, suggesties/action drafts/orders/execution en fake FX-rates/converted totals/brokerdata.
+
 ## Task 125C-B scope update
 - Binnen scope: API runtime wiring van bestaande handmatige IBKR read-only sync naar duurzame opslag met kleine persistence boundary en in-memory fallback.
 - Buiten scope: echte IBKR netwerkadapter/TWS connectie, order submit/modify/cancel/bind, suggesties, Decision Packages, AI runtime, forecasting, scheduler/background sync, market-data runtime en fake data.

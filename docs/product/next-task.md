@@ -1,3 +1,3 @@
 # Next Task
 
-Task 125J — Read-only valuation conversion-total preflight/design met veilige Decimal-only criteria op basis van reeds opgeslagen inputs (geen runtime FX/provider fetch).
+Task 125K — Implementeer een pure Decimal-only conversion-total calculator module met unit tests op basis van reeds opgeslagen inputs, zonder API wiring en zonder runtime FX/provider fetch.
