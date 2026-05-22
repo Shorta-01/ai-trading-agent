@@ -1,3 +1,4 @@
+- Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
 - Task 126 (documentation/research): afgerond — `docs/product/asset-suggestion-algorithm-roadmap.md` toegevoegd als beslis- en architectuurroadmap voor toekomstige suggestielaag; runtime blijft ongewijzigd.
 - [x] Task 125C-B — Completed: wire IBKR read-only sync manual-trigger runtime to durable storage behind small persistence boundary with in-memory fallback; no orders/suggestions/fake data, no real IBKR network adapter or TWS/IB Gateway connection added.
 - [x] Task 125C-A — Completed: small mapper + persistence façade scaffolding for durable IBKR sync storage bridge (API-side only); endpoint runtime behavior not replaced yet.

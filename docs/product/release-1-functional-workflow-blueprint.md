@@ -1,3 +1,4 @@
+- Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
 # Release 1 Functional Workflow Blueprint
 
 ## 1) Release 1 product intent

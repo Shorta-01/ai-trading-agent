@@ -24,7 +24,7 @@ Kader:
 
 - Portfolio Outlook Manager is de productnaam.
 - Ai Trading Agent is de repository/werknaam.
-- Version 1 is paper-only.
+- Version 1 ondersteunt paper en real-money accountmodus als zichtbare veiligheidscontext; productidentiteit blijft account-mode-aware en user-approved.
 - Paper-only verzwakt de functionele ambitie niet.
 - Account-risico is beperkt, maar architectuur blijft professioneel.
 
@@ -258,3 +258,10 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 - Geen suggestion zonder gevalideerde data/model/evidence/freshness/risk gates.
 - Could-items blijven experimentele/challenger modules tot promotie via validatie.
 - Eerste paper action flow blijft LMT-only, user-approved, paper-only.
+
+## Task 127 decision lock
+- Bron: `docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md`.
+- Productidentiteit: IBKR portfolio/watchlist intelligence, account-mode-aware (paper/real-money zichtbaar), niet paper-only als identiteit.
+- Geen automatische brokeractie; expliciete user-goedkeuring blijft verplicht.
+- Version 1 scope bevat nu expliciet Prediction Diary, alerts en daily briefing (zonder runtime-implementatie in Task 127).
+- Eerste action-draft ordertype-scope blijft: whole shares, Buy/Sell, Limit, Day, bewerkbaar, dry-run verplicht, geen auto-send.

@@ -5,7 +5,7 @@
 Portfolio Outlook Manager is een professionele AI-ondersteunde **paper portfolio research- en trading-beslissingsomgeving**.
 
 - Het is **geen** automatische real-money trading bot.
-- Version 1 blijft strikt **paper-only**.
+- Version 1 werkt account-mode-aware (paper of real-money zichtbaar), zonder automatische brokeracties.
 - Het systeem ondersteunt beslissingen met evidence, probabilistische analyses en auditability.
 
 ## 2) Final user workflow (target state)
@@ -34,7 +34,7 @@ IBKR/paper account data
 → detail “waarom”-paneel
 → optionele conversie naar bewerkbare IBKR paper actie
 → user review/bewerking/bevestiging
-→ paper-only submission
+→ user-approved submission
 → warning/confirmation capture
 → execution import
 → reconciliatie
@@ -113,7 +113,7 @@ Version 1:
 - Suggestion Engine
 - AI Event Intelligence
 - IBKR read-only integration
-- IBKR paper action grid
+- IBKR action-draft grid (account-mode-aware)
 - Reconciliatie
 - Audit Viewer
 - AI Cost Dashboard
