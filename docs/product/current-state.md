@@ -1,3 +1,7 @@
+- Task 125A-R: **completed** — CI-herstel na PR #256 door IBKR sync snapshot migratieconsistentie te repareren (revisie 0025, inventory-contract, metadata-set en tests). Dit bevestigt dat Task 125A alleen duurzame read-only schema/metadata/migration foundation toevoegde; repository-dataclasses/methodes en API runtime wiring blijven expliciet deferred naar Task 125B.
+
+# Current State (na Task 125A)
+
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
 - Task 120: **completed** — disabled-by-default IBKR paper marktdata-adapter skeleton en handmatige latest-snapshot fetch route toegevoegd (status-first, read-only, geen scheduler/background fetch, geen fake data, safety booleans false).

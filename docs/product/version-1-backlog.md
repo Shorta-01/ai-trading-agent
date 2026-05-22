@@ -1,3 +1,5 @@
+- [ ] Task 125B — Complete IBKR sync storage repository dataclasses and SQL repository methods for durable IBKR snapshot tables (geen API runtime wiring, geen orders, geen suggesties, geen fake data).
+
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
 - Task 120: **completed** — disabled-by-default IBKR paper marktdata-adapter skeleton en handmatige latest-snapshot fetch route toegevoegd (status-first, read-only, geen scheduler/background fetch, geen fake data, safety booleans false).
