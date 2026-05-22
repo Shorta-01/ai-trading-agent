@@ -458,3 +458,4 @@ Bevestiging scope:
 ## Task 123
 - Read-only IBKR paper sync runtime foundation (account summary/cash/positions) toegevoegd achter handmatige trigger en disabled-by-default config.
 - Geen ordersubmission/modificatie/cancel, geen suggesties, geen AI runtime, geen fake brokerdata.
+## Task 125A update: durable IBKR snapshot storage foundation added; runtime wiring deferred to 125B.
