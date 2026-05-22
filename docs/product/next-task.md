@@ -1,3 +1,3 @@
 # Next Task
 
-Task 125L — Wire de pure Decimal-only conversion-total calculator read-only in `GET /portfolio/valuation/readiness` achter strikte opgeslagen-input gates, zonder runtime FX/provider fetch en zonder suggesties/action drafts/orders.
+Task 125M — Add document-first/read-only UI/API display contract preflight for showing valuation conversion totals in simple Dutch, without changing web UI behavior and without runtime fetch, suggestions, action drafts, or orders.

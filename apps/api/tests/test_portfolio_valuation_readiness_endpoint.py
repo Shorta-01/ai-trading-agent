@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from ai_trading_agent_storage import (
+    FxRateSnapshotRecord,
     IbkrAccountCashSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
@@ -413,3 +414,172 @@ def test_no_positions_multi_currency_cash_marks_fx_required(monkeypatch) -> None
     assert "fx_rates" in payload["missing_total_value_inputs"]
     assert payload["fx_rates_available"] is False
     assert payload["converted_totals_available"] is False
+
+
+def _fx(pair: str, rate: str = "1.10", freshness: str = "fresh", validation: str = "valid") -> FxRateSnapshotRecord:
+    base, quote = pair.split("/", 1)
+    now = datetime.now(UTC)
+    return FxRateSnapshotRecord(
+        snapshot_id=f"fx-{pair}",
+        provider="ibkr",
+        source="snapshot",
+        base_currency=base,
+        quote_currency=quote,
+        pair=pair,
+        rate=Decimal(rate),
+        rate_type="mid",
+        as_of=now,
+        received_at=now,
+        stored_at=now,
+        freshness_status=freshness,
+        validation_status=validation,
+        reason_code="ok",
+        metadata_json=None,
+    )
+
+
+def _market(conid: str = "123", price: str = "120"):
+    now = datetime.now(UTC)
+    return type("M", (), {
+        "snapshot_id": f"m-{conid}",
+        "ibkr_conid": conid,
+        "last_price": Decimal(price),
+        "freshness_status": "fresh",
+        "provider_as_of": now,
+        "stored_at": now,
+    })()
+
+def test_conversion_not_required_totals_available(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(),
+            storage_help_nl=None,
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return [_position()]
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("USD")]
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
+
+    class FakeMarketRepo:
+        def list_latest_market_data_snapshots_by_conids(self, _conids):
+            return type("R", (), {"records": (_market(),)})()
+
+    class Ctx:
+        def __enter__(self):
+            return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+        def __exit__(self, *_args):
+            return None
+
+    monkeypatch.setattr(status_routes, "StorageConnectionProvider", lambda _s: type("P", (), {"checked_connection": lambda self, require_writable=False: Ctx()})())
+    monkeypatch.setattr(status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo())
+    monkeypatch.setattr(status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo())
+    payload = client.get("/portfolio/valuation/readiness").json()
+    assert payload["conversion_total_status"] == "conversion_not_required"
+    assert payload["total_market_value"] == "240"
+    assert payload["total_cash_value"] == "50.10"
+    assert payload["total_portfolio_value"] == "290.10"
+    assert payload["converted_totals_available"] is True
+    assert payload["valuation_input_trace"]["latest_sync_run_id"] == "run-1"
+
+
+def test_conversion_ready_with_fx(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(),
+            storage_help_nl=None,
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return [_position()]
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("EUR")]
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return [_fx("USD/EUR", rate="0.9")]
+
+    class FakeMarketRepo:
+        def list_latest_market_data_snapshots_by_conids(self, _conids):
+            return type("R", (), {"records": (_market(price="120"),)})()
+
+    class Ctx:
+        def __enter__(self):
+            return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+        def __exit__(self, *_args):
+            return None
+
+    monkeypatch.setattr(status_routes, "StorageConnectionProvider", lambda _s: type("P", (), {"checked_connection": lambda self, require_writable=False: Ctx()})())
+    monkeypatch.setattr(status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo())
+    monkeypatch.setattr(status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo())
+    payload = client.get("/portfolio/valuation/readiness").json()
+    assert payload["conversion_total_status"] == "conversion_ready"
+    assert payload["total_market_value"] == "216.0"
+    assert payload["total_cash_value"] == "50.10"
+    assert payload["total_portfolio_value"] == "266.10"
+
+
+def test_no_inverse_pair_synthesis(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(),
+            storage_help_nl=None,
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return [_position()]
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("EUR")]
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return [_fx("EUR/USD", rate="1.1")]
+
+    class FakeMarketRepo:
+        def list_latest_market_data_snapshots_by_conids(self, _conids):
+            return type("R", (), {"records": (_market(),)})()
+
+    class Ctx:
+        def __enter__(self):
+            return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+        def __exit__(self, *_args):
+            return None
+
+    monkeypatch.setattr(status_routes, "StorageConnectionProvider", lambda _s: type("P", (), {"checked_connection": lambda self, require_writable=False: Ctx()})())
+    monkeypatch.setattr(status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo())
+    monkeypatch.setattr(status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo())
+    payload = client.get("/portfolio/valuation/readiness").json()
+    assert payload["conversion_total_status"] == "conversion_blocked_missing_fx"
+    assert payload["missing_fx_pairs"] == ["USD/EUR"]
+    assert payload["total_portfolio_value"] is None
