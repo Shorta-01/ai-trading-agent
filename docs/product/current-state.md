@@ -1,6 +1,7 @@
 # Current State
 
 ## Task 127R update
+- Task 125G: **completed** — document-first/read-only preflight toegevoegd voor minimale duurzame FX snapshot storage/repository/API-read contracten (`docs/product/fx-snapshot-storage-contract-preflight-task-125g.md`); geen migraties, geen runtime FX fetch, geen market-data runtime, geen suggesties, geen action drafts, geen orders/execution en geen fake FX-rates/converted totals toegevoegd.
 - Task 125F: **completed** — read-only FX snapshot-contract inventaris en readiness-koppeling toegevoegd aan `GET /portfolio/valuation/readiness`; API meldt nu expliciet dat FX-opslagcontract ontbreekt (`fx_snapshot_contract_missing`) i.p.v. runtime-fetch te impliceren; geen FX runtime fetch, geen market-data runtime, geen suggesties, geen action drafts, geen orders/execution en geen fake FX-rates/converted totals toegevoegd.
 - Task 125E: **completed** — read-only `GET /portfolio/valuation/readiness` contract verrijkt met cash-readiness en FX-readiness metadata op basis van duurzame IBKR snapshots; ontbrekende cash/FX blijft expliciet `Geblokkeerd`/`Controle nodig`; geen runtime FX fetch, geen market-data runtime, geen suggesties, geen action drafts, geen orders/execution en geen verzonnen cash/FX/totals toegevoegd.
 - Task 127 leverde de eerste decision-lock documentatie op, maar liet documentatiedrift achter.

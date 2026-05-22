@@ -1,12 +1,13 @@
 # Next Task
 
-## Task 125G — FX snapshot storage contract preflight (document-first, read-only)
+## Task 125H — FX snapshot storage schema/repository contract implementation (read-only, no runtime fetch)
 
-Task 125F heeft bevestigd dat er nog geen bruikbaar opgeslagen FX snapshot-opslagcontract bestaat voor valuation readiness. De volgende veilige slice is daarom contract-first preflight:
+Task 125G heeft de document-first contractpreflight afgerond. De volgende veilige implementatieslice is nu smal en storage-first:
 
-- definieer document-first het minimale duurzame FX snapshot storagecontract (schema/repository/API-read),
-- nog zonder runtime FX fetch,
+- implementeer duurzame FX snapshot storage schema + repositorycontract met tests,
+- nog zonder runtime FX/provider fetch,
 - nog zonder market-data runtime,
+- nog zonder valuation conversion runtime,
 - nog zonder suggesties/action drafts/orders.
 
-Doel: toekomstige implementatie voorbereiden zodat valuation readiness later stored FX pairs veilig kan lezen zonder runtime fetch.
+Doel: een bruikbaar read-only opslagcontract opleveren zodat valuation readiness in een latere taak veilig opgeslagen FX-paren kan consumeren.

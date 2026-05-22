@@ -50,6 +50,14 @@
 
 # Task History (concise)
 
+## Task 125G — FX snapshot storage contract preflight (document-first, read-only)
+
+- Status: afgerond.
+- Nieuw document toegevoegd: `docs/product/fx-snapshot-storage-contract-preflight-task-125g.md`.
+- Definieert op designniveau het minimale toekomstige duurzame FX snapshot storagecontract + repositorycontract + valuation readiness API-read contract.
+- Legt pair-derivation, freshness/validation statussemantiek, Decimal-safe regels en expliciete non-goals vast.
+- Geen migraties, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties, geen action drafts, geen orders/execution en geen fake FX-rates/converted totals toegevoegd.
+
 ## Task 127R — documentation-only repair
 - Status: afgerond.
 - Task 127 documentatiedrift hersteld in bron-of-truth docs.
