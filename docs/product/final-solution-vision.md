@@ -2,7 +2,7 @@
 
 ## 1) Product purpose
 
-Portfolio Outlook Manager is een professionele AI-ondersteunde **paper portfolio research- en trading-beslissingsomgeving**.
+Portfolio Outlook Manager is een professionele AI-ondersteunde **IBKR portfolio/watchlist intelligence- en suggestiesysteem**.
 
 - Het is **geen** automatische real-money trading bot.
 - Version 1 werkt account-mode-aware (paper of real-money zichtbaar), zonder automatische brokeracties.
@@ -12,7 +12,7 @@ Portfolio Outlook Manager is een professionele AI-ondersteunde **paper portfolio
 
 De gedetailleerde en vergrendelde Release 1 workflowblauwdruk staat in `docs/product/release-1-functional-workflow-blueprint.md`. Die blueprint is leidend voor implementatievolgorde en afbakening van Decision Packages, Suggestions-grid, IBKR Action Center, sync/recompute en AI-analytics.
 
-IBKR/paper account data
+IBKR accountdata (paper of real-money zichtbaar)
 → IBKR contract validation (conid-based identity)
 → active portfolio/watchlist state
 → market data en FX data
@@ -32,7 +32,7 @@ IBKR/paper account data
 → eenvoudige Nederlandse uitleg
 → portfolio/watchlist action badge
 → detail “waarom”-paneel
-→ optionele conversie naar bewerkbare IBKR paper actie
+→ optionele conversie naar bewerkbare account-mode-aware IBKR action draft
 → user review/bewerking/bevestiging
 → user-approved submission
 → warning/confirmation capture
@@ -72,10 +72,10 @@ Terminologieguardrail: zie `docs/product/locked-decisions.md` (sectie **Read-onl
 
 
 Version 1:
-- IBKR paper-only
-- geen real money
-- geen automatische orders
-- geen live trading
+- account-mode-aware context (paper of real-money zichtbaar)
+- geen automatische brokeracties
+- geen brokeractie zonder expliciete usergoedkeuring
+- geen live trading automation
 - geen opties/futures/leverage/short selling/crypto/penny stocks/CFD’s/complexe derivaten
 - eenvoudige Nederlandse UI
 - volledige auditability
@@ -128,5 +128,5 @@ Kernarchitectuur: data layer → feature layer → model layer → ensemble/orch
 
 Hard lock blijft:
 - eenvoudige Nederlandse UI;
-- paper-only, user-approved IBKR simulatieacties;
+- account-mode-aware, user-approved IBKR actieflow;
 - AI is kerncapability maar **berekent geen financiële kerngetallen** en beslist geen labels/orders.

@@ -1,5 +1,5 @@
 - Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
-| Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Version-1 paper-only lock blijft actief; eventuele verbreding naar real-account support is product decision pending |
+| Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Version-1 paper-only lock blijft actief; eventuele verbreding naar real-account context is locked as zichtbaar account mode met safety gates |
 ## Task 125C-B scope update
 - Binnen scope: API runtime wiring van bestaande handmatige IBKR read-only sync naar duurzame opslag met kleine persistence boundary en in-memory fallback.
 - Buiten scope: echte IBKR netwerkadapter/TWS connectie, order submit/modify/cancel/bind, suggesties, Decision Packages, AI runtime, forecasting, scheduler/background sync, market-data runtime en fake data.
@@ -144,7 +144,7 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Deterministisch usable-cash contract | Planned | Buying power is geen veilige cash; cashberekening volledig auditeerbaar. |
 | AI enforcement foundation | Planned | Schema-validatie + evidence-linking + safety gates vóór AI-impact op beslissingen. |
 | Decision Package storage/API/UI | Planned | Verplicht vóór suggestions; immutable/auditable beslissingscontext. |
-| Paper action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft paper-only. |
+| Account-mode-aware action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft paper-only. |
 
 ## Prediction-engine capabilities register addendum (Task 88J)
 
@@ -159,7 +159,7 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | V1.5 dissent challenger layer | Planned / Runtime pending |
 | V1.6 monitoring/drift/calibration diary | Planned / Runtime pending |
 | V1.7 immutable Decision Package + deterministic labels | Planned / **Blocked for suggestions until validated gates** |
-| V1.8 paper action workflow | Planned / **Paper-only future** |
+| V1.8 account-mode-aware action workflow | Planned / **Paper-only future** |
 
 Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/freshness/risk gates + approved modelversion actief zijn.
 

@@ -80,8 +80,8 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - account mode verification
 - broker snapshots
 - reconciliation
-- toekomstige paper-only IBKR action grid
-- user-confirmed paper submission (pas na alle gates)
+- toekomstige account-mode-aware IBKR Action Center
+- user-approved broker submission na validation/dry-run/final confirmation (pas na alle gates)
 - audit viewer
 - AI event intelligence
 - OpenAI usage/cost dashboard

@@ -25,7 +25,7 @@ Kader:
 - Portfolio Outlook Manager is de productnaam.
 - Ai Trading Agent is de repository/werknaam.
 - Version 1 ondersteunt paper en real-money accountmodus als zichtbare veiligheidscontext; productidentiteit blijft account-mode-aware en user-approved.
-- Paper-only verzwakt de functionele ambitie niet.
+- Accountmodus is veiligheidscontext en bepaalt niet de productidentiteit.
 - Account-risico is beperkt, maar architectuur blijft professioneel.
 
 ## 2) UI-taal en eenvoud
@@ -138,14 +138,14 @@ Verder:
 
 ## 11) IBKR rules
 
-- Version 1 verbindt enkel met IBKR paper account zodra runtime bestaat.
+- Version 1 blijft account-mode-aware voor paper en real-money als zichtbare accountcontext.
 - Accountmodus verifiëren vóór enige submission.
 - Geen live trading.
-- Geen real-money execution.
+- Geen brokeractie zonder expliciete usergoedkeuring.
 - Geen automatische orders.
 - IBKR warnings/confirmations moeten worden opgeslagen.
 - Orders gaan eerst naar aparte bewerkbare IBKR acties-grid.
-- User kan bewerken en bevestigen voor toekomstige paper-executie.
+- User kan bewerken en bevestigen voor toekomstige user-approved brokeractie.
 - IBKR actie ≠ suggestie.
 - Suggestie blijft traceerbaar naar evidence en regels.
 
@@ -265,3 +265,13 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 - Geen automatische brokeractie; expliciete user-goedkeuring blijft verplicht.
 - Version 1 scope bevat nu expliciet Prediction Diary, alerts en daily briefing (zonder runtime-implementatie in Task 127).
 - Eerste action-draft ordertype-scope blijft: whole shares, Buy/Sell, Limit, Day, bewerkbaar, dry-run verplicht, geen auto-send.
+
+
+## IBKR account mode and user approval lock
+- GUI moet zichtbaar tonen: paper of real-money accountmodus.
+- Workflow is account-mode-aware; productidentiteit is niet paper-only.
+- Paper mode mag gebruikt worden voor testen/veilige validatie.
+- Geen brokeractie zonder expliciete usergoedkeuring.
+- Geen automatische brokeractie.
+- Geen stille submit/modify/cancel.
+- Toekomstige brokeractie vereist validatie, dry-run, finale confirmatie en audit trail.
