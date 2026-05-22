@@ -524,3 +524,5 @@ Bevestiging scope:
 - Toegevoegd: `apps/api/src/portfolio_outlook_api/ibkr_sync_persistence.py` met pure mappers (cash/position/open-order/execution/sync-run) en een minimale persistence-façade die Task 125B repository-methodes in vaste volgorde aanroept.
 - Toegevoegd: gerichte API-tests in `apps/api/tests/test_ibkr_sync_persistence.py` voor Decimal/None-preservatie, conid-conversie, safety booleans false en call-order van de façade met fake repository.
 - Niet gedaan in deze slice: geen endpoint runtime replacement, geen StorageConnectionProvider wiring vanuit sync endpoints, geen in-memory store vervanging, geen IBKR netwerkruntime, geen TWS/Gateway connectiecode, geen orders/suggesties/Decision Packages/AI runtime/forecasting/scheduler/market-data runtime/fake data.
+
+- Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
