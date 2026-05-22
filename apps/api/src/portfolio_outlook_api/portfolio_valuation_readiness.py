@@ -248,14 +248,32 @@ def build_portfolio_valuation_readiness(
     if not positions:
         cash_currencies = sorted({item.base_currency for item in cash_snapshots})
         valuation_currencies = list(cash_currencies)
+        base_currency: str | None = None
+        if len(cash_currencies) == 1:
+            base_currency = cash_currencies[0]
+        elif "USD" in cash_currencies:
+            base_currency = "USD"
+
         fx_required = len(cash_currencies) > 1
-        fx_status = "fx_not_supported_yet" if fx_required else "fx_not_required"
-        fx_status_nl = "FX ontbreekt" if fx_required else "FX niet nodig"
-        fx_help = (
-            "Meerdere cashvaluta zonder opgeslagen wisselkoers: controle nodig."
-            if fx_required
-            else "Cash staat in één valuta; omzetting is niet nodig."
+        missing_fx_pairs = _derive_required_fx_pairs(
+            portfolio_currencies=[],
+            cash_currencies=cash_currencies,
+            base_currency=base_currency,
         )
+        fx_status = "fx_not_required"
+        fx_status_nl = "FX niet nodig"
+        fx_help = "Cash staat in één valuta; omzetting is niet nodig."
+        if fx_required:
+            if base_currency is None:
+                fx_status = "fx_control_needed"
+                fx_status_nl = "Controle nodig"
+                fx_help = "Basismunt ontbreekt; vereiste wisselkoersen zijn onbekend."
+                missing_fx_pairs = ["base_currency"]
+            else:
+                fx_status = "fx_snapshot_missing"
+                fx_status_nl = "Wisselkoers ontbreekt"
+                fx_help = "Niet alle vereiste opgeslagen wisselkoersen zijn aanwezig."
+
         missing_total_value_inputs = ["positions"]
         if fx_required:
             missing_total_value_inputs.append("fx_rates")
@@ -303,8 +321,11 @@ def build_portfolio_valuation_readiness(
             fx_snapshot_count=0,
             fx_snapshot_pairs_available=[],
             valuation_currencies=valuation_currencies,
-            missing_fx_pairs=[] if not fx_required else ["all_required_pairs"],
+            base_currency=base_currency,
+            missing_fx_pairs=[] if not fx_required else missing_fx_pairs,
+            fx_rates_available=False,
             fx_conversion_allowed=not fx_required,
+            converted_totals_available=False,
             total_value_status="blocked",
             total_value_status_nl="Geblokkeerd",
             total_value_help_nl="Geen posities om totaalwaarde te bepalen.",
