@@ -411,45 +411,47 @@ def _read_asset_listing_gate(item: object) -> ReadinessAssetListingGate:
             status=ReadinessAssetListingGateStatus.STORAGE_UNAVAILABLE,
             ibkr_conid=ibkr_conid,
         )
-    provider = StorageConnectionProvider(
-        build_database_connection_settings(storage_settings.database_url)
-    )
     try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage_settings.database_url)
+        )
         with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyResearchSourceArchiveRepository(
+                checked.connection,
+                checked.readiness,
+            )
             if ibkr_conid is None:
                 return build_asset_listing_gate(
                     status=ReadinessAssetListingGateStatus.MISSING_IBKR_CONID,
                     ibkr_conid=None,
                 )
-            repo = SqlAlchemyResearchSourceArchiveRepository(
-                checked.connection,
-                checked.readiness,
-            )
             listing = repo.get_asset_listing_by_ibkr_conid(ibkr_conid)
-            if listing is None:
-                return build_asset_listing_gate(
-                    status=ReadinessAssetListingGateStatus.MISSING_LISTING,
-                    ibkr_conid=ibkr_conid,
-                )
-            gate_status = (
-                ReadinessAssetListingGateStatus.VALIDATED_LISTING
-                if listing.safe_to_use_for_market_data and not listing.blocks_market_data
-                else ReadinessAssetListingGateStatus.UNVALIDATED_LISTING
-            )
-            return build_asset_listing_gate(
-                status=gate_status,
-                listing_id=listing.listing_id,
-                asset_id=listing.asset_id,
-                ibkr_conid=listing.ibkr_conid,
-                validation_status=listing.validation_status,
-                safe_to_use_for_market_data=listing.safe_to_use_for_market_data,
-                blocks_market_data=listing.blocks_market_data,
-            )
     except StorageConnectionError:
         return build_asset_listing_gate(
             status=ReadinessAssetListingGateStatus.STORAGE_UNAVAILABLE,
             ibkr_conid=ibkr_conid,
         )
+
+    if listing is None:
+        return build_asset_listing_gate(
+            status=ReadinessAssetListingGateStatus.MISSING_LISTING,
+            ibkr_conid=ibkr_conid,
+        )
+
+    gate_status = (
+        ReadinessAssetListingGateStatus.VALIDATED_LISTING
+        if listing.safe_to_use_for_market_data and not listing.blocks_market_data
+        else ReadinessAssetListingGateStatus.UNVALIDATED_LISTING
+    )
+    return build_asset_listing_gate(
+        status=gate_status,
+        listing_id=listing.listing_id,
+        asset_id=listing.asset_id,
+        ibkr_conid=listing.ibkr_conid,
+        validation_status=listing.validation_status,
+        safe_to_use_for_market_data=listing.safe_to_use_for_market_data,
+        blocks_market_data=listing.blocks_market_data,
+    )
 def _build_market_data_readiness_rows() -> list[ReadinessRow]:
     from portfolio_outlook_api.watchlist import STORE
 
