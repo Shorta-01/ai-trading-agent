@@ -205,6 +205,19 @@ def build_portfolio_valuation_readiness(
             missing_total_value_inputs=["cash_snapshot", "market_data", "fx_inputs"],
         )
     if not positions:
+        cash_currencies = sorted({item.base_currency for item in cash_snapshots})
+        valuation_currencies = list(cash_currencies)
+        fx_required = len(cash_currencies) > 1
+        fx_status = "fx_not_supported_yet" if fx_required else "fx_not_required"
+        fx_status_nl = "FX ontbreekt" if fx_required else "FX niet nodig"
+        fx_help = (
+            "Meerdere cashvaluta zonder opgeslagen wisselkoers: controle nodig."
+            if fx_required
+            else "Cash staat in één valuta; omzetting is niet nodig."
+        )
+        missing_total_value_inputs = ["positions"]
+        if fx_required:
+            missing_total_value_inputs.append("fx_rates")
         return PortfolioValuationReadinessResponse(
             status=PortfolioValuationStatus.NO_POSITIONS.value,
             reason_code="no_positions",
@@ -233,18 +246,20 @@ def build_portfolio_valuation_readiness(
             ),
             cash_snapshot_available=bool(cash_snapshots),
             cash_snapshot_count=len(cash_snapshots),
-            cash_currencies=sorted({item.base_currency for item in cash_snapshots}),
+            cash_currencies=cash_currencies,
             has_base_currency_cash=any(item.cash is not None for item in cash_snapshots),
             missing_cash_inputs=[] if cash_snapshots else ["cash_snapshot"],
-            fx_readiness_status="fx_not_required",
-            fx_readiness_status_nl="FX niet nodig",
-            fx_readiness_help_nl="Geen posities aanwezig; omzetting is niet nodig.",
-            fx_required=False,
-            fx_conversion_allowed=True,
+            fx_readiness_status=fx_status,
+            fx_readiness_status_nl=fx_status_nl,
+            fx_readiness_help_nl=fx_help,
+            fx_required=fx_required,
+            valuation_currencies=valuation_currencies,
+            missing_fx_pairs=[] if not fx_required else ["all_required_pairs"],
+            fx_conversion_allowed=not fx_required,
             total_value_status="blocked",
             total_value_status_nl="Geblokkeerd",
             total_value_help_nl="Geen posities om totaalwaarde te bepalen.",
-            missing_total_value_inputs=["positions"],
+            missing_total_value_inputs=missing_total_value_inputs,
         )
     rows = [
         build_position_row(
@@ -292,6 +307,9 @@ def build_portfolio_valuation_readiness(
         if not fx_required
         else "Meerdere valuta zonder opgeslagen wisselkoers: controle nodig."
     )
+    missing_total_value_inputs = ["validated_cash_totals"]
+    if fx_required:
+        missing_total_value_inputs.insert(0, "fx_rates")
     return PortfolioValuationReadinessResponse(
         status=(
             PortfolioValuationStatus.MISSING_MARKET_DATA.value
@@ -350,5 +368,5 @@ def build_portfolio_valuation_readiness(
         total_value_help_nl=(
             "Geen verzonnen waardes: totaal vereist cash+FX met gevalideerde inputs."
         ),
-        missing_total_value_inputs=["fx_rates", "validated_cash_totals"],
+        missing_total_value_inputs=missing_total_value_inputs,
     )
