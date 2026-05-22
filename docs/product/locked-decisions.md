@@ -223,7 +223,7 @@ Volgende beslissingen zijn expliciet vergrendeld:
 - dagelijkse portfolio/watchlist briefing
 - hybride sync/refreshmodel (subscriptions + jobs + events + manuele refreshknoppen)
 
-Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only, zonder live trading, real-money execution of automatische orders.
+Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met zichtbare paper/real-money context, zonder automatische brokeracties en zonder submit/modify/cancel zonder expliciete user approval.
 
 ## IBKR-contract-based watchlist and data-readiness locks
 
@@ -244,9 +244,9 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 
 - Usable cash mag **niet** gebaseerd zijn op leveraged buying power; enkel auditeerbare beschikbare funds/cash min verplichtingen en user buffer.
 - AssetListing-identiteitssplitsing is vereist vóór serieuze market-data/forecast/suggestion runtime.
-- Eerste uitvoerbare paper action flow blijft LMT-only (geen market, geen bracket/stop/trailing in eerste flow).
+- Eerste uitvoerbare broker action flow blijft whole-share/unit, Buy/Sell, Limit, Day-only (geen market, geen bracket/stop/trailing in eerste flow).
 - AI mag geen financiële kerngetallen origineren voor beslissingen; AI structureert/verklaart evidence binnen schema- en safety-gates.
-- IBKR reply-handshake en order-state-machine is verplicht vóór toekomstige paper submission flow.
+- IBKR reply-handshake en order-state-machine is verplicht vóór account-mode-aware, user-approved broker submission flow.
 
 ## Task 88J hard locks — Asset-Value Prediction Engine
 
@@ -257,7 +257,7 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 - Decision Package is verplicht vóór suggestion output.
 - Geen suggestion zonder gevalideerde data/model/evidence/freshness/risk gates.
 - Could-items blijven experimentele/challenger modules tot promotie via validatie.
-- Eerste paper action flow blijft LMT-only, user-approved, paper-only.
+- Eerste broker action flow blijft whole-share/unit, Buy/Sell, Limit, Day-only, user-approved en account-mode zichtbaar/geverifieerd vóór submit.
 
 ## Task 127 decision lock
 - Bron: `docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md`.

@@ -6,7 +6,7 @@
 - Na Task 127R zijn er geen runtime code/tests/migrations/workflows/package metadata/UI/trading/execution wijzigingen toegevoegd.
 
 - Task 127: **completed** — documentatie-only productrichting uitgelijnd voor account-mode-aware suggestie/action-draft/Prediction Diary beslissingen; nieuw lockdocument toegevoegd (`docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md`) en productdocs geharmoniseerd. Geen runtime code, geen tests, geen migrations, geen workflows, geen UI-code en geen trading/execution runtime toegevoegd.
-- Task 126: **completed** — documentatie/research-only asset suggestion + financial algorithm roadmap toegevoegd (`docs/product/asset-suggestion-algorithm-roadmap.md`), inclusief gates/calculation/AI-scheidingsmodel en productbeslissing-pending notitie over bredere niet-paper-only eindrichting versus huidige Version-1 paper-only lock. Geen runtime, geen suggesties actief, geen market-data runtime, geen orders en geen live/real-money gedrag toegevoegd.
+- Task 126: **completed** — documentatie/research-only asset suggestion + financial algorithm roadmap toegevoegd (`docs/product/asset-suggestion-algorithm-roadmap.md`), inclusief gates/calculation/AI-scheidingsmodel en historische notitie die later door Task 127/127R is vervangen door de huidige account-mode-aware lockrichting. Geen runtime, geen suggesties actief, geen market-data runtime, geen orders en geen live/real-money gedrag toegevoegd.
 - Task 125C-C: **completed** — duurzame IBKR sync read/status paden verhard met expliciete storage-unavailable/no-run/latest-run afhandeling en contracttests voor read-only endpoints; safety booleans blijven false; geen TWS/IB Gateway connectie, geen order submit/modify/cancel/bind, geen suggesties en geen fake data toegevoegd.
 - Task 125C-B: **completed** — handmatige IBKR read-only sync runtime is nu gekoppeld aan duurzame opslag achter een kleine boundary wanneer storage geconfigureerd, enabled, writable en migration-ready is; in-memory fallback blijft actief bij storage-unavailable paden. Geen echte IBKR-netwerkadapter, geen TWS/IB Gateway connectie, geen order submit/modify/cancel/bind, geen suggesties en geen fake data toegevoegd.
 - Task 125C-A: **completed** — kleine veilige slice toegevoegd met API-side `ibkr_sync_persistence` mapperfuncties en een minimale persistence-façade die Task 125B repository-methodes in vaste volgorde aanroept. Endpoint-runtimegedrag is niet vervangen: `/ibkr/sync/*`, `/ibkr/portfolio/positions`, `/ibkr/account/cash`, `/ibkr/orders/open` en `/ibkr/executions` blijven ongewijzigd en gebruiken nog huidige flow/in-memory gedrag. Geen echte IBKR netwerkruntime toegevoegd, geen orders, geen suggesties, geen Decision Packages, geen AI runtime, geen forecasting, geen scheduler/background sync, geen market-data runtime en geen fake data toegevoegd.
@@ -14,7 +14,9 @@
 - Scopebevestiging Task 125B: geen orders, geen suggesties, geen AI runtime, geen forecasting, geen fake brokerdata, geen fake marktdata en geen paid-subscription-afhankelijke IBKR-features toegevoegd.
 - Task 125A-R: **completed** — CI-herstel na PR #256 door IBKR sync snapshot migratieconsistentie te repareren (revisie 0025, inventory-contract, metadata-set en tests). Dit bevestigt dat Task 125A alleen duurzame read-only schema/metadata/migration foundation toevoegde; repository-dataclasses/methodes en API runtime wiring bleven toen expliciet deferred naar Task 125B.
 
-# Current State (na Task 125B)
+- Task 127R2: **completed** — documentation-only eindopschoning van resterende account-mode-woordingscontradicties; geen runtime/code/tests/migrations/workflows/UI gewijzigd.
+
+# Current State (na Task 127R2)
 
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
@@ -134,7 +136,7 @@
 - Probabilistische forecast runtime: pending.
 - Portfolio/watchlist volledige runtime grids: pending.
 - IBKR read-only runtime integratie: pending.
-- IBKR paper action flow/submission/reconciliatie: pending.
+- IBKR account-mode-aware user-approved broker action flow/submission/reconciliatie: pending.
 - Audit viewer runtime: pending.
 - AI Event Intelligence runtime: pending.
 - Belgische tax/compliance runtime: pending.

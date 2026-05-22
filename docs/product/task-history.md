@@ -1,3 +1,9 @@
+## Task 127R2 — Final cleanup account-mode wording contradictions
+- Status: Completed (documentation-only).
+- Resterende bron-of-truth woordingscontradicties rond paper-only identiteit en real-money framing verwijderd.
+- Formuleringen geharmoniseerd naar account-mode-aware + expliciete user-approved brokeractie veiligheidsgrenzen.
+- Geen runtime code, tests, migraties, workflows of UI aangepast.
+
 
 ## Task 127 — account-mode-aware product direction + action-draft/Prediction Diary decision locks
 - Status: afgerond (documentation-only).
