@@ -302,10 +302,12 @@ def test_market_data_snapshot_latest_returns_not_configured_when_storage_disable
     assert parsed.analysis_ready is False
     assert parsed.suggestions_allowed is False
     assert parsed.action_drafts_allowed is False
-    assert parsed.freshness_status is not None
-    assert parsed.valuation_readiness_status is not None
-    assert parsed.price_basis is not None
-    assert parsed.price_basis_nl is not None
+    assert parsed.freshness_status is None
+    assert parsed.valuation_readiness_status is None
+    assert parsed.price_basis is None
+    assert parsed.price_basis_nl is None
+    assert parsed.usable_price is None
+    assert parsed.snapshot_age_seconds is None
 
 
 def test_market_data_snapshot_latest_returns_missing_snapshot_variant(monkeypatch) -> None:
@@ -510,6 +512,8 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
             assert require_writable is False
             return _FakeContext()
 
+    now = datetime.now(UTC)
+
     class _Record:
         symbol = "AAPL"
         currency = "USD"
@@ -517,10 +521,10 @@ def test_market_data_snapshot_latest_returns_snapshot_available_variant(monkeypa
         provider_environment = "paper"
         provider_account_mode = "paper"
         market_data_type = "snapshot"
-        requested_at = datetime(2026, 5, 20, 0, 0, 0, tzinfo=UTC)
-        received_at = datetime(2026, 5, 20, 0, 0, 1, tzinfo=UTC)
-        provider_as_of = datetime(2026, 5, 20, 0, 0, 1, tzinfo=UTC)
-        stored_at = datetime(2026, 5, 20, 0, 1, 0, tzinfo=UTC)
+        requested_at = now
+        received_at = now
+        provider_as_of = now
+        stored_at = now
         freshness_status = "fresh"
         last_price = Decimal("189.12")
         bid_price = Decimal("189.10")
