@@ -1,3 +1,4 @@
+- **Task 127 (documentation-only):** productrichting uitgelijnd naar account-mode-aware IBKR portfolio/watchlist-intelligentie en suggesties; paper-only verwijderd als productidentiteit; user approval/auditability/no-runtime-change boundaries behouden.
 ## Task 126 — Asset suggestion and financial algorithm roadmap (documentation/research only)
 
 - Status: afgerond.

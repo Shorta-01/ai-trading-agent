@@ -21,7 +21,9 @@ IBKR account synchroniseren
 GUI-principe:
 - De GUI blijft eenvoudig en professioneel in het Nederlands.
 - Geen “toy”-gevoel en geen constante waarschuwingstaal op hoofdniveau.
-- Normale modus toont enkel een eenvoudige account-modus/status-icoonweergave.
+- Normale modus toont altijd een eenvoudige account-modus/status-icoonweergave (paper of real-money).
+- Productlogica blijft account-mode-neutraal: dezelfde analyse/suggestie/approval-flow ongeacht accountmodus.
+- Papermodus is nuttig voor testen, maar is niet de productidentiteit.
 
 ## 2) Portfolio source-of-truth rule
 

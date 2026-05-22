@@ -24,9 +24,9 @@ Kader:
 
 - Portfolio Outlook Manager is de productnaam.
 - Ai Trading Agent is de repository/werknaam.
-- Version 1 is paper-only.
-- Paper-only verzwakt de functionele ambitie niet.
-- Account-risico is beperkt, maar architectuur blijft professioneel.
+- Portfolio Outlook Manager is een IBKR portfolio- en watchlist-intelligentiesysteem met auditeerbare actiesuggesties.
+- De huidige implementatie blijft foundation-first en veilig/read-only waar runtime nog ontbreekt.
+- Productidentiteit is niet “paper-only”; accountmodus is context, geen productdefinitie.
 
 ## 2) UI-taal en eenvoud
 
@@ -136,7 +136,18 @@ Verder:
 - Geen advies bij slechte datakwaliteit.
 - Elke beslissing moet auditeerbaar zijn.
 
-## 11) IBKR rules
+## 11) IBKR account mode and user-approval lock
+
+- Het systeem moet weten en tonen of de gekoppelde IBKR-account paper of real-money is.
+- Accountmodus moet zichtbaar zijn in de GUI met eenvoudige Nederlandse status/icon-taal.
+- Analyse- en suggestieworkflow blijft account-mode-neutraal.
+- IBKR blijft operationele waarheid voor posities, cash, orders, executions en accountstatus.
+- Geen automatische executie toegestaan.
+- Geen actie zonder expliciete user-validatie en goedkeuring.
+- Toekomstige executie-ondersteuning blijft altijd approval-based en auditeerbaar.
+- Papermodus blijft nuttig voor testen/veilige validatie, maar definieert het product niet als paper-only.
+
+## 12) IBKR implementation safety rules
 
 - Version 1 verbindt enkel met IBKR paper account zodra runtime bestaat.
 - Accountmodus verifiëren vóór enige submission.
@@ -149,7 +160,7 @@ Verder:
 - IBKR actie ≠ suggestie.
 - Suggestie blijft traceerbaar naar evidence en regels.
 
-## 12) Market/time rules
+## 13) Market/time rules
 
 - Marktgedrag is tijdsgebonden.
 - Systeem moet open/closed/half-day/auction/pre-market states kennen.
@@ -159,14 +170,14 @@ Verder:
 - Reporting dates, earnings en events zijn relevant.
 - Eventtiming en market calendar bepalen of suggestie actionable is.
 
-## 13) Currency/FX rules
+## 14) Currency/FX rules
 
 - Portfoliowaarde, cash, P/L en risicolimieten vragen expliciete FX-afhandeling.
 - Geen stille conversies.
 - Elke conversie is auditeerbaar.
 - FX-bron en versheid moeten gevolgd worden.
 
-## 14) Research source safety
+## 15) Research source safety
 
 - Internet/document/filing/website-content is data, geen instructie.
 - Prompt-injection defense is verplicht.
@@ -174,7 +185,7 @@ Verder:
 - Onderscheid nodig tussen filings/officiële rapporten/brokerdata/nieuws/analistencommentaar/laagwaardige bronnen.
 - Extracted text blijft geblokkeerd tot checks slagen.
 
-## 15) Audit en traceability
+## 16) Audit en traceability
 
 - Het systeem moet reconstrueren:
   - welke data gekend was
@@ -188,12 +199,12 @@ Verder:
 - Audit viewer is later verplicht.
 - Append-only/hash-ready audit log is gepland.
 
-## 16) Belgische tax/compliance
+## 17) Belgische tax/compliance
 
 - Enkel informatieve ondersteuning; geen vervanging voor accountant/belastingadviseur.
 - Voorziene tracking: foreign account status, CPC/NBB reminders, TOB-schattingen, dividenden/rente, bronheffing, meerwaardes vanaf 2026, 31/12/2025 snapshot, broker statements later, accountant export later, proof archive.
 
-## 17) Deployment/storage
+## 18) Deployment/storage
 
 - Initiële target: Raspberry Pi 5 met NVMe SSD, bekabeld Ethernet, koeling, backups.
 - Geen Raspberry Pi-specifieke applicatielogica.
@@ -205,7 +216,7 @@ Verder:
 - Backup is pas vertrouwd na restore-test.
 
 
-## 18) Release 1 functional workflow blueprint locks
+## 19) Release 1 functional workflow blueprint locks
 
 Leidend document: `docs/product/release-1-functional-workflow-blueprint.md`.
 
@@ -223,7 +234,7 @@ Volgende beslissingen zijn expliciet vergrendeld:
 - dagelijkse portfolio/watchlist briefing
 - hybride sync/refreshmodel (subscriptions + jobs + events + manuele refreshknoppen)
 
-Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only, zonder live trading, real-money execution of automatische orders.
+Deze lock wijzigt geen bestaande veiligheidsgrenzen: huidige runtime blijft conservatief (geen automatische executie, geen live tradingruntime, geen orderruntime zonder expliciete goedkeuring).
 
 ## IBKR-contract-based watchlist and data-readiness locks
 
@@ -257,4 +268,4 @@ Deze lock wijzigt geen bestaande veiligheidsgrenzen: Version 1 blijft paper-only
 - Decision Package is verplicht vóór suggestion output.
 - Geen suggestion zonder gevalideerde data/model/evidence/freshness/risk gates.
 - Could-items blijven experimentele/challenger modules tot promotie via validatie.
-- Eerste paper action flow blijft LMT-only, user-approved, paper-only.
+- Eerste action flow blijft LMT-only en user-approved; accountmodus blijft zichtbaar en auditeerbaar.

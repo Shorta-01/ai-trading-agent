@@ -12,5 +12,5 @@ Doel:
 ## Waarom nu
 Task 126 heeft de lange-termijn algoritmeroadmap vastgelegd. De veiligste directe vervolgstap blijft een kleine foundation-slice dicht bij huidige status (read-only, audit-first, non-runtime unlock).
 
-## Product decision pending (niet in deze taak)
-Er is een vastgelegde richtingsconflict-notitie: mogelijk bredere eindrichting dan paper-only versus huidige Version-1 paper-only lock. Dit vereist later een aparte expliciete productbeslissingstaak; geen runtimewijziging nu.
+## Product direction documented
+Productrichting is nu vastgelegd als account-mode-aware IBKR portfolio/watchlist-intelligentie en suggestieproduct. Deze documentatielijn is afgerond; volgende implementatie blijft een veilige foundation-slice zonder runtime-unlock.

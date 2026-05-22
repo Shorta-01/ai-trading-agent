@@ -3,14 +3,13 @@
 ## 1. Purpose and product position
 Deze roadmap beschrijft welke data-, reken-, risk-, validatie- en uitlegfundamenten nodig zijn vóór het systeem betrouwbare actie-suggesties mag tonen. Het doel is **nauwkeurigheid, auditability en uitlegbaarheid**. Het systeem mag niet van gesynchroniseerde IBKR-data direct naar advies springen zonder gecontroleerde tussenlagen.
 
-## 2. Current repository conflict note
-Er is een productrichting-verduidelijking: eindproduct hoeft conceptueel niet permanent paper-only te blijven. Tegelijk blijven huidige repository locks voor Version 1 expliciet paper-only.
+## 2. Current repository alignment note
+Productrichting is nu verduidelijkt en gedocumenteerd: Portfolio Outlook Manager is account-mode-aware en niet paper-only als productidentiteit.
 
 Deze taak:
 - wijzigt **geen runtimegedrag**;
-- voegt **geen** live/real-money execution toe;
-- registreert alleen “product decision pending” voor mogelijke latere real-account support;
-- bereidt alleen roadmap/documentatie voor.
+- voegt **geen** broker execution/orderruntime toe;
+- houdt de roadmapfocus op nauwkeurige, auditeerbare suggesties met gates en Decision Packages.
 
 ## 3. Source-of-truth model
 - **IBKR**: operationele waarheid voor portfolio, cash, positions, orders, executions, account state.

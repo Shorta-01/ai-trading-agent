@@ -52,7 +52,7 @@ Task 122 levert alleen preflight/design + read-only sessiestatuscontract. Geen o
 ## Niet in Task 122
 - Geen `placeOrder` runtime
 - Geen order-endpoints
-- Geen live-account gedrag
+- Geen automatische execution; account mode detectie/status verplicht
 - Geen scheduler/background fetch runtime
 
 ## Foutmapping (NL status)
@@ -78,4 +78,4 @@ Voorbeeldmapping:
 2. Read-only sync volledig en auditbaar
 3. Cash/risk/safety checks hard enforced
 4. Action draft + user approval workflow
-5. Daarna pas paper-only LMT submit pad
+5. Daarna pas account-mode-aware (paper/real-money status zichtbaar) LMT submit pad

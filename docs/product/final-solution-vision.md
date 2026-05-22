@@ -2,17 +2,17 @@
 
 ## 1) Product purpose
 
-Portfolio Outlook Manager is een professionele AI-ondersteunde **paper portfolio research- en trading-beslissingsomgeving**.
+Portfolio Outlook Manager is een AI-ondersteund **IBKR portfolio- en watchlist-intelligentiesysteem**.
 
-- Het is **geen** automatische real-money trading bot.
-- Version 1 blijft strikt **paper-only**.
-- Het systeem ondersteunt beslissingen met evidence, probabilistische analyses en auditability.
+- Het hoofddoel is per asset de beste voorgestelde actie voorspellen en eenvoudig in het Nederlands uitleggen.
+- Het systeem gebruikt historische en actuele marktdata, benchmarkvergelijking, risk/valuation/factor-modellen, technische signalen, fundamentals, nieuws/events en AI-ondersteunde research.
+- Het systeem suggereert; de user keurt goed, past aan of wijst af. Geen automatische actie.
 
 ## 2) Final user workflow (target state)
 
 De gedetailleerde en vergrendelde Release 1 workflowblauwdruk staat in `docs/product/release-1-functional-workflow-blueprint.md`. Die blueprint is leidend voor implementatievolgorde en afbakening van Decision Packages, Suggestions-grid, IBKR Action Center, sync/recompute en AI-analytics.
 
-IBKR/paper account data
+IBKR accountdata (paper of real-money status zichtbaar)
 → IBKR contract validation (conid-based identity)
 → active portfolio/watchlist state
 → market data en FX data
@@ -32,9 +32,9 @@ IBKR/paper account data
 → eenvoudige Nederlandse uitleg
 → portfolio/watchlist action badge
 → detail “waarom”-paneel
-→ optionele conversie naar bewerkbare IBKR paper actie
-→ user review/bewerking/bevestiging
-→ paper-only submission
+→ optionele conversie naar bewerkbare IBKR-actie
+→ user review/bewerking/bevestiging/afwijzing
+→ alleen expliciet goedgekeurde actie
 → warning/confirmation capture
 → execution import
 → reconciliatie
@@ -42,7 +42,7 @@ IBKR/paper account data
 
 ## 3) Final analytical goal
 
-Het systeem berekent probability/range-based asset outlooks, inclusief:
+Het systeem berekent probability/range-based asset outlooks en vertaalt die naar deterministische actielabels met Decision Package-uitleg, inclusief:
 
 - p10/p50/p90 ranges
 - probability of gain/loss
@@ -71,9 +71,10 @@ Niet toegestaan:
 Terminologieguardrail: zie `docs/product/locked-decisions.md` (sectie **Read-only readiness terminology lock (Task 101)**) voor vergrendelde pre-runtime woordkeuze.
 
 
-Version 1:
-- IBKR paper-only
-- geen real money
+Version 1 (huidige implementatiestatus):
+- foundation-first/read-only waar runtime nog ontbreekt
+- accountmodus (paper/real-money) zichtbaar en auditeerbaar
+- geen automatische orders of automatische executie
 - geen automatische orders
 - geen live trading
 - geen opties/futures/leverage/short selling/crypto/penny stocks/CFD’s/complexe derivaten

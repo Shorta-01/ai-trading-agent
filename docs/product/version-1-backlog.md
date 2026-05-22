@@ -79,7 +79,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - account mode verification
 - broker snapshots
 - reconciliation
-- toekomstige paper-only IBKR action grid
+- toekomstige account-mode-aware (paper/real-money status zichtbaar) IBKR action grid
 - user-confirmed paper submission (pas na alle gates)
 - audit viewer
 - AI event intelligence
@@ -217,7 +217,7 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - **CI-blocker opgelost in Task 88L**: GitHub Actions logs/executie zijn hersteld na visibility change naar public; normale regel blijft: featurewerk alleen bij groene CI.
 - **Asset identity hardening vóór serieuze runtime**: roadmap voegt expliciete `AssetMaster` (entiteit/bedrijf) + `AssetListing` (verhandelbare listing/instrument) splitsing toe. IBKR `conid` hoort op listing-niveau; model moet conid-history, primary/routing exchange, listing/settlement currency, ADR-underlying relaties, corporate-action identity changes en unresolved identity blockers ondersteunen.
 - **Geen serieuze analyse op losse tickertekst**: geen market data, suggesties of action-drafts op ambiguë/onopgeloste identiteit.
-- **IBKR Gateway skeleton (read-only/safe boundary) gepland**: centrale sessiestatus, auth/account-mode status, tickle/keepalive, request logging, pacing awareness, foutafhandeling, paper-only enforcement en latere order-serialisatiegrens.
+- **IBKR Gateway skeleton (read-only/safe boundary) gepland**: centrale sessiestatus, auth/account-mode status, tickle/keepalive, request logging, pacing awareness, foutafhandeling, account-mode-aware (paper/real-money status zichtbaar) enforcement en latere order-serialisatiegrens.
 - **Market-data readiness hardening vóór echte fetching**: request logs, provider/source metadata, snapshot timestamps, freshness policy, stale/null handling, geen zero-fill, geen stale last-known-price als verse data en geen analysis unlock op ontbrekende/stale data.
 - **Usable-cash contract vóór action-drafts**: geen leveraged buying power als veilige cash; usable cash = beschikbare funds/cash minus pending buys, approved/submitted drafts en user buffer; alle cashcijfers moeten auditeerbaar zijn.
 - **AI enforcement foundation vóór beslissingsinvloed**: AI-output moet schema-gevalideerd, evidence-linked en source-grounded zijn met injection/credibility/freshness/risk gates; AI mag geen financiële kerngetallen origineren.
@@ -242,7 +242,7 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - monitoring/drift: PSI/KS, IC decay, CRPS, pinball, retraining triggers;
 - Decision Package: immutable evidence/model/gate bundle;
 - deterministic suggestion translator (Python rules, AI never decides label);
-- paper action workflow: future, LMT-only, user-approved, paper-only.
+- paper action workflow: future, LMT-only, user-approved, account-mode-aware (paper/real-money status zichtbaar).
 
 - [x] Task 93 — AssetListing identity foundation verdieping (storage/API/tests/docs), zonder runtime market data/forecast/AI/suggesties/actions/orders.
 

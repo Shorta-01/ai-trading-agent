@@ -1,4 +1,4 @@
-| Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Version-1 paper-only lock blijft actief; eventuele verbreding naar real-account support is product decision pending |
+| Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; productrichting is account-mode-aware vastgelegd; focus blijft op auditeerbare suggesties en expliciete user-approval |
 ## Task 125C-B scope update
 - Binnen scope: API runtime wiring van bestaande handmatige IBKR read-only sync naar duurzame opslag met kleine persistence boundary en in-memory fallback.
 - Buiten scope: echte IBKR netwerkadapter/TWS connectie, order submit/modify/cancel/bind, suggesties, Decision Packages, AI runtime, forecasting, scheduler/background sync, market-data runtime en fake data.
@@ -138,12 +138,12 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Planned capability | Status | Scope note |
 |---|---|---|
 | AssetListing identity model (naast AssetMaster) | Planned | Nodig vóór serieuze market-data/analyse/suggesties; conid op listing-niveau met identity-history. |
-| Centrale IBKR Gateway skeleton (read-only/safe boundary) | Planned | Sessiebeheer, auth/account-mode status, keepalive, logging, pacing, paper-only enforcement. |
+| Centrale IBKR Gateway skeleton (read-only/safe boundary) | Planned | Sessiebeheer, auth/account-mode status, keepalive, logging, pacing, account-mode-aware (paper/real-money status zichtbaar) enforcement. |
 | Market-data pacing/freshness hardening | Planned | Geen fetch-unlock zonder freshness/quality gates; geen zero-fill of stale-hergebruik als fresh. |
 | Deterministisch usable-cash contract | Planned | Buying power is geen veilige cash; cashberekening volledig auditeerbaar. |
 | AI enforcement foundation | Planned | Schema-validatie + evidence-linking + safety gates vóór AI-impact op beslissingen. |
 | Decision Package storage/API/UI | Planned | Verplicht vóór suggestions; immutable/auditable beslissingscontext. |
-| Paper action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft paper-only. |
+| Paper action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft account-mode-aware (paper/real-money status zichtbaar). |
 
 ## Prediction-engine capabilities register addendum (Task 88J)
 

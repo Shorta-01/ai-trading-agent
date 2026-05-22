@@ -35,8 +35,12 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
-- Version 1 is paper-only.
-- Geen live trading, geen real-money execution, geen automatische orders.
+- GitHub-repository en gemergede PR’s zijn source of truth voor status.
+- Portfolio Outlook Manager is een IBKR portfolio/watchlist-intelligentie- en suggestiesysteem.
+- Prioriteit: nauwkeurige, auditeerbare actiesuggesties met eenvoudige Nederlandse uitleg.
+- Accountmodus (paper/real-money) moet zichtbaar zijn in de GUI.
+- Systeem suggereert; user keurt goed/past aan/wijst af.
+- IBKR blijft operationele waarheid; geen automatische executie.
 - AI is uitleg/evidence-interpretatie; Python/modelcode berekent.
 
 ## Navigatie
