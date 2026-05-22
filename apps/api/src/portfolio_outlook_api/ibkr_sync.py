@@ -99,24 +99,52 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
             account_summary_status = "provider_error"
             positions_status = "provider_error"
 
-    STORE.runs.append({
-        "sync_run_id": run_id,
-        "started_at": now.isoformat(),
-        "completed_at": datetime.now(UTC).isoformat(),
-        "provider_code": settings.ibkr_sync_provider_code,
-        "provider_environment": settings.ibkr_sync_account_mode,
-        "account_mode": settings.ibkr_sync_account_mode,
-        "readonly": settings.ibkr_sync_readonly,
-        "status": result_status,
-        "account_summary_status": account_summary_status,
-        "positions_status": positions_status,
-        "positions_count": len(positions),
-        "cash_values_count": len(cash_items),
-    })
+    STORE.runs.append(
+        {
+            "sync_run_id": run_id,
+            "started_at": now.isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
+            "provider_code": settings.ibkr_sync_provider_code,
+            "provider_environment": settings.ibkr_sync_account_mode,
+            "account_mode": settings.ibkr_sync_account_mode,
+            "readonly": settings.ibkr_sync_readonly,
+            "status": result_status,
+            "account_summary_status": account_summary_status,
+            "positions_status": positions_status,
+            "positions_count": len(positions),
+            "cash_values_count": len(cash_items),
+        }
+    )
     for p in positions:
-        STORE.positions.append({"sync_run_id": run_id, "symbol": p.symbol, "quantity": str(p.quantity), "average_cost": None if p.average_cost is None else str(p.average_cost), "currency": p.currency, "security_type": p.security_type, "conid": p.conid, "exchange": p.exchange, "primary_exchange": p.primary_exchange, "account_ref": p.account_ref, "timestamp": now.isoformat()})
+        STORE.positions.append(
+            {
+                "sync_run_id": run_id,
+                "symbol": p.symbol,
+                "quantity": str(p.quantity),
+                "average_cost": None if p.average_cost is None else str(p.average_cost),
+                "currency": p.currency,
+                "security_type": p.security_type,
+                "conid": p.conid,
+                "exchange": p.exchange,
+                "primary_exchange": p.primary_exchange,
+                "account_ref": p.account_ref,
+                "timestamp": now.isoformat(),
+            }
+        )
     for c in cash_items:
-        STORE.cash.append({"sync_run_id": run_id, "account_ref": c.account_ref, "base_currency": c.base_currency, "cash": str(c.cash), "available_funds": None if c.available_funds is None else str(c.available_funds), "buying_power": None if c.buying_power is None else str(c.buying_power), "timestamp": now.isoformat()})
+        STORE.cash.append(
+            {
+                "sync_run_id": run_id,
+                "account_ref": c.account_ref,
+                "base_currency": c.base_currency,
+                "cash": str(c.cash),
+                "available_funds": (
+                    None if c.available_funds is None else str(c.available_funds)
+                ),
+                "buying_power": None if c.buying_power is None else str(c.buying_power),
+                "timestamp": now.isoformat(),
+            }
+        )
 
     return read_status(settings) | {"sync_run_id": run_id}
 
@@ -124,12 +152,20 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
 def read_status(settings: Settings) -> dict[str, object]:
     latest = STORE.runs[-1] if STORE.runs else None
     status = "disabled" if not settings.ibkr_sync_enabled else "configured_not_connected"
-    status_nl = "IBKR-sync niet geconfigureerd" if status == "disabled" else "Read-only synchronisatie"
-    next_step_nl = "Activeer handmatig met paper-only instellingen." if status == "disabled" else "Start handmatige sync."
+    if status == "disabled":
+        status_nl = "IBKR-sync niet geconfigureerd"
+        next_step_nl = "Activeer handmatig met paper-only instellingen."
+    else:
+        status_nl = "Read-only synchronisatie"
+        next_step_nl = "Start handmatige sync."
     if latest is not None:
         status = str(latest["status"])
-        status_nl = "Alleen papiermodus toegestaan" if status == "wrong_account_mode" else "Read-only synchronisatie"
-        next_step_nl = "Controleer accountmodus paper." if status == "wrong_account_mode" else "Geen orders mogelijk"
+        if status == "wrong_account_mode":
+            status_nl = "Alleen papiermodus toegestaan"
+            next_step_nl = "Controleer accountmodus paper."
+        else:
+            status_nl = "Read-only synchronisatie"
+            next_step_nl = "Geen orders mogelijk"
 
     return {
         "status": status,
