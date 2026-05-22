@@ -361,7 +361,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
             checked.readiness,
         )
         positions = repo.list_ibkr_position_snapshots(durable.latest_run.sync_run_id)
-        conids = [item.conid for item in positions if item.conid]
+        conids = tuple(item.conid for item in positions if item.conid)
         market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
         market_by_conid = {item.ibkr_conid: item for item in market_result.records}
     return build_portfolio_valuation_readiness(
