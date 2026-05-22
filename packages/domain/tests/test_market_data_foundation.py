@@ -31,3 +31,21 @@ def test_market_data_fetch_status_contains_storage_and_stale_variants() -> None:
     assert MarketDataFetchStatus.STALE_SNAPSHOT.value == "stale_snapshot"
     assert MarketDataFetchStatus.SNAPSHOT_AVAILABLE.value == "snapshot_available"
     assert MarketDataFetchStatus.PROVIDER_NOT_CONFIGURED.value == "provider_not_configured"
+
+
+def test_block_if_identity_with_whitespace_conid_is_missing() -> None:
+    result = block_if_identity_invalid(
+        MarketDataIdentity(ibkr_conid="   ", identity_validated=True)
+    )
+    assert result is not None
+    assert result.status is MarketDataFetchStatus.MISSING_IDENTITY
+    assert "Contract ontbreekt" in result.message_nl
+
+
+def test_block_if_identity_not_validated_contains_dutch_blocked_message() -> None:
+    result = block_if_identity_invalid(
+        MarketDataIdentity(ibkr_conid="456", identity_validated=False)
+    )
+    assert result is not None
+    assert result.status is MarketDataFetchStatus.IDENTITY_NOT_VALIDATED
+    assert "geblokkeerd" in result.message_nl.lower()
