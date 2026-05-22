@@ -1,10 +1,10 @@
 # Next Task
 
-## Task 125E — Read-only vervolg: waarderingsstatus verrijken met cash/FX readiness zonder runtime fetch
+## Task 125F — Read-only vervolg: opgeslagen FX snapshot-contract inventaris en readiness-koppeling zonder runtime fetch
 
-Task 125D leverde read-only portfolio valuation readiness op basis van duurzame IBKR snapshots met expliciete blocking bij ontbrekende of verouderde marktdata.
+Task 125E heeft cash/FX readiness metadata toegevoegd aan valuation readiness, maar zonder FX-rate opslag of conversieberekening.
 
 Volgende veilige slice:
-- read-only cash/FX readiness velden toevoegen aan hetzelfde contract;
-- geen market-data runtime, geen suggestions, geen action drafts, geen orders/execution;
-- ontbrekende inputs expliciet als Geblokkeerd/Controle nodig blijven tonen.
+- documenteer en implementeer alleen read-only detectie van eventueel bestaande opgeslagen FX-rate snapshots (indien aanwezig in storage-contracten);
+- geen FX runtime fetch, geen market-data runtime, geen suggestions/action drafts/orders;
+- behoud expliciete Geblokkeerd/Controle nodig status wanneer FX-input ontbreekt.

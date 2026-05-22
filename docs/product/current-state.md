@@ -1,6 +1,7 @@
 # Current State
 
 ## Task 127R update
+- Task 125E: **completed** — read-only `GET /portfolio/valuation/readiness` contract verrijkt met cash-readiness en FX-readiness metadata op basis van duurzame IBKR snapshots; ontbrekende cash/FX blijft expliciet `Geblokkeerd`/`Controle nodig`; geen runtime FX fetch, geen market-data runtime, geen suggesties, geen action drafts, geen orders/execution en geen verzonnen cash/FX/totals toegevoegd.
 - Task 127 leverde de eerste decision-lock documentatie op, maar liet documentatiedrift achter.
 - Task 127R herstelt bron-of-truth productdocs, verwijdert paper-only identiteitscontradicties en breidt alle lockdetails uit.
 - Na Task 127R zijn er geen runtime code/tests/migrations/workflows/package metadata/UI/trading/execution wijzigingen toegevoegd.
