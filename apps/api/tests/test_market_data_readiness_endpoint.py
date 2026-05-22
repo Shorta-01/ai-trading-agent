@@ -289,7 +289,18 @@ def test_market_data_readiness_asset_listing_gate_variants(monkeypatch) -> None:
     assert row["action_drafts_allowed"] is False
 
 
-def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled() -> None:
+def test_market_data_snapshot_latest_returns_not_configured_when_storage_disabled(
+    monkeypatch,
+) -> None:
+    class _FakeStorageSettings:
+        enabled = False
+        database_url = None
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+
     response = client.get("/market-data/snapshots/latest/265598")
     assert response.status_code == 200
     parsed = LatestSnapshotResponse.model_validate(response.json())

@@ -411,17 +411,20 @@ def _read_asset_listing_gate(item: object) -> ReadinessAssetListingGate:
             status=ReadinessAssetListingGateStatus.STORAGE_UNAVAILABLE,
             ibkr_conid=ibkr_conid,
         )
-    if ibkr_conid is None:
-        return build_asset_listing_gate(
-            status=ReadinessAssetListingGateStatus.MISSING_IBKR_CONID,
-            ibkr_conid=None,
-        )
     provider = StorageConnectionProvider(
         build_database_connection_settings(storage_settings.database_url)
     )
     try:
         with provider.checked_connection(require_writable=False) as checked:
-            repo = SqlAlchemyResearchSourceArchiveRepository(checked.connection, checked.readiness)
+            if ibkr_conid is None:
+                return build_asset_listing_gate(
+                    status=ReadinessAssetListingGateStatus.MISSING_IBKR_CONID,
+                    ibkr_conid=None,
+                )
+            repo = SqlAlchemyResearchSourceArchiveRepository(
+                checked.connection,
+                checked.readiness,
+            )
             listing = repo.get_asset_listing_by_ibkr_conid(ibkr_conid)
             if listing is None:
                 return build_asset_listing_gate(
