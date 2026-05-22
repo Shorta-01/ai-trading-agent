@@ -7,6 +7,7 @@ dependencies = [
   "fastapi>=0.115.0",
   "ai-trading-agent-storage>=0.1.0",
   "portfolio-outlook-domain>=0.1.0",
+  "portfolio-outlook-portfolio>=0.1.0",
   "pydantic-settings>=2.6.0",
   "python-multipart>=0.0.20",
   "uvicorn>=0.30.0",

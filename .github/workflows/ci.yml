@@ -61,6 +61,7 @@ jobs:
           python-version: '3.12'
       - run: cd ../../packages/domain && pip install -e .
       - run: cd ../../packages/storage && pip install -e .
+      - run: cd ../../packages/portfolio && pip install -e .
       - run: pip install -e .[dev]
       - run: ruff check .
       - run: mypy src
