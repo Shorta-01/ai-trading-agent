@@ -68,6 +68,10 @@ from portfolio_outlook_api.paper_setup import (
     get_setup_status,
 )
 from portfolio_outlook_api.paper_setup_persistence import persist_first_run_paper_setup
+from portfolio_outlook_api.portfolio_valuation_readiness import (
+    PortfolioValuationReadinessResponse,
+    build_portfolio_valuation_readiness,
+)
 from portfolio_outlook_api.status_builders import (
     build_ai_usage_summary,
     build_dutch_labels_summary,
@@ -325,6 +329,47 @@ def read_ibkr_executions() -> dict[str, object]:
         "help_nl": "Uitvoeringen alleen-lezen",
         "actions_allowed": False,
     }
+
+
+@router.get(
+    "/portfolio/valuation/readiness",
+    response_model=PortfolioValuationReadinessResponse,
+)
+def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
+    durable = read_latest_ibkr_sync_run(settings.storage)
+    if durable.storage_help_nl is not None:
+        return build_portfolio_valuation_readiness(
+            latest_run=None,
+            positions=[],
+            market_by_conid={},
+            storage_available=False,
+        )
+    if durable.latest_run is None:
+        return build_portfolio_valuation_readiness(
+            latest_run=None,
+            positions=[],
+            market_by_conid={},
+            storage_available=True,
+        )
+    provider = StorageConnectionProvider(
+        build_database_connection_settings(settings.storage.database_url)
+    )
+    with provider.checked_connection(require_writable=False) as checked:
+        repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+        market_repo = SqlAlchemyMarketDataSnapshotRepository(
+            checked.connection,
+            checked.readiness,
+        )
+        positions = repo.list_ibkr_position_snapshots(durable.latest_run.sync_run_id)
+        conids = [item.conid for item in positions if item.conid]
+        market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
+        market_by_conid = {item.ibkr_conid: item for item in market_result.records}
+    return build_portfolio_valuation_readiness(
+        latest_run=durable.latest_run,
+        positions=positions,
+        market_by_conid=market_by_conid,
+        storage_available=True,
+    )
 
 
 
