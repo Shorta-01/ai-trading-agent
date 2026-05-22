@@ -416,7 +416,12 @@ def test_no_positions_multi_currency_cash_marks_fx_required(monkeypatch) -> None
     assert payload["converted_totals_available"] is False
 
 
-def _fx(pair: str, rate: str = "1.10", freshness: str = "fresh", validation: str = "valid") -> FxRateSnapshotRecord:
+def _fx(
+    pair: str,
+    rate: str = "1.10",
+    freshness: str = "fresh",
+    validation: str = "valid",
+) -> FxRateSnapshotRecord:
     base, quote = pair.split("/", 1)
     now = datetime.now(UTC)
     return FxRateSnapshotRecord(
@@ -449,6 +454,43 @@ def _market(conid: str = "123", price: str = "120"):
         "stored_at": now,
     })()
 
+
+
+class _CheckedConnectionContext:
+    def __enter__(self):
+        return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+    def __exit__(self, *_args):
+        return None
+
+
+class _FakeStorageConnectionProvider:
+    def checked_connection(self, require_writable: bool = False):
+        return _CheckedConnectionContext()
+
+
+def _patch_storage_and_repositories(
+    monkeypatch,
+    status_routes,
+    sync_repo,
+    market_repo,
+) -> None:
+    monkeypatch.setattr(
+        status_routes,
+        "StorageConnectionProvider",
+        lambda _settings: _FakeStorageConnectionProvider(),
+    )
+    monkeypatch.setattr(
+        status_routes,
+        "SqlAlchemyIbkrSyncSnapshotRepository",
+        lambda _connection, _readiness: sync_repo,
+    )
+    monkeypatch.setattr(
+        status_routes,
+        "SqlAlchemyMarketDataSnapshotRepository",
+        lambda _connection, _readiness: market_repo,
+    )
+
 def test_conversion_not_required_totals_available(monkeypatch) -> None:
     from portfolio_outlook_api import ibkr_sync_read_model, status_routes
 
@@ -477,16 +519,12 @@ def test_conversion_not_required_totals_available(monkeypatch) -> None:
         def list_latest_market_data_snapshots_by_conids(self, _conids):
             return type("R", (), {"records": (_market(),)})()
 
-    class Ctx:
-        def __enter__(self):
-            return type("Checked", (), {"connection": object(), "readiness": object()})()
-
-        def __exit__(self, *_args):
-            return None
-
-    monkeypatch.setattr(status_routes, "StorageConnectionProvider", lambda _s: type("P", (), {"checked_connection": lambda self, require_writable=False: Ctx()})())
-    monkeypatch.setattr(status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo())
-    monkeypatch.setattr(status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo())
+    _patch_storage_and_repositories(
+        monkeypatch=monkeypatch,
+        status_routes=status_routes,
+        sync_repo=FakeRepo(),
+        market_repo=FakeMarketRepo(),
+    )
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["conversion_total_status"] == "conversion_not_required"
     assert payload["total_market_value"] == "240"
@@ -524,16 +562,12 @@ def test_conversion_ready_with_fx(monkeypatch) -> None:
         def list_latest_market_data_snapshots_by_conids(self, _conids):
             return type("R", (), {"records": (_market(price="120"),)})()
 
-    class Ctx:
-        def __enter__(self):
-            return type("Checked", (), {"connection": object(), "readiness": object()})()
-
-        def __exit__(self, *_args):
-            return None
-
-    monkeypatch.setattr(status_routes, "StorageConnectionProvider", lambda _s: type("P", (), {"checked_connection": lambda self, require_writable=False: Ctx()})())
-    monkeypatch.setattr(status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo())
-    monkeypatch.setattr(status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo())
+    _patch_storage_and_repositories(
+        monkeypatch=monkeypatch,
+        status_routes=status_routes,
+        sync_repo=FakeRepo(),
+        market_repo=FakeMarketRepo(),
+    )
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["conversion_total_status"] == "conversion_ready"
     assert payload["total_market_value"] == "216.0"
@@ -569,16 +603,12 @@ def test_no_inverse_pair_synthesis(monkeypatch) -> None:
         def list_latest_market_data_snapshots_by_conids(self, _conids):
             return type("R", (), {"records": (_market(),)})()
 
-    class Ctx:
-        def __enter__(self):
-            return type("Checked", (), {"connection": object(), "readiness": object()})()
-
-        def __exit__(self, *_args):
-            return None
-
-    monkeypatch.setattr(status_routes, "StorageConnectionProvider", lambda _s: type("P", (), {"checked_connection": lambda self, require_writable=False: Ctx()})())
-    monkeypatch.setattr(status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo())
-    monkeypatch.setattr(status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo())
+    _patch_storage_and_repositories(
+        monkeypatch=monkeypatch,
+        status_routes=status_routes,
+        sync_repo=FakeRepo(),
+        market_repo=FakeMarketRepo(),
+    )
     payload = client.get("/portfolio/valuation/readiness").json()
     assert payload["conversion_total_status"] == "conversion_blocked_missing_fx"
     assert payload["missing_fx_pairs"] == ["USD/EUR"]
