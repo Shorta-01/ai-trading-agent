@@ -556,3 +556,6 @@ Bevestiging scope:
 - Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
 
 - Task 125I afgerond: valuation-readiness leest opgeslagen FX snapshotrecords read-only en rapporteert missing/stale/invalid expliciet zonder runtime fetch of unsafe totals.
+
+
+- Task 125L afgerond: read-only wiring van Decimal-only conversion-total calculator in valuation readiness endpoint; alleen opgeslagen inputs, zonder runtime FX/provider fetch, zonder market-data runtime en zonder suggestions/action drafts/orders.

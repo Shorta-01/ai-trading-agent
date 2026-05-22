@@ -289,3 +289,6 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Task 125H afgerond: FX snapshot durable storage foundation (read-only, no runtime fetch).
 
 - Task 125I voltooid (read-only FX snapshot consumption in valuation readiness); vervolg blijft conservatief zonder runtime provider fetch.
+
+
+- Task 125L afgerond: read-only wiring van Decimal-only conversion-total calculator in valuation readiness endpoint; alleen opgeslagen inputs, zonder runtime FX/provider fetch, zonder market-data runtime en zonder suggestions/action drafts/orders.

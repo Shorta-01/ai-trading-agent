@@ -11,6 +11,14 @@ from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
     MarketDataLatestSnapshotRecord,
 )
+from portfolio_outlook_portfolio import (
+    CashConversionInput,
+    ConversionTotalsInput,
+    FxPairConversionInput,
+    PositionConversionInput,
+    ValuationInputTrace,
+    calculate_conversion_totals,
+)
 from pydantic import BaseModel, Field
 
 
@@ -97,6 +105,16 @@ class PortfolioValuationReadinessResponse(BaseModel):
     total_value_status_nl: str = "Geblokkeerd"
     total_value_help_nl: str = "Geen verzonnen waardes: totaal blijft geblokkeerd."
     missing_total_value_inputs: list[str] = Field(default_factory=list)
+    conversion_total_status: str = "conversion_blocked_incomplete_inputs"
+    conversion_total_status_nl: str = "Geblokkeerd"
+    conversion_total_help_nl: str = "Niet alle vereiste inputvelden zijn ingevuld."
+    total_market_value: str | None = None
+    total_cash_value: str | None = None
+    total_portfolio_value: str | None = None
+    missing_market_data_conids: list[str] = Field(default_factory=list)
+    converted_position_values_available: bool = False
+    converted_cash_values_available: bool = False
+    valuation_input_trace: dict[str, object] = Field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -177,6 +195,98 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
         missing_inputs=[],
     )
 
+
+
+
+def _conversion_trace_dict(trace: ValuationInputTrace) -> dict[str, object]:
+    return {
+        "latest_sync_run_id": trace.latest_sync_run_id,
+        "position_trace_ids": trace.position_trace_ids,
+        "cash_trace_ids": trace.cash_trace_ids,
+        "market_snapshot_ids": trace.market_snapshot_ids,
+        "cash_snapshot_ids": trace.cash_snapshot_ids,
+        "fx_snapshot_ids": trace.fx_snapshot_ids,
+    }
+
+
+def _build_conversion_inputs(
+    *,
+    positions: list[IbkrPositionSnapshotRecord],
+    rows: list[PositionValuationReadinessRow],
+    market_by_conid: dict[str, MarketDataLatestSnapshotRecord],
+    cash_snapshots: list[IbkrAccountCashSnapshotRecord],
+    fx_snapshots: list[FxRateSnapshotRecord],
+    latest_sync_run_id: str | None,
+    base_currency: str | None,
+) -> ConversionTotalsInput:
+    position_inputs: list[PositionConversionInput] = []
+    position_trace_ids: list[str] = []
+    market_snapshot_ids: list[str] = []
+    for position, row in zip(positions, rows, strict=True):
+        trace_id = position.snapshot_id or position.conid
+        if trace_id is not None:
+            position_trace_ids.append(trace_id)
+        snapshot = market_by_conid.get(position.conid or "")
+        if snapshot is not None:
+            market_snapshot_ids.append(snapshot.snapshot_id)
+        native_market_value = Decimal(row.market_value) if row.market_value is not None else None
+        position_inputs.append(
+            PositionConversionInput(
+                position_id=position.conid or position.snapshot_id,
+                source_currency=position.currency,
+                native_market_value=native_market_value,
+                source_trace_id=trace_id,
+            )
+        )
+
+    cash_inputs: list[CashConversionInput] = []
+    cash_trace_ids: list[str] = []
+    cash_snapshot_ids: list[str] = []
+    for cash in cash_snapshots:
+        trace_id = cash.snapshot_id
+        cash_trace_ids.append(trace_id)
+        cash_snapshot_ids.append(cash.snapshot_id)
+        cash_inputs.append(
+            CashConversionInput(
+                cash_id=cash.snapshot_id,
+                source_currency=cash.base_currency,
+                native_cash_value=cash.cash,
+                source_trace_id=trace_id,
+            )
+        )
+
+    fx_inputs: list[FxPairConversionInput] = []
+    fx_snapshot_ids: list[str] = []
+    for fx in fx_snapshots:
+        source_currency, target_currency = fx.pair.split("/", 1)
+        fx_snapshot_ids.append(fx.snapshot_id)
+        fx_inputs.append(
+            FxPairConversionInput(
+                pair=fx.pair,
+                source_currency=source_currency,
+                target_currency=target_currency,
+                rate=fx.rate,
+                freshness_status=fx.freshness_status,
+                validation_status=fx.validation_status,
+                fx_snapshot_id=fx.snapshot_id,
+            )
+        )
+
+    trace = ValuationInputTrace(
+        latest_sync_run_id=latest_sync_run_id,
+        position_trace_ids=position_trace_ids,
+        cash_trace_ids=cash_trace_ids,
+        market_snapshot_ids=market_snapshot_ids,
+        cash_snapshot_ids=cash_snapshot_ids,
+        fx_snapshot_ids=fx_snapshot_ids,
+    )
+    return ConversionTotalsInput(
+        positions=position_inputs,
+        cash_values=cash_inputs,
+        fx_pairs=fx_inputs,
+        base_currency=base_currency,
+        trace=trace,
+    )
 
 def build_portfolio_valuation_readiness(
     *,
@@ -414,9 +524,16 @@ def build_portfolio_valuation_readiness(
             fx_rates_available = True
             fx_conversion_allowed = True
             fx_snapshot_data_available = True
-    missing_total_value_inputs = ["validated_cash_totals"]
-    if fx_required:
-        missing_total_value_inputs.insert(0, "fx_rates")
+    conversion_input = _build_conversion_inputs(
+        positions=positions,
+        rows=rows,
+        market_by_conid=market_by_conid,
+        cash_snapshots=cash_snapshots,
+        fx_snapshots=fx_snapshots,
+        latest_sync_run_id=latest_run.sync_run_id,
+        base_currency=base_currency,
+    )
+    conversion_result = calculate_conversion_totals(conversion_input)
     return PortfolioValuationReadinessResponse(
         status=(
             PortfolioValuationStatus.MISSING_MARKET_DATA.value
@@ -476,14 +593,34 @@ def build_portfolio_valuation_readiness(
         missing_fx_pairs=[] if not fx_required else missing_fx_pairs,
         fx_rates_available=fx_rates_available,
         fx_conversion_allowed=fx_conversion_allowed if fx_required else True,
-        converted_totals_available=False,
-        total_market_value_available=not blocked,
-        total_cash_value_available=False,
-        total_portfolio_value_available=False,
-        total_value_status="blocked",
-        total_value_status_nl="Geblokkeerd",
-        total_value_help_nl=(
-            "Geen verzonnen waardes: totaal vereist cash+FX met gevalideerde inputs."
+        converted_totals_available=conversion_result.total_portfolio_value_available,
+        total_market_value_available=conversion_result.total_market_value_available,
+        total_cash_value_available=conversion_result.total_cash_value_available,
+        total_portfolio_value_available=conversion_result.total_portfolio_value_available,
+        total_value_status=conversion_result.status,
+        total_value_status_nl=conversion_result.status_nl,
+        total_value_help_nl=conversion_result.help_nl,
+        missing_total_value_inputs=conversion_result.missing_total_value_inputs,
+        conversion_total_status=conversion_result.status,
+        conversion_total_status_nl=conversion_result.status_nl,
+        conversion_total_help_nl=conversion_result.help_nl,
+        total_market_value=(
+            _money(conversion_result.total_market_value)
+            if conversion_result.total_market_value is not None
+            else None
         ),
-        missing_total_value_inputs=missing_total_value_inputs,
+        total_cash_value=(
+            _money(conversion_result.total_cash_value)
+            if conversion_result.total_cash_value is not None
+            else None
+        ),
+        total_portfolio_value=(
+            _money(conversion_result.total_portfolio_value)
+            if conversion_result.total_portfolio_value is not None
+            else None
+        ),
+        missing_market_data_conids=conversion_result.missing_market_data_conids,
+        converted_position_values_available=conversion_result.converted_position_values_available,
+        converted_cash_values_available=conversion_result.converted_cash_values_available,
+        valuation_input_trace=_conversion_trace_dict(conversion_result.valuation_input_trace),
     )
