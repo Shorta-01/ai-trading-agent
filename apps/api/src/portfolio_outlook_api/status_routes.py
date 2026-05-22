@@ -239,12 +239,24 @@ def read_ibkr_cash() -> dict[str, object]:
 
 @router.get("/ibkr/orders/open")
 def read_ibkr_open_orders() -> dict[str, object]:
-    return {"items": [], "help_nl": "Task 123: open orders sync nog niet beschikbaar."}
+    from portfolio_outlook_api.ibkr_sync import STORE
+
+    return {
+        "items": STORE.open_orders,
+        "help_nl": "Open orders alleen-lezen",
+        "actions_allowed": False,
+    }
 
 
 @router.get("/ibkr/executions")
 def read_ibkr_executions() -> dict[str, object]:
-    return {"items": [], "help_nl": "Task 123: executions sync nog niet beschikbaar."}
+    from portfolio_outlook_api.ibkr_sync import STORE
+
+    return {
+        "items": STORE.executions,
+        "help_nl": "Uitvoeringen alleen-lezen",
+        "actions_allowed": False,
+    }
 
 
 
