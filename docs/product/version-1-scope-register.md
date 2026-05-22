@@ -22,6 +22,11 @@
 
 # Ai Trading Agent — Version 1 Scope Register
 
+## Task 125G — FX snapshot storage contract preflight
+- Status: afgerond (document-first/read-only).
+- Nieuw preflightdocument: `docs/product/fx-snapshot-storage-contract-preflight-task-125g.md` met minimale toekomstige FX snapshot storage/repository/API-read contractdefinitie op designniveau.
+- Geen runtime/code/tests/migrations/workflows/UI gewijzigd; geen runtime FX fetch, geen market-data runtime, geen suggesties, geen action drafts, geen orders/execution en geen fake FX-rates/converted totals.
+
 Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 
 ## Status definitions

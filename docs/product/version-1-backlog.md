@@ -23,6 +23,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 
 ## A) Completed foundations
 
+- [x] Task 125G — Completed: document-first/read-only FX snapshot storage contract preflight toegevoegd (`docs/product/fx-snapshot-storage-contract-preflight-task-125g.md`); geen migraties of runtime implementatie toegevoegd.
 
 - Task 109 completed: documentatie/design-only preflight voor request logs + provider/source metadata + freshness-audit records (`docs/product/request-log-provider-freshness-contract-preflight-task-109.md`). Candidate veldcatalogi + status/reason-code voorstellen + traceability-linking vastgelegd. Geen storagetabellen/migrations/endpoints/schedulers/runtime-fetching/latest-price fetching/forecast runtime/AI runtime/suggesties/Decision Packages runtime/actiedrafts/orders/fake data toegevoegd; Task 107 tracking-drift preventieregel gevolgd.
 - repository/API/worker/web/docker/CI skeleton
