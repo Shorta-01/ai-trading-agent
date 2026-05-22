@@ -4,14 +4,18 @@
 ## 1. Purpose and product position
 Deze roadmap beschrijft welke data-, reken-, risk-, validatie- en uitlegfundamenten nodig zijn vóór het systeem betrouwbare actie-suggesties mag tonen. Het doel is **nauwkeurigheid, auditability en uitlegbaarheid**. Het systeem mag niet van gesynchroniseerde IBKR-data direct naar advies springen zonder gecontroleerde tussenlagen.
 
-## 2. Current repository conflict note
-Er is een productrichting-verduidelijking: eindproduct hoeft conceptueel niet permanent account-mode-aware te blijven. Tegelijk blijven huidige repository locks voor Version 1 expliciet account-mode-aware.
+## 2. Task 127/127R clarification
+Productrichting is nu expliciet vergrendeld: Version 1 is account-mode-aware en niet paper-only als productidentiteit. Paper versus real-money blijft zichtbare accountmodus en safetycontext.
 
-Deze taak:
-- wijzigt **geen runtimegedrag**;
-- voegt **geen** live/real-money execution toe;
-- registreert alleen “productrichting vergrendeld in Task 127” voor mogelijke latere real-account support;
-- bereidt alleen roadmap/documentatie voor.
+Deze roadmap:
+- implementeert **geen** runtimegedrag;
+- voegt **geen** broker execution/order runtime toe;
+- voegt **geen** suggestion runtime toe;
+- voegt **geen** action-draft runtime toe;
+- voegt **geen** market-data runtime toe.
+
+Suggesties blijven geblokkeerd totdat data/model/evidence/freshness/risk-gates plus Decision Package volledig bestaan.
+Geen brokeractie zonder expliciete user approval en geen automatische brokeractie.
 
 ## 3. Source-of-truth model
 - **IBKR**: operationele waarheid voor portfolio, cash, positions, orders, executions, account state.

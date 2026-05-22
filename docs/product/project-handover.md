@@ -31,7 +31,7 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 ## Kerncontext
 
-- Producttrackingstatus: Task 125B is merged (PR #258); volgende implementatiestap is Task 125D (runtime/API wiring naar duurzame opslag).
+- Producttrackingstatus: Task 127R (PR #271) is merged; Task 127R2 rondt de laatste documentatie-contradicties af. Laatste docs locken account-mode-aware productrichting en uitgebreide Task 127 decision-locks. Volgende implementatiestap blijft Task 125D (volgens `next-task.md`).
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.

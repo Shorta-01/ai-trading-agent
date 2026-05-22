@@ -1,5 +1,5 @@
 - Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
-| Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Version-1 paper-only lock blijft actief; eventuele verbreding naar real-account context is locked as zichtbaar account mode met safety gates |
+| Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Task 127/127R heeft de oude paper-only richting vervangen door account-mode-aware productrichting met zichtbare account mode en safety gates |
 ## Task 125C-B scope update
 - Binnen scope: API runtime wiring van bestaande handmatige IBKR read-only sync naar duurzame opslag met kleine persistence boundary en in-memory fallback.
 - Buiten scope: echte IBKR netwerkadapter/TWS connectie, order submit/modify/cancel/bind, suggesties, Decision Packages, AI runtime, forecasting, scheduler/background sync, market-data runtime en fake data.
@@ -69,7 +69,7 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 ## Hard boundaries (Version 1)
 
 - Geen live trading.
-- Geen real-money execution.
+- Geen automatische brokeractie.
 - Geen automatische orders.
 - Geen IBKR live order flow.
 - Suggesties blijven geblokkeerd tot alle gates/runtime engines bestaan.
@@ -139,12 +139,12 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | Planned capability | Status | Scope note |
 |---|---|---|
 | AssetListing identity model (naast AssetMaster) | Planned | Nodig vóór serieuze market-data/analyse/suggesties; conid op listing-niveau met identity-history. |
-| Centrale IBKR Gateway skeleton (read-only/safe boundary) | Planned | Sessiebeheer, auth/account-mode status, keepalive, logging, pacing, paper-only enforcement. |
+| Centrale IBKR Gateway skeleton (read-only/safe boundary) | Planned | Sessiebeheer, auth/account-mode status, keepalive, logging, pacing, account-mode visibility/verification enforcement. |
 | Market-data pacing/freshness hardening | Planned | Geen fetch-unlock zonder freshness/quality gates; geen zero-fill of stale-hergebruik als fresh. |
 | Deterministisch usable-cash contract | Planned | Buying power is geen veilige cash; cashberekening volledig auditeerbaar. |
 | AI enforcement foundation | Planned | Schema-validatie + evidence-linking + safety gates vóór AI-impact op beslissingen. |
 | Decision Package storage/API/UI | Planned | Verplicht vóór suggestions; immutable/auditable beslissingscontext. |
-| Account-mode-aware action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige paper submission flow; Version 1 blijft paper-only. |
+| Account-mode-aware action state machine + IBKR reply handshake | Planned | Verplicht vóór toekomstige account-mode-aware, user-approved broker action flow; account mode zichtbaar/geverifieerd vóór submit. |
 
 ## Prediction-engine capabilities register addendum (Task 88J)
 
@@ -159,7 +159,7 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 | V1.5 dissent challenger layer | Planned / Runtime pending |
 | V1.6 monitoring/drift/calibration diary | Planned / Runtime pending |
 | V1.7 immutable Decision Package + deterministic labels | Planned / **Blocked for suggestions until validated gates** |
-| V1.8 account-mode-aware action workflow | Planned / **Paper-only future** |
+| V1.8 account-mode-aware user-approved broker action workflow | Planned |
 
 Extra lock: suggestions/action drafts blijven blocked tot data/model/evidence/freshness/risk gates + approved modelversion actief zijn.
 

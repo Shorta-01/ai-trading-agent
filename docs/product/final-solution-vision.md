@@ -124,7 +124,7 @@ Version 1:
 
 Version 1 bevat nu expliciet de **volledige Asset-Value Prediction Engine roadmap** (Must/Should/Could) in interne V1.0–V1.8 fasen, vastgelegd in `docs/product/asset-value-prediction-engine-roadmap.md`.
 
-Kernarchitectuur: data layer → feature layer → model layer → ensemble/orchestration → evaluatie/calibratie → Decision Package/translation → AI feature/explanation/dissent layers → audit layer → latere paper action layer.
+Kernarchitectuur: data layer → feature layer → model layer → ensemble/orchestration → evaluatie/calibratie → Decision Package/translation → AI feature/explanation/dissent layers → audit layer → latere account-mode-aware user-approved action layer.
 
 Hard lock blijft:
 - eenvoudige Nederlandse UI;
