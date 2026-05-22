@@ -5,6 +5,7 @@ from typing import Annotated
 
 from ai_trading_agent_storage import (
     SqlAlchemyIbkrSyncSnapshotRepository,
+    SqlAlchemyMarketDataSnapshotRepository,
     SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
     StorageConnectionProvider,
@@ -389,7 +390,10 @@ def _read_snapshot_metadata(ibkr_conid: str | None) -> ReadinessSnapshotMetadata
     )
     try:
         with provider.checked_connection(require_writable=False) as checked:
-            repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+            repo = SqlAlchemyMarketDataSnapshotRepository(
+                checked.connection,
+                checked.readiness,
+            )
             result = repo.get_latest_by_ibkr_conid(ibkr_conid)
             if result.record is None:
                 return None
@@ -548,7 +552,10 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
     )
     try:
         with provider.checked_connection(require_writable=False) as checked:
-            repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+            repo = SqlAlchemyMarketDataSnapshotRepository(
+                checked.connection,
+                checked.readiness,
+            )
             result = repo.get_latest_market_data_snapshot_by_conid(ibkr_conid)
             if result.record is None:
                 return build_latest_snapshot_response(
