@@ -14,7 +14,7 @@ from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
 )
 
-from portfolio_outlook_api.ibkr_sync import (
+from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
     IbkrExecution,
     IbkrOpenOrder,
