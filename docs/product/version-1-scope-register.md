@@ -1,6 +1,6 @@
 ## Task 125A-R scope update
 - Binnen scope: CI-repair en schema/migratie-consistentie voor read-only IBKR snapshotopslag.
-- Buiten scope (blijft uitgesteld): repository-dataclasses/methodes voor nieuwe IBKR snapshot-tabellen (Task 125B), API runtime wiring, orders, suggesties, AI, forecasting, background sync.
+- Buiten scope (blijft uitgesteld): API/runtime wiring voor IBKR sync persistence (Task 125C), orders, suggesties, AI, forecasting, background sync.
 
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
@@ -48,7 +48,7 @@ Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 
 | Task 109 request-log/provider/source/freshness contract preflight | Contracted | N/A | N/A | N/A | Runtime pending | Documentatie/design-only preflight met kandidaatveldencatalogi, status/reason-code voorstellen en traceability-linking (`docs/product/request-log-provider-freshness-contract-preflight-task-109.md`); geen storagetabellen/migrations/endpoints/schedulers/runtime-fetching/latest-price fetching/forecast runtime/AI runtime/suggesties/Decision Packages runtime/actiedrafts/orders/fake data. |
 
-| Portfolio sync from IBKR | Core workflow | Planned | Planned | UI pending | Runtime pending | Geen runtime-implementatie; IBKR blijft operationele waarheid |
+| Portfolio sync from IBKR | Core workflow | Storage implemented (repository-laag voor snapshots) | Planned | UI pending | Runtime pending (API/service wiring pending in Task 125C) | Geen runtime-implementatie; IBKR blijft operationele waarheid |
 | Watchlist assets (manuele toevoeging, gescheiden van portfolio) | Core workflow | Planned | Planned | Planned | Runtime pending | Suggesties mogelijk na gates; geen automatische orders |
 | Decision Package | Core workflow | Planned | Planned | Planned | Runtime pending | Kernobject voor auditbare suggesties; nog niet geïmplementeerd |
 | Suggestions grid (Actief/Verlopen/Historiek) | Core workflow | Planned | Planned | Planned | Runtime pending | Portfolio/watchlist toont enkel laatste actieve hoofdsuggestie |
@@ -248,4 +248,5 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Task 117 toegevoegd: typed provider boundary (domain) voor read-only market-data snapshots met conid-identiteitsvalidatie, zonder runtime-fetch unlock.
 
 - Task 123 scope verwerkt: alleen read-only IBKR paper account/cash/positions sync via handmatige trigger; geen orderruntime.
-## Task 125A update: durable IBKR snapshot storage foundation added; runtime wiring deferred to 125B.
+- Task 125B verwerkt: storage repository dataclasses/methodes voor duurzame IBKR sync snapshot-tabellen bestaan nu; API/runtime wiring blijft pending voor Task 125C.
+## Task 125B update: durable IBKR sync storage repository layer completed; API/runtime wiring deferred to 125C.

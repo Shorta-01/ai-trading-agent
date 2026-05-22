@@ -31,6 +31,8 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 ## Kerncontext
 
+- Producttrackingstatus: Task 125B is merged (PR #258); volgende implementatiestap is Task 125C (runtime/API wiring naar duurzame opslag).
+
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
 - Version 1 is paper-only.

@@ -1,4 +1,5 @@
-- [ ] Task 125B — Complete IBKR sync storage repository dataclasses and SQL repository methods for durable IBKR snapshot tables (geen API runtime wiring, geen orders, geen suggesties, geen fake data).
+- [ ] Task 125C — Wire IBKR read-only sync API/service runtime to durable storage, replacing in-memory persistence where storage is configured, with no orders, no suggestions, no fake broker data and no paid subscription dependency.
+- [x] Task 125B — Completed in PR #258: IBKR sync storage repository dataclasses/records en SQL repository methods voor duurzame snapshot-tabellen toegevoegd (incl. public exports + storage tests); geen API/runtime wiring, geen orders, geen suggesties, geen fake data.
 
 - Task 122: **completed** — IBKR TWS/Gateway technical preflight documentatie toegevoegd en read-only IBKR sessiestatuscontract uitgebreid (disabled-by-default, geen auto-connect, geen orders, safety booleans false).
 
@@ -270,4 +271,4 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Task 114 afgerond: read-only audit linked-record coverage/navigation hardening en web type-alignment; geen runtimegedrag toegevoegd.
 
 - Na Task 123 verschuift focus naar Task 124: read-only open orders/executions sync runtime (manueel, geen orders).
-## Task 125A update: durable IBKR snapshot storage foundation added; runtime wiring deferred to 125B.
+## Task 125B update: durable IBKR sync storage repository layer completed; runtime/API wiring deferred to 125C.
