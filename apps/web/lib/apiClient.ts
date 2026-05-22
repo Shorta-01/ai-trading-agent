@@ -270,6 +270,8 @@ export type ProviderSourceResponse = {
 };
 
 
+export type ValuationInputTrace = Record<string, unknown>;
+
 export type PortfolioValuationReadinessResponse = {
   conversion_total_status: string;
   conversion_total_status_nl: string;
@@ -290,7 +292,7 @@ export type PortfolioValuationReadinessResponse = {
   missing_fx_pairs: string[];
   stale_fx_pairs: string[];
   invalid_fx_pairs: string[];
-  valuation_input_trace: Record<string, unknown> | null;
+  valuation_input_trace: ValuationInputTrace | null;
   suggestions_allowed?: boolean;
   action_drafts_allowed?: boolean;
   orders_allowed?: boolean;
