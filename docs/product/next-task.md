@@ -1,3 +1,3 @@
 # Next Task
 
-Task 125C-B — Wire IBKR read-only sync manual-trigger runtime to durable storage behind a small persistence boundary, using Task 125C-A mappers, with in-memory fallback, no orders, no suggestions and no fake data.
+Task 125C-C — Harden durable IBKR sync read/status behavior and API contract tests for storage-unavailable, no-run and latest-run edge cases, with no orders, no suggestions and no fake data.

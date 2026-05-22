@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from ai_trading_agent_storage import (
+    SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataSnapshotRepository,
     SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
@@ -209,6 +210,46 @@ def update_trading_settings(payload: TradingSettingsUpdateInput) -> dict[str, ob
 
 @router.get("/ibkr/sync/status")
 def read_ibkr_sync_status() -> dict[str, object]:
+    storage = settings.storage
+    if storage.enabled and storage.database_url:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        try:
+            with provider.checked_connection(require_writable=False) as checked:
+                repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+                latest = repo.get_latest_ibkr_sync_run()
+                if latest is not None:
+                    return {
+                        "status": latest.status,
+                        "provider_code": latest.provider_code,
+                        "provider_environment": latest.provider_environment,
+                        "account_mode": latest.account_mode,
+                        "readonly": latest.readonly,
+                        "account_summary_status": latest.account_summary_status,
+                        "positions_status": latest.positions_status,
+                        "open_orders_status": latest.open_orders_status,
+                        "executions_status": latest.executions_status,
+                        "positions_count": latest.positions_count,
+                        "cash_values_count": latest.cash_values_count,
+                        "open_orders_count": latest.open_orders_count,
+                        "executions_count": latest.executions_count,
+                        "started_at": latest.started_at.isoformat(),
+                        "completed_at": (
+                            None if latest.completed_at is None else latest.completed_at.isoformat()
+                        ),
+                        "status_nl": latest.status_nl or "Read-only synchronisatie",
+                        "next_step_nl": latest.next_step_nl or "Geen orders mogelijk",
+                        "help_nl": latest.help_nl or "Duurzame IBKR-syncstatus beschikbaar.",
+                        "sync_allowed": True,
+                        "actions_allowed": False,
+                        "order_submission_allowed": False,
+                        "order_modification_allowed": False,
+                        "order_cancellation_allowed": False,
+                        "suggestions_allowed": False,
+                    }
+        except StorageConnectionError:
+            pass
     return read_status(settings)
 
 
@@ -220,7 +261,30 @@ def start_ibkr_sync_run() -> dict[str, object]:
 @router.get("/ibkr/portfolio/positions")
 def read_ibkr_positions() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
-
+    storage = settings.storage
+    if storage.enabled and storage.database_url:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        try:
+            with provider.checked_connection(require_writable=False) as checked:
+                repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+                latest = repo.get_latest_ibkr_sync_run()
+                if latest is not None:
+                    records = repo.list_ibkr_position_snapshots(latest.sync_run_id)
+                    return {
+                        "items": [
+                            {
+                                "sync_run_id": item.sync_run_id,
+                                "symbol": item.symbol,
+                                "quantity": str(item.quantity),
+                            }
+                            for item in records
+                        ],
+                        "help_nl": "Alleen gesynchroniseerde IBKR-posities (duurzame opslag).",
+                    }
+        except StorageConnectionError:
+            pass
     return {
         "items": STORE.positions,
         "help_nl": "Alleen gesynchroniseerde IBKR-posities.",
@@ -230,7 +294,30 @@ def read_ibkr_positions() -> dict[str, object]:
 @router.get("/ibkr/account/cash")
 def read_ibkr_cash() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
-
+    storage = settings.storage
+    if storage.enabled and storage.database_url:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        try:
+            with provider.checked_connection(require_writable=False) as checked:
+                repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+                latest = repo.get_latest_ibkr_sync_run()
+                if latest is not None:
+                    records = repo.list_ibkr_account_cash_snapshots(latest.sync_run_id)
+                    return {
+                        "items": [
+                            {
+                                "sync_run_id": item.sync_run_id,
+                                "cash": str(item.cash),
+                                "account_ref": item.account_ref,
+                            }
+                            for item in records
+                        ],
+                        "help_nl": "Alleen gesynchroniseerde IBKR-cashgegevens (duurzame opslag).",
+                    }
+        except StorageConnectionError:
+            pass
     return {
         "items": STORE.cash,
         "help_nl": "Alleen gesynchroniseerde IBKR-cashgegevens.",
@@ -240,7 +327,33 @@ def read_ibkr_cash() -> dict[str, object]:
 @router.get("/ibkr/orders/open")
 def read_ibkr_open_orders() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
-
+    storage = settings.storage
+    if storage.enabled and storage.database_url:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        try:
+            with provider.checked_connection(require_writable=False) as checked:
+                repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+                latest = repo.get_latest_ibkr_sync_run()
+                if latest is not None:
+                    records = repo.list_ibkr_open_order_snapshots(latest.sync_run_id)
+                    return {
+                        "items": [
+                            {
+                                "sync_run_id": item.sync_run_id,
+                                "ibkr_order_id": item.ibkr_order_id,
+                                "symbol": item.symbol,
+                                "quantity": str(item.quantity),
+                                "status": item.status,
+                            }
+                            for item in records
+                        ],
+                        "help_nl": "Open orders alleen-lezen (duurzame opslag).",
+                        "actions_allowed": False,
+                    }
+        except StorageConnectionError:
+            pass
     return {
         "items": STORE.open_orders,
         "help_nl": "Open orders alleen-lezen",
@@ -251,7 +364,33 @@ def read_ibkr_open_orders() -> dict[str, object]:
 @router.get("/ibkr/executions")
 def read_ibkr_executions() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
-
+    storage = settings.storage
+    if storage.enabled and storage.database_url:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        try:
+            with provider.checked_connection(require_writable=False) as checked:
+                repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
+                latest = repo.get_latest_ibkr_sync_run()
+                if latest is not None:
+                    records = repo.list_ibkr_execution_snapshots(latest.sync_run_id)
+                    return {
+                        "items": [
+                            {
+                                "sync_run_id": item.sync_run_id,
+                                "execution_id": item.execution_id,
+                                "symbol": item.symbol,
+                                "quantity": str(item.quantity),
+                                "price": str(item.price),
+                            }
+                            for item in records
+                        ],
+                        "help_nl": "Uitvoeringen alleen-lezen (duurzame opslag).",
+                        "actions_allowed": False,
+                    }
+        except StorageConnectionError:
+            pass
     return {
         "items": STORE.executions,
         "help_nl": "Uitvoeringen alleen-lezen",
