@@ -33,6 +33,11 @@
 
 Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 
+## Task 125K — conversion-total calculator foundation
+- Status: afgerond (pure calculatiemodule + tests).
+- Toegevoegd: pure Decimal-only conversion-total calculator in `packages/portfolio` op opgeslagen inputs, met deterministische statusvelden en trace metadata passthrough.
+- Geen API wiring, geen endpointgedragwijziging, geen storage migratie, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
+
 ## Status definitions
 
 - Contracted

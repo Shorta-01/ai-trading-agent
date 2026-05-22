@@ -203,4 +203,21 @@ __all__ = [
     "check_no_blocking_reconciliation_differences",
     "check_reconciliation_allows_suggestions",
     "require_reconciliation_allows_suggestions",
+    "PositionConversionInput",
+    "CashConversionInput",
+    "FxPairConversionInput",
+    "ValuationInputTrace",
+    "ConversionTotalsInput",
+    "ConversionTotalsResult",
+    "calculate_conversion_totals",
 ]
+
+from .valuation_conversion_totals import (
+    CashConversionInput,
+    ConversionTotalsInput,
+    ConversionTotalsResult,
+    FxPairConversionInput,
+    PositionConversionInput,
+    ValuationInputTrace,
+    calculate_conversion_totals,
+)

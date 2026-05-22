@@ -1,3 +1,4 @@
+- [x] Task 125K — Completed: pure Decimal-only conversion-total calculator module + unit tests op opgeslagen inputs; geen API wiring, geen endpointgedragwijziging, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
 - [x] Task 125J — Completed: document-first valuation conversion-total preflight met veilige Decimal-only criteria en contract/status/teststrategie voor toekomstige totals op basis van opgeslagen inputs; geen runtime berekening/fetch/suggesties/orders en geen fake FX/totals.
 - [x] Task 125F — Completed: read-only FX snapshot-contract inventaris + valuation readiness contractstatus voor ontbrekende FX-opslagcontracten; geen runtime fetch en geen fake FX/totals.
 - Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.

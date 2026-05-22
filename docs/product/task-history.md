@@ -1,3 +1,9 @@
+## Task 125K — pure Decimal-only conversion-total calculator (no wiring)
+- Status: afgerond.
+- Toegevoegd: pure calculator module `packages/portfolio/src/portfolio_outlook_portfolio/valuation_conversion_totals.py` met deterministische statusuitkomsten en Decimal-only berekening op caller-provided opgeslagen inputs.
+- Toegevoegd: unit tests `packages/portfolio/tests/test_valuation_conversion_totals.py` voor complete single/multi-currency, ontbrekende base/FX, stale/invalid/unknown FX, ontbrekende market/cash, geen inverse pair synthese en Decimal exactness.
+- Niet toegevoegd: API wiring, endpoint contractwijziging, storage migratie, runtime FX/provider fetch, market-data runtime, suggesties/action drafts/orders en fake FX-rates/converted totals.
+
 ## Task 125J — Valuation conversion-total preflight (document-first, read-only)
 - Nieuw document toegevoegd: `docs/product/valuation-conversion-total-preflight-task-125j.md`.
 - Definieert purpose/boundary, required stored inputs, base-currency rules, FX pair rules, calculation boundaries, Decimal/rounding-regels, candidate readiness/status-contract en audittrace-eisen.
