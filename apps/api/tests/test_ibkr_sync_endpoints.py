@@ -3,136 +3,74 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import ibkr_sync
-from portfolio_outlook_api.ibkr_sync import (
-    IbkrExecution,
-    IbkrOpenOrder,
-    IbkrReadOnlyAdapter,
-)
+from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_sync import IbkrCash, IbkrPosition, IbkrReadOnlyAdapter
 from portfolio_outlook_api.main import app
 
 client = TestClient(app)
 
 
 class FakeAdapter(IbkrReadOnlyAdapter):
-    def fetch_positions(self):
-        return []
-
-    def fetch_account_cash(self):
-        return []
-
-    def fetch_open_orders(self):
+    def sync_account_summary(self):
         return [
-            IbkrOpenOrder(
+            IbkrCash(
                 account_ref="paper",
-                ibkr_order_id=101,
+                base_currency="USD",
+                cash=Decimal("1000.25"),
+                available_funds=Decimal("800.10"),
+                buying_power=Decimal("1600.20"),
+            )
+        ]
+
+    def sync_positions(self):
+        return [
+            IbkrPosition(
+                account_ref="paper",
                 symbol="MSFT",
                 security_type="STK",
                 currency="USD",
                 quantity=Decimal("10"),
-                status="Submitted",
-                filled_quantity=Decimal("2"),
-                remaining_quantity=Decimal("8"),
-                limit_price=Decimal("200.50"),
-                action_side="BUY",
-                order_type="LMT",
+                average_cost=Decimal("200.50"),
             )
         ]
-
-    def fetch_executions(self):
-        return [
-            IbkrExecution(
-                account_ref="paper",
-                execution_id="E-1",
-                symbol="MSFT",
-                security_type="STK",
-                currency="USD",
-                side="BUY",
-                quantity=Decimal("2"),
-                price=Decimal("200.50"),
-                execution_time="2026-05-20T10:00:00Z",
-                ibkr_order_id=101,
-            )
-        ]
-
-
-class BrokenAdapter(IbkrReadOnlyAdapter):
-    def fetch_positions(self):
-        raise RuntimeError("boom")
-
-    def fetch_account_cash(self):
-        return []
-
-    def fetch_open_orders(self):
-        return []
-
-    def fetch_executions(self):
-        return []
 
 
 def setup_function() -> None:
     ibkr_sync.STORE.runs.clear()
     ibkr_sync.STORE.positions.clear()
     ibkr_sync.STORE.cash.clear()
-    ibkr_sync.STORE.open_orders.clear()
-    ibkr_sync.STORE.executions.clear()
 
 
-def test_ibkr_sync_status_not_configured() -> None:
+def _base_settings(**kwargs):
+    return Settings(
+        ibkr_sync_enabled=True,
+        ibkr_sync_host="127.0.0.1",
+        ibkr_sync_port=4002,
+        ibkr_sync_client_id=7,
+        **kwargs,
+    )
+
+
+def test_ibkr_sync_status_disabled_by_default() -> None:
     body = client.get("/ibkr/sync/status").json()
-    assert body["configured"] is False
-    assert body["open_orders_count"] == 0
-    assert body["executions_count"] == 0
+    assert body["status"] == "disabled"
+    assert body["actions_allowed"] is False
 
 
-def test_ibkr_sync_run_returns_failed_when_not_configured() -> None:
-    body = client.post("/ibkr/sync/run").json()
-    assert body["status"] == "failed"
+def test_run_sync_not_configured() -> None:
+    body = ibkr_sync.run_sync(Settings(ibkr_sync_enabled=True))
+    assert body["status"] == "not_configured"
 
 
-def test_ibkr_snapshot_endpoints_empty_without_sync_data() -> None:
-    assert client.get("/ibkr/portfolio/positions").json()["items"] == []
-    assert client.get("/ibkr/account/cash").json()["items"] == []
-    assert client.get("/ibkr/orders/open").json()["items"] == []
-    assert client.get("/ibkr/executions").json()["items"] == []
+def test_run_sync_wrong_account_mode() -> None:
+    body = ibkr_sync.run_sync(_base_settings(ibkr_sync_account_mode="live"))
+    assert body["status"] == "wrong_account_mode"
 
 
-def test_run_sync_stores_open_orders_and_executions() -> None:
-    result = ibkr_sync.run_sync(
-        ibkr_sync.Settings(
-            ibkr_enabled=True, ibkr_gateway_url="x", ibkr_account_id_hint="y"
-        ),
-        adapter=FakeAdapter(),
-    )
-    assert result["open_orders_saved"] == 1
-    assert result["executions_saved"] == 1
-    order = ibkr_sync.STORE.open_orders[0]
-    assert order["quantity"] == "10"
-    assert order["limit_price"] == "200.50"
-    execution = ibkr_sync.STORE.executions[0]
-    assert execution["price"] == "200.50"
-
-
-def test_run_sync_failure_safe_status() -> None:
-    result = ibkr_sync.run_sync(
-        ibkr_sync.Settings(
-            ibkr_enabled=True, ibkr_gateway_url="x", ibkr_account_id_hint="y"
-        ),
-        adapter=BrokenAdapter(),
-    )
-    assert result["status"] == "failed"
-
-
-def test_sync_status_counts_after_sync() -> None:
-    ibkr_sync.run_sync(
-        ibkr_sync.Settings(
-            ibkr_enabled=True, ibkr_gateway_url="x", ibkr_account_id_hint="y"
-        ),
-        adapter=FakeAdapter(),
-    )
-    body = ibkr_sync.read_status(
-        ibkr_sync.Settings(
-            ibkr_enabled=True, ibkr_gateway_url="x", ibkr_account_id_hint="y"
-        )
-    )
-    assert body["open_orders_count"] == 1
-    assert body["executions_count"] == 1
+def test_fake_adapter_stores_positions_and_cash() -> None:
+    body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
+    assert body["status"] == "paper_account_confirmed"
+    assert ibkr_sync.STORE.positions[0]["quantity"] == "10"
+    assert ibkr_sync.STORE.cash[0]["cash"] == "1000.25"
+    assert body["order_submission_allowed"] is False
+    assert body["suggestions_allowed"] is False

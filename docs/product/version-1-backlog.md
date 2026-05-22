@@ -266,3 +266,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 
 - Task 114 afgerond: read-only audit linked-record coverage/navigation hardening en web type-alignment; geen runtimegedrag toegevoegd.
+
+- Na Task 123 verschuift focus naar Task 124: read-only open orders/executions sync runtime (manueel, geen orders).

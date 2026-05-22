@@ -1,3 +1,3 @@
 # Next Task
 
-Task 123 — Add read-only IBKR paper account/positions/cash sync runtime behind explicit manual trigger and disabled-by-default config, with no orders/suggestions/fake data.
+Task 124 — Add read-only IBKR open orders and executions sync runtime behind explicit manual trigger, no order submission/modification/cancellation, no suggestions, no fake broker data.
