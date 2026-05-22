@@ -342,6 +342,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
             latest_run=None,
             positions=[],
             market_by_conid={},
+            cash_snapshots=[],
             storage_available=False,
         )
     if durable.latest_run is None:
@@ -349,6 +350,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
             latest_run=None,
             positions=[],
             market_by_conid={},
+            cash_snapshots=[],
             storage_available=True,
         )
     provider = StorageConnectionProvider(
@@ -361,6 +363,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
             checked.readiness,
         )
         positions = repo.list_ibkr_position_snapshots(durable.latest_run.sync_run_id)
+        cash_snapshots = repo.list_ibkr_account_cash_snapshots(durable.latest_run.sync_run_id)
         conids = tuple(item.conid for item in positions if item.conid)
         market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
         market_by_conid = {item.ibkr_conid: item for item in market_result.records}
@@ -368,6 +371,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
         latest_run=durable.latest_run,
         positions=positions,
         market_by_conid=market_by_conid,
+        cash_snapshots=cash_snapshots,
         storage_available=True,
     )
 

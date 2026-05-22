@@ -1,3 +1,4 @@
+- Task 125E — read-only valuation readiness verrijkt met cash/FX readiness (duurzame snapshots, geen runtime fetch, geen fake waarden).
 ## Task 127R2 — Final cleanup account-mode wording contradictions
 - Status: Completed (documentation-only).
 - Resterende bron-of-truth woordingscontradicties rond paper-only identiteit en real-money framing verwijderd.

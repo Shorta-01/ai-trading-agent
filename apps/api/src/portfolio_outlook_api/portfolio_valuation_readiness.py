@@ -5,6 +5,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from ai_trading_agent_storage import (
+    IbkrAccountCashSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
     MarketDataLatestSnapshotRecord,
@@ -58,6 +59,33 @@ class PortfolioValuationReadinessResponse(BaseModel):
     action_drafts_allowed: bool = False
     orders_allowed: bool = False
     rows: list[PositionValuationReadinessRow] = Field(default_factory=list)
+    cash_readiness_status: str = "cash_not_checked"
+    cash_readiness_status_nl: str = "Cash niet gecontroleerd"
+    cash_readiness_help_nl: str = "Cashsnapshot is nog niet beoordeeld."
+    cash_snapshot_available: bool = False
+    cash_snapshot_count: int = 0
+    cash_currencies: list[str] = Field(default_factory=list)
+    has_base_currency_cash: bool = False
+    missing_cash_inputs: list[str] = Field(default_factory=list)
+    cash_values: list[dict[str, str | None]] = Field(default_factory=list)
+    fx_readiness_status: str = "fx_not_checked"
+    fx_readiness_status_nl: str = "Valutacontrole niet uitgevoerd"
+    fx_readiness_help_nl: str = "Valutacontrole is nog niet beoordeeld."
+    fx_required: bool = False
+    portfolio_currencies: list[str] = Field(default_factory=list)
+    valuation_currencies: list[str] = Field(default_factory=list)
+    base_currency: str | None = None
+    missing_fx_pairs: list[str] = Field(default_factory=list)
+    fx_rates_available: bool = False
+    fx_conversion_allowed: bool = False
+    converted_totals_available: bool = False
+    total_market_value_available: bool = False
+    total_cash_value_available: bool = False
+    total_portfolio_value_available: bool = False
+    total_value_status: str = "blocked"
+    total_value_status_nl: str = "Geblokkeerd"
+    total_value_help_nl: str = "Geen verzonnen waardes: totaal blijft geblokkeerd."
+    missing_total_value_inputs: list[str] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -131,6 +159,7 @@ def build_portfolio_valuation_readiness(
     latest_run: IbkrSyncRunRecord | None,
     positions: list[IbkrPositionSnapshotRecord],
     market_by_conid: dict[str, MarketDataLatestSnapshotRecord],
+    cash_snapshots: list[IbkrAccountCashSnapshotRecord],
     storage_available: bool,
 ) -> PortfolioValuationReadinessResponse:
     if not storage_available:
@@ -145,6 +174,14 @@ def build_portfolio_valuation_readiness(
             market_data_available=False,
             valuation_complete=False,
             blocked=True,
+            cash_readiness_status="cash_storage_unavailable",
+            cash_readiness_status_nl="Cashstorage niet beschikbaar",
+            cash_readiness_help_nl="Cashsnapshot kan niet gelezen worden uit storage.",
+            missing_cash_inputs=["cash_snapshot"],
+            fx_readiness_status="fx_storage_unavailable",
+            fx_readiness_status_nl="Valutastorage niet beschikbaar",
+            fx_readiness_help_nl="Valutastatus kan niet bepaald worden zonder storage.",
+            missing_total_value_inputs=["storage"],
         )
     if latest_run is None:
         return PortfolioValuationReadinessResponse(
@@ -158,6 +195,14 @@ def build_portfolio_valuation_readiness(
             market_data_available=False,
             valuation_complete=False,
             blocked=True,
+            cash_readiness_status="no_cash_snapshot",
+            cash_readiness_status_nl="Cashsnapshot ontbreekt",
+            cash_readiness_help_nl="Draai eerst een read-only IBKR sync met cashdata.",
+            missing_cash_inputs=["cash_snapshot"],
+            fx_readiness_status="fx_control_needed",
+            fx_readiness_status_nl="Controle nodig",
+            fx_readiness_help_nl="Valutastatus vereist eerst posities en cashsnapshot.",
+            missing_total_value_inputs=["cash_snapshot", "market_data", "fx_inputs"],
         )
     if not positions:
         return PortfolioValuationReadinessResponse(
@@ -175,6 +220,31 @@ def build_portfolio_valuation_readiness(
             market_data_available=False,
             valuation_complete=False,
             blocked=True,
+            cash_readiness_status=(
+                "cash_available" if cash_snapshots else "no_cash_snapshot"
+            ),
+            cash_readiness_status_nl=(
+                "Cash beschikbaar" if cash_snapshots else "Cashsnapshot ontbreekt"
+            ),
+            cash_readiness_help_nl=(
+                "Cashsnapshot gevonden in opslag."
+                if cash_snapshots
+                else "Geen cashsnapshot in laatste sync."
+            ),
+            cash_snapshot_available=bool(cash_snapshots),
+            cash_snapshot_count=len(cash_snapshots),
+            cash_currencies=sorted({item.base_currency for item in cash_snapshots}),
+            has_base_currency_cash=any(item.cash is not None for item in cash_snapshots),
+            missing_cash_inputs=[] if cash_snapshots else ["cash_snapshot"],
+            fx_readiness_status="fx_not_required",
+            fx_readiness_status_nl="FX niet nodig",
+            fx_readiness_help_nl="Geen posities aanwezig; omzetting is niet nodig.",
+            fx_required=False,
+            fx_conversion_allowed=True,
+            total_value_status="blocked",
+            total_value_status_nl="Geblokkeerd",
+            total_value_help_nl="Geen posities om totaalwaarde te bepalen.",
+            missing_total_value_inputs=["positions"],
         )
     rows = [
         build_position_row(
@@ -187,6 +257,41 @@ def build_portfolio_valuation_readiness(
     ]
     blocked = any(row.blocked for row in rows)
     has_market = any(row.market_price is not None for row in rows)
+    cash_currencies = sorted({item.base_currency for item in cash_snapshots})
+    portfolio_currency_set = {
+        (item.currency or "").strip()
+        for item in positions
+        if item.currency
+    }
+    portfolio_currencies = sorted(portfolio_currency_set)
+    valuation_currencies = sorted(set(portfolio_currencies) | set(cash_currencies))
+    base_currency = cash_currencies[0] if len(cash_currencies) == 1 else None
+    cash_values: list[dict[str, str | None]] = []
+    for item in cash_snapshots:
+        cash_values.append(
+            {
+                "currency": item.base_currency,
+                "cash": _money(item.cash) if item.cash is not None else None,
+                "available_funds": (
+                    _money(item.available_funds)
+                    if item.available_funds is not None
+                    else None
+                ),
+                "buying_power": (
+                    _money(item.buying_power) if item.buying_power is not None else None
+                ),
+                "sync_run_id": item.sync_run_id,
+                "snapshot_timestamp": item.received_at.isoformat(),
+            }
+        )
+    fx_required = len(valuation_currencies) > 1
+    fx_status = "fx_not_required" if not fx_required else "fx_not_supported_yet"
+    fx_status_nl = "FX niet nodig" if not fx_required else "FX ontbreekt"
+    fx_help = (
+        "Alle waardering is in één valuta."
+        if not fx_required
+        else "Meerdere valuta zonder opgeslagen wisselkoers: controle nodig."
+    )
     return PortfolioValuationReadinessResponse(
         status=(
             PortfolioValuationStatus.MISSING_MARKET_DATA.value
@@ -211,4 +316,39 @@ def build_portfolio_valuation_readiness(
         valuation_complete=not blocked,
         blocked=blocked,
         rows=rows,
+        cash_readiness_status="cash_available" if cash_snapshots else "no_cash_snapshot",
+        cash_readiness_status_nl=(
+            "Cash beschikbaar" if cash_snapshots else "Cashsnapshot ontbreekt"
+        ),
+        cash_readiness_help_nl=(
+            "Cashsnapshot is read-only beschikbaar uit opslag."
+            if cash_snapshots
+            else "Geen cashsnapshot in laatste sync; cashcontext ontbreekt."
+        ),
+        cash_snapshot_available=bool(cash_snapshots),
+        cash_snapshot_count=len(cash_snapshots),
+        cash_currencies=cash_currencies,
+        has_base_currency_cash=any(item.cash is not None for item in cash_snapshots),
+        missing_cash_inputs=[] if cash_snapshots else ["cash_snapshot"],
+        cash_values=cash_values,
+        fx_readiness_status=fx_status,
+        fx_readiness_status_nl=fx_status_nl,
+        fx_readiness_help_nl=fx_help,
+        fx_required=fx_required,
+        portfolio_currencies=portfolio_currencies,
+        valuation_currencies=valuation_currencies,
+        base_currency=base_currency,
+        missing_fx_pairs=[] if not fx_required else ["all_required_pairs"],
+        fx_rates_available=False,
+        fx_conversion_allowed=not fx_required,
+        converted_totals_available=False,
+        total_market_value_available=not blocked,
+        total_cash_value_available=False,
+        total_portfolio_value_available=False,
+        total_value_status="blocked",
+        total_value_status_nl="Geblokkeerd",
+        total_value_help_nl=(
+            "Geen verzonnen waardes: totaal vereist cash+FX met gevalideerde inputs."
+        ),
+        missing_total_value_inputs=["fx_rates", "validated_cash_totals"],
     )
