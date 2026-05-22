@@ -244,3 +244,4 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Task 117 toegevoegd: typed provider boundary (domain) voor read-only market-data snapshots met conid-identiteitsvalidatie, zonder runtime-fetch unlock.
 
 - Task 123 scope verwerkt: alleen read-only IBKR paper account/cash/positions sync via handmatige trigger; geen orderruntime.
+## Task 125A update: durable IBKR snapshot storage foundation added; runtime wiring deferred to 125B.
