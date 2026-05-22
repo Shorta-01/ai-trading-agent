@@ -1,3 +1,3 @@
 # Next Task
 
-Task 125K — Implementeer een pure Decimal-only conversion-total calculator module met unit tests op basis van reeds opgeslagen inputs, zonder API wiring en zonder runtime FX/provider fetch.
+Task 125L — Wire de pure Decimal-only conversion-total calculator read-only in `GET /portfolio/valuation/readiness` achter strikte opgeslagen-input gates, zonder runtime FX/provider fetch en zonder suggesties/action drafts/orders.
