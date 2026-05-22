@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ValuationTraceDetails } from "@/components/ValuationTraceDetails";
 import {
   apiClient,
   IbkrCashSnapshot,
@@ -103,13 +104,9 @@ export default function PortfolioPage() {
             <div><strong>Basismunt:</strong> {displayValue(valuationReadiness.base_currency)}</div>
             <div><strong>Omrekening:</strong> <StatusBadge label={valuationReadiness.conversion_total_status_nl} status={valuationStatusTone} title={valuationReadiness.conversion_total_help_nl} /></div>
             <div><strong>Toelichting:</strong> {valuationReadiness.conversion_total_help_nl}</div>
-            {valuationReadiness.missing_market_data_conids.length > 0 ? <div><strong>Marktdata ontbreekt:</strong> {valuationReadiness.missing_market_data_conids.join(", ")}</div> : null}
-            {valuationReadiness.missing_cash_inputs.length > 0 ? <div><strong>Cashsnapshot ontbreekt:</strong> {valuationReadiness.missing_cash_inputs.join(", ")}</div> : null}
-            {valuationReadiness.missing_fx_pairs.length > 0 ? <div><strong>Wisselkoers ontbreekt:</strong> {valuationReadiness.missing_fx_pairs.join(", ")}</div> : null}
-            {valuationReadiness.stale_fx_pairs.length > 0 ? <div><strong>Wisselkoers verouderd:</strong> {valuationReadiness.stale_fx_pairs.join(", ")}</div> : null}
-            {valuationReadiness.invalid_fx_pairs.length > 0 ? <div><strong>Wisselkoers ongeldig:</strong> {valuationReadiness.invalid_fx_pairs.join(", ")}</div> : null}
           </div>
         ) : null}
+        {valuationReadiness ? <ValuationTraceDetails readiness={valuationReadiness} /> : null}
 
         <div className="portfolio-meta-grid">
           <div><strong>Status:</strong> <StatusBadge label={syncStatus?.status_nl ?? "Niet beschikbaar"} status={statusTone} title={syncStatus?.help_nl ?? "Nog geen syncstatus."} /></div>
