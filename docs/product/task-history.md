@@ -1,3 +1,6 @@
+## Task 125C-B-R
+- Circular import reparatie afgerond door gedeelde IBKR sync dataclasses/protocol naar `ibkr_sync_contracts.py` te verplaatsen.
+
 ## Task 125C-B — Durable IBKR read-only sync runtime wiring
 - Handmatige `/ibkr/sync/run` schrijft naast geheugenopslag nu ook naar duurzame opslag wanneer storage enabled/geconfigureerd/writable/migration-ready is via Task 125C-A persistence façade.
 - Read-endpoints (`/ibkr/sync/status`, positions/cash/open-orders/executions) lezen duurzame latest-run snapshots wanneer beschikbaar en vallen anders terug op in-memory gedrag.
