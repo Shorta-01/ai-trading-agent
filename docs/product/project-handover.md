@@ -35,7 +35,7 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
-- Version 1 is paper-only.
+- Version 1 ondersteunt paper en real-money accountmodus als zichtbare veiligheidscontext; productidentiteit blijft account-mode-aware en user-approved.
 - Geen live trading, geen real-money execution, geen automatische orders.
 - AI is uitleg/evidence-interpretatie; Python/modelcode berekent.
 

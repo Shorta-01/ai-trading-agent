@@ -1,3 +1,4 @@
+- Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
 # Task 126 — Asset Suggestion and Financial Algorithm Roadmap
 
 ## 1. Purpose and product position

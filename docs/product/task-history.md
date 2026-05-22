@@ -1,3 +1,10 @@
+
+## Task 127 — account-mode-aware product direction + action-draft/Prediction Diary decision locks
+- Status: afgerond (documentation-only).
+- Nieuw document: `docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md` als compacte source-of-truth voor 30 beslissingen.
+- Productdocs geharmoniseerd: account-mode-aware identiteit (paper/real-money zichtbaar), IBKR operationele waarheid, user-approved acties, Prediction Diary/alerts/daily briefing in Version 1 scope.
+- Geen runtime code, tests, migrations, workflows, package metadata of UI-code gewijzigd.
+
 ## Task 126 — Asset suggestion and financial algorithm roadmap (documentation/research only)
 
 - Status: afgerond.
