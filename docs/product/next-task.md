@@ -1,10 +1,12 @@
 # Next Task
 
-## Task 125F — Read-only vervolg: opgeslagen FX snapshot-contract inventaris en readiness-koppeling zonder runtime fetch
+## Task 125G — FX snapshot storage contract preflight (document-first, read-only)
 
-Task 125E heeft cash/FX readiness metadata toegevoegd aan valuation readiness, maar zonder FX-rate opslag of conversieberekening.
+Task 125F heeft bevestigd dat er nog geen bruikbaar opgeslagen FX snapshot-opslagcontract bestaat voor valuation readiness. De volgende veilige slice is daarom contract-first preflight:
 
-Volgende veilige slice:
-- documenteer en implementeer alleen read-only detectie van eventueel bestaande opgeslagen FX-rate snapshots (indien aanwezig in storage-contracten);
-- geen FX runtime fetch, geen market-data runtime, geen suggestions/action drafts/orders;
-- behoud expliciete Geblokkeerd/Controle nodig status wanneer FX-input ontbreekt.
+- definieer document-first het minimale duurzame FX snapshot storagecontract (schema/repository/API-read),
+- nog zonder runtime FX fetch,
+- nog zonder market-data runtime,
+- nog zonder suggesties/action drafts/orders.
+
+Doel: toekomstige implementatie voorbereiden zodat valuation readiness later stored FX pairs veilig kan lezen zonder runtime fetch.

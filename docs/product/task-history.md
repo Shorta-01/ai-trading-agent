@@ -1,3 +1,4 @@
+- Task 125F — read-only FX snapshot-contract inventaris + valuation readiness contractstatus toegevoegd; geen runtime fetch, geen fake FX/totals.
 - Task 125E — read-only valuation readiness verrijkt met cash/FX readiness (duurzame snapshots, geen runtime fetch, geen fake waarden).
 ## Task 127R2 — Final cleanup account-mode wording contradictions
 - Status: Completed (documentation-only).
