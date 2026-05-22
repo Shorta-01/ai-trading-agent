@@ -65,7 +65,16 @@ def _inactive_item(item_id: str) -> WatchlistItem:
     )
 
 
-def test_market_data_readiness_blocks_unvalidated_identity() -> None:
+def test_market_data_readiness_blocks_unvalidated_identity(monkeypatch) -> None:
+    class _FakeStorageSettings:
+        enabled = False
+        database_url = None
+
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.settings.storage",
+        _FakeStorageSettings(),
+    )
+
     STORE["w-1"] = _item("w-1", conid="265598", validation_status="unvalidated")
     STORE["w-2"] = _item("w-2", conid=None, validation_status=None)
 
