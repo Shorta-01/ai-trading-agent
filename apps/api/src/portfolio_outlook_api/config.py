@@ -96,6 +96,14 @@ class Settings(BaseSettings):
     ibkr_market_data_type: str = "delayed"
     ibkr_market_data_snapshot_timeout_seconds: int = 5
     ibkr_market_data_provider_code: str = "ibkr"
+    ibkr_sync_enabled: bool = False
+    ibkr_sync_host: str | None = None
+    ibkr_sync_port: int | None = None
+    ibkr_sync_client_id: int | None = None
+    ibkr_sync_account_mode: str = "paper"
+    ibkr_sync_readonly: bool = True
+    ibkr_sync_timeout_seconds: int = 10
+    ibkr_sync_provider_code: str = "ibkr"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

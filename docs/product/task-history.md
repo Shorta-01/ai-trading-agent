@@ -454,3 +454,7 @@ Bevestiging scope:
 
 
 - Task 114 afgerond: read-only audit linked-record coverage/navigation hardening en web type-alignment; geen runtimegedrag toegevoegd.
+
+## Task 123
+- Read-only IBKR paper sync runtime foundation (account summary/cash/positions) toegevoegd achter handmatige trigger en disabled-by-default config.
+- Geen ordersubmission/modificatie/cancel, geen suggesties, geen AI runtime, geen fake brokerdata.
