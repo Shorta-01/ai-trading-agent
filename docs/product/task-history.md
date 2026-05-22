@@ -1,3 +1,11 @@
+## Task 126 — Asset suggestion and financial algorithm roadmap (documentation/research only)
+
+- Status: afgerond.
+- Nieuw document toegevoegd: `docs/product/asset-suggestion-algorithm-roadmap.md`.
+- Roadmap dekt berekeningen, risk metrics, factor/technical/fundamental lagen, probabilistische forecasting, gate-model, Decision Package-dependency, AI-rolgrenzen, validatie/model-risk en gefaseerde implementatie.
+- Product conflict expliciet vastgelegd: eindrichting kan breder zijn dan paper-only, maar huidige Version-1 lock blijft paper-only; wijziging vereist aparte expliciete productbeslissingstaak.
+- Geen runtime code, tests, migrations, workflows, package metadata of UI code gewijzigd.
+
 ## Task 125C-B-R
 - Circular import reparatie afgerond door gedeelde IBKR sync dataclasses/protocol naar `ibkr_sync_contracts.py` te verplaatsen.
 

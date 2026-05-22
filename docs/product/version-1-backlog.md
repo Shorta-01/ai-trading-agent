@@ -1,3 +1,4 @@
+- Task 126 (documentation/research): afgerond — `docs/product/asset-suggestion-algorithm-roadmap.md` toegevoegd als beslis- en architectuurroadmap voor toekomstige suggestielaag; runtime blijft ongewijzigd.
 - [x] Task 125C-B — Completed: wire IBKR read-only sync manual-trigger runtime to durable storage behind small persistence boundary with in-memory fallback; no orders/suggestions/fake data, no real IBKR network adapter or TWS/IB Gateway connection added.
 - [x] Task 125C-A — Completed: small mapper + persistence façade scaffolding for durable IBKR sync storage bridge (API-side only); endpoint runtime behavior not replaced yet.
 - [x] Task 125B — Completed in PR #258: IBKR sync storage repository dataclasses/records en SQL repository methods voor duurzame snapshot-tabellen toegevoegd (incl. public exports + storage tests); geen API/runtime wiring, geen orders, geen suggesties, geen fake data.
