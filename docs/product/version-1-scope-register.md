@@ -286,4 +286,5 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 
 
 - Task 125L afgerond: read-only wiring van Decimal-only conversion-total calculator in valuation readiness endpoint; alleen opgeslagen inputs, zonder runtime FX/provider fetch, zonder market-data runtime en zonder suggestions/action drafts/orders.
+- Task 125N afgerond: read-only UI voor valuation conversion totals display geïmplementeerd met hergebruik van bestaande readiness endpoint-respons; runtime blijft pending; suggestie/IBKR/orderstatus blijft geblokkeerd; geen nieuwe berekeningen, geen runtime fetch en geen brokergedrag toegevoegd.
 - Task 125M afgerond: document-first/read-only UI/API display contract preflight voor valuation conversion totals toegevoegd (`docs/product/valuation-conversion-total-display-contract-preflight-task-125m.md`); geen web UI behavior changes, geen API behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
