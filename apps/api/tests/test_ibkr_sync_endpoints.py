@@ -122,3 +122,44 @@ def test_fake_adapter_stores_orders_and_executions() -> None:
     assert body["order_modification_allowed"] is False
     assert body["order_cancellation_allowed"] is False
     assert body["suggestions_allowed"] is False
+
+
+def test_sync_returns_memory_fallback_when_storage_disabled() -> None:
+    settings = _base_settings()
+    settings.storage.enabled = False
+    body = ibkr_sync.run_sync(settings, adapter=FakeAdapter())
+    assert body["persistence_mode"] == "memory"
+    assert body["persistence_status_nl"] == "Geheugenfallback actief"
+
+
+def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
+    calls: dict[str, int] = {"runs": 0, "cash": 0, "positions": 0, "orders": 0, "executions": 0}
+
+    class FakeCtx:
+        def __exit__(self, *_args):
+            return None
+
+    class FakeRepo:
+        def save_ibkr_sync_run(self, record):
+            calls["runs"] += 1
+
+        def save_ibkr_account_cash_snapshots(self, sync_run_id, records):
+            calls["cash"] += len(records)
+
+        def save_ibkr_position_snapshots(self, sync_run_id, records):
+            calls["positions"] += len(records)
+
+        def save_ibkr_open_order_snapshots(self, sync_run_id, records):
+            calls["orders"] += len(records)
+
+        def save_ibkr_execution_snapshots(self, sync_run_id, records):
+            calls["executions"] += len(records)
+
+    monkeypatch.setattr(
+        ibkr_sync,
+        "_resolve_repo",
+        lambda settings, require_writable: (FakeRepo(), FakeCtx(), ""),
+    )
+    body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
+    assert body["persistence_mode"] == "durable"
+    assert calls == {"runs": 1, "cash": 1, "positions": 1, "orders": 1, "executions": 1}

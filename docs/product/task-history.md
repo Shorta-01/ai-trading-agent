@@ -1,3 +1,8 @@
+## Task 125C-B — Durable IBKR read-only sync runtime wiring
+- Handmatige `/ibkr/sync/run` schrijft naast geheugenopslag nu ook naar duurzame opslag wanneer storage enabled/geconfigureerd/writable/migration-ready is via Task 125C-A persistence façade.
+- Read-endpoints (`/ibkr/sync/status`, positions/cash/open-orders/executions) lezen duurzame latest-run snapshots wanneer beschikbaar en vallen anders terug op in-memory gedrag.
+- Geen echte IBKR-netwerkadapter, geen TWS/IB Gateway connectie, geen order submit/modify/cancel/bind, geen scheduler/background sync, geen suggesties, geen Decision Packages, geen AI runtime, geen forecasting en geen fake data toegevoegd.
+
 ## Task 125A-R — Repair IBKR sync storage migration readiness
 - Herstelde foutieve dubbele migratierevisie door `0023_ibkr_sync_snapshot_storage` te verplaatsen naar `0025_ibkr_sync_snapshot_storage` met `down_revision=0024_market_data_latest_snapshots`.
 - Herstelde storage-readiness contracten (inventory/latest revision/count) en bijbehorende storage/API tests.

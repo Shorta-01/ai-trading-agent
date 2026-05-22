@@ -1,3 +1,7 @@
+## Task 125C-B scope update
+- Binnen scope: API runtime wiring van bestaande handmatige IBKR read-only sync naar duurzame opslag met kleine persistence boundary en in-memory fallback.
+- Buiten scope: echte IBKR netwerkadapter/TWS connectie, order submit/modify/cancel/bind, suggesties, Decision Packages, AI runtime, forecasting, scheduler/background sync, market-data runtime en fake data.
+
 ## Task 125A-R scope update
 - Binnen scope: CI-repair en schema/migratie-consistentie voor read-only IBKR snapshotopslag.
 - Buiten scope (blijft uitgesteld): API/runtime wiring voor IBKR sync persistence (Task 125C), orders, suggesties, AI, forecasting, background sync.

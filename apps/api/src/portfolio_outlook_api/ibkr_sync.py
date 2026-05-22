@@ -5,7 +5,23 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
+from ai_trading_agent_storage import (
+    SqlAlchemyIbkrSyncSnapshotRepository,
+    StorageConnectionError,
+    StorageConnectionProvider,
+    build_database_connection_settings,
+)
+
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_sync_persistence import (
+    IbkrSyncPersistencePayload,
+    map_cash_snapshot_record,
+    map_execution_snapshot_record,
+    map_open_order_snapshot_record,
+    map_position_snapshot_record,
+    map_sync_run_record,
+    persist_ibkr_sync_payload,
+)
 
 
 @dataclass(frozen=True)
@@ -126,6 +142,33 @@ def _configured(settings: Settings) -> bool:
     )
 
 
+def _resolve_repo(
+    settings: Settings,
+    *,
+    require_writable: bool,
+) -> tuple[SqlAlchemyIbkrSyncSnapshotRepository | None, object | None, str]:
+    storage = settings.storage
+    if not storage.enabled:
+        return None, None, "Storage staat uit; alleen geheugenopslag actief."
+    if not storage.database_url:
+        return None, None, "Storage is niet geconfigureerd; alleen geheugenopslag actief."
+    if require_writable and not storage.writes_enabled:
+        return None, None, "Storage schrijven staat uit; alleen geheugenopslag actief."
+    provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        checked = provider.checked_connection(require_writable=require_writable)
+        context = checked.__enter__()
+        repo = SqlAlchemyIbkrSyncSnapshotRepository(
+            context.connection,
+            context.readiness,
+        )
+        return repo, checked, ""
+    except StorageConnectionError:
+        return None, None, "Storage niet beschikbaar; alleen geheugenopslag actief."
+
+
 def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> dict[str, object]:
     now = datetime.now(UTC)
     run_id = f"ibkr-sync-{uuid4()}"
@@ -174,11 +217,11 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
             open_orders_status = "provider_error"
             executions_status = "provider_error"
 
-    STORE.runs.append(
-        {
+    completed_at = datetime.now(UTC)
+    run_record = {
             "sync_run_id": run_id,
             "started_at": now.isoformat(),
-            "completed_at": datetime.now(UTC).isoformat(),
+            "completed_at": completed_at.isoformat(),
             "provider_code": settings.ibkr_sync_provider_code,
             "provider_environment": settings.ibkr_sync_account_mode,
             "account_mode": settings.ibkr_sync_account_mode,
@@ -193,7 +236,7 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
             "open_orders_count": len(open_orders),
             "executions_count": len(executions),
         }
-    )
+    STORE.runs.append(run_record)
     for p in positions:
         STORE.positions.append(
             {
@@ -231,7 +274,90 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
             }
         )
 
-    return read_status(settings) | {"sync_run_id": run_id}
+    persistence_mode = "memory"
+    persistence_help_nl = "Alleen geheugenopslag actief."
+    repo, connection_ctx, storage_help_nl = _resolve_repo(settings, require_writable=True)
+    if repo is not None:
+        try:
+            payload = IbkrSyncPersistencePayload(
+                sync_run=map_sync_run_record(
+                    sync_run_id=run_id,
+                    started_at=now,
+                    completed_at=completed_at,
+                    provider_code=settings.ibkr_sync_provider_code,
+                    provider_environment=settings.ibkr_sync_account_mode,
+                    account_mode=settings.ibkr_sync_account_mode,
+                    readonly=settings.ibkr_sync_readonly,
+                    status=result_status,
+                    account_summary_status=account_summary_status,
+                    positions_status=positions_status,
+                    open_orders_status=open_orders_status,
+                    executions_status=executions_status,
+                    positions_count=len(positions),
+                    cash_values_count=len(cash_items),
+                    open_orders_count=len(open_orders),
+                    executions_count=len(executions),
+                    status_nl=None,
+                    next_step_nl=None,
+                    help_nl=None,
+                ),
+                cash_snapshots=[
+                    map_cash_snapshot_record(
+                        sync_run_id=run_id,
+                        item=item,
+                        received_at=completed_at,
+                        stored_at=completed_at,
+                    )
+                    for item in cash_items
+                ],
+                position_snapshots=[
+                    map_position_snapshot_record(
+                        sync_run_id=run_id,
+                        item=item,
+                        received_at=completed_at,
+                        stored_at=completed_at,
+                    )
+                    for item in positions
+                ],
+                open_order_snapshots=[
+                    map_open_order_snapshot_record(
+                        sync_run_id=run_id,
+                        item=item,
+                        received_at=completed_at,
+                        stored_at=completed_at,
+                    )
+                    for item in open_orders
+                ],
+                execution_snapshots=[
+                    map_execution_snapshot_record(
+                        sync_run_id=run_id,
+                        item=item,
+                        received_at=completed_at,
+                        stored_at=completed_at,
+                    )
+                    for item in executions
+                ],
+            )
+            persist_ibkr_sync_payload(payload, repo)
+            persistence_mode = "durable"
+            persistence_help_nl = "Storage-opslag voltooid."
+        except Exception:
+            persistence_help_nl = "Storage-opslag mislukt; alleen geheugenopslag actief."
+        finally:
+            if connection_ctx is not None and hasattr(connection_ctx, "__exit__"):
+                connection_ctx.__exit__(None, None, None)
+    elif storage_help_nl:
+        persistence_help_nl = storage_help_nl
+    return read_status(settings) | {
+        "sync_run_id": run_id,
+        "persistence_mode": persistence_mode,
+        "persistence_status_nl": (
+            "Duurzame opslag actief"
+            if persistence_mode == "durable"
+            else "Geheugenfallback actief"
+        ),
+        "persistence_help_nl": persistence_help_nl,
+    }
 
 
 def _int_value(value: object) -> int:
