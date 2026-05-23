@@ -18,10 +18,10 @@ TASK_HISTORY_PATH = REPO_ROOT / "docs/product/task-history.md"
 BACKLOG_PATH = REPO_ROOT / "docs/product/version-1-backlog.md"
 SCOPE_REGISTER_PATH = REPO_ROOT / "docs/product/version-1-scope-register.md"
 MARKER_RE = re.compile(
-    r"Huidige toestand:\s*\*\*na\s+Task\s+(\d+)([A-Z]?)(?:-(R))?\*\*"
+    r"Huidige toestand:\s*\*\*na\s+Task\s+(\d+)([A-Z]?)(?:-(R)(\d*))?\*\*"
 )
 COMPLETED_TASK_RE = re.compile(
-    r"Task\s+(\d+)([A-Z]?)(?:-(R))?\s*:\s*\*\*completed\*\*",
+    r"Task\s+(\d+)([A-Z]?)(?:-(R)(\d*))?\s*:\s*\*\*completed\*\*",
     flags=re.IGNORECASE,
 )
 
@@ -34,20 +34,25 @@ class TaskId:
     repair_rank: int
 
 
-def parse_task_id(number: str, suffix: str, repair: str) -> TaskId:
+def parse_task_id(number: str, suffix: str, repair: str, repair_num: str = "") -> TaskId:
     suffix_clean = suffix or ""
     repair_clean = repair or ""
+    repair_num_clean = repair_num or ""
     return TaskId(
         number=int(number),
         suffix_rank=0 if not suffix_clean else 1,
         suffix_letter=suffix_clean,
-        repair_rank=1 if repair_clean == "R" else 0,
+        repair_rank=(1 + int(repair_num_clean or "0")) if repair_clean == "R" else 0,
     )
 
 
 def format_task(task_id: TaskId) -> str:
     suffix = task_id.suffix_letter
-    repair = "-R" if task_id.repair_rank else ""
+    if task_id.repair_rank:
+        suffix_num = "" if task_id.repair_rank == 1 else str(task_id.repair_rank - 1)
+        repair = f"-R{suffix_num}"
+    else:
+        repair = ""
     return f"{task_id.number}{suffix}{repair}"
 
 
