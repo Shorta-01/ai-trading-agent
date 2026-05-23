@@ -13,10 +13,13 @@
 - [ ] I verified there are no open PRs.
 - [ ] I verified the latest `main` CI run is green.
 - [ ] I verified all six required jobs passed on `main`: `domain`, `storage`, `portfolio`, `api`, `worker`, `web`.
-- [ ] If direct verification was blocked, I included this exact note in the PR body:
-
-> Pre-implementation CI was user-confirmed green, but Codex could not independently verify the latest main CI from this environment.
 
 ## Merge gate
-- [ ] Do not merge until GitHub CI is green for this PR across all six jobs: `domain`, `storage`, `portfolio`, `api`, `worker`, `web`.
-- [ ] If CI fails after PR creation, fix the failures in this same PR before merge.
+- [ ] Do not merge unless this PR is green on all six required CI jobs.
+- [ ] If CI is red, fix this same PR branch first; do not merge red.
+- [ ] Separate repair PRs are only for accidentally already-merged broken `main`.
+
+## Product tracking and safety
+- [ ] Product tracking docs checked/updated (`current-state`, `task-history`, `version-1-backlog`, `version-1-scope-register`, `next-task`).
+- [ ] Task queue / next-task alignment checked.
+- [ ] No product safety boundary violated (no live trading, no auto-trading, no broker execution without explicit approval, no fake data).

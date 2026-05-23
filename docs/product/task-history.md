@@ -1,3 +1,11 @@
+## Task 128 — Codex workflow acceleration + Version 1 milestone queue
+
+- Status: afgerond (process/documentation-only).
+- Toegevoegd: workflow acceleration docs, herbruikbare Codex task template, red/green CI workflowdocument, Version 1 milestone plan en milestone-gebaseerde `task-queue.md`.
+- Toegevoegd: kleine stdlib-only lokale helper scripts voor producttracking check en lokale statusweergave.
+- Trackingpivot: oude Task 125W micro-auditrichting bewust gedeferreerd/vervangen door Task 128.
+- Niet gewijzigd: runtime productgedrag, API, storage, migraties, runtime fetch, berekeningen, suggesties, action drafts, orders, broker execution of fake waarden.
+
 ## Task 125V — apply wording catalog op read-only valuation readiness UI labels/helpteksten
 - Status: afgerond.
 - Toegevoegd: Task 125U wording-catalogus toegepast op bestaande read-only valuation readiness UI-oppervlakken in dashboard/portefeuille/trace-details met eenvoudige Nederlandse labels/helpteksten en duidelijkere unavailable-fallbacks.

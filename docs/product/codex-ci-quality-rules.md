@@ -121,3 +121,18 @@ Doel: herhaalbare CI-fouten voorkomen bij toekomstige Codex-taken.
 
 - Bij toekomstige implementatie van request-log/provider/freshness storage/API-contracten: update publieke exports, API typechecks en migratiestatus-tests in dezelfde PR.
 - Safety booleans (`safe_for_analysis`, `safe_for_suggestions`, `safe_for_action_drafts`) moeten default blocked/false blijven tot expliciete runtime gates bestaan.
+
+## Task 128 workflow acceleration references
+
+Gebruik deze hulpmiddelen als reviewdiscipline:
+- `docs/product/codex-task-template.md`
+- `docs/product/task-queue.md`
+- `docs/product/codex-red-green-ci-workflow.md`
+- `scripts/check_product_tracking.py`
+- `scripts/project_status.py`
+
+Belangrijk:
+- Deze docs/scripts ondersteunen consistentie, maar vervangen GitHub CI niet.
+- Deze hulpmiddelen staan geen auto-merge toe.
+- Human review + manual merge blijven verplicht.
+- Product safety grenzen blijven ongewijzigd en mogen niet verzwakken.

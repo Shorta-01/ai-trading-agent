@@ -298,3 +298,6 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 
 - Task 125P afgerond: document-first/read-only preflight voor cost-basis en unrealized P/L display rules toegevoegd op basis van opgeslagen IBKR snapshots + bestaande market/FX readiness gates; geen berekeningen, geen API/web UI-behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen latest-price fetching, geen suggesties/action drafts/orders en geen fake kostbasis/P-L/FX/converted totals.
 - Task 125M afgerond: document-first/read-only UI/API display contract preflight voor valuation conversion totals toegevoegd (`docs/product/valuation-conversion-total-display-contract-preflight-task-125m.md`); geen web UI behavior changes, geen API behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
+
+
+| Task 128 workflow acceleration (process-only) | Governance | N/A | N/A | N/A | Implemented as docs/scripts support | Defereert/vervangt Task 125W micro-auditrichting; geen runtimewijzigingen, geen API/storage/migraties/fetch/berekeningen/suggesties/action drafts/orders/broker execution/fake data. |

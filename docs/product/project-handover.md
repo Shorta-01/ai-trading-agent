@@ -31,7 +31,7 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 ## Kerncontext
 
-- Producttrackingstatus: Task 125R (PR #301) en Task 125R-R (PR #302) zijn merged. Producttrackingdocs moeten nu de post-repair staat reflecteren met Task 125V afgerond en Task 125W als volgende conservatieve document-first vervolgstap voor label/helptekst-consistentie (volgens `next-task.md`).
+- Producttrackingstatus: Task 125R (PR #301) en Task 125R-R (PR #302) zijn merged. Producttrackingdocs moeten nu de post-repair staat reflecteren met Task 125V afgerond en Task 128 als procespivot waarbij Task 125W bewust is gedeferreerd/vervangen (volgens `next-task.md`).
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
@@ -64,3 +64,9 @@ Aanvullend:
 - Dit is een documentatie/review-discipline-regel en **geen** geautomatiseerde CI-regel.
 
 - Verplicht lezen: docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md
+
+
+## Task 128 workflowpivot
+- Gebruik voortaan `docs/product/codex-task-template.md` en `docs/product/task-queue.md` voor kortere milestone-gerichte opdrachten.
+- Red/green CI discipline volgt `docs/product/codex-red-green-ci-workflow.md`.
+- Geen auto-merge; human review en manual merge blijven verplicht.
