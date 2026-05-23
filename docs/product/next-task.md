@@ -1,4 +1,4 @@
-# Task 141 - Add disabled-by-default real TWS/Gateway read-only network adapter skeleton behind existing safety gates
+# Task 142 - Wire disabled-by-default TWS/Gateway session-status adapter factory behind explicit settings and readiness diagnostics
 
 ## Why
-Follow-up after Task 140-R repair to prepare a constrained adapter skeleton without enabling runtime connectivity by default.
+Task 141 introduced a safe injected-client-only adapter skeleton. Task 142 should add explicit factory wiring while keeping default non-network behavior and existing readiness safety gates unchanged.
