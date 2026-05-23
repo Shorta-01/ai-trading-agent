@@ -1,3 +1,9 @@
+## Task 125T — read-only advanced kostbasis en ongerealiseerde winst/verlies trace/details display
+- Status: afgerond.
+- Toegevoegd: row-level detailsweergave in de Portefeuille-sectie `Kostbasis en winst/verlies` met eenvoudige Nederlandse labels voor controle/herkomst, ontbrekende invoer en tracevelden.
+- Toegevoegd: type-alignment in web API-client met het bestaande Python API-model (`PositionValuationReadinessRow`), inclusief nullable velden en removal van niet-bestaand `account_ref` als row key-bron.
+- Grenzen bewaakt: alleen bestaande readinessvelden en trace-objecten getoond, geen browser-side financiële berekeningen, geen API-behavior changes, geen storage/migraties, geen runtime market-data/latest-price/FX-provider fetch, geen suggesties/Decision Packages/action drafts/orders, geen broker execution en geen fake waarden.
+
 ## Task 125S — read-only kostbasis en ongerealiseerde winst/verlies display
 - Status: afgerond.
 - Toegevoegd: web API-client typecontract uitgebreid met row-level readinessvelden en `rows` in `PortfolioValuationReadinessResponse`.
