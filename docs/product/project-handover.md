@@ -1,6 +1,6 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
-- Producttrackingstatus: Task 134B-R is afgerond als merged-red repair na Task 134B en herstelde API pytest readiness-testconfiguratie (incomplete session-status instellingen in test setup); Task 134B blijft afgerond met execution blocking op handmatige sync; volgende stap blijft Task 135B in `docs/product/next-task.md`.
+- Producttrackingstatus: Task 134B-R2 is afgerond als merged-red repair na Task 134B-R en herstelde de resterende API pytest readiness-response recomputation; root cause was dat `run_sync(...)` readiness met geïnjecteerde adapter berekende maar `read_status(settings)` die voor de eindresponse zonder adapter opnieuw berekende; `run_sync(...)` gebruikt nu de vooraf berekende readiness in de response. Task 135B blijft de volgende stap in `docs/product/next-task.md`. Geen echte TWS/Gateway netwerkruntime, geen echte IBKR account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake data toegevoegd.
 
 ## Purpose
 
