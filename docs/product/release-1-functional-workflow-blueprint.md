@@ -376,3 +376,26 @@ Deze blueprint beschrijft vergrendelde functionele ontwerpwaarheid voor Release 
 Release 1 workflow wordt intern gefaseerd: V1.0 foundations → V1.1 baseline forecasting → V1.2 AI text-to-feature → V1.3 challengers → V1.4 AI uitleg/RAG → V1.5 dissent challenger → V1.6 monitoring/drift → V1.7 Decision Package + deterministic translator → V1.8 account-mode-aware user-approved broker action workflow.
 
 Runtime-regel: suggestions, action drafts en user-approved brokeracties blijven geblokkeerd tot V1.7 gates + Decision Package bestaan en gevalideerd zijn. Zie `docs/product/asset-value-prediction-engine-roadmap.md`.
+
+## 21) Task 130Q daily operating model lock
+
+Dagritme (Europe/Brussels):
+- 07:00 volledige briefing;
+- Europese market open refresh;
+- US market open refresh;
+- elk uur updates tussen 08:00 en 20:00;
+- extra updates alleen bij materiële events;
+- 20:00 laatste actieve checkpoint + quiet mode;
+- US close capture gebeurt stil; volgende 07:00 briefing verklaart late events.
+
+## 22) Task 130Q dashboard → Action Center execution flow lock
+
+Verplichte flow: Dashboard beslissing → Action Center draftbeheer → `Orderimpact` / `Impact vóór verzenden` → final confirmation → pas daarna user-approved brokerverzending. Geen one-click execution, geen batch approval en geen auto-execution in Version 1.
+
+## 23) Task 130Q new-asset cold-start flow lock
+
+Nieuwe kansen blijven apart van portfolio/watchlist en vereisen volledige gates (identity, market, liquidity, freshness, evidence, prompt-injection, risk, portfolio fit, account environment) vóór een ready buy-draft. Zonder geslaagde gates alleen `Controle nodig` of `Geblokkeerd`.
+
+## 24) Task 130Q Research Desk evidence flow lock
+
+Research Desk/Onderzoeksdesk ondersteunt documenten/URL’s/notities als evidence-input. Evidence doorloopt extraction, prompt-injection check, credibility, freshness en asset-linking vóór gebruik in quant-engine signalering. Geüploade content is nooit directe orderinstructie en kan geen gates bypassen.

@@ -130,3 +130,12 @@ Hard lock blijft:
 - eenvoudige Nederlandse UI;
 - account-mode-aware, user-approved IBKR actieflow;
 - AI is kerncapability maar **berekent geen financiële kerngetallen** en beslist geen labels/orders.
+
+
+## 9) Task 130Q direction lock (owner workshop)
+
+- Productrichting is expliciet een professioneel asset-management cockpitmodel met mission-control dashboard en verdiepende secties (Action Center, Research Desk/Onderzoeksdesk, Decision Packages, Prediction Diary, Audit & History).
+- Dashboardtitel is exact `AI Trading Agent` en focust op snelle beslissingen: wat veranderde, wat telt, wat veilig/geblokkeerd is en wat user approval vraagt.
+- Financiële kern is evidence-gated, uncertainty-aware en multi-horizon ensemble: Python berekent richting/range/risico/uncertainty/confidence; AI geeft alleen gevalideerde uitleg.
+- Structured order drafts met `Waarom?`-uitleg, gatestatus, `Orderimpact` vóór verzenden en aparte final confirmation vormen de verplichte orderflow.
+- Safety boundaries blijven hard: geen automatische orders, geen brokeractie zonder expliciete usergoedkeuring en geen live trading automation.

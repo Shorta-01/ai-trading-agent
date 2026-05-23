@@ -46,3 +46,8 @@ Als één van deze drie niet geldt, splits de taak.
 - Plan bij voorkeur grotere milestone-batches waar de safety boundary dit toelaat.
 - Batch alleen veilig samenhangende onderdelen (bijv. één read-only boundary + tests + docs).
 - Houd broker-order flows en andere money-moving scope strikt gescheiden van ongerelateerd werk.
+
+
+## Task 130Q product lock alignment
+- Milestone-uitwerking volgt decision-first mission-control dashboard, daily operating model, Action Center + Orderimpact/final confirmation, Research Desk/Onderzoeksdesk evidenceflow en Decision Packages/Prediction Diary keten.
+- Safe milestone-batch policy en RC-only manual testing discipline blijven verplicht.

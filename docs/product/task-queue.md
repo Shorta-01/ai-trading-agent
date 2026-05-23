@@ -101,3 +101,8 @@
 - Partial/unfinished slices worden niet handmatig getest door de owner.
 - Partial features moeten CI/fake-adapter/fixture/contracttest-dekking hebben.
 - Rode CI niet mergen; fix dezelfde PR.
+
+
+## Task 130Q alignment note
+- Milestones voor Dashboard/Action Center/Decision Packages/Suggestion Engine/Research Desk/Prediction Diary volgen de vergrendelde owner workshop richting uit `version-1-owner-workshop-decision-locks-task-130q.md`.
+- Runtimevolgorde blijft: Task 131B als eerstvolgende implementatiestap binnen read-only veiligheidsgrens.

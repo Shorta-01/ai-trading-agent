@@ -18,3 +18,6 @@
 - Volg `docs/product/codex-red-green-ci-workflow.md`.
 - Alleen handmatige merge na groene CI op alle zes jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`).
 - Bij rode CI: fix op dezelfde PR-branch; niet mergen.
+
+
+> Task 130Q bevestigt deze richting; Task 131B blijft de volgende implementatiestap.

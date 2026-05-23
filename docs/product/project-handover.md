@@ -79,3 +79,9 @@ Aanvullend:
 - Partial features moeten via CI + fake adapters/fixtures/contracttests worden afgedekt.
 - Toekomstige taken moeten waar veilig milestone-batches gebruiken binnen strikte safety boundaries.
 - Eerdere kleine Task 131-route is vervangen door Task 131B in `docs/product/next-task.md` (tenzij latere inspectie een nog veiligere batch oplevert).
+
+
+## Task 130Q handover update
+- Owner workshop productrichting is nu vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` (mission-control dashboard, daily operating model, Action Center, Research Desk, structured order drafts, evidence-gated engine).
+- Tracking marker drift in `docs/product/current-state.md` is gerepareerd naar **na Task 130Q**.
+- Volgende implementatierichting blijft Task 131B (tenzij latere inspectie een veiligere batch oplevert).

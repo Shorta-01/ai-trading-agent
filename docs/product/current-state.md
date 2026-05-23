@@ -1,5 +1,10 @@
 # Current State
 
+Huidige toestand: **na Task 130** (Task 130Q tracking update verwerkt).
+
+## Task 130Q update
+- Task 130Q: **completed** — owner workshop Version 1 productbeslissingen vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` en gekoppelde productdocs bijgewerkt (mission-control dashboard, daily operating model, Action Center/Orderimpact/final confirmation flow, Research Desk evidenceflow, cold-start `Nieuwe kansen`). Documentation/planning-only: geen runtime, API, storage, migraties, berekeningen, suggestie-runtime, action-draft runtime, orders, broker execution of fake data toegevoegd.
+
 ## Task 130 update
 - Task 130: **completed** — disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary toegevoegd met veilige API-status exposure op `/broker/ibkr/status` en `/ibkr/session/status`, inclusief testbare adapter-injectie zonder echte netwerkcalls. Geen auto-connect, geen account/portfolio sync, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders/broker execution en geen fake brokerdata toegevoegd. API response bevat geen credentials/secrets.
 
@@ -75,7 +80,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 130**.
+- Huidige toestand: **na Task 130Q**.
 - Task 101: **completed** — documentatie/cross-link/terminologie-anchor-only update. Task 100-termenset is verankerd in handover + locked decisions + lichte cross-links. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 102: **completed** — conservatieve documentatie-only read-only wording drift check na Task 101. Productdocs zijn gecontroleerd tegen de vergrendelde termenset in `locked-decisions.md`; kleine tracking/plaatsingsdrift is hersteld (current-state titel + backlogplaatsing/next-step wording). Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 103: **completed** — conservatieve documentatie-only product-doc consistentiecheck na Task 102. Productdocs zijn gericht gecontroleerd tegen de vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift is hersteld (current-state na-Task-102 tracking + follow-up logging). Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime/actiedrafts/orders en geen fake data toegevoegd.

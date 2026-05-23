@@ -1,3 +1,17 @@
+## Task 130Q — Record owner workshop Version 1 product decision locks
+
+- Status: afgerond (documentation/product-planning-only).
+- Toegevoegd: `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` als source-of-truth lock voor daily operating model, mission-control dashboard (`AI Trading Agent`), structured order drafts met `Waarom?`, Action Center-flow, `Orderimpact`, Research Desk/Onderzoeksdesk en `Nieuwe kansen` gates.
+- Productdocs uitgelijnd op deze locks; `next-task.md` blijft Task 131B.
+- Trackingdrift hersteld in `docs/product/current-state.md` met marker-update en Task 130Q completion-update.
+- Bevestigd: geen runtime/API/storage/migration/calculation/suggestion/action-draft/order/broker execution wijzigingen.
+
+## Task 130P — Release-candidate testing and batch-task policy
+
+- Status: afgerond (documentation/process-only).
+- Verankerd: owner manual testing alleen op volledige Version 1 release candidate; partial slices via CI/fake adapters/fixtures/contracttests.
+- Richtlijn: veilige milestone-batches prefereren binnen safety boundaries.
+
 ## Task 129 — Select and document the next Milestone B implementation slice
 
 - Status: afgerond (documentation/planning-only).
