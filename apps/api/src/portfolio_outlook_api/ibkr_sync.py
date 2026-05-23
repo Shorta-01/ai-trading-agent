@@ -152,6 +152,11 @@ def run_sync(
     cash_items: list[IbkrCash] = []
     open_orders: list[IbkrOpenOrder] = []
     executions: list[IbkrExecution] = []
+    payload_validation_status = "not_attempted"
+    payload_validation_status_nl = "Niet uitgevoerd"
+    payload_validation_error_count = 0
+    payload_validation_errors: list[dict[str, object]] = []
+    payload_validation_help_nl = "Validatie niet uitgevoerd."
 
     if not settings.ibkr_sync_enabled:
         result_status = "disabled"
@@ -211,18 +216,28 @@ def run_sync(
                         "Controleer adapterpayload; opslag is veilig geblokkeerd."
                     ),
                 }
+
+            payload_validation_status = "passed"
+            payload_validation_status_nl = "Geslaagd"
+            payload_validation_help_nl = "Payloadvalidatie geslaagd."
         except TimeoutError:
             result_status = "timeout"
             account_summary_status = "timeout"
             positions_status = "timeout"
             open_orders_status = "timeout"
             executions_status = "timeout"
+            payload_validation_help_nl = (
+                "Validatie niet uitgevoerd omdat de adapter time-out gaf."
+            )
         except Exception:
             result_status = "provider_error"
             account_summary_status = "provider_error"
             positions_status = "provider_error"
             open_orders_status = "provider_error"
             executions_status = "provider_error"
+            payload_validation_help_nl = (
+                "Validatie niet uitgevoerd omdat de adapter een fout gaf."
+            )
 
     completed_at = datetime.now(UTC)
     run_record = {
@@ -362,11 +377,11 @@ def run_sync(
             "Duurzame opslag actief" if persistence_mode == "durable" else "Geheugenfallback actief"
         ),
         "persistence_help_nl": persistence_help_nl,
-        "payload_validation_status": "passed",
-        "payload_validation_status_nl": "Geslaagd",
-        "payload_validation_error_count": 0,
-        "payload_validation_errors": [],
-        "payload_validation_help_nl": "Payloadvalidatie geslaagd.",
+        "payload_validation_status": payload_validation_status,
+        "payload_validation_status_nl": payload_validation_status_nl,
+        "payload_validation_error_count": payload_validation_error_count,
+        "payload_validation_errors": payload_validation_errors,
+        "payload_validation_help_nl": payload_validation_help_nl,
     }
 
 

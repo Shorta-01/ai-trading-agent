@@ -1,5 +1,10 @@
 # Current State
 
+## Task 138-R update
+- Task 138-R: **completed** — repair-only fix na merged-red Task 138 (PR #332) voor API pytest regressie in `run_sync(...)`: timeout/provider adapterfouten rapporteren nu `payload_validation_status=not_attempted` (met eenvoudige NL uitleg) i.p.v. onterecht `passed`. Adapter/runtimefouten blijven expliciet gescheiden van payloadvalidatiefouten (`payload_validation_failed`). Geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.
+
+Huidige toestand: **na Task 138-R**
+
 ## Task 138 update
 - Task 138: **completed** — IBKR read-only sync adaptercontracten en deterministische test-only fake-adapter fixtures gehard voor cash, positions, open orders en executions. API-contracttests onderscheiden nu expliciet `payload_validation_failed` versus adapter/runtimefouten (`timeout`, `provider_error`) en readiness-blocking (`sync_readiness_blocked`, `sync_readiness_needs_control`) met behoud van veilige persistence-blocking en safetybooleans (`False`/`blocked`). Geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.
 
