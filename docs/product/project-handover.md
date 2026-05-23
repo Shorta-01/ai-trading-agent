@@ -1,6 +1,6 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
-- Producttrackingstatus: Task 133B is afgerond met minimale IBKR read-only sync readiness/preflight status gate; Task 133B-R heeft daarna de ontbrekende Task 133B scope-register trackingnotitie gerepareerd en de product-tracking checker verhard; volgende stap blijft Task 134B in `docs/product/next-task.md`.
+- Producttrackingstatus: Task 133B is afgerond met minimale IBKR read-only sync readiness/preflight status gate; Task 133B-R heeft daarna de ontbrekende Task 133B scope-register trackingnotitie gerepareerd en de product-tracking checker verhard; Task 134B is afgerond met execution blocking op handmatige sync; volgende stap is Task 135B in `docs/product/next-task.md`.
 
 ## Purpose
 

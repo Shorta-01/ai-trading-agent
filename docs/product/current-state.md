@@ -1,7 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 133B-R**
+Huidige toestand: **na Task 134B**
 
+
+## Task 134B update
+- Task 134B: **completed** — Task 133B readiness/preflight gate is nu wired in manual `POST /ibkr/sync/run` execution blocking. Readiness `blocked` en `needs_control` blokkeren adapter-calls en persistence; alleen bij expliciete ready paper test-session kan een geïnjecteerde fake adapter in tests draaien. Geen echte TWS/Gateway netwerkruntime, geen echte IBKR account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake data toegevoegd.
 
 ## Task 133B-R update
 - Task 133B-R: **completed** — product-tracking drift hersteld door ontbrekende Task 133B scope-register notitie toe te voegen in `docs/product/version-1-scope-register.md` en de stdlib-only checker `scripts/check_product_tracking.py` te verharden zodat de eerste completed taak uit `current-state.md` verplicht terugkomt in `task-history`, `version-1-backlog` en `version-1-scope-register`. Documentation/process-helper repair-only: geen runtime-, API-, web-, storage-, migratie- of netwerkgedrag gewijzigd; Task 134B is niet geïmplementeerd.
