@@ -1,15 +1,15 @@
-# Task 131B — Implement IBKR read-only account/session safety batch using the Task 130 session-status boundary
+# Task 132B — Select and document the next IBKR read-only sync foundation batch after Task 131B
 
-- Vervangt de eerdere kleine Task 131-route met een veiligere milestone-batch.
-- Scope: account-mode mapping, unknown-status veilige wording, en statusmapping voor `connection_failed`, `authentication_required` en `pacing_limited`.
-- Vereist: fake-adapter tests plus no-secret/no-fake-data checks.
+- Gebruik de Task 131B account/session status outputs als startpunt voor een veilige vervolgselectie.
+- Scope: document-first selectie + afbakening van de eerstvolgende sync-foundation batch zonder runtime-unlock.
+- Vereist: duidelijke no-network/no-order/no-suggestion/no-action-draft/no-market-data grenzen.
 
 ## Boundaries (locked)
-- Geen account/portfolio sync.
+- Geen echte TWS/Gateway netwerk runtime.
+- Geen account/portfolio sync runtime.
 - Geen market-data runtime.
 - Geen suggesties.
 - Geen action drafts.
-- Geen Decision Packages runtime.
 - Geen orders (submit/modify/cancel/bind).
 - Geen broker execution.
 - Geen fake brokerdata, fake portfoliodata of fake marktdata.
@@ -18,6 +18,3 @@
 - Volg `docs/product/codex-red-green-ci-workflow.md`.
 - Alleen handmatige merge na groene CI op alle zes jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`).
 - Bij rode CI: fix op dezelfde PR-branch; niet mergen.
-
-
-> Task 130Q bevestigt deze richting; Task 131B blijft de volgende implementatiestap.

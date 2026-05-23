@@ -1,3 +1,7 @@
+## Task 131B
+- Completed: IBKR read-only account/session safety batch op Task 130 boundary met account-mode mapping, unknown-status veilige wording, mappings voor connection_failed/authentication_required/pacing_limited, adapter-exception safety, fake-adapter tests en no-secret/no-fake-data checks.
+- Niet toegevoegd: echte IBKR-netwerkadapter, auto-connect, sync runtime, market-data runtime, suggesties/action drafts/Decision Packages runtime, orders/broker execution, financiële berekeningen of fake data.
+
 ## Task 130Q-R — Repair current-state marker drift and suffix-task tracking
 
 - Status: afgerond (documentation/process-helper repair-only).

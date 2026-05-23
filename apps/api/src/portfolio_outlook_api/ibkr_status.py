@@ -6,6 +6,39 @@ from portfolio_outlook_api.ibkr_session_status import (
     IbkrSessionStatusAdapter,
 )
 
+_KNOWN_CONNECTION_STATUSES = {
+    "configured_not_connected",
+    "connected_wrong_account_mode",
+    "connection_failed",
+    "authentication_required",
+    "pacing_limited",
+}
+_KNOWN_ACCOUNT_MODE_STATUSES = {"unknown", "unverified", "match", "mismatch"}
+_KNOWN_ACCOUNT_MODES = {"paper", "live"}
+
+
+def _normalize_connection_status(raw_status: str | None) -> str:
+    status = (raw_status or "").strip().lower()
+    if status in _KNOWN_CONNECTION_STATUSES:
+        return status
+    return "unknown"
+
+
+def _normalize_account_mode_status(raw_status: str | None) -> str:
+    status = (raw_status or "").strip().lower()
+    if status in _KNOWN_ACCOUNT_MODE_STATUSES:
+        return status
+    return "unknown"
+
+
+def _normalize_account_mode(raw_mode: str | None) -> str | None:
+    if raw_mode is None:
+        return None
+    normalized = raw_mode.strip().lower()
+    if normalized in _KNOWN_ACCOUNT_MODES:
+        return normalized
+    return None
+
 
 def _status_content(connection_status: str) -> tuple[str, str, str, str]:
     if connection_status == "disabled":
@@ -58,6 +91,13 @@ def _status_content(connection_status: str) -> tuple[str, str, str, str]:
             "Wacht en probeer later opnieuw met handmatige controle.",
             "Orders blijven geblokkeerd en er draait geen marktdataruntime.",
         )
+    if connection_status == "unknown":
+        return (
+            "IBKR-status onbekend",
+            "De sessiecontrole gaf geen herkenbare status terug.",
+            "Controleer de configuratie en probeer later opnieuw.",
+            "Geen sync, geen suggesties en geen orders mogelijk.",
+        )
     return (
         "IBKR geconfigureerd, nog niet verbonden",
         "Configuratie is aanwezig, maar er is geen actieve read-only sessie.",
@@ -93,13 +133,47 @@ def build_ibkr_status_placeholder(
         session_status_reason = "status_check_disabled"
     else:
         adapter = session_status_adapter or DefaultSafeIbkrSessionStatusAdapter()
-        result = adapter.check_session_status(runtime_settings)
-        connection_status = result.connection_status
-        account_mode_status = result.account_mode_status
-        account_mode = result.account_mode or expected_environment
-        session_check_attempted = True
-        session_check_source = result.session_check_source
-        session_status_reason = result.session_status_reason or "adapter_result"
+        try:
+            result = adapter.check_session_status(runtime_settings)
+        except Exception:
+            connection_status = "connection_failed"
+            account_mode_status = "unknown"
+            account_mode = expected_environment
+            session_check_attempted = True
+            session_check_source = "adapter"
+            session_status_reason = "adapter_error"
+        else:
+            normalized_connection_status = _normalize_connection_status(
+                result.connection_status
+            )
+            normalized_account_mode_status = _normalize_account_mode_status(
+                result.account_mode_status
+            )
+            normalized_account_mode = _normalize_account_mode(result.account_mode)
+
+            if normalized_account_mode is None:
+                normalized_account_mode_status = "unknown"
+            if normalized_account_mode is not None:
+                expected_mode = _normalize_account_mode(expected_environment)
+                if (
+                    expected_mode is not None
+                    and normalized_account_mode != expected_mode
+                ):
+                    normalized_connection_status = "connected_wrong_account_mode"
+                    normalized_account_mode_status = "mismatch"
+                    session_status_reason = "account_mode_mismatch"
+                elif normalized_account_mode_status == "unknown":
+                    normalized_account_mode_status = "match"
+
+            connection_status = normalized_connection_status
+            account_mode_status = normalized_account_mode_status
+            account_mode = normalized_account_mode or expected_environment
+            session_check_attempted = True
+            session_check_source = result.session_check_source
+            if connection_status == "unknown":
+                session_status_reason = "unknown_connection_status"
+            else:
+                session_status_reason = result.session_status_reason or "adapter_result"
 
     status_nl, message_nl, next_step_nl, connection_help_nl = _status_content(connection_status)
 

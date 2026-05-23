@@ -1,3 +1,7 @@
+## Task 131B scope-resultaat
+- Binnen scope: veilige statusnormalisatie voor IBKR account/session status endpoint responses (unknown/account-mode/mismatch/authentication/pacing/connection-failed) + fake-adapter tests.
+- Buiten scope: echte IBKR-verbinding, auto-connect, sync runtime, market-data runtime, suggesties/action drafts/Decision Packages runtime, orders/broker execution en fake data.
+
 ## Task 129 update (documentation/planning-only)
 - Volgende Milestone B implementatieslice geselecteerd: Task 130 (disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary + API status exposure).
 - Geen runtimewijzigingen toegevoegd in Task 129: geen API/storage/migratie/fetch/berekeningen/suggesties/action drafts/orders/broker execution/fake data.

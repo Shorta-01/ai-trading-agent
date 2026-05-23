@@ -1,7 +1,9 @@
 # Current State
 
-Huidige toestand: **na Task 130Q-R**
+Huidige toestand: **na Task 131B**
 
+## Task 131B update
+- Task 131B: **completed** — IBKR read-only account/session safety batch geïmplementeerd op de Task 130 session-status boundary met expliciete unknown-status wording, account-mode match/mismatch mapping, en veilige mappings voor `connection_failed`, `authentication_required` en `pacing_limited`, inclusief fake-adapter tests + no-secret/no-fake-data checks. Geen echte IBKR-netwerkadapter, geen auto-connect, geen account/portfolio sync, geen market-data runtime, geen suggesties/action drafts/Decision Packages runtime, geen orders of broker execution, geen financiële berekeningen en geen fake data toegevoegd.
 
 ## Task 130Q-R update
 - Task 130Q-R: **completed** — product-tracking marker drift gerepareerd door `Huidige toestand` te corrigeren naar `na Task 130Q-R` en stdlib-only checker `scripts/check_product_tracking.py` te verharden met suffix-task volgorde (`130` < `130P` < `130Q` < `130Q-R` < `131B`). Documentation/process-helper repair-only: geen runtime, API, web, storage, migraties, sync, market-data, FX, suggesties, action drafts, Decision Packages, orders, broker execution, financiële berekeningen of fake data toegevoegd.
