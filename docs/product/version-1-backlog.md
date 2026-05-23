@@ -309,3 +309,8 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Task 125U afgerond: document-first review/preflight voor valuation readiness UI-teksten en helpteksten toegevoegd met consistent eenvoudig Nederlands + checklist voor ontbrekende invoer en trace-empty staten; geen runtime/API/web behavior/storage/migraties/fetch/suggesties/action drafts/orders/broker execution/fake waarden.
 - Task 125S afgerond: read-only web/API-client display support voor bestaande kostbasis en ongerealiseerde winst/verlies readiness-velden toegevoegd, zonder browser-side berekeningen en zonder runtime/API/storage/migratie-uitbreiding.
 - Task 125M afgerond: document-first/read-only UI/API display contract preflight voor valuation conversion totals toegevoegd (`docs/product/valuation-conversion-total-display-contract-preflight-task-125m.md`); geen web UI behavior changes, geen API behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
+
+## Workflow update na Task 130P
+- Manual owner-testing verschuift naar volledige Version 1 release candidate.
+- Partial feature-slices vereisen CI + fake-adapter/fixture/contracttestdekking.
+- Kleine Task 131 is vervangen door Task 131B als volgende veilige Milestone B batch.

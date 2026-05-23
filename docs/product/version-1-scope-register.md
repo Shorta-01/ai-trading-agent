@@ -307,3 +307,8 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 
 
 | Task 128 workflow acceleration (process-only) | Governance | N/A | N/A | N/A | Implemented as docs/scripts support | Defereert/vervangt Task 125W micro-auditrichting; geen runtimewijzigingen, geen API/storage/migraties/fetch/berekeningen/suggesties/action drafts/orders/broker execution/fake data. |
+
+## Task 130P scope note
+- Task 130P is proces/documentatie-only: release-candidate manual-testing policy + veilige milestone-batch-planning.
+- In-scope: workflowregels, planningdocumenten en producttrackingupdates.
+- Out-of-scope bevestigd: geen runtimewijzigingen (API/web/storage/migraties/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution), geen financiële berekeningen, geen fake data.

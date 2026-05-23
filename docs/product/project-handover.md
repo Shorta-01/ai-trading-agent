@@ -1,6 +1,6 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
-- Producttrackingstatus: Task 130 (session-status boundary + API exposure) is merged in repo-state; volgende stap staat in `docs/product/next-task.md` als Task 131.
+- Producttrackingstatus: Task 130 (session-status boundary + API exposure) is merged in repo-state; volgende stap staat in `docs/product/next-task.md` als Task 131B.
 
 ## Purpose
 
@@ -72,3 +72,10 @@ Aanvullend:
 - Gebruik voortaan `docs/product/codex-task-template.md` en `docs/product/task-queue.md` voor kortere milestone-gerichte opdrachten.
 - Red/green CI discipline volgt `docs/product/codex-red-green-ci-workflow.md`.
 - Geen auto-merge; human review en manual merge blijven verplicht.
+
+## Task 130P workflow rule (nieuw)
+- Task 130P is afgerond als process/documentation-only workflowupdate.
+- Geen handmatige owner-testing voor partial, unfinished slices; handmatige testing pas bij volledige Version 1 release candidate.
+- Partial features moeten via CI + fake adapters/fixtures/contracttests worden afgedekt.
+- Toekomstige taken moeten waar veilig milestone-batches gebruiken binnen strikte safety boundaries.
+- Eerdere kleine Task 131-route is vervangen door Task 131B in `docs/product/next-task.md` (tenzij latere inspectie een nog veiligere batch oplevert).

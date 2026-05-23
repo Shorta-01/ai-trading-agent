@@ -36,3 +36,13 @@ Bundel alleen werk dat:
 3. geen contractdrift over meerdere subsystemen verspreidt.
 
 Als één van deze drie niet geldt, splits de taak.
+
+## Release-candidate-only manual testing
+- Version 1 handmatige user-testing gebeurt op release-candidate niveau, niet na elke partial PR.
+- Partial feature-slices moeten door geautomatiseerde checks worden afgedekt (CI, unit/API/web, contracttests, fake adapters/fixtures).
+- IBKR paper-account handmatige testing volgt pas wanneer de volledige Version 1 workflow release-candidate-ready is.
+
+## Milestone batch planning
+- Plan bij voorkeur grotere milestone-batches waar de safety boundary dit toelaat.
+- Batch alleen veilig samenhangende onderdelen (bijv. één read-only boundary + tests + docs).
+- Houd broker-order flows en andere money-moving scope strikt gescheiden van ongerelateerd werk.
