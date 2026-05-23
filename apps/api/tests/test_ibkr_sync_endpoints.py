@@ -104,14 +104,22 @@ def setup_function() -> None:
     api_settings.storage.database_url = None
 
 
-def _base_settings(**kwargs):
-    return Settings(
-        ibkr_sync_enabled=True,
-        ibkr_sync_host="127.0.0.1",
-        ibkr_sync_port=4002,
-        ibkr_sync_client_id=7,
-        **kwargs,
-    )
+def _base_settings(**kwargs: object) -> Settings:
+    values: dict[str, object] = {
+        "ibkr_sync_enabled": True,
+        "ibkr_sync_host": "127.0.0.1",
+        "ibkr_sync_port": 4002,
+        "ibkr_sync_client_id": 7,
+        "ibkr_sync_account_mode": "paper",
+        "ibkr_sync_readonly": True,
+        "ibkr_enabled": True,
+        "ibkr_status_check_enabled": True,
+        "ibkr_gateway_url": "https://gateway.internal",
+        "ibkr_account_id_hint": "DU123",
+        "ibkr_expected_environment": "paper",
+    }
+    values.update(kwargs)
+    return Settings(**values)
 
 
 def test_fake_adapter_stores_orders_and_executions() -> None:
