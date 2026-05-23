@@ -1,5 +1,7 @@
 ## Next up
-- Task 134B: wire IBKR read-only sync readiness/preflight gate in manual sync execution blocking op basis van Task 133B statusgate, zonder real TWS/Gateway network runtime, zonder account/portfolio sync runtime, zonder market-data runtime, zonder suggesties, zonder action drafts en zonder orders.
+- Task 135B: behoud als volgende taak in `docs/product/next-task.md` (niet geïmplementeerd in deze repair PR).
+
+- [x] Task 134B-R — Completed: repair na merged Task 134B voor API pytest-failures door incomplete test settings op de session-status zijde van de readiness gate; `_base_settings(**kwargs)` in `apps/api/tests/test_ibkr_sync_endpoints.py` configureert nu sync + session-status defaults override-safe. Geen productieruntimewijziging buiten test/config repair; geen echte TWS/Gateway netwerkruntime, echte IBKR account/portfolio sync runtime, market-data runtime, suggesties, action drafts, Decision Packages runtime, orders, broker execution, financiële berekeningen of fake data toegevoegd.
 
 - [x] Task 133B-R — Completed: product-tracking repair voor ontbrekende Task 133B scope-register notitie + checker-hardening voor latest-completed-task aanwezigheid in `current-state`, `task-history`, `version-1-backlog` en `version-1-scope-register`; geen runtimewijzigingen.
 
