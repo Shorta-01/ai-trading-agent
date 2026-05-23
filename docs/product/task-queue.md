@@ -16,10 +16,13 @@
 - **Purpose**: read-only TWS/Gateway status, account-mode verificatie en read-only sync (positions/cash/open orders/executions).
 - **Blocked until**: readiness- en safety-guards bevestigd.
 - **Non-goals**: geen ordersubmissie/wijziging/cancel.
-- **Task size guidance**: verticale slices per read-only endpoint of sync-component.
+- **Task size guidance**: grotere veilige milestone-batches binnen één read-only boundary (geen unsafe bundling).
 - **Bundling notes**:
-  - veilig: één endpoint + tests;
+  - veilig: één read-only boundary/surface + tests + docs;
   - apart houden: broker-order flows.
+- **Testing policy**:
+  - partial IBKR slices worden getest via CI/fake adapters/fixtures/contracttests;
+  - handmatige IBKR paper-account testing wacht tot volledige Version 1 release candidate.
 
 ## Milestone C — Market data + FX runtime foundations
 - **Purpose**: provider adapters, latest snapshots, freshness checks.
@@ -92,3 +95,9 @@
 - **Bundling notes**:
   - veilig: documentatie + verificatiechecks;
   - apart houden: grote functionele toevoegingen.
+
+## Release-candidate-only manual testing policy
+- Owner manual testing gebeurt pas op volledige Version 1 release candidate.
+- Partial/unfinished slices worden niet handmatig getest door de owner.
+- Partial features moeten CI/fake-adapter/fixture/contracttest-dekking hebben.
+- Rode CI niet mergen; fix dezelfde PR.

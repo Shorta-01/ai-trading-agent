@@ -136,3 +136,8 @@ Belangrijk:
 - Deze hulpmiddelen staan geen auto-merge toe.
 - Human review + manual merge blijven verplicht.
 - Product safety grenzen blijven ongewijzigd en mogen niet verzwakken.
+
+## Partial-feature testing must be automated
+- Codex-taken mogen niet steunen op owner handmatige testing voor incomplete slices.
+- Partial features moeten automated getest worden (unit/API/web/build/lint + contracttests waar relevant).
+- Externe integraties gebruiken fake adapters/mocks/fixtures in CI tot release-candidate paper-account testing.

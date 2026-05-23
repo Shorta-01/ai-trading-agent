@@ -80,3 +80,9 @@
 - UI blijft simpel Nederlands.
 - Geen suggestions/action drafts/orders tenzij expliciet in scope.
 - Geen runtime fetch tenzij expliciet in scope.
+
+## Manual testing policy
+- Vraag de gebruiker niet om partial unfinished features handmatig te testen.
+- Partial features moeten automated tests bevatten, inclusief fake-adapter tests waar externe integraties meespelen.
+- Handmatige user-testing gebeurt bij volledige Version 1 release candidate.
+- Als een taak tóch handmatige testing vóór release candidate vereist, moet dat expliciet gemotiveerd en vooraf goedgekeurd zijn.

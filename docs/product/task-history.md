@@ -630,3 +630,9 @@ Bevestiging scope:
 - Task 125O-R afgerond (**completed**): web build failure na Task 125O gerepareerd door `JSX.Element | null` te vervangen door `ReactElement | null` in `ValuationTraceDetails`; geen runtimegedrag gewijzigd, geen UI-logica gewijzigd; CI weer groen na repair.
 - Task 125P afgerond (**completed**): document-first/read-only preflight toegevoegd voor cost-basis en unrealized P/L display rules (`docs/product/portfolio-valuation-cost-basis-pl-preflight-task-125p.md`) met opgeslagen IBKR snapshots en bestaande market/FX readiness gates als toekomstige inputs. Geen berekeningen toegevoegd, geen API-behavior changes, geen web UI-behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen latest-price fetching, geen suggesties/action drafts/orders en geen fake kostbasis, fake P/L, fake FX-rates of fake converted totals.
 - Task 125M afgerond: document-first/read-only UI/API display contract preflight voor valuation conversion totals toegevoegd (`docs/product/valuation-conversion-total-display-contract-preflight-task-125m.md`); geen web UI behavior changes, geen API behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
+
+## Task 130P
+- Status: completed.
+- Resultaat: release-candidate-only manual testing policy vastgelegd; milestone batch planning guidance toegevoegd; kleine Task 131-route vervangen door Task 131B.
+- Type: documentation/process-only.
+- Runtime impact: geen runtimewijzigingen aan API/web/storage/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution; geen financiële berekeningen of fake data toegevoegd.

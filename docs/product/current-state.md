@@ -265,3 +265,6 @@
 - Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
 
 - Task 125I: **completed** — `GET /portfolio/valuation/readiness` consumeert nu alleen opgeslagen FX snapshots via storage repositorycontract (Task 125H), met conservatieve missing/stale/invalid statussemantiek; geen runtime FX/provider fetch, geen market-data runtime, geen unsafe converted totals, geen suggesties/action drafts/orders en geen fake FX-rates/totals toegevoegd.
+
+## Task 130P update
+- Task 130P: **completed** — release-candidate-only manual testing policy en milestone batch planning guidance toegevoegd via product/workflow documentatie. Kleine Task 131-route vervangen door Task 131B als volgende veilige milestone-batch. Geen runtime productgedrag gewijzigd: geen API behavior, geen web behavior, geen storage/migraties, geen sync, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake data toegevoegd.
