@@ -1,3 +1,8 @@
+## Task 125V — apply wording catalog op read-only valuation readiness UI labels/helpteksten
+- Status: afgerond.
+- Toegevoegd: Task 125U wording-catalogus toegepast op bestaande read-only valuation readiness UI-oppervlakken in dashboard/portefeuille/trace-details met eenvoudige Nederlandse labels/helpteksten en duidelijkere unavailable-fallbacks.
+- Grenzen bewaakt: alleen UI copy/helptekst/fallback tekst; geen API-behavior, geen storage/migraties, geen runtime fetch, geen browser-side financiële berekeningen of JavaScript money/P&L parsing, geen suggesties/action drafts/orders/broker execution en geen fake waarden.
+
 ## Task 125U — document-first review read-only valuation readiness UI-teksten/helpteksten
 - Status: afgerond.
 - Toegevoegd: nieuw preflight/reviewdocument `docs/product/portfolio-valuation-readiness-ui-text-review-task-125u.md` met UI-tekstinventaris, wording-principes, standaard wording-catalogus, veilige/onveilige voorbeelden en implementatiechecklist.

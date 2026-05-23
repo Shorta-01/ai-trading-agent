@@ -29,8 +29,8 @@ function renderUnknownValue(value: unknown): string {
   if (Array.isArray(value) && value.every(isPrimitiveValue)) {
     return value.map((item) => stringifyPrimitive(item)).join(", ");
   }
-  if (Array.isArray(value)) return "Detaillijst beschikbaar";
-  if (typeof value === "object") return "Detailobject beschikbaar";
+  if (Array.isArray(value)) return "Niet direct leesbaar: detaillijst beschikbaar.";
+  if (typeof value === "object") return "Niet direct leesbaar: detailobject beschikbaar.";
   return "Niet beschikbaar";
 }
 
@@ -75,12 +75,12 @@ export function ValuationTraceDetails({ readiness }: ValuationTraceDetailsProps)
           {renderBlockerSection("Wisselkoers ongeldig", readiness.invalid_fx_pairs)}
         </ul>
       ) : (
-        <p>Geen blokkerende detailmeldingen gevonden.</p>
+        <p>Geen blokkerende details gevonden in opgeslagen readinessgegevens.</p>
       )}
 
       <h4>Trace van invoer</h4>
       {traceEntries.length === 0 ? (
-        <p>Geen tracegegevens beschikbaar.</p>
+        <p>Geen tracegegevens beschikbaar in opgeslagen readinessgegevens.</p>
       ) : (
         <ul>
           {traceEntries.map(([key, value]) => (
@@ -93,7 +93,7 @@ export function ValuationTraceDetails({ readiness }: ValuationTraceDetailsProps)
 
       {readiness.valuation_input_trace ? (
         <details>
-          <summary>Ruwe auditdata</summary>
+          <summary>Ruwe auditdata (technisch, geen adviessignaal)</summary>
           <pre>{JSON.stringify(readiness.valuation_input_trace, null, 2)}</pre>
         </details>
       ) : null}
