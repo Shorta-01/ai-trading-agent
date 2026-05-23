@@ -1,19 +1,19 @@
 from datetime import UTC, datetime
-from decimal import Decimal
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
+from ibkr_sync_fixtures import (
+    EmptyFixtureAdapter,
+    InvalidFixtureAdapter,
+    ProviderFailureFixtureAdapter,
+    TimeoutFixtureAdapter,
+    ValidFixtureAdapter,
+)
 
 from portfolio_outlook_api import ibkr_sync
 from portfolio_outlook_api.config import Settings
 from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapterResult
-from portfolio_outlook_api.ibkr_sync import (
-    IbkrCash,
-    IbkrExecution,
-    IbkrOpenOrder,
-    IbkrPosition,
-    IbkrReadOnlyAdapter,
-)
+from portfolio_outlook_api.ibkr_sync import IbkrReadOnlyAdapter
 from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
 from portfolio_outlook_api.main import app
 from portfolio_outlook_api.status_routes import settings as api_settings
@@ -44,82 +44,6 @@ class RaisingSyncAdapter(IbkrReadOnlyAdapter):
 
     def sync_executions(self):
         raise AssertionError("sync adapter should not be called")
-
-
-class FakeAdapter(IbkrReadOnlyAdapter):
-    def sync_account_summary(self):
-        return [
-            IbkrCash(
-                account_ref="paper",
-                base_currency="USD",
-                cash=Decimal("1000.25"),
-                available_funds=Decimal("800.10"),
-                buying_power=Decimal("1600.20"),
-            )
-        ]
-
-    def sync_positions(self):
-        return [
-            IbkrPosition(
-                account_ref="paper",
-                symbol="MSFT",
-                security_type="STK",
-                currency="USD",
-                quantity=Decimal("10"),
-                average_cost=Decimal("200.50"),
-            )
-        ]
-
-    def sync_open_orders(self):
-        return [
-            IbkrOpenOrder(
-                account_ref="paper",
-                ibkr_order_id=123,
-                ibkr_perm_id=456,
-                parent_order_id=None,
-                client_id=7,
-                symbol="MSFT",
-                security_type="STK",
-                currency="USD",
-                exchange="SMART",
-                primary_exchange="NASDAQ",
-                action_side="BUY",
-                order_type="LMT",
-                quantity=Decimal("2"),
-                limit_price=Decimal("300"),
-                stop_price=None,
-                tif="DAY",
-                status="Submitted",
-                filled_quantity=Decimal("0"),
-                remaining_quantity=Decimal("2"),
-                average_fill_price=None,
-                last_status_at=datetime.now(UTC),
-                raw_status_reference="raw",
-            )
-        ]
-
-    def sync_executions(self):
-        return [
-            IbkrExecution(
-                account_ref="paper",
-                execution_id="E1",
-                ibkr_order_id=123,
-                ibkr_perm_id=456,
-                symbol="MSFT",
-                security_type="STK",
-                currency="USD",
-                exchange="SMART",
-                primary_exchange="NASDAQ",
-                side="BOT",
-                quantity=Decimal("1"),
-                price=Decimal("299.50"),
-                execution_time=datetime.now(UTC),
-                commission=None,
-                commission_currency=None,
-                realized_pnl=None,
-                raw_execution_reference="raw",
-            )
-        ]
 
 
 def setup_function() -> None:
@@ -153,7 +77,7 @@ def _base_settings(**kwargs):
 def test_fake_adapter_stores_orders_and_executions() -> None:
     body = ibkr_sync.run_sync(
         _base_settings(),
-        adapter=FakeAdapter(),
+        adapter=ValidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["open_orders_count"] == 1
@@ -172,7 +96,7 @@ def test_sync_returns_memory_fallback_when_storage_disabled() -> None:
     settings.storage.enabled = False
     body = ibkr_sync.run_sync(
         settings,
-        adapter=FakeAdapter(),
+        adapter=ValidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["persistence_mode"] == "memory"
@@ -209,7 +133,7 @@ def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
     )
     body = ibkr_sync.run_sync(
         _base_settings(),
-        adapter=FakeAdapter(),
+        adapter=ValidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["persistence_mode"] == "durable"
@@ -369,7 +293,7 @@ def test_blocking_session_states_do_not_call_adapter() -> None:
 def test_explicit_ready_paper_session_allows_fake_adapter() -> None:
     body = ibkr_sync.run_sync(
         _base_settings(ibkr_expected_environment="paper", ibkr_sync_account_mode="paper"),
-        adapter=FakeAdapter(),
+        adapter=ValidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["sync_readiness_status"] == "ready_for_manual_readonly_sync"
@@ -422,20 +346,6 @@ def test_durable_no_run_returns_empty_items(monkeypatch) -> None:
     assert client.get("/ibkr/executions").json()["items"] == []
 
 
-class InvalidPayloadAdapter(FakeAdapter):
-    def sync_positions(self):
-        data = super().sync_positions()
-        data[0] = IbkrPosition(
-            account_ref="paper",
-            symbol="MSFT",
-            security_type="OPT",
-            currency="USD",
-            quantity=Decimal("10"),
-            average_cost=Decimal("200.50"),
-        )
-        return data
-
-
 def test_readiness_blocked_does_not_call_adapter_and_validation_not_attempted() -> None:
     body = ibkr_sync.run_sync(
         _base_settings(ibkr_status_check_enabled=False), adapter=RaisingSyncAdapter()
@@ -447,7 +357,7 @@ def test_readiness_blocked_does_not_call_adapter_and_validation_not_attempted() 
 def test_valid_adapter_sets_payload_validation_passed() -> None:
     body = ibkr_sync.run_sync(
         _base_settings(),
-        adapter=FakeAdapter(),
+        adapter=ValidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["payload_validation_status"] == "passed"
@@ -463,7 +373,7 @@ def test_invalid_payload_blocks_persistence_and_memory(monkeypatch) -> None:
     )
     body = ibkr_sync.run_sync(
         _base_settings(),
-        adapter=InvalidPayloadAdapter(),
+        adapter=InvalidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["status"] == "payload_validation_failed"
@@ -536,3 +446,39 @@ def test_durable_status_contract_includes_payload_validation_and_safety(
     assert response["can_submit_orders"] is False
     assert response["safe_for_orders"] is False
     assert response["blocks_orders"] is True
+
+
+def test_empty_adapter_is_supported_with_conservative_status() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=EmptyFixtureAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["status"] == "partial_data"
+    assert body["payload_validation_status"] == "passed"
+    assert body["positions_count"] == 0
+    assert body["cash_values_count"] == 0
+    assert body["open_orders_count"] == 0
+    assert body["executions_count"] == 0
+
+
+def test_timeout_adapter_failure_is_not_validation_failure() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=TimeoutFixtureAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["status"] == "timeout"
+    assert body["payload_validation_status"] == "not_attempted"
+    assert body["payload_validation_errors"] == []
+
+
+def test_provider_adapter_failure_is_not_validation_failure() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=ProviderFailureFixtureAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["status"] == "provider_error"
+    assert body["payload_validation_status"] == "not_attempted"
+    assert body["payload_validation_errors"] == []

@@ -1,3 +1,8 @@
+## Task 138 handover update
+- Afgerond: contract-hardening voor IBKR read-only sync payloadfamilies (cash/positions/open orders/executions) met deterministische test-only fixtures en expliciete foutclassificatie in tests tussen payloadvalidatie en adapter/runtimefouten.
+- Bevestigd: readiness-blocking pad roept adapter niet aan; payloadvalidatiefouten blokkeren memory/durable persistence; timeout/provider-fouten worden niet als payloadvalidatiefout gelabeld.
+- Niet toegevoegd: echte TWS/Gateway runtime, persistente sessiemanager, storage schema/migraties, market-data runtime, suggesties/action drafts/orders/broker execution.
+
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
 - Producttrackingstatus: Task 137 is afgerond als planning/documentation-only Milestone B sliceslectie na Task 136. Geselecteerde volgende implementatietaak is Task 138: harden IBKR read-only adapter contracts + deterministic fake-adapter sync fixtures voor cash/positions/open orders/executions. Geen runtimecode, geen API/web behaviorwijziging, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties, action drafts, orders of broker execution toegevoegd.

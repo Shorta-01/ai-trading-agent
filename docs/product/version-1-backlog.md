@@ -1,3 +1,4 @@
+- Task 138 is afgerond: adaptercontract-hardening + deterministische test-only fake fixtures + foutclassificatie-tests voor read-only IBKR sync voltooid zonder runtimeverbreding.
 ## Task 136 update
 - Completed: durable IBKR sync status contract alignment with Task 135B payload-validation/safety fields.
 - Durable historische runs zonder payload-validatie-opslag rapporteren conservatief `payload_validation_status: not_available` met Nederlandse helptekst; er worden geen historische validatiefouten verzonnen.

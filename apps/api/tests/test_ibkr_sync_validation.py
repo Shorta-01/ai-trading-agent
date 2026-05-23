@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import UTC, datetime
 from decimal import Decimal
+
+from ibkr_sync_fixtures import (
+    FIXTURE_TIMESTAMP,
+    build_valid_cash,
+    build_valid_executions,
+    build_valid_open_orders,
+    build_valid_positions,
+)
 
 from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
@@ -15,55 +22,10 @@ from portfolio_outlook_api.ibkr_sync_validation import validate_ibkr_sync_payloa
 
 def _valid_payloads():
     return (
-        [IbkrCash("paper", "USD", Decimal("10"), Decimal("8"), Decimal("20"))],
-        [IbkrPosition("paper", "MSFT", "STK", "USD", Decimal("1"), Decimal("10"))],
-        [
-            IbkrOpenOrder(
-                "paper",
-                1,
-                None,
-                None,
-                None,
-                "MSFT",
-                "STK",
-                "USD",
-                None,
-                None,
-                "BUY",
-                "LMT",
-                Decimal("1"),
-                Decimal("10"),
-                None,
-                "DAY",
-                "Submitted",
-                Decimal("0"),
-                Decimal("1"),
-                None,
-                datetime.now(UTC),
-                None,
-            )
-        ],
-        [
-            IbkrExecution(
-                "paper",
-                "E1",
-                1,
-                None,
-                "MSFT",
-                "STK",
-                "USD",
-                None,
-                None,
-                "BOT",
-                Decimal("1"),
-                Decimal("10"),
-                datetime.now(UTC),
-                None,
-                None,
-                None,
-                None,
-            )
-        ],
+        build_valid_cash(),
+        build_valid_positions(),
+        build_valid_open_orders(),
+        build_valid_executions(),
     )
 
 
@@ -112,7 +74,7 @@ def test_invalid_open_order_payload_fails() -> None:
         Decimal("-1"),
         Decimal("-1"),
         None,
-        datetime.now(UTC),
+        FIXTURE_TIMESTAMP,
         None,
     )
     result = validate_ibkr_sync_payloads(cash, positions, orders, execs)
