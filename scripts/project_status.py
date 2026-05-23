@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
+import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TRACKING_FILES = [
@@ -40,10 +41,30 @@ def git_info() -> str:
         return "WARNING: git info niet beschikbaar in deze omgeving"
 
 
+def product_tracking_check_status() -> str:
+    script_path = REPO_ROOT / "scripts/check_product_tracking.py"
+    if not script_path.exists():
+        return "WARNING: checker ontbreekt"
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=REPO_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return "WARNING: checker kon niet worden gestart"
+
+    return "PASS" if result.returncode == 0 else "FAIL"
+
+
 def main() -> None:
     print("Local project workflow status")
     print("=" * 30)
     print(f"Current next task: {read_next_task_title()}")
+    print(f"Product tracking checker: {product_tracking_check_status()}")
     print("\nProduct tracking files:")
     for relative_path in TRACKING_FILES:
         exists = (REPO_ROOT / relative_path).exists()

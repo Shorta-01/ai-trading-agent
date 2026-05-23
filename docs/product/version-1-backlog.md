@@ -27,6 +27,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 ## A) Completed foundations
 
 - [x] Task 128 — Completed: workflow accelerationlaag toegevoegd (nieuwe procesdocs, task template, milestone queue, red/green CI workflow en optionele lokale helper scripts); Task 125W micro-audit pad gedeferreerd/vervangen; geen runtime/API/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
+- [x] Task 128-R — Completed: product-tracking drift repair op `current-state.md` marker + kleine checker-hardening voor stale `Huidige toestand` detectie; Task 129 blijft volgende taak; geen runtime/API/web/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
 
 - [x] Task 125G — Completed: document-first/read-only FX snapshot storage contract preflight toegevoegd (`docs/product/fx-snapshot-storage-contract-preflight-task-125g.md`); geen migraties of runtime implementatie toegevoegd.
 

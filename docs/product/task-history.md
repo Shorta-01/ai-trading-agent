@@ -1,3 +1,11 @@
+## Task 128-R — Repair workflow-acceleration product tracking drift
+
+- Status: afgerond (documentation/process-helper repair-only).
+- Gefixt: stale marker in `docs/product/current-state.md` bijgewerkt naar `Huidige toestand: **na Task 128**`.
+- Verharding: `scripts/check_product_tracking.py` detecteert nu stale `Huidige toestand` markers wanneer de marker achterloopt op de eerste completed task in `current-state.md`.
+- Bevestigd: `docs/product/next-task.md` blijft op Task 129; Task 129 is niet gestart.
+- Niet gewijzigd: runtime productgedrag, API, web runtime, storage, migraties, runtime fetch, berekeningen, suggesties, action drafts, orders, broker execution of fake waarden.
+
 ## Task 128 — Codex workflow acceleration + Version 1 milestone queue
 
 - Status: afgerond (process/documentation-only).
