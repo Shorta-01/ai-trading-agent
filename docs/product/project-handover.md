@@ -31,7 +31,7 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 ## Kerncontext
 
-- Producttrackingstatus: Task 125R (PR #301) en Task 125R-R (PR #302) zijn merged. Producttrackingdocs moeten nu de post-repair staat reflecteren met Task 125T afgerond en Task 125U als volgende conservatieve documentatie/preflight stap (volgens `next-task.md`).
+- Producttrackingstatus: Task 125R (PR #301) en Task 125R-R (PR #302) zijn merged. Producttrackingdocs moeten nu de post-repair staat reflecteren met Task 125U afgerond en Task 125V als volgende smalle implementatiestap voor label/helptekst-consistentie (volgens `next-task.md`).
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
