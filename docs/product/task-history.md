@@ -1,3 +1,9 @@
+## Task 132B
+- Completed: document-first selectie en afbakening van de volgende veilige Milestone B IBKR read-only sync foundation batch na Task 131B/131B-R.
+- Toegevoegd: `docs/product/ibkr-read-only-sync-foundation-batch-selection-task-132b.md` met foundation-inventaris, gap-analyse, kandidaatvergelijking en batchselectie.
+- Geselecteerd: Task 133B (IBKR read-only sync readiness/preflight gate op basis van Task 131B account/session status outputs).
+- Niet toegevoegd: runtime/API/storage/migratie/netwerk/sync/market-data/suggesties/action drafts/orders/broker execution/financiële berekeningen/fake data.
+
 ## Task 131B-R
 - Completed: repair na merged Task 131B voor API pytest-regressie waarbij `account_mode_status` `unknown` teruggaf i.p.v. `mismatch` in wrong-account-mode pad zonder expliciete `account_mode`.
 - Hersteld: statusnormalisatie bewaart expliciete adapter-`mismatch`, forceert `mismatch` bij `connected_wrong_account_mode`, en behoudt veilige blokkades/booleans.

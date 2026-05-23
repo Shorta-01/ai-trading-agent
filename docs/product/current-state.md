@@ -1,6 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 131B-R**
+Huidige toestand: **na Task 132B**
+
+
+## Task 132B update
+- Task 132B: **completed** — document-first selectie van de volgende veilige Milestone B IBKR read-only sync foundation batch vastgelegd in `docs/product/ibkr-read-only-sync-foundation-batch-selection-task-132b.md`. Geselecteerde volgende implementatietaak: **Task 133B** (IBKR read-only sync readiness/preflight gate op basis van Task 131B account/session status outputs). Deze taak bleef planning-only: geen runtime toegevoegd (geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution, geen financiële berekeningen en geen fake data).
 
 ## Task 131B-R update
 - Task 131B-R: **completed** — repair na merged Task 131B voor wrong-account-mode regressie in API pytest: `account_mode_status` gaf `unknown` terug i.p.v. `mismatch` bij expliciete adapter-mismatch zonder `account_mode`. Normalisatielogica hersteld zodat expliciete/inferred mismatch behouden blijft en niet wordt overschreven. Geen runtime scope toegevoegd: geen echte IBKR-netwerkadapter, geen auto-connect, geen account/portfolio sync, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders of broker execution, geen financiële berekeningen en geen fake data toegevoegd.
