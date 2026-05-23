@@ -323,3 +323,4 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 - Task 130Q — **completed (documentation-only)**: owner workshop product decision locks vastgelegd + tracking marker drift hersteld; geen runtimewijzigingen.
 - Task 130Q-R — **completed (documentation/process-helper repair-only)**: current-state marker drift na Task 130Q hersteld en `scripts/check_product_tracking.py` verhard voor suffix-task markers (`130`/`130P`/`130Q`/`130Q-R`); geen runtimewijzigingen.
+\n## Task 133B\n- Completed: IBKR read-only sync readiness/preflight gate met settings, read-only mode, storage readiness en Task 131B account/session status outputs; geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution, geen financiële berekeningen en geen fake data.\n

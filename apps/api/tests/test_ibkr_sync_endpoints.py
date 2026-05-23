@@ -19,7 +19,11 @@ client = TestClient(app)
 
 
 class FakeAdapter(IbkrReadOnlyAdapter):
+    def __init__(self) -> None:
+        self.sync_calls = 0
+
     def sync_account_summary(self):
+        self.sync_calls += 1
         return [
             IbkrCash(
                 account_ref="paper",
@@ -174,6 +178,42 @@ def test_status_and_read_endpoints_use_memory_when_storage_disabled() -> None:
     assert response["suggestions_allowed"] is False
     assert client.get("/ibkr/orders/open").json()["actions_allowed"] is False
     assert client.get("/ibkr/executions").json()["actions_allowed"] is False
+
+
+def test_sync_status_blocked_when_sync_disabled() -> None:
+    payload = ibkr_sync.read_status(Settings())
+    assert payload["sync_readiness_status"] == "blocked"
+    assert payload["sync_readiness_status_nl"] == "Geblokkeerd"
+    assert payload["manual_sync_allowed"] is False
+    assert payload["actions_allowed"] is False
+    assert payload["order_submission_allowed"] is False
+    assert payload["suggestions_allowed"] is False
+
+
+def test_run_sync_blocked_when_readonly_disabled() -> None:
+    adapter = FakeAdapter()
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_sync_readonly=False),
+        adapter=adapter,
+    )
+    assert body["sync_readiness_status"] == "blocked"
+    assert body["manual_sync_allowed"] is False
+    assert adapter.sync_calls == 0
+
+
+def test_run_sync_needs_control_when_status_check_disabled() -> None:
+    adapter = FakeAdapter()
+    body = ibkr_sync.run_sync(
+        _base_settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=False,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        adapter=adapter,
+    )
+    assert body["sync_readiness_status"] == "needs_control"
+    assert adapter.sync_calls == 0
 
 
 def test_storage_enabled_but_not_configured_uses_memory_fallback() -> None:

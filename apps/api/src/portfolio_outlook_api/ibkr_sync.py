@@ -11,6 +11,7 @@ from ai_trading_agent_storage import (
 )
 
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
     IbkrExecution,
@@ -91,6 +92,13 @@ def _resolve_repo(
         return None, None, "Storage niet beschikbaar; alleen geheugenopslag actief."
 
 
+def _build_readiness(settings: Settings) -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
+
+    session = build_ibkr_status_placeholder(settings)
+    return build_ibkr_sync_readiness(settings, session)
+
+
 def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> dict[str, object]:
     now = datetime.now(UTC)
     run_id = f"ibkr-sync-{uuid4()}"
@@ -104,14 +112,13 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
     open_orders: list[IbkrOpenOrder] = []
     executions: list[IbkrExecution] = []
 
-    if not settings.ibkr_sync_enabled:
-        result_status = "disabled"
-    elif settings.ibkr_sync_account_mode.lower() != "paper":
-        result_status = "wrong_account_mode"
-    elif not settings.ibkr_sync_readonly:
-        result_status = "provider_error"
-    elif not _configured(settings):
-        result_status = "not_configured"
+    readiness = _build_readiness(settings)
+    if not readiness["manual_sync_allowed"]:
+        result_status = str(readiness["sync_readiness_status"])
+        account_summary_status = "blocked"
+        positions_status = "blocked"
+        open_orders_status = "blocked"
+        executions_status = "blocked"
     else:
         active_adapter = adapter or NotConfiguredIbkrAdapter()
         try:
@@ -270,7 +277,7 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
                 connection_ctx.__exit__(None, None, None)
     elif storage_help_nl:
         persistence_help_nl = storage_help_nl
-    return read_status(settings) | {
+    return read_status(settings) | readiness | {
         "sync_run_id": run_id,
         "persistence_mode": persistence_mode,
         "persistence_status_nl": (
@@ -287,6 +294,7 @@ def _int_value(value: object) -> int:
 
 
 def read_status(settings: Settings) -> dict[str, object]:
+    readiness = _build_readiness(settings)
     latest = STORE.runs[-1] if STORE.runs else None
     status = "disabled" if not settings.ibkr_sync_enabled else "configured_not_connected"
     status_nl = "IBKR-sync niet geconfigureerd"
@@ -322,7 +330,22 @@ def read_status(settings: Settings) -> dict[str, object]:
         "status_nl": status_nl,
         "next_step_nl": next_step_nl,
         "help_nl": "Geen brokerdata opgeslagen zonder echte IBKR-respons",
-        "sync_allowed": True,
+        "sync_allowed": False,
+        "safe_for_sync": False,
+        "manual_sync_allowed": readiness["manual_sync_allowed"],
+        "manual_sync_blocked": readiness["manual_sync_blocked"],
+        "sync_readiness_status": readiness["sync_readiness_status"],
+        "sync_readiness_status_nl": readiness["sync_readiness_status_nl"],
+        "sync_readiness_reason": readiness["sync_readiness_reason"],
+        "sync_readiness_help_nl": readiness["sync_readiness_help_nl"],
+        "storage_ready_for_sync": readiness["storage_ready_for_sync"],
+        "session_ready_for_sync": readiness["session_ready_for_sync"],
+        "settings_ready_for_sync": readiness["settings_ready_for_sync"],
+        "readonly_required": readiness["readonly_required"],
+        "readonly_configured": readiness["readonly_configured"],
+        "can_submit_orders": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
         "actions_allowed": False,
         "order_submission_allowed": False,
         "order_modification_allowed": False,

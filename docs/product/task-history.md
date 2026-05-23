@@ -673,3 +673,4 @@ Bevestiging scope:
 - Resultaat: release-candidate-only manual testing policy vastgelegd; milestone batch planning guidance toegevoegd; kleine Task 131-route vervangen door Task 131B.
 - Type: documentation/process-only.
 - Runtime impact: geen runtimewijzigingen aan API/web/storage/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution; geen financiële berekeningen of fake data toegevoegd.
+\n## Task 133B\n- Completed: IBKR read-only sync readiness/preflight gate met settings, read-only mode, storage readiness en Task 131B account/session status outputs; geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution, geen financiële berekeningen en geen fake data.\n

@@ -84,4 +84,4 @@ Aanvullend:
 ## Task 130Q handover update
 - Owner workshop productrichting is nu vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` (mission-control dashboard, daily operating model, Action Center, Research Desk, structured order drafts, evidence-gated engine).
 - Tracking marker drift in `docs/product/current-state.md` is met Task 130Q-R verder gecorrigeerd naar **na Task 130Q-R**.
-- Task 131B is afgerond en Task 131B-R heeft de merged-red API statusregressie gerepareerd; volgende implementatierichting is Task 133B (tenzij latere inspectie een veiligere batch oplevert).
+- Task 131B is afgerond en Task 131B-R heeft de merged-red API statusregressie gerepareerd; volgende implementatierichting is Task 134B (tenzij latere inspectie een veiligere batch oplevert).

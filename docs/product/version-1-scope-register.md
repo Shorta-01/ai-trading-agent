@@ -334,3 +334,4 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 ## Task 130Q scope note
 - Task 130Q is expliciet documentation/product-decision-lock only.
 - Geen runtime/API/storage/migration/calculation/suggestion/action-draft/order/broker execution wijzigingen.
+\n## Task 133B\n- Completed: IBKR read-only sync readiness/preflight gate met settings, read-only mode, storage readiness en Task 131B account/session status outputs; geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution, geen financiële berekeningen en geen fake data.\n
