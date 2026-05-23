@@ -417,3 +417,51 @@ def test_durable_no_run_returns_empty_items(monkeypatch) -> None:
     assert client.get("/ibkr/account/cash").json()["items"] == []
     assert client.get("/ibkr/orders/open").json()["items"] == []
     assert client.get("/ibkr/executions").json()["items"] == []
+
+
+class InvalidPayloadAdapter(FakeAdapter):
+    def sync_positions(self):
+        data = super().sync_positions()
+        data[0] = IbkrPosition(
+            account_ref="paper",
+            symbol="MSFT",
+            security_type="OPT",
+            currency="USD",
+            quantity=Decimal("10"),
+            average_cost=Decimal("200.50"),
+        )
+        return data
+
+
+def test_readiness_blocked_does_not_call_adapter_and_validation_not_attempted() -> None:
+    body = ibkr_sync.run_sync(_base_settings(ibkr_status_check_enabled=False), adapter=RaisingSyncAdapter())
+    assert body["sync_run_id"] is None
+    assert body["payload_validation_status"] == "not_attempted"
+
+
+def test_valid_adapter_sets_payload_validation_passed() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(), adapter=FakeAdapter(), session_status_adapter=FakeReadyPaperSessionStatusAdapter()
+    )
+    assert body["payload_validation_status"] == "passed"
+    assert body["payload_validation_error_count"] == 0
+
+
+def test_invalid_payload_blocks_persistence_and_memory(monkeypatch) -> None:
+    called = {"persist": 0}
+    monkeypatch.setattr(ibkr_sync, "persist_ibkr_sync_payload", lambda *_args, **_kwargs: called.__setitem__("persist", called["persist"] + 1))
+    body = ibkr_sync.run_sync(
+        _base_settings(), adapter=InvalidPayloadAdapter(), session_status_adapter=FakeReadyPaperSessionStatusAdapter()
+    )
+    assert body["status"] == "payload_validation_failed"
+    assert body["persistence_mode"] == "none"
+    assert ibkr_sync.STORE.runs == []
+    assert ibkr_sync.STORE.positions == []
+    assert called["persist"] == 0
+    assert body["actions_allowed"] is False
+    assert body["suggestions_allowed"] is False
+
+
+def test_status_before_any_run_has_not_attempted_validation() -> None:
+    body = ibkr_sync.read_status(_base_settings())
+    assert body["payload_validation_status"] == "not_attempted"

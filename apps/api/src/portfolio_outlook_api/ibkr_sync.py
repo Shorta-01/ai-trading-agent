@@ -30,6 +30,7 @@ from portfolio_outlook_api.ibkr_sync_persistence import (
     persist_ibkr_sync_payload,
 )
 from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
+from portfolio_outlook_api.ibkr_sync_validation import validate_ibkr_sync_payloads
 
 
 class NotConfiguredIbkrAdapter(IbkrReadOnlyAdapter):
@@ -137,6 +138,11 @@ def run_sync(
             "executions_count": 0,
             "started_at": None,
             "completed_at": None,
+            "payload_validation_status": "not_attempted",
+            "payload_validation_status_nl": "Niet uitgevoerd",
+            "payload_validation_error_count": 0,
+            "payload_validation_errors": [],
+            "payload_validation_help_nl": "Validatie niet uitgevoerd omdat sync geblokkeerd is.",
         }
 
     now = datetime.now(UTC)
@@ -173,6 +179,34 @@ def run_sync(
             result_status = "partial_data"
             if cash_items and positions:
                 result_status = "paper_account_confirmed"
+
+            validation_result = validate_ibkr_sync_payloads(
+                cash_items, positions, open_orders, executions
+            )
+            if not validation_result.passed:
+                return read_status(settings, readiness=readiness) | {
+                    "status": "payload_validation_failed",
+                    "status_nl": "Payloadvalidatie mislukt",
+                    "sync_run_id": None,
+                    "persistence_mode": "none",
+                    "persistence_status_nl": "Geen sync uitgevoerd",
+                    "persistence_help_nl": "Adapterpayload ongeldig; niets opgeslagen.",
+                    "account_summary_status": "account_summary_received" if cash_items else "partial_data",
+                    "positions_status": "positions_received" if positions else "partial_data",
+                    "open_orders_status": "open_orders_received" if open_orders else "no_open_orders",
+                    "executions_status": "executions_received" if executions else "no_executions",
+                    "positions_count": 0,
+                    "cash_values_count": 0,
+                    "open_orders_count": 0,
+                    "executions_count": 0,
+                    "started_at": None,
+                    "completed_at": None,
+                    "payload_validation_status": "failed",
+                    "payload_validation_status_nl": "Mislukt",
+                    "payload_validation_error_count": len(validation_result.errors),
+                    "payload_validation_errors": [error.__dict__ for error in validation_result.errors],
+                    "payload_validation_help_nl": "Controleer adapterpayload; opslag is veilig geblokkeerd.",
+                }
         except TimeoutError:
             result_status = "timeout"
             account_summary_status = "timeout"
@@ -326,6 +360,11 @@ def run_sync(
             else "Geheugenfallback actief"
         ),
         "persistence_help_nl": persistence_help_nl,
+        "payload_validation_status": "passed",
+        "payload_validation_status_nl": "Geslaagd",
+        "payload_validation_error_count": 0,
+        "payload_validation_errors": [],
+        "payload_validation_help_nl": "Payloadvalidatie geslaagd.",
     }
 
 
@@ -375,6 +414,11 @@ def read_status(
         "status_nl": status_nl,
         "next_step_nl": next_step_nl,
         "help_nl": "Geen brokerdata opgeslagen zonder echte IBKR-respons",
+        "payload_validation_status": "not_attempted",
+        "payload_validation_status_nl": "Niet uitgevoerd",
+        "payload_validation_error_count": 0,
+        "payload_validation_errors": [],
+        "payload_validation_help_nl": "Validatie wordt uitgevoerd tijdens een toegelaten handmatige sync.",
         "sync_allowed": bool(resolved_readiness.get("manual_sync_allowed", False)),
         "actions_allowed": False,
         "order_submission_allowed": False,
