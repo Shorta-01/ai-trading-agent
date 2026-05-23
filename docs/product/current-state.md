@@ -1,6 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 130** (Task 130Q tracking update verwerkt).
+Huidige toestand: **na Task 130Q-R**
+
+
+## Task 130Q-R update
+- Task 130Q-R: **completed** — product-tracking marker drift gerepareerd door `Huidige toestand` te corrigeren naar `na Task 130Q-R` en stdlib-only checker `scripts/check_product_tracking.py` te verharden met suffix-task volgorde (`130` < `130P` < `130Q` < `130Q-R` < `131B`). Documentation/process-helper repair-only: geen runtime, API, web, storage, migraties, sync, market-data, FX, suggesties, action drafts, Decision Packages, orders, broker execution, financiële berekeningen of fake data toegevoegd.
 
 ## Task 130Q update
 - Task 130Q: **completed** — owner workshop Version 1 productbeslissingen vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` en gekoppelde productdocs bijgewerkt (mission-control dashboard, daily operating model, Action Center/Orderimpact/final confirmation flow, Research Desk evidenceflow, cold-start `Nieuwe kansen`). Documentation/planning-only: geen runtime, API, storage, migraties, berekeningen, suggestie-runtime, action-draft runtime, orders, broker execution of fake data toegevoegd.

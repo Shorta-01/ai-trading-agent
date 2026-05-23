@@ -316,3 +316,4 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Kleine Task 131 is vervangen door Task 131B als volgende veilige Milestone B batch.
 
 - Task 130Q — **completed (documentation-only)**: owner workshop product decision locks vastgelegd + tracking marker drift hersteld; geen runtimewijzigingen.
+- Task 130Q-R — **completed (documentation/process-helper repair-only)**: current-state marker drift na Task 130Q hersteld en `scripts/check_product_tracking.py` verhard voor suffix-task markers (`130`/`130P`/`130Q`/`130Q-R`); geen runtimewijzigingen.
