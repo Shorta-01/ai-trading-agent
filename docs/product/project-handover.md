@@ -1,3 +1,9 @@
+## Task 138-R handover update
+- Afgerond: merged-red repair na Task 138 voor API pytest failures in adapter timeout/provider-foutpaden.
+- Bevestigd: timeout/provider adapterfouten rapporteren `payload_validation_status=not_attempted` (niet `passed`) met Nederlandse helptekst dat validatie niet uitgevoerd werd.
+- Bevestigd: adapter/runtimefouten blijven gescheiden van payloadvalidatiefouten; geen fake validatie-errors toegevoegd.
+- Niet toegevoegd: echte TWS/Gateway runtime, persistente sessiemanager, storage schema/migraties, market-data runtime, suggesties/action drafts/orders/broker execution.
+
 ## Task 138 handover update
 - Afgerond: contract-hardening voor IBKR read-only sync payloadfamilies (cash/positions/open orders/executions) met deterministische test-only fixtures en expliciete foutclassificatie in tests tussen payloadvalidatie en adapter/runtimefouten.
 - Bevestigd: readiness-blocking pad roept adapter niet aan; payloadvalidatiefouten blokkeren memory/durable persistence; timeout/provider-fouten worden niet als payloadvalidatiefout gelabeld.

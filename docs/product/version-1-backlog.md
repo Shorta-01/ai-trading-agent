@@ -343,3 +343,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 - Task 130Q — **completed (documentation-only)**: owner workshop product decision locks vastgelegd + tracking marker drift hersteld; geen runtimewijzigingen.
 - Task 130Q-R — **completed (documentation/process-helper repair-only)**: current-state marker drift na Task 130Q hersteld en `scripts/check_product_tracking.py` verhard voor suffix-task markers (`130`/`130P`/`130Q`/`130Q-R`); geen runtimewijzigingen.
+
+- [x] Task 138-R — Repair-only: API pytest regressie na Task 138 hersteld; timeout/provider adapterfouten rapporteren nu `payload_validation_status=not_attempted` i.p.v. `passed`; adapter/runtimefouten blijven gescheiden van payloadvalidatiefouten; geen runtimeverbreding, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties/action drafts/orders.

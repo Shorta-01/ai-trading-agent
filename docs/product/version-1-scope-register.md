@@ -373,3 +373,5 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 ## Task 130Q scope note
 - Task 130Q is expliciet documentation/product-decision-lock only.
 - Geen runtime/API/storage/migration/calculation/suggestion/action-draft/order/broker execution wijzigingen.
+
+- [x] Task 138-R — Repair-only: API pytest regressie na Task 138 hersteld; timeout/provider adapterfouten rapporteren nu `payload_validation_status=not_attempted` i.p.v. `passed`; adapter/runtimefouten blijven gescheiden van payloadvalidatiefouten; geen runtimeverbreding, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties/action drafts/orders.
