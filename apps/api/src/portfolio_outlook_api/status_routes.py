@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from ai_trading_agent_storage import (
+    IbkrSyncRunRecord,
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataSnapshotRepository,
     SqlAlchemyResearchSourceArchiveRepository,
@@ -484,19 +485,26 @@ def read_portfolio_reconciliation_readiness() -> PortfolioReconciliationReadines
     durable = read_latest_ibkr_sync_run(settings.storage)
     latest = durable.latest_run
     diagnostics_available = latest is not None
-    payload_status = "not_available"
-    payload_status_nl = "Niet beschikbaar"
-    payload_help = "Validatiestatus ontbreekt in sync-historie."
-    if latest is not None:
-        payload_status = latest.payload_validation_status or "not_available"
-        payload_status_nl = latest.payload_validation_status_nl or "Niet beschikbaar"
-        payload_help = latest.payload_validation_help_nl or "Payloadvalidatie in sync-diagnostiek."
+    payload_status, payload_status_nl, payload_help = (
+        _payload_validation_summary_from_sync_record(latest)
+    )
     return build_portfolio_reconciliation_readiness(
         valuation=valuation,
         payload_validation_status=payload_status,
         payload_validation_status_nl=payload_status_nl,
         payload_validation_help_nl=payload_help,
         diagnostics_available=diagnostics_available,
+    )
+
+
+def _payload_validation_summary_from_sync_record(
+    latest_run: IbkrSyncRunRecord | None,
+) -> tuple[str, str, str]:
+    _ = latest_run
+    return (
+        "not_available",
+        "Niet beschikbaar",
+        "Deze syncrun bevat geen opgeslagen payloadvalidatie-details.",
     )
 
 

@@ -1,3 +1,8 @@
+## Task 140-R update
+- Task 140-R: **completed** — repair-only fix na merged-red Task 140 voor API CI mypy-fout in `status_routes.py`: reconciliation readiness leest niet langer niet-bestaande payload-validatie-attributen van `IbkrSyncRunRecord`. Duurzame syncruns gebruiken nu conservatieve fallback (`not_available` / `Niet beschikbaar` / `Deze syncrun bevat geen opgeslagen payloadvalidatie-details.`) wanneer validatiemetadata niet is opgeslagen. Geen storage schemawijzigingen, geen migraties, geen echte TWS/Gateway runtime, geen persistente session manager, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen orders en geen broker execution toegevoegd.
+
+Huidige toestand: **na Task 140-R**
+
 # Current State
 
 
