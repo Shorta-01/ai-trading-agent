@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import ibkr_sync
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapterResult
 from portfolio_outlook_api.ibkr_sync import (
     IbkrCash,
     IbkrExecution,
@@ -18,6 +19,32 @@ from portfolio_outlook_api.status_routes import settings as api_settings
 
 client = TestClient(app)
 
+
+
+
+class FakeReadyPaperSessionStatusAdapter:
+    def check_session_status(self, runtime_settings: Settings) -> IbkrSessionStatusAdapterResult:
+        return IbkrSessionStatusAdapterResult(
+            connection_status="connected_readonly",
+            account_mode_status="match",
+            account_mode="paper",
+            session_check_source="test_fake_ready_paper_session",
+            session_status_reason="test_ready",
+        )
+
+
+class RaisingSyncAdapter(IbkrReadOnlyAdapter):
+    def sync_account_summary(self):
+        raise AssertionError("sync adapter should not be called")
+
+    def sync_positions(self):
+        raise AssertionError("sync adapter should not be called")
+
+    def sync_open_orders(self):
+        raise AssertionError("sync adapter should not be called")
+
+    def sync_executions(self):
+        raise AssertionError("sync adapter should not be called")
 
 class FakeAdapter(IbkrReadOnlyAdapter):
     def sync_account_summary(self):
@@ -106,17 +133,22 @@ def setup_function() -> None:
 
 
 def _base_settings(**kwargs):
-    return Settings(
-        ibkr_sync_enabled=True,
-        ibkr_sync_host="127.0.0.1",
-        ibkr_sync_port=4002,
-        ibkr_sync_client_id=7,
-        **kwargs,
-    )
+    values = {
+        "ibkr_sync_enabled": True,
+        "ibkr_sync_host": "127.0.0.1",
+        "ibkr_sync_port": 4002,
+        "ibkr_sync_client_id": 7,
+    }
+    values.update(kwargs)
+    return Settings(**values)
 
 
 def test_fake_adapter_stores_orders_and_executions() -> None:
-    body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=FakeAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
     assert body["open_orders_count"] == 1
     assert body["executions_count"] == 1
     assert ibkr_sync.STORE.open_orders[0]["quantity"] == "2"
@@ -131,7 +163,11 @@ def test_fake_adapter_stores_orders_and_executions() -> None:
 def test_sync_returns_memory_fallback_when_storage_disabled() -> None:
     settings = _base_settings()
     settings.storage.enabled = False
-    body = ibkr_sync.run_sync(settings, adapter=FakeAdapter())
+    body = ibkr_sync.run_sync(
+        settings,
+        adapter=FakeAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
     assert body["persistence_mode"] == "memory"
     assert body["persistence_status_nl"] == "Geheugenfallback actief"
 
@@ -164,7 +200,11 @@ def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
         "_resolve_repo",
         lambda settings, require_writable: (FakeRepo(), FakeCtx(), ""),
     )
-    body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=FakeAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
     assert body["persistence_mode"] == "durable"
     assert calls == {"runs": 1, "cash": 1, "positions": 1, "orders": 1, "executions": 1}
 
@@ -234,6 +274,103 @@ def test_sync_status_ready_for_explicit_readonly_paper_status() -> None:
     assert response["order_modification_allowed"] is False
     assert response["order_cancellation_allowed"] is False
     assert response["suggestions_allowed"] is False
+
+
+def test_sync_run_blocked_when_sync_disabled() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_sync_enabled=False),
+        adapter=RaisingSyncAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["status"] == "sync_readiness_blocked"
+    assert body["sync_readiness_status"] == "blocked"
+    assert body["manual_sync_allowed"] is False
+    assert body["sync_allowed"] is False
+    assert body["sync_run_id"] is None
+    assert body["persistence_mode"] == "none"
+    assert len(ibkr_sync.STORE.runs) == 0
+    assert body["actions_allowed"] is False
+    assert body["suggestions_allowed"] is False
+
+
+def test_sync_run_needs_control_blocks_manual_execution() -> None:
+    body = ibkr_sync.run_sync(_base_settings(), adapter=RaisingSyncAdapter())
+    assert body["status"] == "sync_readiness_needs_control"
+    assert body["sync_readiness_status"] == "needs_control"
+    assert body["manual_sync_allowed"] is False
+    assert body["sync_run_id"] is None
+    assert body["positions_count"] == 0
+    assert len(ibkr_sync.STORE.runs) == 0
+
+
+def test_sync_run_blocked_for_wrong_account_mode() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="paper"),
+        adapter=RaisingSyncAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["sync_readiness_status"] == "blocked"
+    assert body["sync_readiness_reason"] in {"account_mode_mismatch", "version1_paper_only"}
+    assert body["sync_run_id"] is None
+
+
+def test_live_mode_blocked_even_with_ready_session_adapter() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="live"),
+        adapter=RaisingSyncAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["sync_readiness_status"] == "blocked"
+    assert body["sync_readiness_reason"] == "version1_paper_only"
+    assert body["sync_run_id"] is None
+
+
+def test_blocking_session_states_do_not_call_adapter() -> None:
+    class SingleStateAdapter:
+        def __init__(self, connection_status: str) -> None:
+            self._connection_status = connection_status
+
+        def check_session_status(
+            self, runtime_settings: Settings
+        ) -> IbkrSessionStatusAdapterResult:
+            return IbkrSessionStatusAdapterResult(
+                connection_status=self._connection_status,
+                account_mode_status="unknown",
+                account_mode="paper",
+                session_check_source="test_state",
+                session_status_reason="test_state",
+            )
+
+    for connection_status in [
+        "connection_failed",
+        "authentication_required",
+        "pacing_limited",
+        "unknown",
+    ]:
+        body = ibkr_sync.run_sync(
+            _base_settings(),
+            adapter=RaisingSyncAdapter(),
+            session_status_adapter=SingleStateAdapter(connection_status),
+        )
+        assert body["sync_readiness_status"] == "blocked"
+        assert body["sync_run_id"] is None
+
+
+def test_explicit_ready_paper_session_allows_fake_adapter() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_expected_environment="paper", ibkr_sync_account_mode="paper"),
+        adapter=FakeAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    assert body["sync_readiness_status"] == "ready_for_manual_readonly_sync"
+    assert body["sync_run_id"] is not None
+    assert body["positions_count"] == 1
+    assert body["cash_values_count"] == 1
+    assert body["open_orders_count"] == 1
+    assert body["executions_count"] == 1
+    assert body["actions_allowed"] is False
+    assert body["order_submission_allowed"] is False
+    assert body["suggestions_allowed"] is False
 
 
 def test_storage_connection_error_falls_back_to_memory(monkeypatch) -> None:

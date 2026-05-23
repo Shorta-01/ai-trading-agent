@@ -1,3 +1,4 @@
+- Task 134B: completed — readiness/preflight gate wired into manual sync execution blocking; blocked/needs-control prevents adapter calls and persistence; explicit ready paper test seam keeps injected fake adapter paths test-only; no real network/sync/market-data/suggestions/actions/Decision Packages/orders/broker execution/financial calculations/fake data added.
 ## Task 133B-R
 - Completed: product-tracking drift repair voor ontbrekende Task 133B scope-register trackingnotitie.
 - Updated: `docs/product/version-1-scope-register.md` aangevuld en producttrackingdocs geharmoniseerd zonder runtimewijzigingen.

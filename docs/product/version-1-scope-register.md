@@ -1,3 +1,4 @@
+- Task 134B: completed — readiness/preflight gate wired into manual sync execution blocking; blocked/needs-control prevents adapter calls and persistence; explicit ready paper test seam keeps injected fake adapter paths test-only; no real network/sync/market-data/suggestions/actions/Decision Packages/orders/broker execution/financial calculations/fake data added.
 ## Task 133B-R scope-resultaat
 - Task 133B completed: vastgelegd met scope-resultaatnotitie in dit register om trackingdrift te herstellen.
 - Binnen scope (Task 133B): minimale IBKR read-only sync readiness/preflight status gate; pure readiness builder; readiness exposure op `GET /ibkr/sync/status`; Nederlandse statussen `Geblokkeerd`, `Controle nodig`, `Klaar voor handmatige read-only sync`; conservatieve safety booleans.

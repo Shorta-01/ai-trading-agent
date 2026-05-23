@@ -11,6 +11,7 @@ from ai_trading_agent_storage import (
 )
 
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapter
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
@@ -93,7 +94,51 @@ def _resolve_repo(
         return None, None, "Storage niet beschikbaar; alleen geheugenopslag actief."
 
 
-def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> dict[str, object]:
+def _build_readiness(
+    settings: Settings,
+    session_status_adapter: IbkrSessionStatusAdapter | None = None,
+) -> dict[str, object]:
+    session_status = build_ibkr_status_placeholder(
+        settings, session_status_adapter=session_status_adapter
+    )
+    return build_ibkr_sync_readiness(settings, session_status)
+
+
+def run_sync(
+    settings: Settings,
+    adapter: IbkrReadOnlyAdapter | None = None,
+    *,
+    session_status_adapter: IbkrSessionStatusAdapter | None = None,
+) -> dict[str, object]:
+    readiness = _build_readiness(settings, session_status_adapter=session_status_adapter)
+    readiness_status = str(readiness["sync_readiness_status"])
+    if readiness_status != "ready_for_manual_readonly_sync":
+        blocked_status = "sync_readiness_blocked"
+        blocked_status_nl = "IBKR-sync geblokkeerd"
+        if readiness_status == "needs_control":
+            blocked_status = "sync_readiness_needs_control"
+            blocked_status_nl = "Controle nodig"
+        return read_status(settings) | {
+            "status": blocked_status,
+            "status_nl": blocked_status_nl,
+            "sync_run_id": None,
+            "persistence_mode": "none",
+            "persistence_status_nl": "Geen sync uitgevoerd",
+            "persistence_help_nl": (
+                "Readiness/preflight blokkeerde handmatige read-only sync."
+            ),
+            "account_summary_status": "disabled",
+            "positions_status": "disabled",
+            "open_orders_status": "disabled",
+            "executions_status": "disabled",
+            "positions_count": 0,
+            "cash_values_count": 0,
+            "open_orders_count": 0,
+            "executions_count": 0,
+            "started_at": None,
+            "completed_at": None,
+        }
+
     now = datetime.now(UTC)
     run_id = f"ibkr-sync-{uuid4()}"
     result_status = "disabled"
@@ -305,8 +350,7 @@ def read_status(settings: Settings) -> dict[str, object]:
             status_nl = "Read-only synchronisatie"
             next_step_nl = "Geen orders mogelijk"
 
-    session_status = build_ibkr_status_placeholder(settings)
-    readiness = build_ibkr_sync_readiness(settings, session_status)
+    readiness = _build_readiness(settings)
     return {
         "status": status,
         "provider_code": settings.ibkr_sync_provider_code,
@@ -326,7 +370,7 @@ def read_status(settings: Settings) -> dict[str, object]:
         "status_nl": status_nl,
         "next_step_nl": next_step_nl,
         "help_nl": "Geen brokerdata opgeslagen zonder echte IBKR-respons",
-        "sync_allowed": True,
+        "sync_allowed": bool(readiness.get("manual_sync_allowed", False)),
         "actions_allowed": False,
         "order_submission_allowed": False,
         "order_modification_allowed": False,
