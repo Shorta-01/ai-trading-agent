@@ -146,34 +146,55 @@ def build_ibkr_status_placeholder(
             normalized_connection_status = _normalize_connection_status(
                 result.connection_status
             )
-            normalized_account_mode_status = _normalize_account_mode_status(
+            adapter_account_mode_status = _normalize_account_mode_status(
                 result.account_mode_status
             )
-            normalized_account_mode = _normalize_account_mode(result.account_mode)
+            adapter_account_mode = _normalize_account_mode(result.account_mode)
+            expected_mode = _normalize_account_mode(expected_environment)
 
-            if normalized_account_mode is None:
-                normalized_account_mode_status = "unknown"
-            if normalized_account_mode is not None:
-                expected_mode = _normalize_account_mode(expected_environment)
+            final_connection_status = normalized_connection_status
+            final_account_mode_status = adapter_account_mode_status
+            final_session_status_reason = result.session_status_reason or "adapter_result"
+
+            if final_connection_status == "connected_wrong_account_mode":
+                final_account_mode_status = "mismatch"
+
+            if (
+                final_account_mode_status != "mismatch"
+                and expected_mode is not None
+                and adapter_account_mode is not None
+                and adapter_account_mode != expected_mode
+            ):
+                final_connection_status = "connected_wrong_account_mode"
+                final_account_mode_status = "mismatch"
+                final_session_status_reason = "account_mode_mismatch"
+
+            if (
+                final_account_mode_status == "unknown"
+                and adapter_account_mode is not None
+            ):
                 if (
-                    expected_mode is not None
-                    and normalized_account_mode != expected_mode
+                    expected_mode is None
+                    or adapter_account_mode == expected_mode
                 ):
-                    normalized_connection_status = "connected_wrong_account_mode"
-                    normalized_account_mode_status = "mismatch"
-                    session_status_reason = "account_mode_mismatch"
-                elif normalized_account_mode_status == "unknown":
-                    normalized_account_mode_status = "match"
+                    final_account_mode_status = "match"
 
-            connection_status = normalized_connection_status
-            account_mode_status = normalized_account_mode_status
-            account_mode = normalized_account_mode or expected_environment
+            if (
+                final_account_mode_status == "unknown"
+                and adapter_account_mode is None
+                and final_connection_status != "connected_wrong_account_mode"
+            ):
+                final_account_mode_status = "unknown"
+
+            connection_status = final_connection_status
+            account_mode_status = final_account_mode_status
+            account_mode = adapter_account_mode or expected_environment
             session_check_attempted = True
             session_check_source = result.session_check_source
             if connection_status == "unknown":
                 session_status_reason = "unknown_connection_status"
             else:
-                session_status_reason = result.session_status_reason or "adapter_result"
+                session_status_reason = final_session_status_reason
 
     status_nl, message_nl, next_step_nl, connection_help_nl = _status_content(connection_status)
 

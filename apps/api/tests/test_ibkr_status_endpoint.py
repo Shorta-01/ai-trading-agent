@@ -109,6 +109,42 @@ def test_ibkr_status_wrong_account_mode_via_fake_adapter() -> None:
     assert payload["actions_allowed"] is False
     assert payload["suggestions_allowed"] is False
     assert payload["account_mode_status"] == "mismatch"
+    assert payload["order_submission_allowed"] is False
+    assert payload["order_modification_allowed"] is False
+    assert payload["order_cancellation_allowed"] is False
+    assert payload["can_submit_orders"] is False
+    assert payload["safe_for_orders"] is False
+    assert payload["safe_for_sync"] is False
+
+
+def test_ibkr_status_explicit_mismatch_without_account_mode_stays_mismatch() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(
+                connection_status="configured_not_connected",
+                account_mode_status="mismatch",
+            )
+        ),
+    )
+
+    assert payload["connection_status"] == "configured_not_connected"
+    assert payload["account_mode_status"] == "mismatch"
+    assert payload["sync_allowed"] is False
+    assert payload["actions_allowed"] is False
+    assert payload["suggestions_allowed"] is False
+    assert payload["order_submission_allowed"] is False
+    assert payload["order_modification_allowed"] is False
+    assert payload["order_cancellation_allowed"] is False
+    assert payload["can_submit_orders"] is False
+    assert payload["safe_for_orders"] is False
+    assert payload["safe_for_sync"] is False
+    assert payload["blocks_orders"] is True
 
 
 def test_ibkr_status_account_mode_match_via_fake_adapter() -> None:
@@ -135,6 +171,68 @@ def test_ibkr_status_account_mode_match_via_fake_adapter() -> None:
     assert payload["sync_allowed"] is False
     assert payload["safe_for_sync"] is False
     assert payload["safe_for_orders"] is False
+    assert payload["blocks_orders"] is True
+
+
+def test_ibkr_status_infers_wrong_account_mode_from_adapter_account_mode() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+            ibkr_expected_environment="paper",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(
+                connection_status="configured_not_connected",
+                account_mode_status="unknown",
+                account_mode="live",
+            )
+        ),
+    )
+
+    assert payload["connection_status"] == "connected_wrong_account_mode"
+    assert payload["account_mode_status"] == "mismatch"
+    assert payload["sync_allowed"] is False
+    assert payload["actions_allowed"] is False
+    assert payload["suggestions_allowed"] is False
+    assert payload["order_submission_allowed"] is False
+    assert payload["order_modification_allowed"] is False
+    assert payload["order_cancellation_allowed"] is False
+    assert payload["can_submit_orders"] is False
+    assert payload["safe_for_orders"] is False
+    assert payload["safe_for_sync"] is False
+    assert payload["blocks_orders"] is True
+
+
+def test_ibkr_status_unknown_without_account_mode_and_without_mismatch() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(
+                connection_status="configured_not_connected",
+                account_mode_status="unknown",
+                account_mode=None,
+            )
+        ),
+    )
+
+    assert payload["account_mode_status"] == "unknown"
+    assert payload["sync_allowed"] is False
+    assert payload["actions_allowed"] is False
+    assert payload["suggestions_allowed"] is False
+    assert payload["order_submission_allowed"] is False
+    assert payload["order_modification_allowed"] is False
+    assert payload["order_cancellation_allowed"] is False
+    assert payload["can_submit_orders"] is False
+    assert payload["safe_for_orders"] is False
+    assert payload["safe_for_sync"] is False
     assert payload["blocks_orders"] is True
 
 
