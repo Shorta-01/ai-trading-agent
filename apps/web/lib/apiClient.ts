@@ -272,6 +272,33 @@ export type ProviderSourceResponse = {
 
 export type ValuationInputTrace = Record<string, unknown>;
 
+export type PortfolioValuationReadinessRow = {
+  account_ref: string;
+  symbol: string;
+  currency: string | null;
+  quantity: string | null;
+  cost_basis_status: string;
+  cost_basis_status_nl: string;
+  cost_basis_help_nl: string;
+  cost_basis_available: boolean;
+  cost_basis: string | null;
+  cost_basis_currency: string | null;
+  unrealized_pl_status: string;
+  unrealized_pl_status_nl: string;
+  unrealized_pl_help_nl: string;
+  unrealized_pl_available: boolean;
+  unrealized_pl: string | null;
+  unrealized_pl_currency: string | null;
+  unrealized_pl_percent_available: boolean;
+  unrealized_pl_percent: string | null;
+  converted_unrealized_pl_available: boolean;
+  converted_unrealized_pl: string | null;
+  missing_cost_basis_inputs: string[];
+  missing_pl_inputs: string[];
+  cost_basis_input_trace: Record<string, unknown> | null;
+  unrealized_pl_input_trace: Record<string, unknown> | null;
+};
+
 export type PortfolioValuationReadinessResponse = {
   conversion_total_status: string;
   conversion_total_status_nl: string;
@@ -293,6 +320,7 @@ export type PortfolioValuationReadinessResponse = {
   stale_fx_pairs: string[];
   invalid_fx_pairs: string[];
   valuation_input_trace: ValuationInputTrace | null;
+  rows: PortfolioValuationReadinessRow[];
   suggestions_allowed?: boolean;
   action_drafts_allowed?: boolean;
   orders_allowed?: boolean;
