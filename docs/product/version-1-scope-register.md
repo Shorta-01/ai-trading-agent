@@ -51,6 +51,12 @@
 
 Zie ook `docs/product/final-solution-vision.md` voor het einddoel.
 
+## Task 133B — sync readiness/preflight status gate
+- Status: afgerond (minimale status/preflight-implementatie).
+- Toegevoegd: pure IBKR sync readiness builder en statusvelden op `GET /ibkr/sync/status` voor handmatige read-only sync readiness.
+- Niet toegevoegd: geen real sync runtime, geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution, geen financiële berekeningen en geen fake data.
+
+
 ## Task 125K — conversion-total calculator foundation
 - Status: afgerond (pure calculatiemodule + tests).
 - Toegevoegd: pure Decimal-only conversion-total calculator in `packages/portfolio` op opgeslagen inputs, met deterministische statusvelden en trace metadata passthrough.

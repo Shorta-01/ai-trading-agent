@@ -1,6 +1,6 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
-- Producttrackingstatus: Task 130Q is gemerged (owner workshop decision locks); Task 130Q-R heeft daarna marker-drift in producttracking gerepareerd; Task 131B is afgerond; Task 131B-R heeft daarna de wrong-account-mode `account_mode_status` regressie gerepareerd; Task 132B is afgerond (documentation/planning-only) en volgende stap staat op Task 133B in `docs/product/next-task.md`.
+- Producttrackingstatus: Task 130Q is gemerged (owner workshop decision locks); Task 130Q-R heeft daarna marker-drift in producttracking gerepareerd; Task 131B is afgerond; Task 131B-R heeft daarna de wrong-account-mode `account_mode_status` regressie gerepareerd; Task 132B is afgerond (documentation/planning-only); Task 133B is afgerond met minimale IBKR read-only sync readiness/preflight status gate; volgende stap staat op Task 134B in `docs/product/next-task.md`.
 
 ## Purpose
 

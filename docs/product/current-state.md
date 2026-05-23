@@ -1,7 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 132B**
+Huidige toestand: **na Task 133B**
 
+
+## Task 133B update
+- Task 133B: **completed** — minimale IBKR read-only sync readiness/preflight status gate geïmplementeerd via pure statusbuilder en exposed op `GET /ibkr/sync/status` met statussen `Geblokkeerd`, `Controle nodig` en `Klaar voor handmatige read-only sync`. Deze taak wijzigde geen real sync runtime en voegde geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders/broker execution, geen financiële berekeningen en geen fake data toe.
 
 ## Task 132B update
 - Task 132B: **completed** — document-first selectie van de volgende veilige Milestone B IBKR read-only sync foundation batch vastgelegd in `docs/product/ibkr-read-only-sync-foundation-batch-selection-task-132b.md`. Geselecteerde volgende implementatietaak: **Task 133B** (IBKR read-only sync readiness/preflight gate op basis van Task 131B account/session status outputs). Deze taak bleef planning-only: geen runtime toegevoegd (geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution, geen financiële berekeningen en geen fake data).

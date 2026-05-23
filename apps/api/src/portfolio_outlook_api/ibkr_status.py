@@ -8,6 +8,7 @@ from portfolio_outlook_api.ibkr_session_status import (
 
 _KNOWN_CONNECTION_STATUSES = {
     "configured_not_connected",
+    "connected_readonly",
     "connected_wrong_account_mode",
     "connection_failed",
     "authentication_required",
@@ -69,6 +70,13 @@ def _status_content(connection_status: str) -> tuple[str, str, str, str]:
             "overeenkomt met de veilige instelling."),
             "Controleer accountmodus en blijf in veilige paper-only read-only modus.",
             "Geen sync, geen orders en geen brokeracties toegestaan.",
+        )
+    if connection_status == "connected_readonly":
+        return (
+            "Read-only sessie klaar",
+            "De sessiecontrole meldt een read-only paper-sessie.",
+            "Handmatige read-only sync mag alleen verder na de sync readiness-controle.",
+            "Geen orders, geen brokeracties en geen automatische uitvoering.",
         )
     if connection_status == "connection_failed":
         return (

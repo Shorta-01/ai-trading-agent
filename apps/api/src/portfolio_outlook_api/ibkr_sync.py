@@ -11,6 +11,7 @@ from ai_trading_agent_storage import (
 )
 
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
     IbkrExecution,
@@ -27,6 +28,7 @@ from portfolio_outlook_api.ibkr_sync_persistence import (
     map_sync_run_record,
     persist_ibkr_sync_payload,
 )
+from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
 
 
 class NotConfiguredIbkrAdapter(IbkrReadOnlyAdapter):
@@ -303,6 +305,8 @@ def read_status(settings: Settings) -> dict[str, object]:
             status_nl = "Read-only synchronisatie"
             next_step_nl = "Geen orders mogelijk"
 
+    session_status = build_ibkr_status_placeholder(settings)
+    readiness = build_ibkr_sync_readiness(settings, session_status)
     return {
         "status": status,
         "provider_code": settings.ibkr_sync_provider_code,
@@ -328,4 +332,7 @@ def read_status(settings: Settings) -> dict[str, object]:
         "order_modification_allowed": False,
         "order_cancellation_allowed": False,
         "suggestions_allowed": False,
-    }
+        "can_submit_orders": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    } | readiness
