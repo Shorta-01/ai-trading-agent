@@ -104,6 +104,33 @@ def setup_function() -> None:
     api_settings.storage.database_url = None
 
 
+
+
+def _ready_sync_readiness() -> dict[str, object]:
+    return {
+        "sync_readiness_status": "ready_for_manual_readonly_sync",
+        "sync_readiness_status_nl": "Klaar voor handmatige read-only sync",
+        "sync_readiness_reason": "manual_preflight_ready",
+        "sync_readiness_help_nl": "Lokale preflight is geslaagd voor handmatige read-only sync.",
+        "manual_sync_allowed": True,
+        "manual_sync_blocked": False,
+        "storage_ready_for_sync": True,
+        "session_ready_for_sync": True,
+        "settings_ready_for_sync": True,
+        "readonly_required": True,
+        "readonly_configured": True,
+        "account_mode_status": "match",
+        "connection_status": "configured_not_connected",
+        "sync_allowed": False,
+        "safe_for_sync": False,
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "blocks_orders": True,
+    }
+
 def _base_settings(**kwargs):
     return Settings(
         ibkr_sync_enabled=True,
@@ -114,7 +141,13 @@ def _base_settings(**kwargs):
     )
 
 
-def test_fake_adapter_stores_orders_and_executions() -> None:
+def test_fake_adapter_stores_orders_and_executions(monkeypatch) -> None:
+    monkeypatch.setattr(
+        ibkr_sync,
+        "_build_readiness",
+        lambda _settings: _ready_sync_readiness(),
+        raising=False,
+    )
     body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
     assert body["open_orders_count"] == 1
     assert body["executions_count"] == 1
@@ -162,6 +195,12 @@ def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
         ibkr_sync,
         "_resolve_repo",
         lambda settings, require_writable: (FakeRepo(), FakeCtx(), ""),
+    )
+    monkeypatch.setattr(
+        ibkr_sync,
+        "_build_readiness",
+        lambda _settings: _ready_sync_readiness(),
+        raising=False,
     )
     body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
     assert body["persistence_mode"] == "durable"
