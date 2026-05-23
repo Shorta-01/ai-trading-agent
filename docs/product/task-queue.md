@@ -105,4 +105,4 @@
 
 ## Task 130Q alignment note
 - Milestones voor Dashboard/Action Center/Decision Packages/Suggestion Engine/Research Desk/Prediction Diary volgen de vergrendelde owner workshop richting uit `version-1-owner-workshop-decision-locks-task-130q.md`.
-- Runtimevolgorde blijft: Task 131B als eerstvolgende implementatiestap binnen read-only veiligheidsgrens.
+- Runtimevolgorde binnen Milestone B: Task 133B (read-only sync readiness/preflight gate) als eerstvolgende implementatiestap binnen read-only veiligheidsgrens.

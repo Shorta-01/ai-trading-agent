@@ -1,11 +1,11 @@
-# Task 132B — Select and document the next IBKR read-only sync foundation batch after Task 131B
+# Task 133B — Implementeer IBKR read-only sync readiness/preflight gate met Task 131B account/session status outputs
 
-- Gebruik de Task 131B account/session status outputs als startpunt voor een veilige vervolgselectie.
-- Scope: document-first selectie + afbakening van de eerstvolgende sync-foundation batch zonder runtime-unlock.
-- Vereist: duidelijke no-network/no-order/no-suggestion/no-action-draft/no-market-data grenzen.
+- Implementeer een veilige read-only readiness/preflight gate voor handmatige IBKR sync op basis van settings, read-only mode, storage readiness (waar relevant) en Task 131B account/session status outputs.
+- Scope: veilige gating/statuswording en testdekking zonder runtime-unlock.
+- Vereist: heldere NL statusuitkomsten zoals `Geblokkeerd`, `Controle nodig` en `Klaar voor handmatige read-only sync`.
 
 ## Boundaries (locked)
-- Geen echte TWS/Gateway netwerk runtime.
+- Geen real TWS/Gateway network runtime.
 - Geen account/portfolio sync runtime.
 - Geen market-data runtime.
 - Geen suggesties.

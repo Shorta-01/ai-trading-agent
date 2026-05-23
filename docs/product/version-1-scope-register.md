@@ -1,3 +1,7 @@
+## Task 132B scope-resultaat
+- Binnen scope: document-first selectie van de volgende IBKR read-only sync foundation batch na Task 131B/131B-R, inclusief inventory, gapanalyse, kandidaatvergelijking en selectie van Task 133B.
+- Buiten scope: geen runtime, geen sync-runtime, geen echte network runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution en geen fake data.
+
 ## Task 131B-R scope-resultaat
 - Binnen scope: gerichte API statusnormalisatie-repair voor wrong-account-mode/account-mode mismatch regressie uit Task 131B (`account_mode_status` `unknown` → `mismatch` waar expliciet of veilig inferable).
 - Buiten scope: geen echte IBKR-verbinding, geen auto-connect, geen sync runtime, geen market-data runtime, geen suggesties/action drafts/Decision Packages runtime, geen orders/broker execution, geen financiële berekeningen en geen fake data.
