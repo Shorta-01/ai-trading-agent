@@ -71,6 +71,11 @@
 
 # Ai Trading Agent — Version 1 Scope Register
 
+## Task 137 — Milestone B slices selection after Task 136
+- Status: afgerond (planning/documentation-only).
+- Toegevoegd: `docs/product/milestone-b-next-implementation-slices-task-137.md` met vergelijking van kandidaat-slices, risicobeoordeling, selectie van Task 138 en voorgestelde vervolgreeks van 3–5 slices.
+- Niet toegevoegd: geen runtimecode, geen API/web gedragswijziging, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties/action drafts/orders/broker execution.
+
 ## Task 125G — FX snapshot storage contract preflight
 - Status: afgerond (document-first/read-only).
 - Nieuw preflightdocument: `docs/product/fx-snapshot-storage-contract-preflight-task-125g.md` met minimale toekomstige FX snapshot storage/repository/API-read contractdefinitie op designniveau.

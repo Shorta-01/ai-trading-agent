@@ -1,3 +1,9 @@
+## Task 137
+- Completed: planning/documentation-only Milestone B sliceselectie na Task 136 met kandidaatvergelijking, risicobeoordeling en selectie van één volgende milestone-sized implementatietaak.
+- Toegevoegd: `docs/product/milestone-b-next-implementation-slices-task-137.md` als source-of-truth selectiedocument.
+- Geselecteerd als volgende implementatietaak: **Task 138** (IBKR read-only adaptercontract + deterministic fake-adapter fixture hardening batch).
+- Niet toegevoegd: runtimecode, API/web gedragwijziging, storage schema/migraties, echte TWS/Gateway runtime, market-data runtime, suggesties, action drafts, orders of broker execution.
+
 ## Task 136
 - Doel: durable IBKR sync status read model contract uitlijnen met Task 135B payload-validatie/safety response shape.
 - Resultaat: `serialize_sync_status_record(...)` retourneert nu payload-validatievelden met conservatieve `not_available` defaults voor durable historische runs zonder opgeslagen validatiedetails, plus volledige safety booleans (`actions_allowed/order_* /suggestions_allowed/can_submit_orders/safe_for_orders/blocks_orders`) in geblokkeerde toestand.
