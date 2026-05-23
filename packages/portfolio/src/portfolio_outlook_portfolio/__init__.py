@@ -210,6 +210,7 @@ __all__ = [
     "ConversionTotalsInput",
     "ConversionTotalsResult",
     "calculate_conversion_totals",
+    "PositionPlInput",
 ]
 
 from .valuation_conversion_totals import (
@@ -220,4 +221,12 @@ from .valuation_conversion_totals import (
     PositionConversionInput,
     ValuationInputTrace,
     calculate_conversion_totals,
+)
+
+from .valuation_cost_basis_pl import (
+    PositionPlCalculationInput,
+    PositionPlCalculationResult,
+    PositionPlInput,
+    PositionPlInputTrace,
+    calculate_position_cost_basis_and_unrealized_pl,
 )
