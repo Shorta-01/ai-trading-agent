@@ -1,8 +1,9 @@
 # Next Task
 
-Task 125U — Document-first review van read-only portfolio valuation readiness UI-teksten en helpteksten voor consistent, eenvoudig Nederlands, inclusief checklist voor ontbrekende invoer/trace-lege staten, zonder runtimegedrag te wijzigen.
-- Alleen documentatie/preflight; geen codewijzigingen in API/web runtime.
-- Geen browser-side financiële berekeningen, geen API behavior changes, geen storage/migraties, geen runtime fetch, geen suggesties, geen action drafts, geen orders en geen broker execution.
+Task 125V — Apply the Task 125U wording catalog to the read-only portfolio valuation readiness UI labels/help texts, without changing API behavior, without browser-side financial calculations, without runtime fetch, without suggestions, without action drafts and without orders.
+- Implementatie mag alleen bestaande API-provided readinesswaarden tonen.
+- Geen browser-side financiële berekeningen of JavaScript parsing voor money/P/L-berekeningen.
+- Geen API/storage/migratie/runtime fetch-wijzigingen; geen suggesties/action drafts/orders/broker execution; geen fake waarden.
 
 ## Completed predecessor tasks (for traceability)
-- Task 125T — afgerond.
+- Task 125U — afgerond (document-first review/preflight).

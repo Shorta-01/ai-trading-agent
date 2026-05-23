@@ -1,3 +1,9 @@
+## Task 125U — document-first review read-only valuation readiness UI-teksten/helpteksten
+- Status: afgerond.
+- Toegevoegd: nieuw preflight/reviewdocument `docs/product/portfolio-valuation-readiness-ui-text-review-task-125u.md` met UI-tekstinventaris, wording-principes, standaard wording-catalogus, veilige/onveilige voorbeelden en implementatiechecklist.
+- Toegevoegd: expliciete checklist voor missing-input-, blocked/control-needed- en trace-empty/onleesbare staten.
+- Grenzen bewaakt: documentatie-only; geen runtime code, geen API/web runtime behavior changes, geen storage/migraties, geen runtime fetch, geen suggesties/action drafts/orders, geen broker execution en geen fake waarden.
+
 ## Task 125T — read-only advanced kostbasis en ongerealiseerde winst/verlies trace/details display
 - Status: afgerond.
 - Toegevoegd: row-level detailsweergave in de Portefeuille-sectie `Kostbasis en winst/verlies` met eenvoudige Nederlandse labels voor controle/herkomst, ontbrekende invoer en tracevelden.
