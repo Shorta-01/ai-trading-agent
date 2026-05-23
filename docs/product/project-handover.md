@@ -1,6 +1,6 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
-- Producttrackingstatus: Task 134B-R2 is afgerond als merged-red repair na Task 134B-R en herstelde de resterende API pytest readiness-response recomputation; root cause was dat `run_sync(...)` readiness met geïnjecteerde adapter berekende maar `read_status(settings)` die voor de eindresponse zonder adapter opnieuw berekende; `run_sync(...)` gebruikt nu de vooraf berekende readiness in de response. Task 135B blijft de volgende stap in `docs/product/next-task.md`. Geen echte TWS/Gateway netwerkruntime, geen echte IBKR account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake data toegevoegd.
+- Producttrackingstatus: Task 135A is afgerond als documentatie-only audit/reconciliatie na Task 134B-R2 (PR #326) en herstelde producttrackingdrift naar repository-truth op `main` (markerfix in `current-state`, Milestone B queue/backlog driftfix, auditdocument toegevoegd, handover/history/scope/next-task opnieuw uitgelijnd). Task 135B blijft de volgende implementatiestap in `docs/product/next-task.md` op basis van deze audit. Geen runtime-, API-, web-, storage-, migratie-, netwerk- of berekeningsgedrag gewijzigd; geen echte TWS/Gateway netwerkruntime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen fake data toegevoegd.
 
 ## Purpose
 

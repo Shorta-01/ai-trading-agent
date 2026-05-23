@@ -1,6 +1,8 @@
 - [x] Task 134B-R2 — Completed: Task 134B-R2 repaired the remaining API pytest failures after merged Task 134B-R by preventing readiness recomputation in the final `run_sync(...)` response: readiness was first computed with the injected session-status adapter, then incorrectly recomputed by `read_status(settings)` without that adapter; `run_sync(...)` now returns status using the same precomputed readiness object. No real TWS/Gateway network runtime, no real IBKR account/portfolio sync runtime, no market-data runtime, no suggestions, no action drafts, no Decision Packages runtime, no orders, no broker execution, no financial calculations and no fake data were added.
 ## Next up
-- Task 135B: behoud als volgende taak in `docs/product/next-task.md` (niet geïmplementeerd in deze repair PR).
+- Task 135B: volgende implementatiestap blijft geldig na Task 135A audit/reconciliatie; scope blijft hard beperkt tot het verharden van IBKR read-only sync adapter payloadvalidatie voor cash/positions/open orders/executions zonder echte TWS/Gateway runtime, zonder market-data runtime, zonder suggesties, zonder action drafts en zonder orders.
+
+- [x] Task 135A — Completed: documentation-only audit/reconciliatie uitgevoerd om repository/producttracking opnieuw te verankeren op GitHub-truth na PR #326; geen runtimecode, API, web, storage, migraties of netwerkgedrag gewijzigd.
 
 - [x] Task 134B-R — Completed: repair na merged Task 134B voor API pytest-failures door incomplete test settings op de session-status zijde van de readiness gate; `_base_settings(**kwargs)` in `apps/api/tests/test_ibkr_sync_endpoints.py` configureert nu sync + session-status defaults override-safe. Geen productieruntimewijziging buiten test/config repair; geen echte TWS/Gateway netwerkruntime, echte IBKR account/portfolio sync runtime, market-data runtime, suggesties, action drafts, Decision Packages runtime, orders, broker execution, financiële berekeningen of fake data toegevoegd.
 
