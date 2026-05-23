@@ -1,5 +1,8 @@
 # Current State
 
+## Task 129 update
+- Task 129: **completed** — volgende Milestone B implementatieslice geselecteerd en gedocumenteerd in `docs/product/milestone-b-ibkr-read-only-runtime-slice-selection-task-129.md` (planning-only). Geselecteerde vervolgstap is Task 130: disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary + API status exposure. Geen runtime productgedrag gewijzigd: geen API behavior, geen storage/migraties, geen runtime fetch, geen berekeningen, geen suggesties, geen action drafts, geen orders, geen broker execution en geen fake waarden toegevoegd.
+
 ## Task 128 update
 - Task 128: **completed** — workflow acceleration documentatie toegevoegd (`codex-workflow-acceleration-task-128.md`, `codex-task-template.md`, `task-queue.md`, `codex-red-green-ci-workflow.md`, `version-1-milestone-plan.md`) plus lichte lokale helper scripts (`scripts/check_product_tracking.py`, `scripts/project_status.py`). Task 125W micro-auditrichting is bewust gedeferreerd/vervangen door deze procespivot. Geen runtime productgedrag gewijzigd: geen API-behavior, geen storage/migraties, geen runtime fetch, geen financiële berekeningen, geen suggesties, geen action drafts, geen orders, geen broker execution en geen fake waarden toegevoegd.
 
@@ -69,7 +72,7 @@
 - Task 81 voegt geen suggestions, Decision Packages, action drafts, AI runtime of ordergedrag toe.
 - Claude architecture/roadmap audit is reviewed; geaccepteerde findings zijn opgenomen in roadmap/todo-documentatie.
 - Task 88I is documentatie-only; geen runtimegedrag gewijzigd.
-- Huidige toestand: **na Task 128**.
+- Huidige toestand: **na Task 129**.
 - Task 101: **completed** — documentatie/cross-link/terminologie-anchor-only update. Task 100-termenset is verankerd in handover + locked decisions + lichte cross-links. Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 102: **completed** — conservatieve documentatie-only read-only wording drift check na Task 101. Productdocs zijn gecontroleerd tegen de vergrendelde termenset in `locked-decisions.md`; kleine tracking/plaatsingsdrift is hersteld (current-state titel + backlogplaatsing/next-step wording). Geen runtime market-data fetching, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages/action drafts/orders en geen fake data toegevoegd.
 - Task 103: **completed** — conservatieve documentatie-only product-doc consistentiecheck na Task 102. Productdocs zijn gericht gecontroleerd tegen de vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift is hersteld (current-state na-Task-102 tracking + follow-up logging). Geen runtime market-data fetching, geen runtime-fetch, geen latest-price fetching, geen scheduler/background jobs, geen forecast runtime, geen AI runtime, geen suggesties/Decision Packages runtime/actiedrafts/orders en geen fake data toegevoegd.
