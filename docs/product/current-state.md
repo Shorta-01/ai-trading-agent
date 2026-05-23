@@ -1,6 +1,9 @@
 # Current State
 
-Huidige toestand: **na Task 131B**
+Huidige toestand: **na Task 131B-R**
+
+## Task 131B-R update
+- Task 131B-R: **completed** — repair na merged Task 131B voor wrong-account-mode regressie in API pytest: `account_mode_status` gaf `unknown` terug i.p.v. `mismatch` bij expliciete adapter-mismatch zonder `account_mode`. Normalisatielogica hersteld zodat expliciete/inferred mismatch behouden blijft en niet wordt overschreven. Geen runtime scope toegevoegd: geen echte IBKR-netwerkadapter, geen auto-connect, geen account/portfolio sync, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders of broker execution, geen financiële berekeningen en geen fake data toegevoegd.
 
 ## Task 131B update
 - Task 131B: **completed** — IBKR read-only account/session safety batch geïmplementeerd op de Task 130 session-status boundary met expliciete unknown-status wording, account-mode match/mismatch mapping, en veilige mappings voor `connection_failed`, `authentication_required` en `pacing_limited`, inclusief fake-adapter tests + no-secret/no-fake-data checks. Geen echte IBKR-netwerkadapter, geen auto-connect, geen account/portfolio sync, geen market-data runtime, geen suggesties/action drafts/Decision Packages runtime, geen orders of broker execution, geen financiële berekeningen en geen fake data toegevoegd.

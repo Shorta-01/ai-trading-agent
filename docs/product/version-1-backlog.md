@@ -31,6 +31,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 
 ## A) Completed foundations
 
+- [x] Task 131B-R — Completed: repair na merged Task 131B voor wrong-account-mode status regression in API pytest (`account_mode_status` was `unknown` i.p.v. `mismatch`); normalisatie hersteld zonder runtime-scope-uitbreiding (geen echte IBKR-netwerkadapter/auto-connect/sync/market-data runtime/suggesties/action drafts/Decision Packages/orders/broker execution/financiële berekeningen/fake data).
 - [x] Task 129 — Completed: Milestone B IBKR read-only runtime slice selectie/documentatie afgerond (`milestone-b-ibkr-read-only-runtime-slice-selection-task-129.md`); Task 130 geselecteerd als volgende kleine implementatieslice; planning-only, geen runtime/API/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
 - [x] Task 128 — Completed: workflow accelerationlaag toegevoegd (nieuwe procesdocs, task template, milestone queue, red/green CI workflow en optionele lokale helper scripts); Task 125W micro-audit pad gedeferreerd/vervangen; geen runtime/API/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
 - [x] Task 128-R — Completed: product-tracking drift repair op `current-state.md` marker + kleine checker-hardening voor stale `Huidige toestand` detectie; Task 129 blijft volgende taak; geen runtime/API/web/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.

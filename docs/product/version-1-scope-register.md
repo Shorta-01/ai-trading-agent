@@ -1,3 +1,7 @@
+## Task 131B-R scope-resultaat
+- Binnen scope: gerichte API statusnormalisatie-repair voor wrong-account-mode/account-mode mismatch regressie uit Task 131B (`account_mode_status` `unknown` → `mismatch` waar expliciet of veilig inferable).
+- Buiten scope: geen echte IBKR-verbinding, geen auto-connect, geen sync runtime, geen market-data runtime, geen suggesties/action drafts/Decision Packages runtime, geen orders/broker execution, geen financiële berekeningen en geen fake data.
+
 ## Task 131B scope-resultaat
 - Binnen scope: veilige statusnormalisatie voor IBKR account/session status endpoint responses (unknown/account-mode/mismatch/authentication/pacing/connection-failed) + fake-adapter tests.
 - Buiten scope: echte IBKR-verbinding, auto-connect, sync runtime, market-data runtime, suggesties/action drafts/Decision Packages runtime, orders/broker execution en fake data.
