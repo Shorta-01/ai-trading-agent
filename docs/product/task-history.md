@@ -1,3 +1,9 @@
+## Task 125S — read-only kostbasis en ongerealiseerde winst/verlies display
+- Status: afgerond.
+- Toegevoegd: web API-client typecontract uitgebreid met row-level readinessvelden en `rows` in `PortfolioValuationReadinessResponse`.
+- Toegevoegd: read-only tabel op de Portefeuille-pagina die alleen bestaande readiness-row velden toont voor kostbasis en ongerealiseerde winst/verlies.
+- Grenzen bewaakt: uitsluitend API-provided strings + availability booleans, geen browser-side financiële berekeningen, geen API-behavior changes, geen storage/migraties, geen runtime market-data/latest-price/FX-provider fetch, geen suggesties/Decision Packages/action drafts/orders, geen broker execution, geen fake waarden.
+
 ## Task 125Q — pure Decimal-only cost-basis and unrealized P/L calculator (no wiring)
 - Status: afgerond.
 - Toegevoegd: pure calculator module `packages/portfolio/src/portfolio_outlook_portfolio/valuation_cost_basis_pl.py` met deterministische statusuitkomsten en Decimal-only berekening op caller-provided opgeslagen inputs.

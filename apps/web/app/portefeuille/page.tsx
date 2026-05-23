@@ -12,6 +12,7 @@ import {
   IbkrOpenOrderSnapshot,
   IbkrPositionSnapshot,
   IbkrSyncStatusResponse,
+  PortfolioValuationReadinessRow,
   PortfolioValuationReadinessResponse,
 } from "@/lib/apiClient";
 
@@ -22,6 +23,26 @@ function displayValue(value: string | null | undefined): string {
 function formatValuationValue(baseCurrency: string | null, value: string | null, available: boolean): string {
   if (!available || !value) return "Geen veilige totaalwaarde beschikbaar";
   return baseCurrency ? `${baseCurrency} ${value}` : value;
+}
+
+function formatReadinessAmount(
+  currency: string | null,
+  value: string | null,
+  available: boolean,
+  helpText: string,
+): string {
+  if (!available || !value) {
+    return helpText || "Geen veilige waarde beschikbaar";
+  }
+  return currency ? `${currency} ${value}` : value;
+}
+
+function formatMissingInputs(row: PortfolioValuationReadinessRow): string {
+  const missing = [...row.missing_cost_basis_inputs, ...row.missing_pl_inputs];
+  if (missing.length === 0) {
+    return "Geen ontbrekende invoer";
+  }
+  return missing.join(", ");
 }
 
 export default function PortfolioPage() {
@@ -129,6 +150,48 @@ export default function PortfolioPage() {
               <tr key={`${position.sync_run_id}-${position.symbol}-${idx}`}><td>{position.symbol}</td><td>{position.security_type}</td><td>{displayValue(position.exchange)}</td><td>{position.currency}</td><td>{position.quantity}</td><td>{displayValue(position.average_cost)}</td><td>{displayValue(position.timestamp)}</td><td><StatusBadge label="Read-only" status="info" title="Snapshot uit IBKR-sync." /></td></tr>
             ))}
           </tbody></table>
+        )}
+      </section>
+
+      <section className="dashboard-panel">
+        <h2>Kostbasis en winst/verlies</h2>
+        {!valuationReadiness ? (
+          <EmptyState title="Nog geen kostbasis- of winst/verliesgegevens" message="De readiness-gegevens zijn niet beschikbaar. Er worden geen waarden verzonnen." />
+        ) : valuationReadiness.rows.length === 0 ? (
+          <EmptyState title="Nog geen kostbasis- of winst/verliesgegevens beschikbaar." message="Er worden geen waarden verzonnen." />
+        ) : (
+          <table className="portfolio-table">
+            <thead>
+              <tr>
+                <th>Asset / symbool</th>
+                <th>Valuta</th>
+                <th>Aantal</th>
+                <th>Kostbasis</th>
+                <th>Status kostbasis</th>
+                <th>Ongerealiseerde winst/verlies</th>
+                <th>Winst/verlies %</th>
+                <th>Status winst/verlies</th>
+                <th>Ontbrekende invoer</th>
+                <th>Toelichting</th>
+              </tr>
+            </thead>
+            <tbody>
+              {valuationReadiness.rows.map((row, idx) => (
+                <tr key={`${row.account_ref}-${row.symbol}-${idx}`}>
+                  <td>{displayValue(row.symbol)}</td>
+                  <td>{displayValue(row.currency)}</td>
+                  <td>{displayValue(row.quantity)}</td>
+                  <td>{formatReadinessAmount(row.cost_basis_currency, row.cost_basis, row.cost_basis_available, row.cost_basis_help_nl)}</td>
+                  <td>{row.cost_basis_status_nl || "Controle nodig"}</td>
+                  <td>{formatReadinessAmount(row.unrealized_pl_currency, row.unrealized_pl, row.unrealized_pl_available, row.unrealized_pl_help_nl)}</td>
+                  <td>{formatReadinessAmount(null, row.unrealized_pl_percent, row.unrealized_pl_percent_available, row.unrealized_pl_help_nl)}</td>
+                  <td>{row.unrealized_pl_status_nl || "Controle nodig"}</td>
+                  <td>{formatMissingInputs(row)}</td>
+                  <td>{row.cost_basis_help_nl || row.unrealized_pl_help_nl || "Controle nodig"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
 

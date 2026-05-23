@@ -1,8 +1,7 @@
 # Next Task
 
-Task 125S — Implement read-only web/API-client display support for cost-basis and unrealized P/L fields from the existing `GET /portfolio/valuation/readiness` response, with simple Dutch labels, no browser-side financial calculations, no API behavior changes, no runtime market-data/latest-price/FX-provider fetch, no suggestions, no action drafts, and no orders.
-- Alleen display van bestaande API-readinessvelden; geen contract- of runtime-uitbreiding.
+Task 125T — Add read-only advanced cost-basis and unrealized P/L trace/details display using existing readiness trace fields, without browser-side financial calculations, without API behavior changes, without runtime fetch, without suggestions, without action drafts and without orders.
+- Gebruik alleen bestaande `missing_cost_basis_inputs`, `missing_pl_inputs`, `cost_basis_input_trace` en `unrealized_pl_input_trace` readinessvelden.
 - Geen broker execution en geen fake kostbasis/P/L/markt/FX/converted-total waarden.
 
 ## Completed predecessor tasks (for traceability)
-
