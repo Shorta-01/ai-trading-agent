@@ -1,3 +1,6 @@
+## Next up
+- Task 132B: selecteer en documenteer de volgende veilige IBKR read-only sync foundation batch na Task 131B, zonder network runtime/orders/suggesties/action drafts/market-data runtime.
+
 - [x] Task 125V — Completed: Task 125U wording-catalogus toegepast op read-only valuation readiness UI labels/helpteksten; alleen UI copy/helptekst/fallback updates; geen API/storage/migratie/runtime fetch/berekeningen/suggesties/action drafts/orders/broker execution/fake waarden en geen browser-side money/P&L parsing.
 - [x] Task 125K — Completed: pure Decimal-only conversion-total calculator module + unit tests op opgeslagen inputs; geen API wiring, geen endpointgedragwijziging, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
 - [x] Task 125J — Completed: document-first valuation conversion-total preflight met veilige Decimal-only criteria en contract/status/teststrategie voor toekomstige totals op basis van opgeslagen inputs; geen runtime berekening/fetch/suggesties/orders en geen fake FX/totals.

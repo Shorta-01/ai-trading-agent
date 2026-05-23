@@ -18,6 +18,11 @@ class FakeStatusAdapter:
         return self._result
 
 
+class RaisingStatusAdapter:
+    def check_session_status(self, runtime_settings: Settings) -> IbkrSessionStatusAdapterResult:
+        raise RuntimeError("token=abc123 should-never-leak")
+
+
 def test_ibkr_status_endpoint_disabled_default_response() -> None:
     payload = client.get("/broker/ibkr/status").json()
 
@@ -103,6 +108,34 @@ def test_ibkr_status_wrong_account_mode_via_fake_adapter() -> None:
     assert payload["sync_allowed"] is False
     assert payload["actions_allowed"] is False
     assert payload["suggestions_allowed"] is False
+    assert payload["account_mode_status"] == "mismatch"
+
+
+def test_ibkr_status_account_mode_match_via_fake_adapter() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+            ibkr_expected_environment="paper",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(
+                connection_status="configured_not_connected",
+                account_mode_status="unknown",
+                account_mode="paper",
+                session_status_reason="paper_mode_seen",
+            )
+        ),
+    )
+
+    assert payload["connection_status"] == "configured_not_connected"
+    assert payload["account_mode_status"] == "match"
+    assert payload["sync_allowed"] is False
+    assert payload["safe_for_sync"] is False
+    assert payload["safe_for_orders"] is False
+    assert payload["blocks_orders"] is True
 
 
 def test_ibkr_status_connection_failed_via_fake_adapter() -> None:
@@ -123,6 +156,87 @@ def test_ibkr_status_connection_failed_via_fake_adapter() -> None:
 
     assert payload["connection_status"] == "connection_failed"
     assert payload["blocks_orders"] is True
+    assert "gateway_unreachable" in str(payload)
+
+
+def test_ibkr_status_authentication_required_via_fake_adapter() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(connection_status="authentication_required")
+        ),
+    )
+
+    assert payload["connection_status"] == "authentication_required"
+    assert payload["status_nl"] == "Aanmelding vereist"
+    assert payload["blocks_orders"] is True
+    assert payload["safe_for_sync"] is False
+    assert payload["safe_for_orders"] is False
+
+
+def test_ibkr_status_pacing_limited_via_fake_adapter() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(connection_status="pacing_limited")
+        ),
+    )
+
+    assert payload["connection_status"] == "pacing_limited"
+    assert payload["status_nl"] == "Snelheidslimiet actief"
+    assert payload["blocks_orders"] is True
+    assert payload["safe_for_sync"] is False
+    assert payload["safe_for_orders"] is False
+
+
+def test_ibkr_status_unknown_adapter_status_maps_to_unknown() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        session_status_adapter=FakeStatusAdapter(
+            IbkrSessionStatusAdapterResult(connection_status="mystery_state")
+        ),
+    )
+
+    assert payload["connection_status"] == "unknown"
+    assert payload["status_nl"] == "IBKR-status onbekend"
+    assert "geen actieve read-only sessie" not in payload["message_nl"]
+    assert payload["sync_allowed"] is False
+    assert payload["suggestions_allowed"] is False
+    assert payload["blocks_orders"] is True
+
+
+def test_ibkr_status_adapter_exception_maps_to_safe_blocked_status() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        ),
+        session_status_adapter=RaisingStatusAdapter(),
+    )
+
+    serialized = str(payload).lower()
+    assert payload["connection_status"] == "connection_failed"
+    assert payload["session_status_reason"] == "adapter_error"
+    assert payload["blocks_orders"] is True
+    assert "should-never-leak" not in serialized
+    assert "token=abc123" not in serialized
 
 
 def test_ibkr_status_endpoint_exposes_no_fake_broker_data() -> None:
@@ -151,3 +265,11 @@ def test_ibkr_session_status_endpoint_available() -> None:
 
     assert response.status_code == 200
     assert response.json()["connection_status"] == "disabled"
+
+
+def test_broker_and_session_status_endpoints_both_available() -> None:
+    broker_response = client.get("/broker/ibkr/status")
+    session_response = client.get("/ibkr/session/status")
+
+    assert broker_response.status_code == 200
+    assert session_response.status_code == 200
