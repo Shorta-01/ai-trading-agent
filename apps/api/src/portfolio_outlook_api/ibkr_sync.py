@@ -80,9 +80,7 @@ def _resolve_repo(
         return None, None, "Storage is niet geconfigureerd; alleen geheugenopslag actief."
     if require_writable and not storage.writes_enabled:
         return None, None, "Storage schrijven staat uit; alleen geheugenopslag actief."
-    provider = StorageConnectionProvider(
-        build_database_connection_settings(storage.database_url)
-    )
+    provider = StorageConnectionProvider(build_database_connection_settings(storage.database_url))
     try:
         checked = provider.checked_connection(require_writable=require_writable)
         context = checked.__enter__()
@@ -125,9 +123,7 @@ def run_sync(
             "sync_run_id": None,
             "persistence_mode": "none",
             "persistence_status_nl": "Geen sync uitgevoerd",
-            "persistence_help_nl": (
-                "Readiness/preflight blokkeerde handmatige read-only sync."
-            ),
+            "persistence_help_nl": ("Readiness/preflight blokkeerde handmatige read-only sync."),
             "account_summary_status": "disabled",
             "positions_status": "disabled",
             "open_orders_status": "disabled",
@@ -191,9 +187,13 @@ def run_sync(
                     "persistence_mode": "none",
                     "persistence_status_nl": "Geen sync uitgevoerd",
                     "persistence_help_nl": "Adapterpayload ongeldig; niets opgeslagen.",
-                    "account_summary_status": "account_summary_received" if cash_items else "partial_data",
+                    "account_summary_status": "account_summary_received"
+                    if cash_items
+                    else "partial_data",
                     "positions_status": "positions_received" if positions else "partial_data",
-                    "open_orders_status": "open_orders_received" if open_orders else "no_open_orders",
+                    "open_orders_status": "open_orders_received"
+                    if open_orders
+                    else "no_open_orders",
                     "executions_status": "executions_received" if executions else "no_executions",
                     "positions_count": 0,
                     "cash_values_count": 0,
@@ -204,8 +204,12 @@ def run_sync(
                     "payload_validation_status": "failed",
                     "payload_validation_status_nl": "Mislukt",
                     "payload_validation_error_count": len(validation_result.errors),
-                    "payload_validation_errors": [error.__dict__ for error in validation_result.errors],
-                    "payload_validation_help_nl": "Controleer adapterpayload; opslag is veilig geblokkeerd.",
+                    "payload_validation_errors": [
+                        error.__dict__ for error in validation_result.errors
+                    ],
+                    "payload_validation_help_nl": (
+                        "Controleer adapterpayload; opslag is veilig geblokkeerd."
+                    ),
                 }
         except TimeoutError:
             result_status = "timeout"
@@ -222,23 +226,23 @@ def run_sync(
 
     completed_at = datetime.now(UTC)
     run_record = {
-            "sync_run_id": run_id,
-            "started_at": now.isoformat(),
-            "completed_at": completed_at.isoformat(),
-            "provider_code": settings.ibkr_sync_provider_code,
-            "provider_environment": settings.ibkr_sync_account_mode,
-            "account_mode": settings.ibkr_sync_account_mode,
-            "readonly": settings.ibkr_sync_readonly,
-            "status": result_status,
-            "account_summary_status": account_summary_status,
-            "positions_status": positions_status,
-            "open_orders_status": open_orders_status,
-            "executions_status": executions_status,
-            "positions_count": len(positions),
-            "cash_values_count": len(cash_items),
-            "open_orders_count": len(open_orders),
-            "executions_count": len(executions),
-        }
+        "sync_run_id": run_id,
+        "started_at": now.isoformat(),
+        "completed_at": completed_at.isoformat(),
+        "provider_code": settings.ibkr_sync_provider_code,
+        "provider_environment": settings.ibkr_sync_account_mode,
+        "account_mode": settings.ibkr_sync_account_mode,
+        "readonly": settings.ibkr_sync_readonly,
+        "status": result_status,
+        "account_summary_status": account_summary_status,
+        "positions_status": positions_status,
+        "open_orders_status": open_orders_status,
+        "executions_status": executions_status,
+        "positions_count": len(positions),
+        "cash_values_count": len(cash_items),
+        "open_orders_count": len(open_orders),
+        "executions_count": len(executions),
+    }
     STORE.runs.append(run_record)
     for p in positions:
         STORE.positions.append(
@@ -355,9 +359,7 @@ def run_sync(
         "sync_run_id": run_id,
         "persistence_mode": persistence_mode,
         "persistence_status_nl": (
-            "Duurzame opslag actief"
-            if persistence_mode == "durable"
-            else "Geheugenfallback actief"
+            "Duurzame opslag actief" if persistence_mode == "durable" else "Geheugenfallback actief"
         ),
         "persistence_help_nl": persistence_help_nl,
         "payload_validation_status": "passed",
@@ -418,7 +420,9 @@ def read_status(
         "payload_validation_status_nl": "Niet uitgevoerd",
         "payload_validation_error_count": 0,
         "payload_validation_errors": [],
-        "payload_validation_help_nl": "Validatie wordt uitgevoerd tijdens een toegelaten handmatige sync.",
+        "payload_validation_help_nl": (
+            "Validatie wordt uitgevoerd tijdens een toegelaten handmatige sync."
+        ),
         "sync_allowed": bool(resolved_readiness.get("manual_sync_allowed", False)),
         "actions_allowed": False,
         "order_submission_allowed": False,
