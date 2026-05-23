@@ -1,7 +1,7 @@
-## Task 140-R update
-- Task 140-R: **completed** — repair-only fix na merged-red Task 140 voor API CI mypy-fout in `status_routes.py`: reconciliation readiness leest niet langer niet-bestaande payload-validatie-attributen van `IbkrSyncRunRecord`. Duurzame syncruns gebruiken nu conservatieve fallback (`not_available` / `Niet beschikbaar` / `Deze syncrun bevat geen opgeslagen payloadvalidatie-details.`) wanneer validatiemetadata niet is opgeslagen. Geen storage schemawijzigingen, geen migraties, geen echte TWS/Gateway runtime, geen persistente session manager, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen orders en geen broker execution toegevoegd.
+## Task 141 update
+- Task 141: **completed** — disabled-by-default TWS/Gateway read-only session-status adapter skeleton toegevoegd via geïnjecteerde dependency-free client-boundary met veilige statusmapping (`connected_readonly`, `configured_not_connected`, `connected_wrong_account_mode`, `connection_failed`, `authentication_required`, `pacing_limited`, `unknown`) en timeout/error handling zonder secrets of broker payloads te lekken. Geen runtime-connectivity by default, geen auto-connect/reconnect loop, geen persistente session manager, geen account/portfolio sync runtime, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen orders, geen broker execution en geen storage schema/migraties toegevoegd.
 
-Huidige toestand: **na Task 140-R**
+Huidige toestand: **na Task 141**
 
 # Current State
 
@@ -9,12 +9,10 @@ Huidige toestand: **na Task 140-R**
 ## Task 140 update
 - Task 140: **completed** — read-only reconciliatie-readiness toegevoegd tussen opgeslagen IBKR-sync snapshots en bestaande portfolio waardering-blockers via `GET /portfolio/valuation/reconciliation-readiness`. Endpoint vat bestaande blockers samen (market data/FX/kostbasis/payloadvalidatie/snapshotbeschikbaarheid), voegt expliciete blocker-categorieën en telvelden toe, en inventariseert geen nieuwe waarden. Geen nieuwe financiële rekenengine toegevoegd buiten bestaande readiness/calculators; geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen orders of broker execution toegevoegd.
 
-Huidige toestand: **na Task 140**
 
 ## Task 139 update
 - Task 139: **completed** — read-only IBKR sync run history en diagnostics verdiept met nieuwe status-only endpoints `GET /ibkr/sync/runs` en `GET /ibkr/sync/runs/{sync_run_id}` op basis van bestaande in-memory syncruns. Responses bevatten expliciete telvelden, payload-validatie samenvatting (conservatief waar nodig), persistence mode/status, en harde safetybooleans die orders/suggesties blokkeren. Geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.
 
-Huidige toestand: **na Task 139**
 
 ## Task 138-R update
 - Task 138-R: **completed** — repair-only fix na merged-red Task 138 (PR #332) voor API pytest regressie in `run_sync(...)`: timeout/provider adapterfouten rapporteren nu `payload_validation_status=not_attempted` (met eenvoudige NL uitleg) i.p.v. onterecht `passed`. Adapter/runtimefouten blijven expliciet gescheiden van payloadvalidatiefouten (`payload_validation_failed`). Geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.

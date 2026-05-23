@@ -1,3 +1,7 @@
+## Task 141
+- Completed: milestone-sized Milestone B adapter-boundary slice met disabled-by-default TWS/Gateway read-only session-status adapter skeleton op injected-client protocol boundary.
+- Bevestigd: geen runtime connectivity by default, geen auto-connect/reconnect loop, geen persistente session manager, geen account/portfolio sync runtime, geen market-data of FX runtime, geen suggesties/action drafts/orders/broker execution, geen secrets/raw broker payload exposure en geen storage schema/migraties.
+
 ## Task 140-R
 - Completed: repair-only fix na merged-red Task 140 voor API `mypy src` failure in reconciliation readiness (`IbkrSyncRunRecord` payload-validatie-attributen bestonden niet in storage contract).
 - Durable sync records gebruiken nu conservatieve payload-validatie fallback (`not_available` / `Niet beschikbaar` / geen opgeslagen payloadvalidatie-details) zonder historische details te verzinnen.
