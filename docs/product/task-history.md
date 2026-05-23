@@ -1,3 +1,9 @@
+## Task 125Q — pure Decimal-only cost-basis and unrealized P/L calculator (no wiring)
+- Status: afgerond.
+- Toegevoegd: pure calculator module `packages/portfolio/src/portfolio_outlook_portfolio/valuation_cost_basis_pl.py` met deterministische statusuitkomsten en Decimal-only berekening op caller-provided opgeslagen inputs.
+- Toegevoegd: unit tests `packages/portfolio/tests/test_valuation_cost_basis_pl.py` voor kostbasis/P-L ready, ontbrekende average cost, ontbrekende market value, short-positie blokkade, Decimal exactness en geen zero-fallback.
+- Niet toegevoegd: API wiring, endpoint contractwijziging, UI-wijziging, storage migratie, runtime market-data/FX fetch, suggesties/action drafts/orders en fake kostbasis/P-L/FX waarden.
+
 ## Task 125K — pure Decimal-only conversion-total calculator (no wiring)
 - Status: afgerond.
 - Toegevoegd: pure calculator module `packages/portfolio/src/portfolio_outlook_portfolio/valuation_conversion_totals.py` met deterministische statusuitkomsten en Decimal-only berekening op caller-provided opgeslagen inputs.
