@@ -1,5 +1,19 @@
 # Locked Decisions (Version 1)
 
+## Task 130Q owner workshop lock (Version 1)
+
+Task 130Q vergrendelt de owner workshop-beslissingen als product source-of-truth in:
+- `docs/product/version-1-owner-workshop-decision-locks-task-130q.md`
+
+Kernlocks (samenvatting):
+- decision-first mission-control dashboard met exacte titel `AI Trading Agent`;
+- daily operating model met 07:00 briefing, market-open refreshes, hourly updates 08:00–20:00 (Europe/Brussels), event-updates en quiet mode;
+- evidence-gated, uncertainty-aware, multi-horizon ensemble financial engine (Python rekent, AI legt uit na validatie);
+- structured order drafts + `Waarom?`/`Onderbouwing`, pre-send `Orderimpact`, aparte final confirmation en geen auto execution;
+- volledige GUI-structuur met Action Center en Research Desk/Onderzoeksdesk als kernmodules;
+- `Nieuwe kansen` cold-start discovery met gates en zonder automatische portfolio/watchlist vulling;
+- release-candidate-only owner manual testing blijft vergrendeld.
+
 ## Read-only readiness terminology lock (Task 101)
 
 Deze termenset is vergrendeld als documentatie/review guardrail (geen runtime feature):

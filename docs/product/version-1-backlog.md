@@ -314,3 +314,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Manual owner-testing verschuift naar volledige Version 1 release candidate.
 - Partial feature-slices vereisen CI + fake-adapter/fixture/contracttestdekking.
 - Kleine Task 131 is vervangen door Task 131B als volgende veilige Milestone B batch.
+
+- Task 130Q — **completed (documentation-only)**: owner workshop product decision locks vastgelegd + tracking marker drift hersteld; geen runtimewijzigingen.

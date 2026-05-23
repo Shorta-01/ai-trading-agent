@@ -86,3 +86,10 @@
 - Partial features moeten automated tests bevatten, inclusief fake-adapter tests waar externe integraties meespelen.
 - Handmatige user-testing gebeurt bij volledige Version 1 release candidate.
 - Als een taak tóch handmatige testing vóór release candidate vereist, moet dat expliciet gemotiveerd en vooraf goedgekeurd zijn.
+
+
+## Task 130Q reminder lock
+- Respecteer `docs/product/version-1-owner-workshop-decision-locks-task-130q.md`.
+- Geen taak mag dashboard/order/evidence/account-environment/AI-calculation boundaries verzwakken.
+- Partial features vereisen geautomatiseerde tests (CI/fake adapters/fixtures/contracttests).
+- Owner manual testing gebeurt alleen op volledige release candidate.
