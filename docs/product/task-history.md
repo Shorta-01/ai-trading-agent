@@ -1,3 +1,8 @@
+## Task 136
+- Doel: durable IBKR sync status read model contract uitlijnen met Task 135B payload-validatie/safety response shape.
+- Resultaat: `serialize_sync_status_record(...)` retourneert nu payload-validatievelden met conservatieve `not_available` defaults voor durable historische runs zonder opgeslagen validatiedetails, plus volledige safety booleans (`actions_allowed/order_* /suggestions_allowed/can_submit_orders/safe_for_orders/blocks_orders`) in geblokkeerde toestand.
+- Scopebewaking: geen storage schema/migraties, geen runtimeverbreding, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.
+
 ## Task 135B-R
 - Status: afgerond (repair-only).
 - Doel: merged-red Task 135B CI-fout herstellen in API job (`ruff check .`, E501 line-too-long).

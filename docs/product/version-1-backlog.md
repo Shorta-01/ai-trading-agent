@@ -1,3 +1,8 @@
+## Task 136 update
+- Completed: durable IBKR sync status contract alignment with Task 135B payload-validation/safety fields.
+- Durable historische runs zonder payload-validatie-opslag rapporteren conservatief `payload_validation_status: not_available` met Nederlandse helptekst; er worden geen historische validatiefouten verzonnen.
+- Geen storage schema/migraties en geen runtime-uitbreiding (geen TWS/Gateway runtime, market-data runtime, suggesties, action drafts, orders of broker execution).
+
 ## Repair update — Task 135B-R
 - Completed: repair-only fix for merged-red Task 135B API Ruff E501 failures.
 - No runtime scope added; no storage schema/migration changes; no market-data runtime, suggestions, action drafts, orders, or broker execution added.

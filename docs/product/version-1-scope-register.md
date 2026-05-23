@@ -1,3 +1,16 @@
+## Task 136 — durable IBKR sync status contract alignment
+- In scope:
+  - Durable `/ibkr/sync/status` serializer aligned with Task 135B payload-validation contract fields.
+  - Conservatieve durable defaults voor ontbrekende historische payload-validatiedetails (`not_available`, geen verzonnen errors).
+  - Durable safety response-shape aligned met read-status safety booleans (false/blocked).
+  - API tests uitgebreid voor memory + durable status contractalignment.
+  - Web API client type (`IbkrSyncStatusResponse`) aangevuld met optionele payload-validatie- en safetyvelden.
+- Out of scope / bevestigd niet toegevoegd:
+  - Geen storage schemawijziging of migraties.
+  - Geen echte TWS/Gateway runtime.
+  - Geen market-data runtime.
+  - Geen suggesties, action drafts, orders of broker execution.
+
 ## Task 135B-R — merged-red Ruff repair
 - Status: afgerond (repair-only).
 - Gewijzigd: multiline formatting in API IBKR sync validation/test files om Ruff E501 te herstellen.

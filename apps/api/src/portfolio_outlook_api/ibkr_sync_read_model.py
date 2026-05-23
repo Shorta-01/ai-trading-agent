@@ -52,11 +52,21 @@ def serialize_sync_status_record(record: IbkrSyncRunRecord) -> dict[str, object]
         "next_step_nl": record.next_step_nl or "Geen orders mogelijk",
         "help_nl": record.help_nl or "Duurzame IBKR-syncstatus beschikbaar.",
         "sync_allowed": True,
+        "payload_validation_status": "not_available",
+        "payload_validation_status_nl": "Niet beschikbaar",
+        "payload_validation_error_count": 0,
+        "payload_validation_errors": [],
+        "payload_validation_help_nl": (
+            "Deze duurzame syncrun bevat geen opgeslagen payloadvalidatie-details."
+        ),
         "actions_allowed": False,
         "order_submission_allowed": False,
         "order_modification_allowed": False,
         "order_cancellation_allowed": False,
         "suggestions_allowed": False,
+        "can_submit_orders": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
     }
 
 

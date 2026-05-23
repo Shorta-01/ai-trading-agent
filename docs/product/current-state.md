@@ -1,7 +1,9 @@
 # Current State
 
-Huidige toestand: **na Task 135B-R**
+Huidige toestand: **na Task 136**
 
+## Task 136 update
+- Task 136: **completed** — duurzame `/ibkr/sync/status` read-model contractuitlijning met Task 135B payload-validatievelden en safetyvelden. `serialize_sync_status_record(...)` levert nu ook `payload_validation_status`-velden met conservatieve defaults (`not_available` / `Niet beschikbaar`) voor historische durable runs zonder opgeslagen validatiedetails; er worden geen historische payloadvalidatie-errors verzonnen. Durable status blijft order/suggestie-safe (`actions_allowed=False`, order/suggestie booleans geblokkeerd, `blocks_orders=True`). Geen storage schemawijziging/migraties toegevoegd. Geen runtimeverbreding: geen echte TWS/Gateway netwerkruntime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen broker execution toegevoegd.
 
 ## Task 135B-R update
 - Task 135B-R: **completed** — repair-only follow-up after merged-red Task 135B. API Ruff `E501 line-too-long` failures were fixed in IBKR sync validation and related API tests by multiline formatting only. Ruff now passes for `apps/api`. Local `mypy src` and API pytest commands in this environment remain blocked by missing dependencies (notably `fastapi`/package stubs), so no runtime or contract semantics were widened during this repair. No runtime, API behavior, storage schema, migrations, market-data runtime, suggestions, action drafts, orders, or broker execution were added.
