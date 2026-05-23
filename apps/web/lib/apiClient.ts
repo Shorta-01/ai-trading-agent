@@ -88,6 +88,19 @@ export type IbkrSyncStatusResponse = {
   open_orders_count: number;
   executions_count: number;
   last_sync_at?: string;
+  payload_validation_status?: string;
+  payload_validation_status_nl?: string;
+  payload_validation_error_count?: number;
+  payload_validation_errors?: Array<Record<string, unknown>>;
+  payload_validation_help_nl?: string;
+  actions_allowed?: boolean;
+  order_submission_allowed?: boolean;
+  order_modification_allowed?: boolean;
+  order_cancellation_allowed?: boolean;
+  suggestions_allowed?: boolean;
+  can_submit_orders?: boolean;
+  safe_for_orders?: boolean;
+  blocks_orders?: boolean;
 };
 
 

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -222,6 +223,9 @@ def test_status_and_read_endpoints_use_memory_when_storage_disabled() -> None:
     assert response["manual_sync_allowed"] is False
     assert response["actions_allowed"] is False
     assert response["suggestions_allowed"] is False
+    assert response["payload_validation_status"] == "not_attempted"
+    assert response["safe_for_orders"] is False
+    assert response["blocks_orders"] is True
     assert client.get("/ibkr/orders/open").json()["actions_allowed"] is False
     assert client.get("/ibkr/executions").json()["actions_allowed"] is False
 
@@ -474,3 +478,61 @@ def test_invalid_payload_blocks_persistence_and_memory(monkeypatch) -> None:
 def test_status_before_any_run_has_not_attempted_validation() -> None:
     body = ibkr_sync.read_status(_base_settings())
     assert body["payload_validation_status"] == "not_attempted"
+
+
+def test_durable_status_contract_includes_payload_validation_and_safety(
+    monkeypatch,
+) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    now = datetime.now(UTC)
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=SimpleNamespace(
+                sync_run_id="sync-run-1",
+                started_at=now,
+                completed_at=now,
+                provider_code="ibkr",
+                provider_environment="paper",
+                account_mode="paper",
+                readonly=True,
+                status="paper_account_confirmed",
+                account_summary_status="account_summary_received",
+                positions_status="positions_received",
+                open_orders_status="no_open_orders",
+                executions_status="no_executions",
+                positions_count=1,
+                cash_values_count=1,
+                open_orders_count=0,
+                executions_count=0,
+                status_nl=None,
+                next_step_nl=None,
+                help_nl=None,
+                actions_allowed=False,
+                order_submission_allowed=False,
+                order_modification_allowed=False,
+                order_cancellation_allowed=False,
+                suggestions_allowed=False,
+            ),
+            storage_help_nl=None,
+        ),
+    )
+
+    response = client.get("/ibkr/sync/status").json()
+    assert response["payload_validation_status"] == "not_available"
+    assert response["payload_validation_status_nl"] == "Niet beschikbaar"
+    assert response["payload_validation_error_count"] == 0
+    assert response["payload_validation_errors"] == []
+    assert "payloadvalidatie-details" in response["payload_validation_help_nl"]
+    assert response["actions_allowed"] is False
+    assert response["order_submission_allowed"] is False
+    assert response["order_modification_allowed"] is False
+    assert response["order_cancellation_allowed"] is False
+    assert response["suggestions_allowed"] is False
+    assert response["can_submit_orders"] is False
+    assert response["safe_for_orders"] is False
+    assert response["blocks_orders"] is True
