@@ -1,3 +1,8 @@
+## Task 140-R
+- Completed: repair-only fix na merged-red Task 140 voor API mypy-failure in `status_routes.py` (`IbkrSyncRunRecord` heeft geen payload-validatievelden).
+- Durable reconciliatie gebruikt nu conservatieve fallback voor payload-validatie-details (`not_available`, `Niet beschikbaar`, en NL helptekst dat details niet opgeslagen zijn).
+- Geen storage schemawijzigingen/migraties; geen echte TWS/Gateway runtime; geen persistente session manager; geen market-data runtime; geen FX runtime; geen suggesties, action drafts of orders toegevoegd.
+
 ## Task 140
 - Completed: read-only reconciliation readiness endpoint toegevoegd (`GET /portfolio/valuation/reconciliation-readiness`) die bestaande waarderingblockers samenvat zonder waarden te verzinnen en met alle order/suggestie/action safetybooleans geblokkeerd. Geen TWS/Gateway runtime, geen session manager, geen schema/migraties, geen market-data/FX runtime, geen suggesties/action drafts/orders/execution.
 

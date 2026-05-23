@@ -1,3 +1,9 @@
+## Task 140-R
+- Afgerond: repair-only fix voor merged-red Task 140 (`api` job, stap `mypy src`).
+- Oorzaak: reconciliation readiness las niet-bestaande payload-validatie-attributen op `IbkrSyncRunRecord`.
+- Herstel: duurzame syncruns gebruiken conservatieve payload-validatie fallback wanneer validatiemetadata niet is opgeslagen; geen historische validatiedetails verzonnen.
+- Niet toegevoegd: geen storage schema/migraties, geen echte TWS/Gateway runtime, geen persistente session manager, geen market-data runtime, geen FX runtime, geen suggesties/action drafts/orders/broker execution.
+
 ## Task 140
 - Completed: read-only reconciliation readiness endpoint toegevoegd (`GET /portfolio/valuation/reconciliation-readiness`) die bestaande waarderingblockers samenvat zonder waarden te verzinnen en met alle order/suggestie/action safetybooleans geblokkeerd. Geen TWS/Gateway runtime, geen session manager, geen schema/migraties, geen market-data/FX runtime, geen suggesties/action drafts/orders/execution.
 

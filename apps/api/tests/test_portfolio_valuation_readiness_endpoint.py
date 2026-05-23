@@ -730,9 +730,6 @@ def test_reconciliation_no_cash_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(api_settings.storage, "enabled", True)
     monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
     run = _run()
-    run.payload_validation_status = "failed"
-    run.payload_validation_status_nl = "Mislukt"
-    run.payload_validation_help_nl = "Payloadvalidatie mislukt."
     monkeypatch.setattr(
         status_routes,
         "read_latest_ibkr_sync_run",
@@ -780,5 +777,11 @@ def test_reconciliation_no_cash_snapshot(monkeypatch) -> None:
     assert payload["positions_snapshot_available"] is True
     assert payload["cash_snapshot_available"] is False
     assert "no_cash_snapshot" in payload["blocker_categories"]
-    assert "payload_validation_failed" in payload["blocker_categories"]
+    assert "payload_validation_not_available" in payload["blocker_categories"]
+    assert payload["payload_validation_status"] == "not_available"
+    assert payload["payload_validation_status_nl"] == "Niet beschikbaar"
+    assert (
+        payload["payload_validation_help_nl"]
+        == "Deze syncrun bevat geen opgeslagen payloadvalidatie-details."
+    )
     assert payload["suggestions_allowed"] is False

@@ -1,3 +1,8 @@
+## Task 140-R — Repair reconciliation readiness mypy failure
+- Status: afgerond (repair-only).
+- In scope: API reconciliation readiness leest geen niet-bestaande payload-validatie-attributen meer van `IbkrSyncRunRecord`; duurzame records krijgen conservatieve fallbackwaarden wanneer validatiemetadata niet opgeslagen is.
+- Buiten scope: geen storage schemawijzigingen/migraties, geen echte TWS/Gateway runtime, geen persistente session manager, geen market-data runtime, geen FX runtime, geen suggesties/action drafts/orders/broker execution.
+
 ## Task 140
 - Completed: read-only reconciliation readiness endpoint toegevoegd (`GET /portfolio/valuation/reconciliation-readiness`) die bestaande waarderingblockers samenvat zonder waarden te verzinnen en met alle order/suggestie/action safetybooleans geblokkeerd. Geen TWS/Gateway runtime, geen session manager, geen schema/migraties, geen market-data/FX runtime, geen suggesties/action drafts/orders/execution.
 
