@@ -1,3 +1,7 @@
+## Repair update — Task 135B-R
+- Completed: repair-only fix for merged-red Task 135B API Ruff E501 failures.
+- No runtime scope added; no storage schema/migration changes; no market-data runtime, suggestions, action drafts, orders, or broker execution added.
+
 - [x] Task 134B-R2 — Completed: Task 134B-R2 repaired the remaining API pytest failures after merged Task 134B-R by preventing readiness recomputation in the final `run_sync(...)` response: readiness was first computed with the injected session-status adapter, then incorrectly recomputed by `read_status(settings)` without that adapter; `run_sync(...)` now returns status using the same precomputed readiness object. No real TWS/Gateway network runtime, no real IBKR account/portfolio sync runtime, no market-data runtime, no suggestions, no action drafts, no Decision Packages runtime, no orders, no broker execution, no financial calculations and no fake data were added.
 ## Next up
 - Task 135B: volgende implementatiestap blijft geldig na Task 135A audit/reconciliatie; scope blijft hard beperkt tot het verharden van IBKR read-only sync adapter payloadvalidatie voor cash/positions/open orders/executions zonder echte TWS/Gateway runtime, zonder market-data runtime, zonder suggesties, zonder action drafts en zonder orders.

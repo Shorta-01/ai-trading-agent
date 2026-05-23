@@ -20,8 +20,6 @@ from portfolio_outlook_api.status_routes import settings as api_settings
 client = TestClient(app)
 
 
-
-
 class FakeReadyPaperSessionStatusAdapter:
     def check_session_status(self, runtime_settings: Settings) -> IbkrSessionStatusAdapterResult:
         return IbkrSessionStatusAdapterResult(
@@ -45,6 +43,7 @@ class RaisingSyncAdapter(IbkrReadOnlyAdapter):
 
     def sync_executions(self):
         raise AssertionError("sync adapter should not be called")
+
 
 class FakeAdapter(IbkrReadOnlyAdapter):
     def sync_account_summary(self):
@@ -434,14 +433,18 @@ class InvalidPayloadAdapter(FakeAdapter):
 
 
 def test_readiness_blocked_does_not_call_adapter_and_validation_not_attempted() -> None:
-    body = ibkr_sync.run_sync(_base_settings(ibkr_status_check_enabled=False), adapter=RaisingSyncAdapter())
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_status_check_enabled=False), adapter=RaisingSyncAdapter()
+    )
     assert body["sync_run_id"] is None
     assert body["payload_validation_status"] == "not_attempted"
 
 
 def test_valid_adapter_sets_payload_validation_passed() -> None:
     body = ibkr_sync.run_sync(
-        _base_settings(), adapter=FakeAdapter(), session_status_adapter=FakeReadyPaperSessionStatusAdapter()
+        _base_settings(),
+        adapter=FakeAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["payload_validation_status"] == "passed"
     assert body["payload_validation_error_count"] == 0
@@ -449,9 +452,15 @@ def test_valid_adapter_sets_payload_validation_passed() -> None:
 
 def test_invalid_payload_blocks_persistence_and_memory(monkeypatch) -> None:
     called = {"persist": 0}
-    monkeypatch.setattr(ibkr_sync, "persist_ibkr_sync_payload", lambda *_args, **_kwargs: called.__setitem__("persist", called["persist"] + 1))
+    monkeypatch.setattr(
+        ibkr_sync,
+        "persist_ibkr_sync_payload",
+        lambda *_args, **_kwargs: called.__setitem__("persist", called["persist"] + 1),
+    )
     body = ibkr_sync.run_sync(
-        _base_settings(), adapter=InvalidPayloadAdapter(), session_status_adapter=FakeReadyPaperSessionStatusAdapter()
+        _base_settings(),
+        adapter=InvalidPayloadAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
     assert body["status"] == "payload_validation_failed"
     assert body["persistence_mode"] == "none"

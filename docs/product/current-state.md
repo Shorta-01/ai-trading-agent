@@ -1,7 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 134B-R2**
+Huidige toestand: **na Task 135B-R**
 
+
+## Task 135B-R update
+- Task 135B-R: **completed** — repair-only follow-up after merged-red Task 135B. API Ruff `E501 line-too-long` failures were fixed in IBKR sync validation and related API tests by multiline formatting only. Ruff now passes for `apps/api`. Local `mypy src` and API pytest commands in this environment remain blocked by missing dependencies (notably `fastapi`/package stubs), so no runtime or contract semantics were widened during this repair. No runtime, API behavior, storage schema, migrations, market-data runtime, suggestions, action drafts, orders, or broker execution were added.
 
 ## Task 134B-R2 update
 - Task 134B-R2: **completed** — Task 134B-R2 repaired the remaining API pytest failures after merged Task 134B-R by preventing readiness recomputation in the final `run_sync(...)` response: readiness was first computed with the injected session-status adapter, then incorrectly recomputed by `read_status(settings)` without that adapter; `run_sync(...)` now returns status using the same precomputed readiness object. No real TWS/Gateway network runtime, no real IBKR account/portfolio sync runtime, no market-data runtime, no suggestions, no action drafts, no Decision Packages runtime, no orders, no broker execution, no financial calculations and no fake data were added.
