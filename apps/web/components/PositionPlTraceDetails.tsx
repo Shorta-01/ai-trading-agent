@@ -37,8 +37,8 @@ function renderUnknownValue(value: unknown): string {
   if (Array.isArray(value) && value.every(isPrimitiveValue)) {
     return value.map((item) => stringifyPrimitive(item)).join(", ");
   }
-  if (Array.isArray(value)) return "Detaillijst beschikbaar";
-  if (typeof value === "object") return "Detailobject beschikbaar";
+  if (Array.isArray(value)) return "Niet direct leesbaar: detaillijst beschikbaar.";
+  if (typeof value === "object") return "Niet direct leesbaar: detailobject beschikbaar.";
   return "Niet beschikbaar";
 }
 
@@ -60,7 +60,7 @@ function renderTraceSection(title: string, trace: Record<string, unknown> | null
       )}
       {trace ? (
         <details>
-          <summary>Ruwe auditdata</summary>
+          <summary>Ruwe auditdata (technisch, geen adviessignaal)</summary>
           <pre>{JSON.stringify(trace, null, 2)}</pre>
         </details>
       ) : null}
@@ -81,13 +81,13 @@ export function PositionPlTraceDetails({ row }: PositionPlTraceDetailsProps) {
   return (
     <details>
       <summary><strong>Details</strong></summary>
-      <p>Alleen opgeslagen gegevens worden getoond. Er worden geen waarden berekend in de browser.</p>
+      <p>Controle en herkomst van kostbasis en winst/verlies. Alleen opgeslagen gegevens worden getoond; er worden geen waarden berekend in de browser.</p>
       <ul>
         <li><strong>Conid:</strong> {showValue(row.conid)}</li>
         <li><strong>Symbool:</strong> {showValue(row.symbol)}</li>
         <li><strong>Valuta:</strong> {showValue(row.currency)}</li>
         <li><strong>Aantal:</strong> {row.quantity}</li>
-        <li><strong>Gemiddelde kost:</strong> {showValue(row.average_cost)}</li>
+        <li><strong>Gemiddelde kost (brokerinput):</strong> {showValue(row.average_cost)}</li>
         <li><strong>Marktsnapshot:</strong> {showValue(row.last_market_snapshot_id)}</li>
         <li><strong>Prijsmoment:</strong> {showValue(row.market_price_timestamp)}</li>
       </ul>
@@ -97,7 +97,7 @@ export function PositionPlTraceDetails({ row }: PositionPlTraceDetailsProps) {
       <p><strong>Toelichting:</strong> {row.cost_basis_help_nl}</p>
       <p>
         <strong>Ontbrekende kostbasisinvoer:</strong>{" "}
-        {renderMissingList(row.missing_cost_basis_inputs, "Geen ontbrekende kostbasisinvoer")}
+        {renderMissingList(row.missing_cost_basis_inputs, "Geen ontbrekende kostbasisinvoer gevonden")}
       </p>
 
       <h4>Winst/verliescontrole</h4>
@@ -105,11 +105,11 @@ export function PositionPlTraceDetails({ row }: PositionPlTraceDetailsProps) {
       <p><strong>Toelichting:</strong> {row.unrealized_pl_help_nl}</p>
       <p>
         <strong>Ontbrekende winst/verliesinvoer:</strong>{" "}
-        {renderMissingList(row.missing_pl_inputs, "Geen ontbrekende winst/verliesinvoer")}
+        {renderMissingList(row.missing_pl_inputs, "Geen ontbrekende winst/verliesinvoer gevonden")}
       </p>
 
-      {renderTraceSection("Herkomst kostbasis", row.cost_basis_input_trace, "Geen kostbasis-trace beschikbaar")}
-      {renderTraceSection("Herkomst winst/verlies", row.unrealized_pl_input_trace, "Geen winst/verlies-trace beschikbaar")}
+      {renderTraceSection("Herkomst kostbasis", row.cost_basis_input_trace, "Geen herkomst kostbasis beschikbaar")}
+      {renderTraceSection("Herkomst winst/verlies", row.unrealized_pl_input_trace, "Geen herkomst winst/verlies beschikbaar")}
     </details>
   );
 }

@@ -22,7 +22,7 @@ function displayValue(value: string | null | undefined): string {
 }
 
 function formatValuationValue(baseCurrency: string | null, value: string | null, available: boolean): string {
-  if (!available || !value) return "Geen veilige totaalwaarde beschikbaar";
+  if (!available || !value) return "Niet beschikbaar: veilige totaalwaarde ontbreekt.";
   return baseCurrency ? `${baseCurrency} ${value}` : value;
 }
 
@@ -33,7 +33,7 @@ function formatReadinessAmount(
   helpText: string,
 ): string {
   if (!available || !value) {
-    return helpText || "Geen veilige waarde beschikbaar";
+    return helpText || "Niet beschikbaar: veilige waarde ontbreekt.";
   }
   return currency ? `${currency} ${value}` : value;
 }
@@ -120,12 +120,12 @@ export default function PortfolioPage() {
         {!loading && !valuationReadiness ? <EmptyState title="Waardering niet beschikbaar" message="De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen." /> : null}
         {valuationReadiness ? (
           <div className="portfolio-meta-grid" style={{ marginBottom: "1rem" }}>
-            <div><strong>Totale portefeuillewaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_portfolio_value, valuationReadiness.total_portfolio_value_available)}</div>
-            <div><strong>Totale marktwaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_market_value, valuationReadiness.total_market_value_available)}</div>
-            <div><strong>Cashwaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_cash_value, valuationReadiness.total_cash_value_available)}</div>
-            <div><strong>Basismunt:</strong> {displayValue(valuationReadiness.base_currency)}</div>
-            <div><strong>Omrekening:</strong> <StatusBadge label={valuationReadiness.conversion_total_status_nl} status={valuationStatusTone} title={valuationReadiness.conversion_total_help_nl} /></div>
-            <div><strong>Toelichting:</strong> {valuationReadiness.conversion_total_help_nl}</div>
+            <div><strong>Totale portefeuillewaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_portfolio_value, valuationReadiness.total_portfolio_value_available)} <em>— Som van veilige marktwaarde en cashwaarde in basismunt, alleen als invoer compleet en veilig is.</em></div>
+            <div><strong>Totale marktwaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_market_value, valuationReadiness.total_market_value_available)} <em>— Marktwaarde uit opgeslagen snapshots; geen browserberekening.</em></div>
+            <div><strong>Cashwaarde:</strong> {formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_cash_value, valuationReadiness.total_cash_value_available)} <em>— Cash uit opgeslagen accountsnapshot; geen verzonnen fallback.</em></div>
+            <div><strong>Basismunt:</strong> {displayValue(valuationReadiness.base_currency)} <em>— Valuta waarin totalen worden getoond als omrekening veilig beschikbaar is.</em></div>
+            <div><strong>Omrekening:</strong> <StatusBadge label={valuationReadiness.conversion_total_status_nl} status={valuationStatusTone} title="Status van omzetting naar basismunt op basis van opgeslagen wisselkoersen." /> <em>— Status van omzetting naar basismunt op basis van opgeslagen wisselkoersen.</em></div>
+            <div><strong>Toelichting:</strong> {valuationReadiness.conversion_total_help_nl || "Niet beschikbaar: controle en herkomst ontbreken."}</div>
           </div>
         ) : null}
         {valuationReadiness ? <ValuationTraceDetails readiness={valuationReadiness} /> : null}
@@ -159,7 +159,7 @@ export default function PortfolioPage() {
         {!valuationReadiness ? (
           <EmptyState title="Nog geen kostbasis- of winst/verliesgegevens" message="De readiness-gegevens zijn niet beschikbaar. Er worden geen waarden verzonnen." />
         ) : valuationReadiness.rows.length === 0 ? (
-          <EmptyState title="Nog geen kostbasis- of winst/verliesgegevens beschikbaar." message="Er worden geen waarden verzonnen." />
+          <EmptyState title="Nog geen kostbasis- of winst/verliesgegevens beschikbaar" message="Er worden geen waarden verzonnen." />
         ) : (
           <table className="portfolio-table">
             <thead>

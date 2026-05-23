@@ -13,7 +13,7 @@ import { apiClient, IbkrStatusResponse, IbkrSyncStatusResponse, PortfolioValuati
 
 function formatValuationValue(baseCurrency: string | null, value: string | null, available: boolean): string {
   if (!available || !value) {
-    return "Geen veilige totaalwaarde";
+    return "Niet beschikbaar: veilige totaalwaarde ontbreekt.";
   }
   return baseCurrency ? `${baseCurrency} ${value}` : value;
 }
@@ -58,10 +58,6 @@ export default function HomePage() {
   }, [ibkrStatus]);
 
   const valuationStatus = getValuationDisplayStatus(valuationReadiness);
-  const valuationHelp = valuationLoading
-    ? "Waardering wordt geladen. Er worden geen waarden verzonnen."
-    : valuationReadiness?.conversion_total_help_nl ?? "De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen.";
-
   return (
     <main className="page-wrap">
       <section className="metrics-grid">
@@ -69,7 +65,7 @@ export default function HomePage() {
           title="Totale portefeuillewaarde"
           value={valuationLoading ? "Laden..." : formatValuationValue(valuationReadiness?.base_currency ?? null, valuationReadiness?.total_portfolio_value ?? null, valuationReadiness?.total_portfolio_value_available ?? false)}
           status={valuationLoading ? "wacht" : valuationStatus}
-          help={valuationLoading ? "Waardering wordt geladen." : valuationHelp}
+          help={valuationLoading ? "Som van veilige marktwaarde en cashwaarde in basismunt, alleen als invoer compleet en veilig is." : "Som van veilige marktwaarde en cashwaarde in basismunt, alleen als invoer compleet en veilig is."}
         />
         <MetricCard title="Dagresultaat" value="Niet beschikbaar" status="niet-beschikbaar" help="Deze waarde verschijnt zodra echte gegevens beschikbaar zijn." />
         <MetricCard title="Totaal resultaat" value="Niet beschikbaar" status="niet-beschikbaar" help="Deze waarde verschijnt zodra echte gegevens beschikbaar zijn." />
@@ -77,7 +73,7 @@ export default function HomePage() {
           title="Cashwaarde"
           value={valuationLoading ? "Laden..." : formatValuationValue(valuationReadiness?.base_currency ?? null, valuationReadiness?.total_cash_value ?? null, valuationReadiness?.total_cash_value_available ?? false)}
           status={valuationLoading ? "wacht" : valuationStatus}
-          help={valuationHelp}
+          help={"Cash uit opgeslagen accountsnapshot; geen verzonnen fallback."}
         />
         <MetricCard title="Actieve suggesties" value="Niet beschikbaar" status="niet-beschikbaar" help="Suggestion runtime bestaat nog niet." />
         <MetricCard title="Te keuren acties" value="Niet beschikbaar" status="niet-beschikbaar" help="Action-draft runtime bestaat nog niet." />
@@ -88,14 +84,14 @@ export default function HomePage() {
           <ChartPlaceholder text="Portefeuille-evolutie verschijnt hier na IBKR-sync en marktdataverwerking." />
         </DashboardPanel>
 
-        <DashboardPanel title="Waardering" help="Read-only status van waardering op basis van bestaande readiness-gegevens.">
+        <DashboardPanel title="Waardering" help="Read-only status op basis van opgeslagen readiness-gegevens; geen browserberekening.">
           {valuationLoading ? <EmptyState title="Waardering laden" message="Even wachten, er worden geen waarden verzonnen." /> : null}
           {!valuationLoading && !valuationReadiness ? <EmptyState title="Waardering niet beschikbaar" message="De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen." /> : null}
           {valuationReadiness ? (
             <div className="status-list">
-              <StatusCard title="Totale marktwaarde" description={valuationReadiness.conversion_total_help_nl} statusLabel={formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_market_value, valuationReadiness.total_market_value_available)} status={valuationStatus} />
-              <StatusCard title="Cashwaarde" description={valuationReadiness.conversion_total_help_nl} statusLabel={formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_cash_value, valuationReadiness.total_cash_value_available)} status={valuationStatus} />
-              <StatusCard title="Omrekening" description={valuationReadiness.conversion_total_help_nl} statusLabel={valuationReadiness.conversion_total_status_nl} status={valuationStatus} />
+              <StatusCard title="Totale marktwaarde" description={"Marktwaarde uit opgeslagen snapshots; geen browserberekening."} statusLabel={formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_market_value, valuationReadiness.total_market_value_available)} status={valuationStatus} />
+              <StatusCard title="Cashwaarde" description={"Cash uit opgeslagen accountsnapshot; geen verzonnen fallback."} statusLabel={formatValuationValue(valuationReadiness.base_currency, valuationReadiness.total_cash_value, valuationReadiness.total_cash_value_available)} status={valuationStatus} />
+              <StatusCard title="Omrekening" description={"Status van omzetting naar basismunt op basis van opgeslagen wisselkoersen."} statusLabel={valuationReadiness.conversion_total_status_nl} status={valuationStatus} />
             </div>
           ) : null}
         </DashboardPanel>
