@@ -12,6 +12,7 @@ from portfolio_outlook_api.ibkr_sync import (
     IbkrPosition,
     IbkrReadOnlyAdapter,
 )
+from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
 from portfolio_outlook_api.main import app
 from portfolio_outlook_api.status_routes import settings as api_settings
 
@@ -170,6 +171,9 @@ def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
 
 def test_status_and_read_endpoints_use_memory_when_storage_disabled() -> None:
     response = client.get("/ibkr/sync/status").json()
+    assert response["sync_readiness_status"] == "blocked"
+    assert response["sync_readiness_status_nl"] == "Geblokkeerd"
+    assert response["manual_sync_allowed"] is False
     assert response["actions_allowed"] is False
     assert response["suggestions_allowed"] is False
     assert client.get("/ibkr/orders/open").json()["actions_allowed"] is False
@@ -181,6 +185,55 @@ def test_storage_enabled_but_not_configured_uses_memory_fallback() -> None:
     api_settings.storage.database_url = None
     response = client.get("/ibkr/sync/status").json()
     assert response["help_nl"] == "Geen duurzame IBKR-syncrun gevonden."
+
+
+def test_sync_status_blocked_for_missing_sync_config() -> None:
+    response = ibkr_sync.read_status(Settings(ibkr_sync_enabled=True))
+    assert response["sync_readiness_status"] == "blocked"
+    assert response["sync_readiness_reason"] == "missing_sync_config"
+
+
+def test_sync_status_blocked_for_readonly_disabled() -> None:
+    response = ibkr_sync.read_status(_base_settings(ibkr_sync_readonly=False))
+    assert response["sync_readiness_status"] == "blocked"
+    assert response["sync_readiness_reason"] == "readonly_required"
+
+
+def test_sync_status_blocked_for_version1_paper_only() -> None:
+    response = ibkr_sync.read_status(
+        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="paper")
+    )
+    assert response["sync_readiness_status"] == "blocked"
+    assert response["sync_readiness_reason"] == "version1_paper_only"
+    assert response["manual_sync_allowed"] is False
+
+
+def test_sync_status_needs_control_when_status_check_disabled() -> None:
+    response = build_ibkr_sync_readiness(
+        _base_settings(),
+        {"connection_status": "status_check_disabled", "account_mode_status": "unknown"},
+    )
+    assert response["sync_readiness_status"] == "needs_control"
+    assert response["manual_sync_allowed"] is False
+
+
+def test_sync_status_ready_for_explicit_readonly_paper_status() -> None:
+    response = build_ibkr_sync_readiness(
+        _base_settings(ibkr_expected_environment="paper", ibkr_sync_account_mode="paper"),
+        {
+            "connection_status": "connected_readonly",
+            "account_mode_status": "match",
+            "session_check_attempted": True,
+            "status_check_enabled": True,
+        },
+    )
+    assert response["sync_readiness_status"] == "ready_for_manual_readonly_sync"
+    assert response["manual_sync_allowed"] is True
+    assert response["actions_allowed"] is False
+    assert response["order_submission_allowed"] is False
+    assert response["order_modification_allowed"] is False
+    assert response["order_cancellation_allowed"] is False
+    assert response["suggestions_allowed"] is False
 
 
 def test_storage_connection_error_falls_back_to_memory(monkeypatch) -> None:
