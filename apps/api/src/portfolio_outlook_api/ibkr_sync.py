@@ -118,7 +118,7 @@ def run_sync(
         if readiness_status == "needs_control":
             blocked_status = "sync_readiness_needs_control"
             blocked_status_nl = "Controle nodig"
-        return read_status(settings) | {
+        return read_status(settings, readiness=readiness) | {
             "status": blocked_status,
             "status_nl": blocked_status_nl,
             "sync_run_id": None,
@@ -317,7 +317,7 @@ def run_sync(
                 connection_ctx.__exit__(None, None, None)
     elif storage_help_nl:
         persistence_help_nl = storage_help_nl
-    return read_status(settings) | {
+    return read_status(settings, readiness=readiness) | {
         "sync_run_id": run_id,
         "persistence_mode": persistence_mode,
         "persistence_status_nl": (
@@ -333,7 +333,10 @@ def _int_value(value: object) -> int:
     return value if isinstance(value, int) else 0
 
 
-def read_status(settings: Settings) -> dict[str, object]:
+def read_status(
+    settings: Settings,
+    readiness: dict[str, object] | None = None,
+) -> dict[str, object]:
     latest = STORE.runs[-1] if STORE.runs else None
     status = "disabled" if not settings.ibkr_sync_enabled else "configured_not_connected"
     status_nl = "IBKR-sync niet geconfigureerd"
@@ -350,7 +353,9 @@ def read_status(settings: Settings) -> dict[str, object]:
             status_nl = "Read-only synchronisatie"
             next_step_nl = "Geen orders mogelijk"
 
-    readiness = _build_readiness(settings)
+    resolved_readiness = readiness
+    if resolved_readiness is None:
+        resolved_readiness = _build_readiness(settings)
     return {
         "status": status,
         "provider_code": settings.ibkr_sync_provider_code,
@@ -370,7 +375,7 @@ def read_status(settings: Settings) -> dict[str, object]:
         "status_nl": status_nl,
         "next_step_nl": next_step_nl,
         "help_nl": "Geen brokerdata opgeslagen zonder echte IBKR-respons",
-        "sync_allowed": bool(readiness.get("manual_sync_allowed", False)),
+        "sync_allowed": bool(resolved_readiness.get("manual_sync_allowed", False)),
         "actions_allowed": False,
         "order_submission_allowed": False,
         "order_modification_allowed": False,
@@ -379,4 +384,4 @@ def read_status(settings: Settings) -> dict[str, object]:
         "can_submit_orders": False,
         "safe_for_orders": False,
         "blocks_orders": True,
-    } | readiness
+    } | resolved_readiness

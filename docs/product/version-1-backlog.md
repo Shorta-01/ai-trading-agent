@@ -1,3 +1,4 @@
+- [x] Task 134B-R2 — Completed: Task 134B-R2 repaired the remaining API pytest failures after merged Task 134B-R by preventing readiness recomputation in the final `run_sync(...)` response: readiness was first computed with the injected session-status adapter, then incorrectly recomputed by `read_status(settings)` without that adapter; `run_sync(...)` now returns status using the same precomputed readiness object. No real TWS/Gateway network runtime, no real IBKR account/portfolio sync runtime, no market-data runtime, no suggestions, no action drafts, no Decision Packages runtime, no orders, no broker execution, no financial calculations and no fake data were added.
 ## Next up
 - Task 135B: behoud als volgende taak in `docs/product/next-task.md` (niet geïmplementeerd in deze repair PR).
 
