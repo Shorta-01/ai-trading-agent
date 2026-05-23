@@ -1,5 +1,8 @@
 # Current State
 
+## Task 128 update
+- Task 128: **completed** — workflow acceleration documentatie toegevoegd (`codex-workflow-acceleration-task-128.md`, `codex-task-template.md`, `task-queue.md`, `codex-red-green-ci-workflow.md`, `version-1-milestone-plan.md`) plus lichte lokale helper scripts (`scripts/check_product_tracking.py`, `scripts/project_status.py`). Task 125W micro-auditrichting is bewust gedeferreerd/vervangen door deze procespivot. Geen runtime productgedrag gewijzigd: geen API-behavior, geen storage/migraties, geen runtime fetch, geen financiële berekeningen, geen suggesties, geen action drafts, geen orders, geen broker execution en geen fake waarden toegevoegd.
+
 ## Task 125V update
 - Task 125V: **completed** — Task 125U wording-catalogus toegepast op read-only portfolio valuation readiness UI labels/helpteksten (dashboard, portefeuille totals en trace/details). Alleen UI copy/helptekst/fallback-tekst aangepast; geen API-behavior, storage, migraties, runtime fetch, berekeningen, suggesties, action drafts, orders, broker execution of fake waarden toegevoegd. Geen browser-side financiële berekeningen of JavaScript money/P&L parsing toegevoegd.
 - Task 125U: **completed** — document-first review/preflight toegevoegd voor read-only portfolio valuation readiness UI-teksten en helpteksten in consistent, eenvoudig Nederlands (`docs/product/portfolio-valuation-readiness-ui-text-review-task-125u.md`), inclusief checklist voor ontbrekende invoer, trace-lege staten en onleesbare nested tracewaarden. Geen runtime code, geen API-behavior changes, geen web runtime-behavior changes, geen storage changes, geen migraties, geen runtime fetch, geen suggesties, geen action drafts, geen orders, geen broker execution en geen fake waarden toegevoegd.
