@@ -98,7 +98,7 @@ def test_no_float_rounding_decimal_exactness() -> None:
 
     assert str(result.cost_basis) == "3.702963"
     assert str(result.unrealized_pl) == "6.296037"
-    assert str(result.unrealized_pl_percent) == "1.700102700102700102700102700"
+    assert str(result.unrealized_pl_percent) == "1.700270027002700270027002700"
 
 
 def test_no_zero_fallback_for_missing_quantity() -> None:
