@@ -613,3 +613,79 @@ def test_no_inverse_pair_synthesis(monkeypatch) -> None:
     assert payload["conversion_total_status"] == "conversion_blocked_missing_fx"
     assert payload["missing_fx_pairs"] == ["USD/EUR"]
     assert payload["total_portfolio_value"] is None
+
+
+def test_row_pl_complete_single_currency(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(), storage_help_nl=None
+        ),
+    )
+
+    def position_eur() -> IbkrPositionSnapshotRecord:
+        row = _position()
+        return row.__class__(
+            **{
+                **row.__dict__,
+                "quantity": Decimal("10"),
+                "average_cost": Decimal("8"),
+                "currency": "EUR",
+            }
+        )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return [position_eur()]
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("EUR")]
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
+
+    class FakeMarketRepo:
+        def list_latest_market_data_snapshots_by_conids(self, _conids):
+            return type("R", (), {"records": (_market(price="10"),)})()
+
+    _patch_storage_and_repositories(monkeypatch, status_routes, FakeRepo(), FakeMarketRepo())
+    row = client.get("/portfolio/valuation/readiness").json()["rows"][0]
+    assert row["cost_basis"] == "80"
+    assert row["unrealized_pl"] == "20"
+    assert row["unrealized_pl_percent"] == "0.25"
+    assert row["cost_basis_available"] is True
+    assert row["unrealized_pl_available"] is True
+    assert row["cost_basis_input_trace"]["latest_sync_run_id"] == "run-1"
+
+
+def test_row_pl_missing_average_cost(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=_run(), storage_help_nl=None
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            row = _position()
+            return [row.__class__(**{**row.__dict__, "average_cost": None})]
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str): return [_cash("USD")]
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]): return []
+    class FakeMarketRepo:
+        def list_latest_market_data_snapshots_by_conids(self, _conids):
+            return type("R", (), {"records": (_market(),)})()
+    _patch_storage_and_repositories(monkeypatch, status_routes, FakeRepo(), FakeMarketRepo())
+    row = client.get("/portfolio/valuation/readiness").json()["rows"][0]
+    assert row["cost_basis"] is None
+    assert row["unrealized_pl"] is None
+    assert row["cost_basis_available"] is False
+    assert row["unrealized_pl_available"] is False
+    assert "average_cost_per_unit" in row["missing_cost_basis_inputs"]

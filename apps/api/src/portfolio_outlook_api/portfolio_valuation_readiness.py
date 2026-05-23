@@ -16,8 +16,12 @@ from portfolio_outlook_portfolio import (
     ConversionTotalsInput,
     FxPairConversionInput,
     PositionConversionInput,
+    PositionPlCalculationInput,
+    PositionPlInput,
+    PositionPlInputTrace,
     ValuationInputTrace,
     calculate_conversion_totals,
+    calculate_position_cost_basis_and_unrealized_pl,
 )
 from pydantic import BaseModel, Field
 
@@ -47,6 +51,26 @@ class PositionValuationReadinessRow(BaseModel):
     market_price_timestamp: str | None = None
     market_value: str | None = None
     unrealized_pnl: str | None = None
+    cost_basis_status: str = "cost_basis_missing"
+    cost_basis_status_nl: str = "Kostbasis ontbreekt"
+    cost_basis_help_nl: str = "Niet alle kostbasisvelden zijn aanwezig in opgeslagen input."
+    cost_basis_available: bool = False
+    cost_basis: str | None = None
+    cost_basis_currency: str | None = None
+    unrealized_pl_status: str = "pl_blocked_incomplete_inputs"
+    unrealized_pl_status_nl: str = "Geblokkeerd"
+    unrealized_pl_help_nl: str = "Niet alle vereiste inputvelden zijn ingevuld."
+    unrealized_pl_available: bool = False
+    unrealized_pl: str | None = None
+    unrealized_pl_currency: str | None = None
+    unrealized_pl_percent_available: bool = False
+    unrealized_pl_percent: str | None = None
+    converted_unrealized_pl_available: bool = False
+    converted_unrealized_pl: str | None = None
+    missing_cost_basis_inputs: list[str] = Field(default_factory=list)
+    missing_pl_inputs: list[str] = Field(default_factory=list)
+    cost_basis_input_trace: dict[str, object] | None = None
+    unrealized_pl_input_trace: dict[str, object] | None = None
     blocked: bool
     missing_inputs: list[str] = Field(default_factory=list)
 
@@ -121,6 +145,7 @@ class PortfolioValuationReadinessResponse(BaseModel):
 class PositionRowBuildInput:
     position: IbkrPositionSnapshotRecord
     market_snapshot: MarketDataLatestSnapshotRecord | None
+    latest_sync_run_id: str | None
 
 
 def _money(value: Decimal) -> str:
@@ -143,6 +168,12 @@ def _derive_required_fx_pairs(
 def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadinessRow:
     quantity = payload.position.quantity
     average_cost = payload.position.average_cost
+    trace = PositionPlInputTrace(
+        latest_sync_run_id=payload.latest_sync_run_id,
+        position_trace_ids=[payload.position.snapshot_id] if payload.position.snapshot_id else [],
+        market_snapshot_ids=[],
+        fx_snapshot_ids=[],
+    )
     row = PositionValuationReadinessRow(
         conid=payload.position.conid,
         symbol=payload.position.symbol,
@@ -158,6 +189,57 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
         blocked=True,
         missing_inputs=["market_price"],
     )
+    pl_payload = PositionPlCalculationInput(
+        position=PositionPlInput(
+            position_id=payload.position.conid or payload.position.snapshot_id or "unknown",
+            quantity=quantity,
+            source_currency=payload.position.currency,
+            native_market_value=None,
+            average_cost_per_unit=payload.position.average_cost,
+            source_trace_id=payload.position.snapshot_id,
+        ),
+        base_currency=None,
+        trace=trace,
+    )
+    pl_result = calculate_position_cost_basis_and_unrealized_pl(pl_payload)
+    row.cost_basis_status = pl_result.cost_basis_status
+    row.cost_basis_status_nl = pl_result.cost_basis_status_nl
+    row.cost_basis_help_nl = pl_result.cost_basis_help_nl
+    row.cost_basis_available = pl_result.cost_basis_available
+    row.cost_basis = _money(pl_result.cost_basis) if pl_result.cost_basis is not None else None
+    row.cost_basis_currency = pl_result.cost_basis_currency
+    row.unrealized_pl_status = pl_result.unrealized_pl_status
+    row.unrealized_pl_status_nl = pl_result.unrealized_pl_status_nl
+    row.unrealized_pl_help_nl = pl_result.unrealized_pl_help_nl
+    row.unrealized_pl_available = pl_result.unrealized_pl_available
+    row.unrealized_pl = (
+        _money(pl_result.unrealized_pl)
+        if pl_result.unrealized_pl is not None
+        else None
+    )
+    row.unrealized_pl_currency = pl_result.unrealized_pl_currency
+    row.unrealized_pl_percent_available = pl_result.unrealized_pl_percent_available
+    row.unrealized_pl_percent = (
+        _money(pl_result.unrealized_pl_percent)
+        if pl_result.unrealized_pl_percent is not None
+        else None
+    )
+    row.converted_unrealized_pl_available = pl_result.converted_unrealized_pl_available
+    row.converted_unrealized_pl = (
+        _money(pl_result.converted_unrealized_pl)
+        if pl_result.converted_unrealized_pl is not None
+        else None
+    )
+    row.missing_cost_basis_inputs = pl_result.missing_cost_basis_inputs
+    row.missing_pl_inputs = pl_result.missing_pl_inputs
+    row.cost_basis_input_trace = (
+        pl_result.cost_basis_input_trace.__dict__ if pl_result.cost_basis_input_trace else None
+    )
+    row.unrealized_pl_input_trace = (
+        pl_result.unrealized_pl_input_trace.__dict__
+        if pl_result.unrealized_pl_input_trace
+        else None
+    )
     snapshot = payload.market_snapshot
     if snapshot is None or snapshot.last_price is None:
         return row
@@ -171,9 +253,26 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
         row.market_price_timestamp = price_timestamp.isoformat()
         return row
     market_value = quantity * snapshot.last_price
-    unrealized_pnl = None
-    if payload.position.average_cost is not None:
-        unrealized_pnl = (snapshot.last_price - payload.position.average_cost) * quantity
+    market_value = quantity * snapshot.last_price
+    trace_with_market = PositionPlInputTrace(
+        latest_sync_run_id=payload.latest_sync_run_id,
+        position_trace_ids=[payload.position.snapshot_id] if payload.position.snapshot_id else [],
+        market_snapshot_ids=[snapshot.snapshot_id],
+        fx_snapshot_ids=[],
+    )
+    pl_payload = PositionPlCalculationInput(
+        position=PositionPlInput(
+            position_id=payload.position.conid or payload.position.snapshot_id or "unknown",
+            quantity=quantity,
+            source_currency=payload.position.currency,
+            native_market_value=market_value if snapshot.freshness_status == "fresh" else None,
+            average_cost_per_unit=payload.position.average_cost,
+            source_trace_id=payload.position.snapshot_id,
+        ),
+        base_currency=None,
+        trace=trace_with_market,
+    )
+    pl_result = calculate_position_cost_basis_and_unrealized_pl(pl_payload)
     return PositionValuationReadinessRow(
         conid=payload.position.conid,
         symbol=payload.position.symbol,
@@ -190,7 +289,49 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
         market_price=_money(snapshot.last_price),
         market_price_timestamp=(snapshot.provider_as_of or snapshot.stored_at).isoformat(),
         market_value=_money(market_value),
-        unrealized_pnl=_money(unrealized_pnl) if unrealized_pnl is not None else None,
+        unrealized_pnl=(
+            _money(pl_result.unrealized_pl) if pl_result.unrealized_pl_available else None
+        ),
+        cost_basis_status=pl_result.cost_basis_status,
+        cost_basis_status_nl=pl_result.cost_basis_status_nl,
+        cost_basis_help_nl=pl_result.cost_basis_help_nl,
+        cost_basis_available=pl_result.cost_basis_available,
+        cost_basis=_money(pl_result.cost_basis) if pl_result.cost_basis is not None else None,
+        cost_basis_currency=pl_result.cost_basis_currency,
+        unrealized_pl_status=pl_result.unrealized_pl_status,
+        unrealized_pl_status_nl=pl_result.unrealized_pl_status_nl,
+        unrealized_pl_help_nl=pl_result.unrealized_pl_help_nl,
+        unrealized_pl_available=pl_result.unrealized_pl_available,
+        unrealized_pl=(
+            _money(pl_result.unrealized_pl)
+            if pl_result.unrealized_pl is not None
+            else None
+        ),
+        unrealized_pl_currency=pl_result.unrealized_pl_currency,
+        unrealized_pl_percent_available=pl_result.unrealized_pl_percent_available,
+        unrealized_pl_percent=(
+            _money(pl_result.unrealized_pl_percent)
+        if pl_result.unrealized_pl_percent is not None
+        else None
+        ),
+        converted_unrealized_pl_available=pl_result.converted_unrealized_pl_available,
+        converted_unrealized_pl=(
+            _money(pl_result.converted_unrealized_pl)
+        if pl_result.converted_unrealized_pl is not None
+        else None
+        ),
+        missing_cost_basis_inputs=pl_result.missing_cost_basis_inputs,
+        missing_pl_inputs=pl_result.missing_pl_inputs,
+        cost_basis_input_trace=(
+            pl_result.cost_basis_input_trace.__dict__
+            if pl_result.cost_basis_input_trace
+            else None
+        ),
+        unrealized_pl_input_trace=(
+            pl_result.unrealized_pl_input_trace.__dict__
+        if pl_result.unrealized_pl_input_trace
+        else None
+        ),
         blocked=False,
         missing_inputs=[],
     )
@@ -446,6 +587,7 @@ def build_portfolio_valuation_readiness(
             PositionRowBuildInput(
                 position=item,
                 market_snapshot=market_by_conid.get(item.conid or ""),
+                latest_sync_run_id=latest_run.sync_run_id,
             )
         )
         for item in positions
