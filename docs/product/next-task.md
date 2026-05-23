@@ -1,7 +1,8 @@
 # Next Task
 
-Task 125T — Add read-only advanced cost-basis and unrealized P/L trace/details display using existing readiness trace fields, without browser-side financial calculations, without API behavior changes, without runtime fetch, without suggestions, without action drafts and without orders.
-- Gebruik alleen bestaande `missing_cost_basis_inputs`, `missing_pl_inputs`, `cost_basis_input_trace` en `unrealized_pl_input_trace` readinessvelden.
-- Geen broker execution en geen fake kostbasis/P/L/markt/FX/converted-total waarden.
+Task 125U — Document-first review van read-only portfolio valuation readiness UI-teksten en helpteksten voor consistent, eenvoudig Nederlands, inclusief checklist voor ontbrekende invoer/trace-lege staten, zonder runtimegedrag te wijzigen.
+- Alleen documentatie/preflight; geen codewijzigingen in API/web runtime.
+- Geen browser-side financiële berekeningen, geen API behavior changes, geen storage/migraties, geen runtime fetch, geen suggesties, geen action drafts, geen orders en geen broker execution.
 
 ## Completed predecessor tasks (for traceability)
+- Task 125T — afgerond.

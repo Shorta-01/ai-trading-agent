@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PositionPlTraceDetails } from "@/components/PositionPlTraceDetails";
 import { ValuationTraceDetails } from "@/components/ValuationTraceDetails";
 import {
   apiClient,
@@ -173,11 +174,12 @@ export default function PortfolioPage() {
                 <th>Status winst/verlies</th>
                 <th>Ontbrekende invoer</th>
                 <th>Toelichting</th>
+                <th>Details</th>
               </tr>
             </thead>
             <tbody>
               {valuationReadiness.rows.map((row, idx) => (
-                <tr key={`${row.account_ref}-${row.symbol}-${idx}`}>
+                <tr key={`${row.conid ?? row.symbol ?? "row"}-${idx}`}>
                   <td>{displayValue(row.symbol)}</td>
                   <td>{displayValue(row.currency)}</td>
                   <td>{displayValue(row.quantity)}</td>
@@ -188,6 +190,7 @@ export default function PortfolioPage() {
                   <td>{row.unrealized_pl_status_nl || "Controle nodig"}</td>
                   <td>{formatMissingInputs(row)}</td>
                   <td>{row.cost_basis_help_nl || row.unrealized_pl_help_nl || "Controle nodig"}</td>
+                  <td><PositionPlTraceDetails row={row} /></td>
                 </tr>
               ))}
             </tbody>

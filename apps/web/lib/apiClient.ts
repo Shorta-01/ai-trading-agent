@@ -273,10 +273,22 @@ export type ProviderSourceResponse = {
 export type ValuationInputTrace = Record<string, unknown>;
 
 export type PortfolioValuationReadinessRow = {
-  account_ref: string;
-  symbol: string;
+  conid: string | null;
+  symbol: string | null;
+  asset_class: string | null;
   currency: string | null;
-  quantity: string | null;
+  quantity: string;
+  average_cost: string | null;
+  market_data_status: string;
+  valuation_status: string;
+  reason_code: string;
+  status_nl: string;
+  help_nl: string;
+  last_market_snapshot_id: string | null;
+  market_price: string | null;
+  market_price_timestamp: string | null;
+  market_value: string | null;
+  unrealized_pnl: string | null;
   cost_basis_status: string;
   cost_basis_status_nl: string;
   cost_basis_help_nl: string;
