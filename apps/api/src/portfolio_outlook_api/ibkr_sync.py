@@ -11,6 +11,8 @@ from ai_trading_agent_storage import (
 )
 
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapter
+from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
     IbkrExecution,
@@ -27,6 +29,7 @@ from portfolio_outlook_api.ibkr_sync_persistence import (
     map_sync_run_record,
     persist_ibkr_sync_payload,
 )
+from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
 
 
 class NotConfiguredIbkrAdapter(IbkrReadOnlyAdapter):
@@ -91,7 +94,23 @@ def _resolve_repo(
         return None, None, "Storage niet beschikbaar; alleen geheugenopslag actief."
 
 
-def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> dict[str, object]:
+def _build_readiness(
+    settings: Settings,
+    session_status_adapter: IbkrSessionStatusAdapter | None = None,
+) -> dict[str, object]:
+    ibkr_status = build_ibkr_status_placeholder(
+        settings,
+        session_status_adapter=session_status_adapter,
+    )
+    return build_ibkr_sync_readiness(settings, ibkr_status)
+
+
+def run_sync(
+    settings: Settings,
+    adapter: IbkrReadOnlyAdapter | None = None,
+    *,
+    session_status_adapter: IbkrSessionStatusAdapter | None = None,
+) -> dict[str, object]:
     now = datetime.now(UTC)
     run_id = f"ibkr-sync-{uuid4()}"
     result_status = "disabled"
@@ -104,14 +123,9 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
     open_orders: list[IbkrOpenOrder] = []
     executions: list[IbkrExecution] = []
 
-    if not settings.ibkr_sync_enabled:
-        result_status = "disabled"
-    elif settings.ibkr_sync_account_mode.lower() != "paper":
-        result_status = "wrong_account_mode"
-    elif not settings.ibkr_sync_readonly:
-        result_status = "provider_error"
-    elif not _configured(settings):
-        result_status = "not_configured"
+    readiness = _build_readiness(settings, session_status_adapter=session_status_adapter)
+    if readiness["status"] != "ready_for_manual_readonly_sync":
+        result_status = str(readiness["reason_code"])
     else:
         active_adapter = adapter or NotConfiguredIbkrAdapter()
         try:
@@ -270,7 +284,7 @@ def run_sync(settings: Settings, adapter: IbkrReadOnlyAdapter | None = None) -> 
                 connection_ctx.__exit__(None, None, None)
     elif storage_help_nl:
         persistence_help_nl = storage_help_nl
-    return read_status(settings) | {
+    return read_status(settings) | readiness | {
         "sync_run_id": run_id,
         "persistence_mode": persistence_mode,
         "persistence_status_nl": (

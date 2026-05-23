@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from portfolio_outlook_api import ibkr_sync
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapterResult
 from portfolio_outlook_api.ibkr_sync import (
     IbkrCash,
     IbkrExecution,
@@ -94,6 +95,29 @@ class FakeAdapter(IbkrReadOnlyAdapter):
         ]
 
 
+
+
+class ReadyPaperSessionStatusAdapter:
+    def check_session_status(self, runtime_settings: Settings) -> IbkrSessionStatusAdapterResult:
+        return IbkrSessionStatusAdapterResult(
+            connection_status="connected_readonly",
+            account_mode_status="match",
+            account_mode="paper",
+            session_status_reason="test_ready_readonly_session",
+            session_check_source="fake_ready_session_adapter",
+        )
+
+
+class ReadyLiveSessionStatusAdapter:
+    def check_session_status(self, runtime_settings: Settings) -> IbkrSessionStatusAdapterResult:
+        return IbkrSessionStatusAdapterResult(
+            connection_status="connected_readonly",
+            account_mode_status="match",
+            account_mode="live",
+            session_status_reason="test_ready_live_session",
+            session_check_source="fake_ready_session_adapter",
+        )
+
 def setup_function() -> None:
     ibkr_sync.STORE.runs.clear()
     ibkr_sync.STORE.positions.clear()
@@ -110,12 +134,23 @@ def _base_settings(**kwargs):
         ibkr_sync_host="127.0.0.1",
         ibkr_sync_port=4002,
         ibkr_sync_client_id=7,
+        ibkr_sync_account_mode="paper",
+        ibkr_sync_readonly=True,
+        ibkr_enabled=True,
+        ibkr_status_check_enabled=True,
+        ibkr_gateway_url="https://gateway.internal",
+        ibkr_account_id_hint="DU123",
+        ibkr_expected_environment="paper",
         **kwargs,
     )
 
 
 def test_fake_adapter_stores_orders_and_executions() -> None:
-    body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=FakeAdapter(),
+        session_status_adapter=ReadyPaperSessionStatusAdapter(),
+    )
     assert body["open_orders_count"] == 1
     assert body["executions_count"] == 1
     assert ibkr_sync.STORE.open_orders[0]["quantity"] == "2"
@@ -130,7 +165,11 @@ def test_fake_adapter_stores_orders_and_executions() -> None:
 def test_sync_returns_memory_fallback_when_storage_disabled() -> None:
     settings = _base_settings()
     settings.storage.enabled = False
-    body = ibkr_sync.run_sync(settings, adapter=FakeAdapter())
+    body = ibkr_sync.run_sync(
+        settings,
+        adapter=FakeAdapter(),
+        session_status_adapter=ReadyPaperSessionStatusAdapter(),
+    )
     assert body["persistence_mode"] == "memory"
     assert body["persistence_status_nl"] == "Geheugenfallback actief"
 
@@ -163,7 +202,11 @@ def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
         "_resolve_repo",
         lambda settings, require_writable: (FakeRepo(), FakeCtx(), ""),
     )
-    body = ibkr_sync.run_sync(_base_settings(), adapter=FakeAdapter())
+    body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=FakeAdapter(),
+        session_status_adapter=ReadyPaperSessionStatusAdapter(),
+    )
     assert body["persistence_mode"] == "durable"
     assert calls == {"runs": 1, "cash": 1, "positions": 1, "orders": 1, "executions": 1}
 
@@ -220,3 +263,19 @@ def test_durable_no_run_returns_empty_items(monkeypatch) -> None:
     assert client.get("/ibkr/account/cash").json()["items"] == []
     assert client.get("/ibkr/orders/open").json()["items"] == []
     assert client.get("/ibkr/executions").json()["items"] == []
+
+
+def test_sync_blocks_live_mode_in_version1() -> None:
+    body = ibkr_sync.run_sync(
+        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="live"),
+        adapter=FakeAdapter(),
+        session_status_adapter=ReadyLiveSessionStatusAdapter(),
+    )
+    assert body["status"] == "blocked"
+    assert body["reason_code"] == "version1_paper_only"
+    assert body["manual_sync_allowed"] is False
+    assert body["open_orders_count"] == 0
+    assert body["executions_count"] == 0
+    assert body["actions_allowed"] is False
+    assert body["order_submission_allowed"] is False
+    assert body["suggestions_allowed"] is False
