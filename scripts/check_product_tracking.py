@@ -12,6 +12,9 @@ REQUIRED_FILES = [
     "docs/product/version-1-backlog.md",
     "docs/product/version-1-scope-register.md",
 ]
+CURRENT_STATE_PATH = REPO_ROOT / "docs/product/current-state.md"
+CURRENT_STATE_MARKER_RE = re.compile(r"Huidige toestand:\s*\*\*na Task\s+(\d+)\*\*")
+CURRENT_STATE_TASK_RE = re.compile(r"Task\s+(\d+)\s*:\s*\*\*completed\*\*")
 
 
 def check_file_exists(relative_path: str) -> tuple[bool, str]:
@@ -29,12 +32,35 @@ def check_next_task_has_title() -> tuple[bool, str]:
     return False, "MISSING: next-task task title line starting with '# Task <number>'"
 
 
-def check_current_state_marker() -> tuple[bool, str]:
-    text = (REPO_ROOT / "docs/product/current-state.md").read_text(encoding="utf-8")
+def check_current_state_marker_exists() -> tuple[bool, str]:
+    text = CURRENT_STATE_PATH.read_text(encoding="utf-8")
     marker = "Huidige toestand:"
     if marker in text:
         return True, "OK: current-state contains 'Huidige toestand:'"
     return False, "MISSING: current-state marker 'Huidige toestand:'"
+
+
+def check_current_state_marker_not_stale() -> tuple[bool, str]:
+    text = CURRENT_STATE_PATH.read_text(encoding="utf-8")
+    marker_match = CURRENT_STATE_MARKER_RE.search(text)
+    if not marker_match:
+        return False, "MISSING: current-state marker format 'Huidige toestand: **na Task <number>**'"
+
+    first_task_match = CURRENT_STATE_TASK_RE.search(text)
+    if not first_task_match:
+        return False, "MISSING: first completed task entry in current-state"
+
+    marker_task = int(marker_match.group(1))
+    first_task = int(first_task_match.group(1))
+
+    if marker_task < first_task:
+        return (
+            False,
+            "STALE: current-state marker Task "
+            f"{marker_task} is older than first completed Task {first_task}",
+        )
+
+    return True, f"OK: current-state marker Task {marker_task} is not older than Task {first_task}"
 
 
 def main() -> int:
@@ -45,7 +71,8 @@ def main() -> int:
 
     if all(ok for ok, _ in results):
         results.append(check_next_task_has_title())
-        results.append(check_current_state_marker())
+        results.append(check_current_state_marker_exists())
+        results.append(check_current_state_marker_not_stale())
 
     failed = [message for ok, message in results if not ok]
     passed = [message for ok, message in results if ok]
