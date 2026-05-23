@@ -1,15 +1,15 @@
-# Task 130 — Add disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary and API status exposure
+# Task 131 — Add read-only IBKR account-mode verification status mapping using the Task 130 session-status boundary
 
-- Implementeer een kleine veilige Milestone B runtime-slice voor read-only sessiestatus, met adapter boundary + API status exposure.
-- Gebruik geconfigureerde settings en eenvoudige Nederlandse status/helptekst.
-- Houd behavior strikt disabled-by-default; geen auto-connect bij startup.
+- Bouw een kleine vervolgslice op Task 130: account-mode verification status mapping via de bestaande session-status boundary.
+- Blijf disabled-by-default en read-only; gebruik alleen fake-adapter tests voor varianten.
+- Geen auto-connect, geen account/portfolio sync, geen market-data runtime.
 
 ## Boundaries (locked)
-- Geen account/portfolio sync in deze taak.
-- Geen market-data runtime.
 - Geen suggesties.
 - Geen action drafts.
+- Geen Decision Packages runtime.
 - Geen orders (submit/modify/cancel/bind).
+- Geen broker execution.
 - Geen fake brokerdata.
 - Geen credentials in logs/API.
 

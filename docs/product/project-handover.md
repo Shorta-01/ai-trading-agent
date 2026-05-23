@@ -1,5 +1,7 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
+- Producttrackingstatus: Task 130 (session-status boundary + API exposure) is merged in repo-state; volgende stap staat in `docs/product/next-task.md` als Task 131.
+
 ## Purpose
 
 Dit document zorgt dat nieuwe sessies starten vanuit repository-truth, niet chatgeheugen.

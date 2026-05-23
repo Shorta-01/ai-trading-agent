@@ -5,6 +5,8 @@
 - Geselecteerd als volgende implementatietaak: Task 130 (disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary + API status exposure).
 - Bevestigd: geen runtime productgedrag gewijzigd; geen API behavior, storage, migraties, runtime fetch, berekeningen, suggesties, action drafts, orders, broker execution of fake waarden toegevoegd.
 
+- Task 130 afgerond: disabled-by-default IBKR read-only session-status adapter boundary + API status exposure; geen auto-connect, geen sync, geen market-data runtime, geen suggesties/action drafts/orders en geen credentials/secrets in response.
+
 ## Task 128-R — Repair workflow-acceleration product tracking drift
 
 - Status: afgerond (documentation/process-helper repair-only).
