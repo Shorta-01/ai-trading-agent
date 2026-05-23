@@ -313,6 +313,12 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - In-scope: workflowregels, planningdocumenten en producttrackingupdates.
 - Out-of-scope bevestigd: geen runtimewijzigingen (API/web/storage/migraties/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution), geen financiële berekeningen, geen fake data.
 
+
+## Task 130Q-R scope note
+- Task 130Q-R is documentation/process-helper repair-only: producttracking marker drift fix + suffix-task checker hardening.
+- In-scope: `current-state.md`, handover/trackingdocs en stdlib-only scriptupdate voor markervergelijking.
+- Out-of-scope bevestigd: geen runtime/API/web/storage/migraties/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution/financiële berekeningen of fake data.
+
 ## Task 130Q scope note
 - Task 130Q is expliciet documentation/product-decision-lock only.
 - Geen runtime/API/storage/migration/calculation/suggestion/action-draft/order/broker execution wijzigingen.

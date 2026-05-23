@@ -1,6 +1,6 @@
 # Project Handover — Portfolio Outlook Manager / Ai Trading Agent
 
-- Producttrackingstatus: Task 130 (session-status boundary + API exposure) is merged in repo-state; volgende stap staat in `docs/product/next-task.md` als Task 131B.
+- Producttrackingstatus: Task 130Q is gemerged (owner workshop decision locks); Task 130Q-R heeft daarna marker-drift in producttracking gerepareerd; volgende stap blijft Task 131B in `docs/product/next-task.md`.
 
 ## Purpose
 
@@ -83,5 +83,5 @@ Aanvullend:
 
 ## Task 130Q handover update
 - Owner workshop productrichting is nu vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` (mission-control dashboard, daily operating model, Action Center, Research Desk, structured order drafts, evidence-gated engine).
-- Tracking marker drift in `docs/product/current-state.md` is gerepareerd naar **na Task 130Q**.
+- Tracking marker drift in `docs/product/current-state.md` is met Task 130Q-R verder gecorrigeerd naar **na Task 130Q-R**.
 - Volgende implementatierichting blijft Task 131B (tenzij latere inspectie een veiligere batch oplevert).

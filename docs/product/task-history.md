@@ -1,3 +1,11 @@
+## Task 130Q-R — Repair current-state marker drift and suffix-task tracking
+
+- Status: afgerond (documentation/process-helper repair-only).
+- Gefixt: `docs/product/current-state.md` marker gecorrigeerd naar `Huidige toestand: **na Task 130Q-R**` om drift na Task 130Q te verwijderen.
+- Verharding: `scripts/check_product_tracking.py` vergelijkt taskmarkers nu op `(nummer, suffix, repair-suffix)` zodat `130 < 130P < 130Q < 130Q-R < 131B` correct wordt gedetecteerd.
+- Producttrackingdocs bijgewerkt (`task-history`, `version-1-backlog`, `version-1-scope-register`) met Task 130Q-R completionnotitie.
+- Bevestigd: geen runtime/API/web/storage/migratie/sync/market-data/FX/suggestie/action-draft/order/broker execution/financiële-calculatie wijzigingen.
+
 ## Task 130Q — Record owner workshop Version 1 product decision locks
 
 - Status: afgerond (documentation/product-planning-only).
