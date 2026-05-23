@@ -1,3 +1,10 @@
+## Task 129 — Select and document the next Milestone B implementation slice
+
+- Status: afgerond (documentation/planning-only).
+- Toegevoegd: `docs/product/milestone-b-ibkr-read-only-runtime-slice-selection-task-129.md` met IBKR foundation-inventaris, kandidaat-slices, selectie en acceptance criteria voor Task 130.
+- Geselecteerd als volgende implementatietaak: Task 130 (disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary + API status exposure).
+- Bevestigd: geen runtime productgedrag gewijzigd; geen API behavior, storage, migraties, runtime fetch, berekeningen, suggesties, action drafts, orders, broker execution of fake waarden toegevoegd.
+
 ## Task 128-R — Repair workflow-acceleration product tracking drift
 
 - Status: afgerond (documentation/process-helper repair-only).

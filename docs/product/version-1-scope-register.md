@@ -1,3 +1,7 @@
+## Task 129 update (documentation/planning-only)
+- Volgende Milestone B implementatieslice geselecteerd: Task 130 (disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary + API status exposure).
+- Geen runtimewijzigingen toegevoegd in Task 129: geen API/storage/migratie/fetch/berekeningen/suggesties/action drafts/orders/broker execution/fake data.
+
 - Task 127: **completed** — documentation-only alignment voor account-mode-aware productrichting, action-draft/Prediction Diary/alerts/daily briefing decision locks. Geen runtimewijzigingen.
 | Task 126 roadmap (documentation/research) | Completed | Nieuw roadmapdocument voor asset suggestion/algorithms/gates/AI-rolgrenzen en staged implementatie | Runtime ongewijzigd; Task 127/127R heeft de oude paper-only richting vervangen door account-mode-aware productrichting met zichtbare account mode en safety gates |
 ## Task 125J — valuation conversion-total preflight

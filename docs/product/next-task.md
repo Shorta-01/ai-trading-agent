@@ -1,14 +1,18 @@
-# Task 129 — Select and document the next milestone implementation slice from the Task 128 queue
+# Task 130 — Add disabled-by-default IBKR TWS/Gateway read-only session-status adapter boundary and API status exposure
 
-- Gebruik `docs/product/task-queue.md` en `docs/product/codex-task-template.md` om de eerstvolgende veilige milestone-slice te kiezen en scherp af te bakenen.
-- Verwachte richting: Milestone B (IBKR read-only runtime foundation continuation), zonder trading/orders/suggestions/action drafts.
-- Bevestig expliciet red/green CI-discipline en handmatige merge.
+- Implementeer een kleine veilige Milestone B runtime-slice voor read-only sessiestatus, met adapter boundary + API status exposure.
+- Gebruik geconfigureerde settings en eenvoudige Nederlandse status/helptekst.
+- Houd behavior strikt disabled-by-default; geen auto-connect bij startup.
 
-## Context
-- Task 128 heeft de oude Task 125W micro-audit richting bewust gedeferreerd/vervangen.
-- Vervolgwerk moet milestone-gericht en minder micro-fragmented zijn.
+## Boundaries (locked)
+- Geen account/portfolio sync in deze taak.
+- Geen market-data runtime.
+- Geen suggesties.
+- Geen action drafts.
+- Geen orders (submit/modify/cancel/bind).
+- Geen fake brokerdata.
+- Geen credentials in logs/API.
 
-## Completed predecessor tasks (for traceability)
-- Task 128 — afgerond (workflow acceleration docs + lokale helper scripts; proces-only, geen runtimewijzigingen).
-- Task 125V — afgerond (read-only valuation readiness wording-catalog implementatie).
-- Task 125U — afgerond (document-first wording preflight).
+## CI and merge discipline
+- Volg `docs/product/codex-red-green-ci-workflow.md`.
+- Alleen handmatige merge na groene CI op alle zes jobs (`domain`, `storage`, `portfolio`, `api`, `worker`, `web`).

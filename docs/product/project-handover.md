@@ -31,7 +31,7 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 
 ## Kerncontext
 
-- Producttrackingstatus: Task 128 (PR #308) is merged als workflowprocespivot; Task 125W is bewust gedeferreerd/vervangen. Producttrackingdocs moeten dit expliciet reflecteren en `next-task.md` moet op Task 129 blijven staan als volgende taak.
+- Producttrackingstatus: Task 128 (PR #308) is merged als workflowprocespivot; Task 125W is bewust gedeferreerd/vervangen. Producttrackingdocs moeten dit expliciet reflecteren en `next-task.md` moet nu op Task 130 staan als volgende taak (Task 129 is afgerond als planning-only selectie).
 
 - Productnaam: Portfolio Outlook Manager.
 - Repositorynaam: Ai Trading Agent.
