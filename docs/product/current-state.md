@@ -1,6 +1,9 @@
 # Current State
 
-Huidige toestand: **na Task 137**
+## Task 138 update
+- Task 138: **completed** — IBKR read-only sync adaptercontracten en deterministische test-only fake-adapter fixtures gehard voor cash, positions, open orders en executions. API-contracttests onderscheiden nu expliciet `payload_validation_failed` versus adapter/runtimefouten (`timeout`, `provider_error`) en readiness-blocking (`sync_readiness_blocked`, `sync_readiness_needs_control`) met behoud van veilige persistence-blocking en safetybooleans (`False`/`blocked`). Geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.
+
+Huidige toestand: **na Task 138**
 
 ## Task 137 update
 - Task 137: **completed** — documentatie/planning-only selectie van de volgende milestone-sized Milestone B implementatieslices vastgelegd in `docs/product/milestone-b-next-implementation-slices-task-137.md`. Geselecteerde volgende implementatietaak: **Task 138** (IBKR read-only adaptercontracten en fake-adapter fixtures hardenen voor cash/positions/open orders/executions). Geen runtime code, geen API/web gedragswijziging, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen broker execution toegevoegd.

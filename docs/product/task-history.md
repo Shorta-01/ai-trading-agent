@@ -1,3 +1,4 @@
+- Task 138: completed — hardened IBKR read-only adapter contracts and deterministic fake-adapter sync fixtures for cash, positions, open orders and executions; tests now explicitly separate adapter/runtime failures (`timeout`, `provider_error`) from payload validation failures (`payload_validation_failed`) and readiness blocking statuses. No real TWS/Gateway runtime, no persistent session manager, no storage schema/migrations, no market-data runtime, no suggestions/action drafts/orders/broker execution added.
 ## Task 137
 - Completed: planning/documentation-only Milestone B sliceselectie na Task 136 met kandidaatvergelijking, risicobeoordeling en selectie van één volgende milestone-sized implementatietaak.
 - Toegevoegd: `docs/product/milestone-b-next-implementation-slices-task-137.md` als source-of-truth selectiedocument.
