@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-
 PlStatus = str
 
 
@@ -103,28 +102,63 @@ def calculate_position_cost_basis_and_unrealized_pl(
     if position.source_currency is None:
         missing_cost_basis_inputs.append("source_currency")
         missing_pl_inputs.append("source_currency")
-        return _blocked(payload, "cost_basis_missing", "pl_blocked_incomplete_inputs", missing_cost_basis_inputs, missing_pl_inputs)
+        return _blocked(
+            payload,
+            "cost_basis_missing",
+            "pl_blocked_incomplete_inputs",
+            missing_cost_basis_inputs,
+            missing_pl_inputs,
+        )
 
     if position.quantity is None:
         missing_cost_basis_inputs.append("quantity")
         missing_pl_inputs.append("quantity")
-        return _blocked(payload, "cost_basis_missing", "pl_blocked_incomplete_inputs", missing_cost_basis_inputs, missing_pl_inputs)
+        return _blocked(
+            payload,
+            "cost_basis_missing",
+            "pl_blocked_incomplete_inputs",
+            missing_cost_basis_inputs,
+            missing_pl_inputs,
+        )
 
     if position.quantity < Decimal("0"):
-        return _blocked(payload, "cost_basis_blocked_short_position", "pl_blocked_incomplete_inputs", missing_cost_basis_inputs, ["short_position"])
+        return _blocked(
+            payload,
+            "cost_basis_blocked_short_position",
+            "pl_blocked_incomplete_inputs",
+            missing_cost_basis_inputs,
+            ["short_position"],
+        )
 
     if position.quantity == Decimal("0"):
-        return _blocked(payload, "cost_basis_blocked_invalid_quantity", "pl_blocked_incomplete_inputs", ["quantity"], ["quantity"])
+        return _blocked(
+            payload,
+            "cost_basis_blocked_invalid_quantity",
+            "pl_blocked_incomplete_inputs",
+            ["quantity"],
+            ["quantity"],
+        )
 
     if position.average_cost_per_unit is None:
         missing_cost_basis_inputs.append("average_cost_per_unit")
-        return _blocked(payload, "cost_basis_missing", "pl_blocked_missing_cost_basis", missing_cost_basis_inputs, ["cost_basis"])
+        return _blocked(
+            payload,
+            "cost_basis_missing",
+            "pl_blocked_missing_cost_basis",
+            missing_cost_basis_inputs,
+            ["cost_basis"],
+        )
 
     cost_basis = position.quantity * position.average_cost_per_unit
 
     if position.native_market_value is None:
         missing_pl_inputs.append("native_market_value")
-        return _cost_basis_ready_pl_blocked(payload, cost_basis, missing_cost_basis_inputs, missing_pl_inputs)
+        return _cost_basis_ready_pl_blocked(
+            payload,
+            cost_basis,
+            missing_cost_basis_inputs,
+            missing_pl_inputs,
+        )
 
     unrealized_pl = position.native_market_value - cost_basis
 
