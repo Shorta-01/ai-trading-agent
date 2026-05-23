@@ -290,7 +290,9 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
         market_price_timestamp=(snapshot.provider_as_of or snapshot.stored_at).isoformat(),
         market_value=_money(market_value),
         unrealized_pnl=(
-            _money(pl_result.unrealized_pl) if pl_result.unrealized_pl_available else None
+            _money(pl_result.unrealized_pl)
+            if pl_result.unrealized_pl_available and pl_result.unrealized_pl is not None
+            else None
         ),
         cost_basis_status=pl_result.cost_basis_status,
         cost_basis_status_nl=pl_result.cost_basis_status_nl,
