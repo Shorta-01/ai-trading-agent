@@ -74,6 +74,18 @@
 
 # Task History (concise)
 
+## Task 125R-R — API mypy Optional Decimal narrowing repair
+
+- Status: afgerond.
+- Gerichte reparatie op Task 125R-wiring: Optional Decimal narrowing in API mypy context hersteld voor valuation readiness.
+- Niet gewijzigd: runtime market-data/latest-price fetch, runtime FX/provider fetch, suggesties, Decision Packages runtime, action drafts, orders, broker execution, storage/migraties en fake kostbasis/P/L/markt/FX/converted-total data.
+
+## Task 125R — Wire cost-basis/unrealized P/L calculator into valuation readiness
+
+- Status: afgerond.
+- Task 125Q pure Decimal-only calculator read-only aangesloten op `GET /portfolio/valuation/readiness` met uitsluitend opgeslagen inputs en strikte safety-gates.
+- Niet gewijzigd: runtime market-data/latest-price fetch, runtime FX/provider fetch, suggesties, Decision Packages runtime, action drafts, orders, broker execution, storage/migraties en fake kostbasis/P/L/markt/FX/converted-total data.
+
 ## Task 125G — FX snapshot storage contract preflight (document-first, read-only)
 
 - Status: afgerond.
