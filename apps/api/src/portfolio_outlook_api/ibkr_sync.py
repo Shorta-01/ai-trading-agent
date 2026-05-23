@@ -257,6 +257,10 @@ def run_sync(
         "cash_values_count": len(cash_items),
         "open_orders_count": len(open_orders),
         "executions_count": len(executions),
+        "payload_validation_status": payload_validation_status,
+        "payload_validation_status_nl": payload_validation_status_nl,
+        "payload_validation_error_count": payload_validation_error_count,
+        "payload_validation_help_nl": payload_validation_help_nl,
     }
     STORE.runs.append(run_record)
     for p in positions:
@@ -370,6 +374,12 @@ def run_sync(
                 connection_ctx.__exit__(None, None, None)
     elif storage_help_nl:
         persistence_help_nl = storage_help_nl
+    run_record["persistence_mode"] = persistence_mode
+    run_record["persistence_status_nl"] = (
+        "Duurzame opslag actief"
+        if persistence_mode == "durable"
+        else "Geheugenfallback actief"
+    )
     return read_status(settings, readiness=readiness) | {
         "sync_run_id": run_id,
         "persistence_mode": persistence_mode,

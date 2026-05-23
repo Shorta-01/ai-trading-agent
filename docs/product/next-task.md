@@ -1,3 +1,4 @@
-# Task 139 — Deepen read-only IBKR sync run history and diagnostics without real TWS/Gateway runtime
+# Task 140 — Add read-only reconciliation readiness between stored IBKR snapshots and portfolio valuation blockers
 
-Task 138-R repair is completed. Next conservative milestone slice returns to Task 139 to deepen read-only diagnostics/history while preserving paper-only/read-only safety boundaries and without adding real runtime connectivity.
+## Why
+Build on Task 139 diagnostics by adding read-only reconciliation readiness checks before any runtime broadening.

@@ -103,6 +103,59 @@ def test_sync_returns_memory_fallback_when_storage_disabled() -> None:
     assert body["persistence_status_nl"] == "Geheugenfallback actief"
 
 
+def test_sync_runs_history_empty() -> None:
+    response = client.get("/ibkr/sync/runs")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["help_nl"] == "Nog geen read-only syncruns beschikbaar."
+    assert body["actions_allowed"] is False
+    assert body["safe_for_orders"] is False
+    assert body["blocks_orders"] is True
+
+
+def test_sync_runs_history_and_detail_after_valid_sync() -> None:
+    run_body = ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=ValidFixtureAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    sync_run_id = str(run_body["sync_run_id"])
+    history = client.get("/ibkr/sync/runs").json()
+    assert len(history["items"]) == 1
+    item = history["items"][0]
+    assert item["sync_run_id"] == sync_run_id
+    assert item["status"] == "paper_account_confirmed"
+    assert item["positions_count"] == 1
+    assert item["cash_values_count"] == 1
+    assert item["payload_validation_status"] == "passed"
+    assert item["actions_allowed"] is False
+    detail = client.get(f"/ibkr/sync/runs/{sync_run_id}")
+    assert detail.status_code == 200
+    detail_body = detail.json()
+    assert len(detail_body["positions"]) == 1
+    assert len(detail_body["cash_values"]) == 1
+    assert detail_body["order_submission_allowed"] is False
+
+
+def test_sync_runs_history_timeout_status_uses_not_attempted_validation() -> None:
+    ibkr_sync.run_sync(
+        _base_settings(),
+        adapter=TimeoutFixtureAdapter(),
+        session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
+    )
+    history = client.get("/ibkr/sync/runs").json()
+    assert len(history["items"]) == 1
+    item = history["items"][0]
+    assert item["status"] == "timeout"
+    assert item["payload_validation_status"] == "not_attempted"
+
+
+def test_sync_run_detail_unknown_id_returns_not_found() -> None:
+    response = client.get("/ibkr/sync/runs/unknown-sync-run-id")
+    assert response.status_code == 404
+
+
 def test_sync_uses_durable_repo_when_available(monkeypatch) -> None:
     calls: dict[str, int] = {"runs": 0, "cash": 0, "positions": 0, "orders": 0, "executions": 0}
 

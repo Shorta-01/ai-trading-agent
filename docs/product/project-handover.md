@@ -99,3 +99,5 @@ Aanvullend:
 - Owner workshop productrichting is nu vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` (mission-control dashboard, daily operating model, Action Center, Research Desk, structured order drafts, evidence-gated engine).
 - Tracking marker drift in `docs/product/current-state.md` is met Task 130Q-R verder gecorrigeerd naar **na Task 130Q-R**.
 - Task 131B is afgerond en Task 131B-R heeft de merged-red API statusregressie gerepareerd; volgende implementatierichting is Task 133B (tenzij latere inspectie een veiligere batch oplevert).
+
+- Nieuw in Task 139: status-only inspectie van recente IBKR syncruns via `/ibkr/sync/runs` en detail via `/ibkr/sync/runs/{sync_run_id}`. In-memory history, geen real-runtime toevoegingen.
