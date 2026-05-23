@@ -1,6 +1,9 @@
 # Current State
 
-Huidige toestand: **na Task 136**
+Huidige toestand: **na Task 137**
+
+## Task 137 update
+- Task 137: **completed** — documentatie/planning-only selectie van de volgende milestone-sized Milestone B implementatieslices vastgelegd in `docs/product/milestone-b-next-implementation-slices-task-137.md`. Geselecteerde volgende implementatietaak: **Task 138** (IBKR read-only adaptercontracten en fake-adapter fixtures hardenen voor cash/positions/open orders/executions). Geen runtime code, geen API/web gedragswijziging, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen broker execution toegevoegd.
 
 ## Task 136 update
 - Task 136: **completed** — duurzame `/ibkr/sync/status` read-model contractuitlijning met Task 135B payload-validatievelden en safetyvelden. `serialize_sync_status_record(...)` levert nu ook `payload_validation_status`-velden met conservatieve defaults (`not_available` / `Niet beschikbaar`) voor historische durable runs zonder opgeslagen validatiedetails; er worden geen historische payloadvalidatie-errors verzonnen. Durable status blijft order/suggestie-safe (`actions_allowed=False`, order/suggestie booleans geblokkeerd, `blocks_orders=True`). Geen storage schemawijziging/migraties toegevoegd. Geen runtimeverbreding: geen echte TWS/Gateway netwerkruntime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen broker execution toegevoegd.
