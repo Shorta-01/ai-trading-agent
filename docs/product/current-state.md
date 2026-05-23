@@ -1,7 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 134B**
+Huidige toestand: **na Task 134B-R**
 
+
+## Task 134B-R update
+- Task 134B-R: **completed** — API pytest-repair na merged Task 134B: `_base_settings(**kwargs)` in `apps/api/tests/test_ibkr_sync_endpoints.py` configureert nu zowel sync-instellingen als session-status readiness-instellingen, zodat de fake ready paper session adapter correct door de readiness gate loopt in tests. Root cause was incomplete test settings voor de session-status kant van de readiness gate. Productieruntimegedrag bleef ongewijzigd buiten test/config repair. Geen echte TWS/Gateway netwerkruntime, geen echte IBKR account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake data toegevoegd.
 
 ## Task 134B update
 - Task 134B: **completed** — Task 133B readiness/preflight gate is nu wired in manual `POST /ibkr/sync/run` execution blocking. Readiness `blocked` en `needs_control` blokkeren adapter-calls en persistence; alleen bij expliciete ready paper test-session kan een geïnjecteerde fake adapter in tests draaien. Geen echte TWS/Gateway netwerkruntime, geen echte IBKR account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake data toegevoegd.
