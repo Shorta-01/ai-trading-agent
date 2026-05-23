@@ -69,7 +69,9 @@ from portfolio_outlook_api.paper_setup import (
 )
 from portfolio_outlook_api.paper_setup_persistence import persist_first_run_paper_setup
 from portfolio_outlook_api.portfolio_valuation_readiness import (
+    PortfolioReconciliationReadinessResponse,
     PortfolioValuationReadinessResponse,
+    build_portfolio_reconciliation_readiness,
     build_portfolio_valuation_readiness,
 )
 from portfolio_outlook_api.status_builders import (
@@ -130,9 +132,7 @@ def _build_sync_run_diagnostics(run: dict[str, object]) -> dict[str, object]:
         "persistence_mode": run.get("persistence_mode", "memory"),
         "persistence_status_nl": run.get("persistence_status_nl", "Geheugenfallback actief"),
         "payload_validation_status": run.get("payload_validation_status", "not_available"),
-        "payload_validation_status_nl": run.get(
-            "payload_validation_status_nl", "Niet beschikbaar"
-        ),
+        "payload_validation_status_nl": run.get("payload_validation_status_nl", "Niet beschikbaar"),
         "payload_validation_error_count": run.get("payload_validation_error_count", 0),
         "payload_validation_help_nl": run.get(
             "payload_validation_help_nl",
@@ -314,16 +314,12 @@ def read_ibkr_sync_run_detail(sync_run_id: str) -> dict[str, object]:
     if run is None:
         raise HTTPException(status_code=404, detail="Syncrun niet gevonden.")
     return _build_sync_run_diagnostics(run) | {
-        "positions": [
-            item for item in STORE.positions if item.get("sync_run_id") == sync_run_id
-        ],
+        "positions": [item for item in STORE.positions if item.get("sync_run_id") == sync_run_id],
         "cash_values": [item for item in STORE.cash if item.get("sync_run_id") == sync_run_id],
         "open_orders": [
             item for item in STORE.open_orders if item.get("sync_run_id") == sync_run_id
         ],
-        "executions": [
-            item for item in STORE.executions if item.get("sync_run_id") == sync_run_id
-        ],
+        "executions": [item for item in STORE.executions if item.get("sync_run_id") == sync_run_id],
         "detail_help_nl": "Read-only syncrun detail zonder ruwe brokerpayloads.",
     }
 
@@ -353,6 +349,7 @@ def read_ibkr_positions() -> dict[str, object]:
 @router.get("/ibkr/account/cash")
 def read_ibkr_cash() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
+
     durable = read_latest_ibkr_sync_run(settings.storage)
     if durable.latest_run is not None:
         provider = StorageConnectionProvider(
@@ -374,6 +371,7 @@ def read_ibkr_cash() -> dict[str, object]:
 @router.get("/ibkr/orders/open")
 def read_ibkr_open_orders() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
+
     durable = read_latest_ibkr_sync_run(settings.storage)
     if durable.latest_run is not None:
         provider = StorageConnectionProvider(
@@ -397,6 +395,7 @@ def read_ibkr_open_orders() -> dict[str, object]:
 @router.get("/ibkr/executions")
 def read_ibkr_executions() -> dict[str, object]:
     from portfolio_outlook_api.ibkr_sync import STORE
+
     durable = read_latest_ibkr_sync_run(settings.storage)
     if durable.latest_run is not None:
         provider = StorageConnectionProvider(
@@ -446,10 +445,7 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
     )
     with provider.checked_connection(require_writable=False) as checked:
         repo = SqlAlchemyIbkrSyncSnapshotRepository(checked.connection, checked.readiness)
-        market_repo = SqlAlchemyMarketDataSnapshotRepository(
-            checked.connection,
-            checked.readiness,
-        )
+        market_repo = SqlAlchemyMarketDataSnapshotRepository(checked.connection, checked.readiness)
         positions = repo.list_ibkr_position_snapshots(durable.latest_run.sync_run_id)
         cash_snapshots = repo.list_ibkr_account_cash_snapshots(durable.latest_run.sync_run_id)
         conids = tuple(item.conid for item in positions if item.conid)
@@ -479,6 +475,29 @@ def read_portfolio_valuation_readiness() -> PortfolioValuationReadinessResponse:
     )
 
 
+@router.get(
+    "/portfolio/valuation/reconciliation-readiness",
+    response_model=PortfolioReconciliationReadinessResponse,
+)
+def read_portfolio_reconciliation_readiness() -> PortfolioReconciliationReadinessResponse:
+    valuation = read_portfolio_valuation_readiness()
+    durable = read_latest_ibkr_sync_run(settings.storage)
+    latest = durable.latest_run
+    diagnostics_available = latest is not None
+    payload_status = "not_available"
+    payload_status_nl = "Niet beschikbaar"
+    payload_help = "Validatiestatus ontbreekt in sync-historie."
+    if latest is not None:
+        payload_status = latest.payload_validation_status or "not_available"
+        payload_status_nl = latest.payload_validation_status_nl or "Niet beschikbaar"
+        payload_help = latest.payload_validation_help_nl or "Payloadvalidatie in sync-diagnostiek."
+    return build_portfolio_reconciliation_readiness(
+        valuation=valuation,
+        payload_validation_status=payload_status,
+        payload_validation_status_nl=payload_status_nl,
+        payload_validation_help_nl=payload_help,
+        diagnostics_available=diagnostics_available,
+    )
 
 
 @router.get("/ibkr/watchlists")
@@ -504,6 +523,8 @@ def read_latest_ibkr_watchlist_import() -> dict[str, object]:
 @router.get("/ibkr/watchlists/imports/{import_run_id}")
 def read_ibkr_watchlist_import(import_run_id: str) -> dict[str, object]:
     return import_by_id(import_run_id)
+
+
 @router.get("/ibkr/contracts/search")
 def search_contracts(query: str = "", name: bool = False) -> dict[str, object]:
     return search_ibkr_contracts(settings, query, search_name=name)
@@ -552,7 +573,6 @@ def _read_snapshot_metadata(ibkr_conid: str | None) -> ReadinessSnapshotMetadata
             return build_readiness_snapshot_metadata(result.record)
     except StorageConnectionError:
         return None
-
 
 
 def _read_asset_listing_gate(item: object) -> ReadinessAssetListingGate:
@@ -604,6 +624,8 @@ def _read_asset_listing_gate(item: object) -> ReadinessAssetListingGate:
         safe_to_use_for_market_data=listing.safe_to_use_for_market_data,
         blocks_market_data=listing.blocks_market_data,
     )
+
+
 def _build_market_data_readiness_rows() -> list[ReadinessRow]:
     from portfolio_outlook_api.watchlist import STORE
 
@@ -647,8 +669,6 @@ def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> Readine
     return ReadinessDetailResponse(item=None, message_nl="Volglijst-item niet gevonden.")
 
 
-
-
 @router.post(
     "/market-data/snapshots/latest/{ibkr_conid}/fetch",
     response_model=LatestSnapshotResponse,
@@ -657,6 +677,7 @@ def fetch_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse
     evaluated_at = utc_now_iso()
     adapter = IbkrMarketDataAdapter(settings_from_runtime(settings))
     from portfolio_outlook_api.watchlist import STORE
+
     item = next(
         (
             w
@@ -691,6 +712,8 @@ def fetch_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse
     response.next_step_nl = "Alleen status. Nog geen analyse."
     response.help_nl = "Nog geen suggesties mogelijk."
     return response
+
+
 @router.get("/market-data/snapshots/latest/{ibkr_conid}", response_model=LatestSnapshotResponse)
 def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
     evaluated_at = utc_now_iso()
@@ -758,9 +781,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
                 str(record.close_price) if record.close_price is not None else None
             )
             response.day_change_percent = (
-                str(record.day_change_percent)
-                if record.day_change_percent is not None
-                else None
+                str(record.day_change_percent) if record.day_change_percent is not None else None
             )
             response.currency = record.currency
             snapshot = MarketDataSnapshot(
@@ -790,9 +811,7 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
             response.price_basis = readiness.price_basis.value
             response.snapshot_age_seconds = readiness.snapshot_age_seconds
             response.usable_price = (
-                str(readiness.usable_price)
-                if readiness.usable_price is not None
-                else None
+                str(readiness.usable_price) if readiness.usable_price is not None else None
             )
             response.price_basis_nl = {
                 MarketDataPriceBasis.LAST: "Laatste prijs",

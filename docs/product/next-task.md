@@ -1,4 +1,4 @@
-# Task 140 — Add read-only reconciliation readiness between stored IBKR snapshots and portfolio valuation blockers
+# Task 141 - Add disabled-by-default real TWS/Gateway read-only network adapter skeleton behind existing safety gates
 
 ## Why
-Build on Task 139 diagnostics by adding read-only reconciliation readiness checks before any runtime broadening.
+Follow-up after Task 140 to prepare a constrained adapter skeleton without enabling runtime connectivity by default.

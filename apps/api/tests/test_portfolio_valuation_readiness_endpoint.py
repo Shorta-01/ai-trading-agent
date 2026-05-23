@@ -445,15 +445,18 @@ def _fx(
 
 def _market(conid: str = "123", price: str = "120"):
     now = datetime.now(UTC)
-    return type("M", (), {
-        "snapshot_id": f"m-{conid}",
-        "ibkr_conid": conid,
-        "last_price": Decimal(price),
-        "freshness_status": "fresh",
-        "provider_as_of": now,
-        "stored_at": now,
-    })()
-
+    return type(
+        "M",
+        (),
+        {
+            "snapshot_id": f"m-{conid}",
+            "ibkr_conid": conid,
+            "last_price": Decimal(price),
+            "freshness_status": "fresh",
+            "provider_as_of": now,
+            "stored_at": now,
+        },
+    )()
 
 
 class _CheckedConnectionContext:
@@ -490,6 +493,7 @@ def _patch_storage_and_repositories(
         "SqlAlchemyMarketDataSnapshotRepository",
         lambda _connection, _readiness: market_repo,
     )
+
 
 def test_conversion_not_required_totals_available(monkeypatch) -> None:
     from portfolio_outlook_api import ibkr_sync_read_model, status_routes
@@ -642,8 +646,10 @@ def test_row_pl_complete_single_currency(monkeypatch) -> None:
     class FakeRepo:
         def list_ibkr_position_snapshots(self, _sync_run_id: str):
             return [position_eur()]
+
         def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
             return [_cash("EUR")]
+
         def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
             return []
 
@@ -663,6 +669,7 @@ def test_row_pl_complete_single_currency(monkeypatch) -> None:
 
 def test_row_pl_missing_average_cost(monkeypatch) -> None:
     from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
     monkeypatch.setattr(api_settings.storage, "enabled", True)
     monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
     monkeypatch.setattr(
@@ -677,11 +684,17 @@ def test_row_pl_missing_average_cost(monkeypatch) -> None:
         def list_ibkr_position_snapshots(self, _sync_run_id: str):
             row = _position()
             return [row.__class__(**{**row.__dict__, "average_cost": None})]
-        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str): return [_cash("USD")]
-        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]): return []
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return [_cash("USD")]
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
+
     class FakeMarketRepo:
         def list_latest_market_data_snapshots_by_conids(self, _conids):
             return type("R", (), {"records": (_market(),)})()
+
     _patch_storage_and_repositories(monkeypatch, status_routes, FakeRepo(), FakeMarketRepo())
     row = client.get("/portfolio/valuation/readiness").json()["rows"][0]
     assert row["cost_basis"] is None
@@ -689,3 +702,83 @@ def test_row_pl_missing_average_cost(monkeypatch) -> None:
     assert row["cost_basis_available"] is False
     assert row["unrealized_pl_available"] is False
     assert "average_cost_per_unit" in row["missing_cost_basis_inputs"]
+
+
+def test_reconciliation_storage_unavailable(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=None,
+            storage_help_nl="Storage niet beschikbaar.",
+        ),
+    )
+    payload = client.get("/portfolio/valuation/reconciliation-readiness").json()
+    assert payload["status"] == "storage_unavailable"
+    assert "storage_unavailable" in payload["blocker_categories"]
+    assert payload["orders_allowed"] is False
+    assert payload["safe_for_orders"] is False
+
+
+def test_reconciliation_no_cash_snapshot(monkeypatch) -> None:
+    from portfolio_outlook_api import ibkr_sync_read_model, status_routes
+
+    monkeypatch.setattr(api_settings.storage, "enabled", True)
+    monkeypatch.setattr(api_settings.storage, "database_url", "sqlite+pysqlite:///dummy.db")
+    run = _run()
+    run.payload_validation_status = "failed"
+    run.payload_validation_status_nl = "Mislukt"
+    run.payload_validation_help_nl = "Payloadvalidatie mislukt."
+    monkeypatch.setattr(
+        status_routes,
+        "read_latest_ibkr_sync_run",
+        lambda _s: ibkr_sync_read_model.DurableIbkrSyncReadResult(
+            latest_run=run, storage_help_nl=None
+        ),
+    )
+
+    class FakeRepo:
+        def list_ibkr_position_snapshots(self, _sync_run_id: str):
+            return [_position()]
+
+        def list_ibkr_account_cash_snapshots(self, _sync_run_id: str):
+            return []
+
+        def list_latest_fx_rate_snapshots_by_pairs(self, _pairs: tuple[str, ...]):
+            return []
+
+    class FakeMarketRepo:
+        def list_latest_market_data_snapshots_by_conids(self, _conids):
+            return type("R", (), {"records": ()})()
+
+    class Ctx:
+        def __enter__(self):
+            return type("Checked", (), {"connection": object(), "readiness": object()})()
+
+        def __exit__(self, *_args):
+            return None
+
+    class FakeProvider:
+        def checked_connection(self, require_writable: bool = False):
+            return Ctx()
+
+    monkeypatch.setattr(
+        status_routes, "StorageConnectionProvider", lambda _settings: FakeProvider()
+    )
+    monkeypatch.setattr(
+        status_routes, "SqlAlchemyIbkrSyncSnapshotRepository", lambda _c, _r: FakeRepo()
+    )
+    monkeypatch.setattr(
+        status_routes, "SqlAlchemyMarketDataSnapshotRepository", lambda _c, _r: FakeMarketRepo()
+    )
+
+    payload = client.get("/portfolio/valuation/reconciliation-readiness").json()
+    assert payload["positions_snapshot_available"] is True
+    assert payload["cash_snapshot_available"] is False
+    assert "no_cash_snapshot" in payload["blocker_categories"]
+    assert "payload_validation_failed" in payload["blocker_categories"]
+    assert payload["suggestions_allowed"] is False
