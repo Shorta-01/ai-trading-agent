@@ -1,3 +1,8 @@
+## Task 133B-R scope-resultaat
+- Task 133B completed: vastgelegd met scope-resultaatnotitie in dit register om trackingdrift te herstellen.
+- Binnen scope (Task 133B): minimale IBKR read-only sync readiness/preflight status gate; pure readiness builder; readiness exposure op `GET /ibkr/sync/status`; Nederlandse statussen `Geblokkeerd`, `Controle nodig`, `Klaar voor handmatige read-only sync`; conservatieve safety booleans.
+- Buiten scope (Task 133B): geen real TWS/Gateway network runtime, geen account/portfolio sync runtime, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders, geen broker execution, geen financiële berekeningen en geen fake broker data/fake portfolio data/fake market data.
+
 ## Task 132B scope-resultaat
 - Binnen scope: document-first selectie van de volgende IBKR read-only sync foundation batch na Task 131B/131B-R, inclusief inventory, gapanalyse, kandidaatvergelijking en selectie van Task 133B.
 - Buiten scope: geen runtime, geen sync-runtime, geen echte network runtime, geen market-data runtime, geen suggesties, geen action drafts, geen orders/broker execution en geen fake data.

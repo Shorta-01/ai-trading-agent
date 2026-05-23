@@ -14,11 +14,15 @@ REQUIRED_FILES = [
     "docs/product/version-1-scope-register.md",
 ]
 CURRENT_STATE_PATH = REPO_ROOT / "docs/product/current-state.md"
+TASK_HISTORY_PATH = REPO_ROOT / "docs/product/task-history.md"
+BACKLOG_PATH = REPO_ROOT / "docs/product/version-1-backlog.md"
+SCOPE_REGISTER_PATH = REPO_ROOT / "docs/product/version-1-scope-register.md"
 MARKER_RE = re.compile(
     r"Huidige toestand:\s*\*\*na\s+Task\s+(\d+)([A-Z]?)(?:-(R))?\*\*"
 )
 COMPLETED_TASK_RE = re.compile(
-    r"Task\s+(\d+)([A-Z]?)(?:-(R))?\s*:\s*\*\*completed\*\*"
+    r"Task\s+(\d+)([A-Z]?)(?:-(R))?\s*:\s*\*\*completed\*\*",
+    flags=re.IGNORECASE,
 )
 
 
@@ -73,6 +77,14 @@ def check_current_state_marker_exists() -> tuple[bool, str]:
     return False, "MISSING: current-state marker 'Huidige toestand:'"
 
 
+def first_completed_task_from_current_state() -> tuple[TaskId | None, str | None]:
+    text = CURRENT_STATE_PATH.read_text(encoding="utf-8")
+    first_task_match = COMPLETED_TASK_RE.search(text)
+    if not first_task_match:
+        return None, "MISSING: first completed task entry in current-state"
+    return parse_task_id(*first_task_match.groups()), None
+
+
 def check_current_state_marker_not_stale() -> tuple[bool, str]:
     text = CURRENT_STATE_PATH.read_text(encoding="utf-8")
     marker_match = MARKER_RE.search(text)
@@ -83,12 +95,11 @@ def check_current_state_marker_not_stale() -> tuple[bool, str]:
             "'Huidige toestand: **na Task <number><suffix>[-R]**'",
         )
 
-    first_task_match = COMPLETED_TASK_RE.search(text)
-    if not first_task_match:
-        return False, "MISSING: first completed task entry in current-state"
+    first_task, first_task_error = first_completed_task_from_current_state()
+    if first_task_error:
+        return False, first_task_error
 
     marker_task = parse_task_id(*marker_match.groups())
-    first_task = parse_task_id(*first_task_match.groups())
 
     if marker_task < first_task:
         return (
@@ -106,6 +117,34 @@ def check_current_state_marker_not_stale() -> tuple[bool, str]:
     )
 
 
+def check_latest_completed_task_tracked() -> list[tuple[bool, str]]:
+    first_task, first_task_error = first_completed_task_from_current_state()
+    if first_task_error:
+        return [(False, first_task_error)]
+
+    task_token = f"Task {format_task(first_task)}"
+    checks = [
+        (TASK_HISTORY_PATH, "task-history"),
+        (BACKLOG_PATH, "version-1-backlog"),
+        (SCOPE_REGISTER_PATH, "version-1-scope-register"),
+    ]
+
+    results: list[tuple[bool, str]] = [
+        (True, f"OK: latest completed current-state entry is {task_token}")
+    ]
+    for path, label in checks:
+        text = path.read_text(encoding="utf-8")
+        if task_token in text:
+            results.append(
+                (True, f"OK: {task_token} is present in {label}")
+            )
+            continue
+        results.append(
+            (False, f"MISSING: {task_token} is not present in {label}")
+        )
+    return results
+
+
 def main() -> int:
     results: list[tuple[bool, str]] = []
 
@@ -116,6 +155,7 @@ def main() -> int:
         results.append(check_next_task_has_title())
         results.append(check_current_state_marker_exists())
         results.append(check_current_state_marker_not_stale())
+        results.extend(check_latest_completed_task_tracked())
 
     failed = [message for ok, message in results if not ok]
     passed = [message for ok, message in results if ok]

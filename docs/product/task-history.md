@@ -1,3 +1,9 @@
+## Task 133B-R
+- Completed: product-tracking drift repair voor ontbrekende Task 133B scope-register trackingnotitie.
+- Updated: `docs/product/version-1-scope-register.md` aangevuld en producttrackingdocs geharmoniseerd zonder runtimewijzigingen.
+- Hardened: `scripts/check_product_tracking.py` verifieert nu dat de nieuwste completed task uit `current-state.md` ook in `task-history`, `version-1-backlog` en `version-1-scope-register` staat.
+- Scope guard: documentation/process-helper only; geen runtime/API/web/storage/migratie/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution/financiële berekeningen/fake data.
+
 ## Task 133B
 - Completed: minimale IBKR read-only sync readiness/preflight status gate toegevoegd met pure readiness builder + status exposure op `GET /ibkr/sync/status`.
 - Readiness voegt statuslabels/reasons toe (`blocked`, `needs_control`, `ready_for_manual_readonly_sync`) met conservatieve safety booleans en zonder runtime-unlock.

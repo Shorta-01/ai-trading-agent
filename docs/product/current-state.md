@@ -1,7 +1,10 @@
 # Current State
 
-Huidige toestand: **na Task 133B**
+Huidige toestand: **na Task 133B-R**
 
+
+## Task 133B-R update
+- Task 133B-R: **completed** — product-tracking drift hersteld door ontbrekende Task 133B scope-register notitie toe te voegen in `docs/product/version-1-scope-register.md` en de stdlib-only checker `scripts/check_product_tracking.py` te verharden zodat de eerste completed taak uit `current-state.md` verplicht terugkomt in `task-history`, `version-1-backlog` en `version-1-scope-register`. Documentation/process-helper repair-only: geen runtime-, API-, web-, storage-, migratie- of netwerkgedrag gewijzigd; Task 134B is niet geïmplementeerd.
 
 ## Task 133B update
 - Task 133B: **completed** — minimale IBKR read-only sync readiness/preflight status gate geïmplementeerd via pure statusbuilder en exposed op `GET /ibkr/sync/status` met statussen `Geblokkeerd`, `Controle nodig` en `Klaar voor handmatige read-only sync`. Deze taak wijzigde geen real sync runtime en voegde geen echte TWS/Gateway netwerkruntime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties, geen action drafts, geen Decision Packages runtime, geen orders/broker execution, geen financiële berekeningen en geen fake data toe.
