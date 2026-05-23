@@ -108,6 +108,47 @@ from portfolio_outlook_api.trading_settings import (
 router = APIRouter()
 
 
+def _build_sync_run_diagnostics(run: dict[str, object]) -> dict[str, object]:
+    return {
+        "sync_run_id": run.get("sync_run_id"),
+        "started_at": run.get("started_at"),
+        "completed_at": run.get("completed_at"),
+        "status": run.get("status", "unknown"),
+        "status_nl": "Read-only sync uitgevoerd",
+        "provider_code": run.get("provider_code"),
+        "provider_environment": run.get("provider_environment"),
+        "account_mode": run.get("account_mode"),
+        "readonly": run.get("readonly"),
+        "account_summary_status": run.get("account_summary_status"),
+        "positions_status": run.get("positions_status"),
+        "open_orders_status": run.get("open_orders_status"),
+        "executions_status": run.get("executions_status"),
+        "positions_count": run.get("positions_count", 0),
+        "cash_values_count": run.get("cash_values_count", 0),
+        "open_orders_count": run.get("open_orders_count", 0),
+        "executions_count": run.get("executions_count", 0),
+        "persistence_mode": run.get("persistence_mode", "memory"),
+        "persistence_status_nl": run.get("persistence_status_nl", "Geheugenfallback actief"),
+        "payload_validation_status": run.get("payload_validation_status", "not_available"),
+        "payload_validation_status_nl": run.get(
+            "payload_validation_status_nl", "Niet beschikbaar"
+        ),
+        "payload_validation_error_count": run.get("payload_validation_error_count", 0),
+        "payload_validation_help_nl": run.get(
+            "payload_validation_help_nl",
+            "Deze syncrun bevat geen opgeslagen payloadvalidatie-details.",
+        ),
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "can_submit_orders": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
 @router.get("/system/status", response_model=SystemStatusSummary)
 def read_system_status() -> SystemStatusSummary:
     return build_system_status_summary()
@@ -240,6 +281,51 @@ def read_ibkr_sync_status() -> dict[str, object]:
 @router.post("/ibkr/sync/run")
 def start_ibkr_sync_run() -> dict[str, object]:
     return run_sync(settings)
+
+
+@router.get("/ibkr/sync/runs")
+def read_ibkr_sync_runs() -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync import STORE
+
+    items = [_build_sync_run_diagnostics(run) for run in reversed(STORE.runs)]
+    return {
+        "items": items,
+        "help_nl": (
+            "Recente read-only syncruns in geheugenvolgorde."
+            if items
+            else "Nog geen read-only syncruns beschikbaar."
+        ),
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "can_submit_orders": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/ibkr/sync/runs/{sync_run_id}")
+def read_ibkr_sync_run_detail(sync_run_id: str) -> dict[str, object]:
+    from portfolio_outlook_api.ibkr_sync import STORE
+
+    run = next((item for item in STORE.runs if item.get("sync_run_id") == sync_run_id), None)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Syncrun niet gevonden.")
+    return _build_sync_run_diagnostics(run) | {
+        "positions": [
+            item for item in STORE.positions if item.get("sync_run_id") == sync_run_id
+        ],
+        "cash_values": [item for item in STORE.cash if item.get("sync_run_id") == sync_run_id],
+        "open_orders": [
+            item for item in STORE.open_orders if item.get("sync_run_id") == sync_run_id
+        ],
+        "executions": [
+            item for item in STORE.executions if item.get("sync_run_id") == sync_run_id
+        ],
+        "detail_help_nl": "Read-only syncrun detail zonder ruwe brokerpayloads.",
+    }
 
 
 @router.get("/ibkr/portfolio/positions")
