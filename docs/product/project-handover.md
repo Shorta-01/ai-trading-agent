@@ -1,3 +1,6 @@
+## Task 140
+- Completed: read-only reconciliation readiness endpoint toegevoegd (`GET /portfolio/valuation/reconciliation-readiness`) die bestaande waarderingblockers samenvat zonder waarden te verzinnen en met alle order/suggestie/action safetybooleans geblokkeerd. Geen TWS/Gateway runtime, geen session manager, geen schema/migraties, geen market-data/FX runtime, geen suggesties/action drafts/orders/execution.
+
 ## Task 138-R handover update
 - Afgerond: merged-red repair na Task 138 voor API pytest failures in adapter timeout/provider-foutpaden.
 - Bevestigd: timeout/provider adapterfouten rapporteren `payload_validation_status=not_attempted` (niet `passed`) met Nederlandse helptekst dat validatie niet uitgevoerd werd.

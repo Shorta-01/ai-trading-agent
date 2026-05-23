@@ -1,6 +1,11 @@
 # Current State
 
 
+## Task 140 update
+- Task 140: **completed** — read-only reconciliatie-readiness toegevoegd tussen opgeslagen IBKR-sync snapshots en bestaande portfolio waardering-blockers via `GET /portfolio/valuation/reconciliation-readiness`. Endpoint vat bestaande blockers samen (market data/FX/kostbasis/payloadvalidatie/snapshotbeschikbaarheid), voegt expliciete blocker-categorieën en telvelden toe, en inventariseert geen nieuwe waarden. Geen nieuwe financiële rekenengine toegevoegd buiten bestaande readiness/calculators; geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen FX runtime, geen suggesties, geen action drafts, geen orders of broker execution toegevoegd.
+
+Huidige toestand: **na Task 140**
+
 ## Task 139 update
 - Task 139: **completed** — read-only IBKR sync run history en diagnostics verdiept met nieuwe status-only endpoints `GET /ibkr/sync/runs` en `GET /ibkr/sync/runs/{sync_run_id}` op basis van bestaande in-memory syncruns. Responses bevatten expliciete telvelden, payload-validatie samenvatting (conservatief waar nodig), persistence mode/status, en harde safetybooleans die orders/suggesties blokkeren. Geen echte TWS/Gateway runtime, geen persistente session manager, geen storage schema/migraties, geen market-data runtime, geen suggesties/action drafts/orders/broker execution toegevoegd.
 

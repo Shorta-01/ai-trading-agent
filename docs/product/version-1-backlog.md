@@ -1,3 +1,6 @@
+## Task 140
+- Completed: read-only reconciliation readiness endpoint toegevoegd (`GET /portfolio/valuation/reconciliation-readiness`) die bestaande waarderingblockers samenvat zonder waarden te verzinnen en met alle order/suggestie/action safetybooleans geblokkeerd. Geen TWS/Gateway runtime, geen session manager, geen schema/migraties, geen market-data/FX runtime, geen suggesties/action drafts/orders/execution.
+
 - Task 138 is afgerond: adaptercontract-hardening + deterministische test-only fake fixtures + foutclassificatie-tests voor read-only IBKR sync voltooid zonder runtimeverbreding.
 ## Task 136 update
 - Completed: durable IBKR sync status contract alignment with Task 135B payload-validation/safety fields.

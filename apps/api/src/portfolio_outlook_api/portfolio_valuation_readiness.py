@@ -141,6 +141,50 @@ class PortfolioValuationReadinessResponse(BaseModel):
     valuation_input_trace: dict[str, object] = Field(default_factory=dict)
 
 
+class PortfolioReconciliationReadinessResponse(BaseModel):
+    status: str
+    status_nl: str
+    reason_code: str
+    help_nl: str
+    latest_sync_run_id: str | None = None
+    latest_sync_completed_at: str | None = None
+    storage_available: bool
+    ibkr_snapshot_available: bool
+    positions_snapshot_available: bool
+    cash_snapshot_available: bool
+    market_data_available: bool
+    fx_data_available: bool
+    cost_basis_available: bool
+    valuation_ready: bool
+    reconciliation_ready: bool
+    blocked: bool
+    blocker_categories: list[str] = Field(default_factory=list)
+    missing_inputs: list[str] = Field(default_factory=list)
+    positions_count: int = 0
+    cash_values_count: int = 0
+    valuation_rows_count: int = 0
+    missing_market_data_conids: list[str] = Field(default_factory=list)
+    missing_fx_pairs: list[str] = Field(default_factory=list)
+    missing_cost_basis_inputs: list[str] = Field(default_factory=list)
+    stale_fx_pairs: list[str] = Field(default_factory=list)
+    invalid_fx_pairs: list[str] = Field(default_factory=list)
+    payload_validation_status: str = "not_available"
+    payload_validation_status_nl: str = "Niet beschikbaar"
+    payload_validation_help_nl: str = "Validatiestatus ontbreekt in sync-historie."
+    sync_history_available: bool = False
+    diagnostics_available: bool = False
+    actions_allowed: bool = False
+    suggestions_allowed: bool = False
+    action_drafts_allowed: bool = False
+    orders_allowed: bool = False
+    order_submission_allowed: bool = False
+    order_modification_allowed: bool = False
+    order_cancellation_allowed: bool = False
+    can_submit_orders: bool = False
+    safe_for_orders: bool = False
+    blocks_orders: bool = True
+
+
 @dataclass(frozen=True)
 class PositionRowBuildInput:
     position: IbkrPositionSnapshotRecord
@@ -213,9 +257,7 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
     row.unrealized_pl_help_nl = pl_result.unrealized_pl_help_nl
     row.unrealized_pl_available = pl_result.unrealized_pl_available
     row.unrealized_pl = (
-        _money(pl_result.unrealized_pl)
-        if pl_result.unrealized_pl is not None
-        else None
+        _money(pl_result.unrealized_pl) if pl_result.unrealized_pl is not None else None
     )
     row.unrealized_pl_currency = pl_result.unrealized_pl_currency
     row.unrealized_pl_percent_available = pl_result.unrealized_pl_percent_available
@@ -305,40 +347,34 @@ def build_position_row(payload: PositionRowBuildInput) -> PositionValuationReadi
         unrealized_pl_help_nl=pl_result.unrealized_pl_help_nl,
         unrealized_pl_available=pl_result.unrealized_pl_available,
         unrealized_pl=(
-            _money(pl_result.unrealized_pl)
-            if pl_result.unrealized_pl is not None
-            else None
+            _money(pl_result.unrealized_pl) if pl_result.unrealized_pl is not None else None
         ),
         unrealized_pl_currency=pl_result.unrealized_pl_currency,
         unrealized_pl_percent_available=pl_result.unrealized_pl_percent_available,
         unrealized_pl_percent=(
             _money(pl_result.unrealized_pl_percent)
-        if pl_result.unrealized_pl_percent is not None
-        else None
+            if pl_result.unrealized_pl_percent is not None
+            else None
         ),
         converted_unrealized_pl_available=pl_result.converted_unrealized_pl_available,
         converted_unrealized_pl=(
             _money(pl_result.converted_unrealized_pl)
-        if pl_result.converted_unrealized_pl is not None
-        else None
+            if pl_result.converted_unrealized_pl is not None
+            else None
         ),
         missing_cost_basis_inputs=pl_result.missing_cost_basis_inputs,
         missing_pl_inputs=pl_result.missing_pl_inputs,
         cost_basis_input_trace=(
-            pl_result.cost_basis_input_trace.__dict__
-            if pl_result.cost_basis_input_trace
-            else None
+            pl_result.cost_basis_input_trace.__dict__ if pl_result.cost_basis_input_trace else None
         ),
         unrealized_pl_input_trace=(
             pl_result.unrealized_pl_input_trace.__dict__
-        if pl_result.unrealized_pl_input_trace
-        else None
+            if pl_result.unrealized_pl_input_trace
+            else None
         ),
         blocked=False,
         missing_inputs=[],
     )
-
-
 
 
 def _conversion_trace_dict(trace: ValuationInputTrace) -> dict[str, object]:
@@ -430,6 +466,7 @@ def _build_conversion_inputs(
         base_currency=base_currency,
         trace=trace,
     )
+
 
 def build_portfolio_valuation_readiness(
     *,
@@ -545,9 +582,7 @@ def build_portfolio_valuation_readiness(
             market_data_available=False,
             valuation_complete=False,
             blocked=True,
-            cash_readiness_status=(
-                "cash_available" if cash_snapshots else "no_cash_snapshot"
-            ),
+            cash_readiness_status=("cash_available" if cash_snapshots else "no_cash_snapshot"),
             cash_readiness_status_nl=(
                 "Cash beschikbaar" if cash_snapshots else "Cashsnapshot ontbreekt"
             ),
@@ -597,11 +632,7 @@ def build_portfolio_valuation_readiness(
     blocked = any(row.blocked for row in rows)
     has_market = any(row.market_price is not None for row in rows)
     cash_currencies = sorted({item.base_currency for item in cash_snapshots})
-    portfolio_currency_set = {
-        (item.currency or "").strip()
-        for item in positions
-        if item.currency
-    }
+    portfolio_currency_set = {(item.currency or "").strip() for item in positions if item.currency}
     portfolio_currencies = sorted(portfolio_currency_set)
     valuation_currencies = sorted(set(portfolio_currencies) | set(cash_currencies))
     base_currency = cash_currencies[0] if len(cash_currencies) == 1 else None
@@ -612,9 +643,7 @@ def build_portfolio_valuation_readiness(
                 "currency": item.base_currency,
                 "cash": _money(item.cash) if item.cash is not None else None,
                 "available_funds": (
-                    _money(item.available_funds)
-                    if item.available_funds is not None
-                    else None
+                    _money(item.available_funds) if item.available_funds is not None else None
                 ),
                 "buying_power": (
                     _money(item.buying_power) if item.buying_power is not None else None
@@ -767,4 +796,121 @@ def build_portfolio_valuation_readiness(
         converted_position_values_available=conversion_result.converted_position_values_available,
         converted_cash_values_available=conversion_result.converted_cash_values_available,
         valuation_input_trace=_conversion_trace_dict(conversion_result.valuation_input_trace),
+    )
+
+
+def build_portfolio_reconciliation_readiness(
+    *,
+    valuation: PortfolioValuationReadinessResponse,
+    payload_validation_status: str,
+    payload_validation_status_nl: str,
+    payload_validation_help_nl: str,
+    diagnostics_available: bool,
+) -> PortfolioReconciliationReadinessResponse:
+    blockers: list[str] = []
+    if not valuation.storage_available:
+        blockers.append("storage_unavailable")
+    if not valuation.has_latest_ibkr_snapshot:
+        blockers.append("no_latest_ibkr_snapshot")
+    if not valuation.has_positions:
+        blockers.append("no_positions_snapshot")
+    if not valuation.cash_snapshot_available:
+        blockers.append("no_cash_snapshot")
+    if valuation.missing_market_data_conids:
+        blockers.append("missing_market_data")
+    if any(row.reason_code == "stale_market_data" for row in valuation.rows):
+        blockers.append("stale_market_data")
+    if valuation.missing_fx_pairs:
+        blockers.append("missing_fx")
+    if valuation.stale_fx_pairs:
+        blockers.append("stale_fx")
+    if valuation.invalid_fx_pairs:
+        blockers.append("invalid_fx")
+    missing_cost_basis_inputs = sorted(
+        {missing for row in valuation.rows for missing in row.missing_cost_basis_inputs}
+    )
+    if missing_cost_basis_inputs:
+        blockers.append("missing_cost_basis")
+    if not diagnostics_available:
+        blockers.append("sync_diagnostics_unavailable")
+    if payload_validation_status == "failed":
+        blockers.append("payload_validation_failed")
+    elif payload_validation_status in {"not_available", "unknown"}:
+        blockers.append("payload_validation_not_available")
+
+    status = "reconciliation_ready_for_readonly_valuation"
+    status_nl = "Read-only waardering kan worden voorbereid"
+    reason = "reconciliation_ready"
+    help_nl = "Read-only reconciliatie is beschikbaar. Orders blijven geblokkeerd."
+    if "storage_unavailable" in blockers:
+        status, status_nl, reason = (
+            "storage_unavailable",
+            "Storage niet beschikbaar",
+            "storage_unavailable",
+        )
+        help_nl = "Reconciliatie geblokkeerd door storagefout."
+    elif "no_latest_ibkr_snapshot" in blockers:
+        status, status_nl, reason = (
+            "no_latest_ibkr_snapshot",
+            "IBKR-snapshot ontbreekt",
+            "no_latest_ibkr_snapshot",
+        )
+        help_nl = "Geen laatste read-only IBKR-snapshot gevonden."
+    elif "missing_market_data" in blockers:
+        status, status_nl, reason = (
+            "reconciliation_needs_market_data",
+            "Marktdata ontbreekt",
+            "missing_market_data",
+        )
+        help_nl = "Waardering blijft geblokkeerd door ontbrekende marktdata."
+    elif "missing_fx" in blockers:
+        status, status_nl, reason = "reconciliation_needs_fx", "FX-data ontbreekt", "missing_fx"
+        help_nl = "Waardering blijft geblokkeerd door ontbrekende FX-data."
+    elif "missing_cost_basis" in blockers:
+        status, status_nl, reason = (
+            "reconciliation_needs_cost_basis",
+            "Kostbasis ontbreekt",
+            "missing_cost_basis",
+        )
+        help_nl = "Kostbasisinvoer ontbreekt voor één of meer posities."
+    elif blockers:
+        status, status_nl, reason = (
+            "reconciliation_blocked",
+            "Reconciliatie geblokkeerd",
+            "reconciliation_blocked",
+        )
+        help_nl = "Reconciliatie is niet volledig. Orders blijven geblokkeerd."
+
+    return PortfolioReconciliationReadinessResponse(
+        status=status,
+        status_nl=status_nl,
+        reason_code=reason,
+        help_nl=help_nl,
+        latest_sync_run_id=valuation.latest_sync_run_id,
+        latest_sync_completed_at=valuation.latest_sync_completed_at,
+        storage_available=valuation.storage_available,
+        ibkr_snapshot_available=valuation.has_latest_ibkr_snapshot,
+        positions_snapshot_available=valuation.has_positions,
+        cash_snapshot_available=valuation.cash_snapshot_available,
+        market_data_available=valuation.market_data_available,
+        fx_data_available=valuation.fx_rates_available or not valuation.fx_required,
+        cost_basis_available=not missing_cost_basis_inputs,
+        valuation_ready=valuation.valuation_complete,
+        reconciliation_ready=not blockers,
+        blocked=bool(blockers),
+        blocker_categories=blockers,
+        missing_inputs=sorted(set(valuation.missing_total_value_inputs)),
+        positions_count=len(valuation.rows),
+        cash_values_count=valuation.cash_snapshot_count,
+        valuation_rows_count=len(valuation.rows),
+        missing_market_data_conids=valuation.missing_market_data_conids,
+        missing_fx_pairs=valuation.missing_fx_pairs,
+        missing_cost_basis_inputs=missing_cost_basis_inputs,
+        stale_fx_pairs=valuation.stale_fx_pairs,
+        invalid_fx_pairs=valuation.invalid_fx_pairs,
+        payload_validation_status=payload_validation_status,
+        payload_validation_status_nl=payload_validation_status_nl,
+        payload_validation_help_nl=payload_validation_help_nl,
+        sync_history_available=valuation.has_latest_ibkr_snapshot,
+        diagnostics_available=diagnostics_available,
     )
