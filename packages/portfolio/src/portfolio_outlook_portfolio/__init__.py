@@ -10,6 +10,20 @@ from .approval_guards import (
     is_approval_decision_final,
     require_approved_decision,
 )
+from .baseline_forecast import (
+    MINIMUM_BARS_REQUIRED as BASELINE_FORECAST_MIN_BARS,
+)
+from .baseline_forecast import (
+    MODEL_CODE as BASELINE_FORECAST_MODEL_CODE,
+)
+from .baseline_forecast import (
+    MODEL_VERSION as BASELINE_FORECAST_MODEL_VERSION,
+)
+from .baseline_forecast import (
+    BaselineForecast,
+    HistoricalBar,
+    compute_baseline_forecast,
+)
 from .broker_reconciliation_guards import (
     check_no_blocking_reconciliation_differences,
     check_reconciliation_allows_suggestions,
@@ -231,5 +245,11 @@ __all__ = [
     "PositionPlInput",
     "PositionPlInputTrace",
     "calculate_position_cost_basis_and_unrealized_pl",
+    "BaselineForecast",
+    "HistoricalBar",
+    "BASELINE_FORECAST_MIN_BARS",
+    "BASELINE_FORECAST_MODEL_CODE",
+    "BASELINE_FORECAST_MODEL_VERSION",
+    "compute_baseline_forecast",
 ]
 

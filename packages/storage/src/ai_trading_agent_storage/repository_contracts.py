@@ -7,7 +7,7 @@ It intentionally does not open sessions, read environment variables, or connect 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -1714,3 +1714,101 @@ def repository_interfaces_are_defined() -> bool:
         ResearchSourceProcessingStatusRecord,
     )
     return True
+
+
+@dataclass(frozen=True)
+class MarketDataBarRecord:
+    bar_id: str
+    ibkr_conid: str
+    symbol: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    provider_code: str
+    bar_date: date
+    interval_code: str
+    open_price: Decimal | None
+    high_price: Decimal | None
+    low_price: Decimal | None
+    close_price: Decimal
+    adjusted_close_price: Decimal | None
+    volume: Decimal | None
+    provider_as_of: datetime | None
+    received_at: datetime
+    stored_at: datetime
+    source_type: str
+    explanation_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "bar_id",
+            "ibkr_conid",
+            "symbol",
+            "currency",
+            "provider_code",
+            "interval_code",
+            "source_type",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+
+
+@dataclass(frozen=True)
+class AssetForecastRecord:
+    forecast_id: str
+    ibkr_conid: str
+    symbol: str
+    currency: str
+    model_code: str
+    model_version: str
+    horizon_days: int
+    generated_at: datetime
+    valid_until: datetime
+    data_points_used: int
+    history_first_bar_date: date | None
+    history_last_bar_date: date | None
+    current_price: Decimal
+    expected_return_pct: Decimal
+    p10_price: Decimal
+    p50_price: Decimal
+    p90_price: Decimal
+    prob_gain: Decimal
+    prob_loss: Decimal
+    prob_loss_gt_5pct: Decimal
+    prob_loss_gt_10pct: Decimal
+    prob_gain_gt_5pct: Decimal
+    prob_gain_gt_10pct: Decimal
+    expected_volatility_annual: Decimal
+    downside_risk_score: Decimal
+    confidence_score: Decimal
+    direction_label: str
+    direction_label_nl: str
+    explanation_nl: str
+    status: str
+    blocking_reason: str | None
+    safe_for_analysis: bool = False
+    safe_for_suggestions: bool = False
+    safe_for_action_drafts: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "forecast_id",
+            "ibkr_conid",
+            "symbol",
+            "currency",
+            "model_code",
+            "model_version",
+            "direction_label",
+            "direction_label_nl",
+            "explanation_nl",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.horizon_days <= 0:
+            raise ValueError("horizon_days must be positive")
+        if self.data_points_used < 0:
+            raise ValueError("data_points_used must be non-negative")
+        if self.safe_for_analysis or self.safe_for_suggestions or self.safe_for_action_drafts:
+            raise ValueError(
+                "All safe_for_* fields must remain false for V1 baseline forecasts."
+            )

@@ -261,6 +261,16 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
         label_nl="FX rate snapshot durable opslag",
         description_nl="Duurzame opslagtabel voor read-only FX koers snapshots per valutapaar.",
     ),
+    MigrationRevisionInfo(
+        revision_id="0027_market_data_bars_and_asset_forecasts",
+        previous_revision_id="0026_fx_rate_snapshot_storage",
+        filename="0027_market_data_bars_and_asset_forecasts.py",
+        label_nl="Historische bars en assetvoorspellingen",
+        description_nl=(
+            "Duurzame opslag voor dagelijkse OHLCV-bars en deterministische "
+            "baseline-assetvoorspellingen (read-only, geen suggesties)."
+        ),
+    ),
 )
 
 

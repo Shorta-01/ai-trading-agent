@@ -351,6 +351,53 @@ export type PortfolioValuationReadinessResponse = {
   orders_allowed?: boolean;
 };
 
+export type AssetForecastResponse = {
+  forecast_id: string;
+  ibkr_conid: string;
+  symbol: string;
+  currency: string;
+  model_code: string;
+  model_version: string;
+  horizon_days: number;
+  generated_at: string;
+  valid_until: string;
+  data_points_used: number;
+  history_first_bar_date: string | null;
+  history_last_bar_date: string | null;
+  current_price: string;
+  expected_return_pct: string;
+  p10_price: string;
+  p50_price: string;
+  p90_price: string;
+  prob_gain: string;
+  prob_loss: string;
+  prob_loss_gt_5pct: string;
+  prob_loss_gt_10pct: string;
+  prob_gain_gt_5pct: string;
+  prob_gain_gt_10pct: string;
+  expected_volatility_annual: string;
+  downside_risk_score: string;
+  confidence_score: string;
+  direction_label: string;
+  direction_label_nl: string;
+  explanation_nl: string;
+  status: string;
+  blocking_reason: string | null;
+  safe_for_analysis: boolean;
+  safe_for_suggestions: boolean;
+  safe_for_action_drafts: boolean;
+};
+
+export type LatestForecastsResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  items: AssetForecastResponse[];
+  suggestions_allowed?: boolean;
+  safe_for_orders?: boolean;
+  blocks_orders?: boolean;
+};
+
 export type FreshnessAuditResponse = {
   freshness_audit_id: string;
   request_log_id: string | null;
@@ -460,6 +507,8 @@ export const apiClient = {
   getIbkrCash: () => getJson<{ items: IbkrCashSnapshot[] }>("/ibkr/account/cash"),
   getIbkrOpenOrders: () => getJson<{ items: IbkrOpenOrderSnapshot[] }>("/ibkr/orders/open"),
   getIbkrExecutions: () => getJson<{ items: IbkrExecutionSnapshot[] }>("/ibkr/executions"),
+  getLatestForecasts: () => getJson<LatestForecastsResponse>("/forecasts/latest"),
+  runForecastSync: () => postJson<{ status: string }>("/forecasts/compute"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

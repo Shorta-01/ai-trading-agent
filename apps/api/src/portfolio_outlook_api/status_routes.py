@@ -6,7 +6,9 @@ from typing import Annotated
 
 from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
+    SqlAlchemyAssetForecastRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
+    SqlAlchemyMarketDataBarRepository,
     SqlAlchemyMarketDataSnapshotRepository,
     SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
@@ -24,6 +26,10 @@ from portfolio_outlook_domain.market_data_foundation import (
 )
 
 from portfolio_outlook_api.config import Settings, settings
+from portfolio_outlook_api.forecast_sync import (
+    serialize_forecast_for_response,
+    sync_forecasts,
+)
 from portfolio_outlook_api.ibkr_account_snapshot_preflight import (
     build_manual_readonly_account_snapshot_preflight_readiness,
     run_manual_readonly_account_snapshot_preflight,
@@ -895,6 +901,221 @@ def run_market_data_sync() -> dict[str, object]:
         "safe_for_orders": False,
         "blocks_orders": True,
     }
+
+
+def _build_blocked_forecast_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "model_code": "baseline_gbm",
+        "asset_total": 0,
+        "asset_success": 0,
+        "asset_skipped_unknown_exchange": 0,
+        "asset_skipped_missing_market_data": 0,
+        "asset_failed": 0,
+        "forecasts_persisted": 0,
+        "bars_persisted": 0,
+        "failures": [],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/forecasts/compute")
+def run_forecast_sync() -> dict[str, object]:
+    """Run one baseline-forecast cycle and persist a forecast per position.
+
+    Default-off. Even when enabled, only deterministic GBM forecasts are
+    persisted; no suggestions, action drafts or orders are produced.
+    """
+
+    if not settings.forecast_sync_enabled:
+        return _build_blocked_forecast_response(
+            reason="forecast_sync_disabled",
+            status_nl="Voorspellingssync uitgeschakeld",
+            help_nl="Stel `FORECAST_SYNC_ENABLED=true` in om de baseline-engine te activeren.",
+        )
+
+    provider = build_market_data_provider(settings)
+    if provider is None:
+        return _build_blocked_forecast_response(
+            reason="market_data_provider_not_configured",
+            status_nl="Marktdataprovider niet geconfigureerd",
+            help_nl=(
+                "Voorspellingen vereisen EODHD; configureer "
+                "`MARKET_DATA_PROVIDER=eodhd`, `EODHD_ENABLED=true` en "
+                "`EODHD_API_KEY=...`."
+            ),
+        )
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_forecast_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl=(
+                "Voorspellingen vereisen schrijfbare opslag; controleer "
+                "STORAGE__ENABLED, STORAGE__DATABASE_URL en STORAGE__WRITES_ENABLED."
+            ),
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            market_repo = SqlAlchemyMarketDataSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            bar_repo = SqlAlchemyMarketDataBarRepository(
+                checked.connection, checked.readiness
+            )
+            forecast_repo = SqlAlchemyAssetForecastRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return _build_blocked_forecast_response(
+                    reason="no_ibkr_sync_run",
+                    status_nl="Geen IBKR-sync gevonden",
+                    help_nl=(
+                        "Voorspellingen gebruiken de laatst opgeslagen IBKR-sync; "
+                        "voer eerst een handmatige read-only IBKR-sync uit."
+                    ),
+                )
+            positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            if not positions:
+                return _build_blocked_forecast_response(
+                    reason="no_positions",
+                    status_nl="Geen posities in laatste IBKR-sync",
+                    help_nl=(
+                        "De laatste IBKR-sync bevat geen posities; voer een "
+                        "nieuwe sync uit zodra je posities aanhoudt."
+                    ),
+                )
+            conids = tuple(p.conid for p in positions if p.conid)
+            market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
+            market_by_conid = {item.ibkr_conid: item for item in market_result.records}
+            report = sync_forecasts(
+                provider=provider,
+                bar_repo=bar_repo,
+                forecast_repo=forecast_repo,
+                positions=positions,
+                market_snapshots_by_conid=market_by_conid,
+                history_lookback_days=settings.forecast_history_lookback_days,
+                horizon_trading_days=settings.forecast_horizon_trading_days,
+                minimum_bars_required=settings.forecast_minimum_bars_required,
+                max_assets=settings.forecast_max_assets_per_run,
+                valid_minutes=settings.forecast_valid_minutes,
+            )
+    except StorageConnectionError:
+        return _build_blocked_forecast_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt; geen voorspellingen opgeslagen.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "model_code": report.model_code,
+        "model_version": report.model_version,
+        "horizon_trading_days": report.horizon_trading_days,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "asset_total": report.asset_total,
+        "asset_success": report.asset_success,
+        "asset_skipped_unknown_exchange": report.asset_skipped_unknown_exchange,
+        "asset_skipped_missing_market_data": report.asset_skipped_missing_market_data,
+        "asset_failed": report.asset_failed,
+        "forecasts_persisted": report.forecasts_persisted,
+        "bars_persisted": report.bars_persisted,
+        "failures": [dict(item) for item in report.failures],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/forecasts/latest")
+def read_latest_forecasts() -> dict[str, object]:
+    """Read the latest persisted baseline forecast per current position."""
+
+    base = {
+        "items": [],
+        "help_nl": "Voorspellingen zijn read-only baseline-resultaten.",
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            forecast_repo = SqlAlchemyAssetForecastRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return base | {
+                    "status": "no_ibkr_sync_run",
+                    "status_nl": "Geen IBKR-sync gevonden",
+                }
+            positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return base | {
+                    "status": "no_positions",
+                    "status_nl": "Geen posities",
+                }
+            result = forecast_repo.list_latest_asset_forecasts_by_conids(conids)
+            return base | {
+                "status": "ok",
+                "status_nl": (
+                    "Voorspellingen beschikbaar"
+                    if result.records
+                    else "Nog geen voorspellingen"
+                ),
+                "items": [serialize_forecast_for_response(r) for r in result.records],
+            }
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+        }
 
 
 @router.post(

@@ -1,11 +1,3 @@
-# Task 158
+# Task 159
 
-Slice 3 — Baseline forecast engine (V1.1 stage), end-to-end. Add a pure
-Python baseline forecaster that consumes the persisted market-data snapshots
-and emits a probabilistic outlook per position: p10/p50/p90 ranges,
-P(gain)/P(loss), expected volatility, downside risk, and explicit horizon
-(initial: 1-month). No AI, no live fetch — historical-vol + drift baseline
-only, deterministic, fully tested. Persist forecasts as a new
-`AssetForecastRecord` so the Portefeuille and Volglijst pages can show a
-read-only "Verwachte richting" badge per asset. Disabled-by-default; no
-suggestions, no action drafts, no orders.
+Slice 4 — Deterministic Dutch label translator and Suggestions-grid foundation. Pure Python translator that consumes the persisted `AssetForecastRecord` plus the existing risk profile and gate flags and emits one of the locked action labels (`Kopen` / `Langzaam bijkopen` / `Houden` / `Bekijken` / `Verminderen` / `Verkopen` / `Cash houden` / `Vermijden` / `Geen actie` / `Geblokkeerd`). Persisted as a new `AssetSuggestionRecord` table, exposed via `GET /suggestions/latest`, surfaced on Portefeuille and Volglijst rows as the locked action badge. AI **never** decides the label; Python rules over evidence-gated, gate-passed inputs only. Disabled-by-default; no action drafts, no orders.

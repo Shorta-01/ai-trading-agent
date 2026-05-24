@@ -8,6 +8,7 @@ import { PositionPlTraceDetails } from "@/components/PositionPlTraceDetails";
 import { ValuationTraceDetails } from "@/components/ValuationTraceDetails";
 import {
   apiClient,
+  AssetForecastResponse,
   IbkrCashSnapshot,
   IbkrExecutionSnapshot,
   IbkrOpenOrderSnapshot,
@@ -53,19 +54,21 @@ export default function PortfolioPage() {
   const [cashItems, setCashItems] = useState<IbkrCashSnapshot[]>([]);
   const [openOrders, setOpenOrders] = useState<IbkrOpenOrderSnapshot[]>([]);
   const [executions, setExecutions] = useState<IbkrExecutionSnapshot[]>([]);
+  const [forecasts, setForecasts] = useState<AssetForecastResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
-    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes] = await Promise.all([
+    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes] = await Promise.all([
       apiClient.getIbkrSyncStatus(),
       apiClient.getPortfolioValuationReadiness(),
       apiClient.getIbkrPositions(),
       apiClient.getIbkrCash(),
       apiClient.getIbkrOpenOrders(),
       apiClient.getIbkrExecutions(),
+      apiClient.getLatestForecasts(),
     ]);
 
     setLoadFailed(!statusRes.ok && !valuationRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
@@ -75,7 +78,28 @@ export default function PortfolioPage() {
     if (cashRes.ok) setCashItems(cashRes.data.items ?? []);
     if (ordersRes.ok) setOpenOrders(ordersRes.data.items ?? []);
     if (executionsRes.ok) setExecutions(executionsRes.data.items ?? []);
+    if (forecastsRes.ok) setForecasts(forecastsRes.data.items ?? []);
     setLoading(false);
+  };
+
+  const forecastBySymbol = useMemo(() => {
+    const map: Record<string, AssetForecastResponse> = {};
+    for (const forecast of forecasts) {
+      // Latest forecast per symbol — items are already keyed by conid on the
+      // backend, but on the web side we join by symbol to keep the read model
+      // shape simple for V1.
+      map[forecast.symbol] = forecast;
+    }
+    return map;
+  }, [forecasts]);
+
+  const forecastTone = (forecast: AssetForecastResponse | undefined): "ok" | "info" | "wacht" | "aandacht" | "geblokkeerd" => {
+    if (!forecast || forecast.status !== "ready") return "info";
+    const label = forecast.direction_label;
+    if (label === "strong_up" || label === "slight_up") return "ok";
+    if (label === "strong_down") return "geblokkeerd";
+    if (label === "slight_down") return "aandacht";
+    return "info";
   };
 
   useEffect(() => {
@@ -146,10 +170,28 @@ export default function PortfolioPage() {
       <section className="dashboard-panel">
         <h2>Posities</h2>
         {positions.length === 0 ? <EmptyState title="Geen posities gevonden in de laatste snapshot" message="Nog geen IBKR-sync uitgevoerd" /> : (
-          <table className="portfolio-table"><thead><tr><th>Asset / symbool</th><th>Type</th><th>Beurs</th><th>Valuta</th><th>Aantal</th><th>Gem. aankoopprijs</th><th>Laatste sync</th><th>Status</th></tr></thead><tbody>
-            {positions.map((position, idx) => (
-              <tr key={`${position.sync_run_id}-${position.symbol}-${idx}`}><td>{position.symbol}</td><td>{position.security_type}</td><td>{displayValue(position.exchange)}</td><td>{position.currency}</td><td>{position.quantity}</td><td>{displayValue(position.average_cost)}</td><td>{displayValue(position.timestamp)}</td><td><StatusBadge label="Read-only" status="info" title="Snapshot uit IBKR-sync." /></td></tr>
-            ))}
+          <table className="portfolio-table"><thead><tr><th>Asset / symbool</th><th>Type</th><th>Beurs</th><th>Valuta</th><th>Aantal</th><th>Gem. aankoopprijs</th><th>Laatste sync</th><th>Verwachte richting (1m)</th><th>Status</th></tr></thead><tbody>
+            {positions.map((position, idx) => {
+              const forecast = forecastBySymbol[position.symbol];
+              const tone = forecastTone(forecast);
+              const directionLabel = forecast ? forecast.direction_label_nl : "Nog geen voorspelling";
+              const directionTooltip = forecast
+                ? `Baseline GBM • p10 ${forecast.p10_price} / p50 ${forecast.p50_price} / p90 ${forecast.p90_price} • kans op stijging ${forecast.prob_gain} • horizon ${forecast.horizon_days} dagen. Read-only baseline; geen suggesties of orders.`
+                : "Geen voorspelling beschikbaar. Geen suggesties of orders.";
+              return (
+                <tr key={`${position.sync_run_id}-${position.symbol}-${idx}`}>
+                  <td>{position.symbol}</td>
+                  <td>{position.security_type}</td>
+                  <td>{displayValue(position.exchange)}</td>
+                  <td>{position.currency}</td>
+                  <td>{position.quantity}</td>
+                  <td>{displayValue(position.average_cost)}</td>
+                  <td>{displayValue(position.timestamp)}</td>
+                  <td><StatusBadge label={directionLabel} status={tone} title={directionTooltip} /></td>
+                  <td><StatusBadge label="Read-only" status="info" title="Snapshot uit IBKR-sync." /></td>
+                </tr>
+              );
+            })}
           </tbody></table>
         )}
       </section>
