@@ -47,8 +47,8 @@ class IbapiManualReadonlyStatusClient:
         client_module = importlib.import_module("ibapi.client")
         wrapper_module = importlib.import_module("ibapi.wrapper")
 
-        eclient_type = cast(type[Any], getattr(client_module, "EClient"))
-        ewrapper_type = cast(type[Any], getattr(wrapper_module, "EWrapper"))
+        eclient_type = cast(type[Any], cast(Any, client_module).EClient)
+        ewrapper_type = cast(type[Any], cast(Any, wrapper_module).EWrapper)
 
         state = self._state
         lock = self._lock
