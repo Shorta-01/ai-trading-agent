@@ -594,6 +594,55 @@ export type DailyBriefingResponse = {
   safe_for_orders: boolean;
 };
 
+export type SchedulerJobResponse = {
+  job_id: string;
+  job_name: string;
+  cron_expression: string;
+  next_run_at: string | null;
+};
+
+export type SchedulerJobsResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  scheduler_enabled: boolean;
+  scheduler_timezone: string;
+  scheduler_daily_briefing_cron: string;
+  items: SchedulerJobResponse[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type SchedulerRunResponse = {
+  run_id: string;
+  job_name: string;
+  scheduled_at: string;
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  error_text: string | null;
+  triggered_by: string;
+};
+
+export type LatestSchedulerRunResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl: string;
+  item: SchedulerRunResponse | null;
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+};
+
+export type IbkrAccountModeResponse = {
+  status: string;
+  mode: string;
+  display_label: string;
+  expected_environment: string;
+  help_nl: string;
+  safe_for_orders: boolean;
+  blocks_orders: boolean;
+};
+
 export type DailyBriefingRunResponse = {
   status: string;
   status_nl?: string;
@@ -799,6 +848,10 @@ export const apiClient = {
     postJson<DailyBriefingRunResponse>("/briefings/daily/compute"),
   getLatestDailyBriefing: () =>
     getJson<DailyBriefingReadResponse>("/briefings/daily/latest"),
+  getSchedulerJobs: () => getJson<SchedulerJobsResponse>("/scheduler/jobs"),
+  getLatestSchedulerRun: () =>
+    getJson<LatestSchedulerRunResponse>("/scheduler/runs/latest"),
+  getIbkrAccountMode: () => getJson<IbkrAccountModeResponse>("/ibkr/account/mode"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

@@ -153,6 +153,9 @@ class Settings(BaseSettings):
     ai_explanation_max_output_chars: int = 2000
     daily_briefing_sync_enabled: bool = False
     daily_briefing_lookback_hours: int = 24
+    scheduler_enabled: bool = False
+    scheduler_timezone: str = "Europe/Brussels"
+    scheduler_daily_briefing_cron: str = "30 6 * * *"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

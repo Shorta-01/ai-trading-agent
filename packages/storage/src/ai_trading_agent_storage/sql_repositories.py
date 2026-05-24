@@ -38,6 +38,7 @@ from ai_trading_agent_storage.metadata import (
     daily_briefings,
     decision_package_explanations,
     explanation_evidence_ledger,
+    scheduler_runs,
     market_data_bars,
     market_data_snapshots,
     prediction_diary_entries,
@@ -80,6 +81,7 @@ from ai_trading_agent_storage.repository_contracts import (
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     PredictionDiaryEntryRecord,
+    SchedulerRunRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
     AssetListingRecord,
@@ -2789,4 +2791,70 @@ class SqlAlchemyDailyBriefingRepository(_Base):
             briefing_alerts.name,
             True,
             "Briefing alerts verwijderd.",
+        )
+
+
+class SqlAlchemySchedulerRunRepository(_Base):
+    def save_scheduler_run(self, record: SchedulerRunRecord) -> StorageWriteResult:
+        self._insert(scheduler_runs, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            scheduler_runs.name,
+            True,
+            "Scheduler-run opgeslagen.",
+        )
+
+    def update_scheduler_run(self, record: SchedulerRunRecord) -> StorageWriteResult:
+        self._connection.execute(
+            scheduler_runs.delete().where(scheduler_runs.c.run_id == record.run_id)
+        )
+        self._insert(scheduler_runs, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            scheduler_runs.name,
+            True,
+            "Scheduler-run bijgewerkt.",
+        )
+
+    def get_latest_scheduler_run(
+        self, *, job_name: str | None = None
+    ) -> StorageReadResult[SchedulerRunRecord]:
+        statement = select(scheduler_runs)
+        if job_name is not None:
+            statement = statement.where(scheduler_runs.c.job_name == job_name)
+        statement = statement.order_by(scheduler_runs.c.started_at.desc()).limit(1)
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                scheduler_runs.name,
+                "Nog geen scheduler-run.",
+            )
+        return StorageReadResult(
+            True,
+            SchedulerRunRecord(**dict(row)),
+            scheduler_runs.name,
+            "Scheduler-run opgehaald.",
+        )
+
+    def list_scheduler_runs(
+        self, *, limit: int = 50
+    ) -> StorageListResult[SchedulerRunRecord]:
+        rows = (
+            self._connection.execute(
+                select(scheduler_runs)
+                .order_by(scheduler_runs.c.started_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(SchedulerRunRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            scheduler_runs.name,
+            f"{len(records)} scheduler-runs opgehaald.",
         )

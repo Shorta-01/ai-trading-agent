@@ -41,19 +41,11 @@ def build_ibkr_sync_readiness(
         status_nl = "Geblokkeerd"
         reason = "readonly_required"
         help_nl = "Schakel read-only in; brokeracties blijven geblokkeerd."
-    elif (
-        settings.ibkr_sync_account_mode.lower() != "paper"
-        or settings.ibkr_expected_environment != "paper"
-    ):
-        status = "blocked"
-        status_nl = "Geblokkeerd"
-        reason = "version1_paper_only"
-        help_nl = "Version 1 ondersteunt alleen de veilige IBKR paper-accountomgeving."
-    elif account_mode_status == "mismatch":
-        status = "blocked"
-        status_nl = "Geblokkeerd"
-        reason = "account_mode_mismatch"
-        help_nl = "Sessiemodus komt niet overeen met paper-only vereiste."
+    # V1 §21.1 relock: account-mode is reported, not gated. The
+    # previous `version1_paper_only` / `account_mode_mismatch`
+    # blockers used to fail readiness when the connected account did
+    # not match the operator's expected mode; both gates are removed.
+    # The dashboard renders the actual mode IBKR reports as a badge.
     elif connection_status in {
         "connection_failed",
         "authentication_required",

@@ -12,6 +12,7 @@ dependencies = [
   "python-multipart>=0.0.20",
   "uvicorn>=0.30.0",
   "ibapi==9.81.1.post1",
+  "apscheduler>=3.10.4",
 ]
 
 [project.optional-dependencies]
@@ -45,4 +46,8 @@ known-first-party = ["portfolio_outlook_api"]
 python_version = "3.12"
 strict = true
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["apscheduler.*"]
+ignore_missing_imports = true
 

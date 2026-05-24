@@ -339,15 +339,15 @@ def run_dry_run_safety_checks(
     if not context.ibkr_conid.strip():
         failures.append("missing_ibkr_conid")
 
-    # Account-mode gate: paper-only safety net for V1; the locked product
-    # rule allows visible paper/real-money context, but mismatch always
-    # fails dry-run.
-    expected = (context.expected_account_mode or "").strip().lower()
+    # Account-mode is informational only since the V1 §21 relock — the
+    # connected IBKR account decides paper vs. live, not an app-side
+    # gate. We still record both values on the draft for audit, but a
+    # missing or differing mode no longer blocks dry-run. The remaining
+    # safety surface is per-draft manual approval + the broker's own
+    # account selection.
     actual = (context.account_mode or "").strip().lower()
-    if not expected or not actual:
+    if not actual:
         failures.append("missing_account_mode")
-    elif expected != actual:
-        failures.append("account_mode_mismatch")
 
     # Exchange whitelist gate
     primary = (context.primary_exchange or context.exchange or "").strip().upper()

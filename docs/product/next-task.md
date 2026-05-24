@@ -1,30 +1,26 @@
-# Task 168
+# Task 169
 
-Slice 13 — Doctrine relock + scheduler skeleton. This slice
-implements the doctrine relocks captured in
-`version-1-product-experience-locks.md §21` after the owner brainstorm
-that followed Slice 12.
+Slice 14 — `PredictorProtocol` + Momentum predictor. The first concrete
+step of the V1 §21.4 ensemble lock.
 
 Scope:
-- Relax `paper_only_mode` + `ibkr_expected_environment` from
-  "blocks order" to "reports the mode the connected IBKR account is in".
-  Add a dashboard `PAPER` / `LIVE` badge that surfaces the account mode
-  IBKR reports; the runtime is identical for both.
-- Drop the `account_mode_mismatch` dry-run failure code.
-- Add APScheduler in-process (FastAPI lifespan-wired). New settings
-  `scheduler_enabled` (default `False`) and `daily_briefing_cron`
-  (default `0 30 6 * * *` Europe/Brussels). When enabled, the schedule
-  triggers the existing daily briefing endpoint.
-- Storage migration adding `scheduler_runs` table (one row per
-  scheduled run: job name, scheduled_at, started_at, finished_at,
-  status, error_text, safe booleans hard-False) so the audit chain
-  records every automatic invocation.
-- New routes `GET /scheduler/jobs` (read which jobs are registered) and
-  `GET /scheduler/runs/latest` (read the most recent run).
-- Web update: add the `PAPER` / `LIVE` badge on the Portefeuille page
-  header and a small "Scheduler" panel showing the last run + next-fire
-  time.
+- Define `PredictorProtocol` in `packages/portfolio`: input
+  `PredictorInputs(historical_bars, current_price, horizon_trading_days,
+  asset_metadata)`; output `PredictionDistribution(model_code,
+  model_version, p10_price, p50_price, p90_price, prob_gain, direction,
+  confidence_score, expected_return_pct, blocking_reason)`.
+- Migrate the existing lognormal GBM (`compute_baseline_forecast`) to
+  implement the protocol; export a `GbmPredictor` class.
+- Add a `MomentumPredictor` class (deterministic Python):
+  * 12-1 momentum (12-month return excluding most-recent month)
+  * Time-series momentum (sign + magnitude of last 6 months vs. trailing volatility)
+  * Combines both into a `PredictionDistribution` with the same shape
+    GBM returns
+- The two predictors must be drop-in interchangeable through the
+  protocol; no orchestrator change yet — this slice only defines the
+  contract and adds the first new predictor.
+- Tests cover both predictors against synthetic series with known
+  momentum and known mean-reversion characteristics.
 
-Disabled-by-default; manual approval gate stays; safety booleans
-hard-False on every record and every response. No new predictors yet —
-this slice clears the runway for slices 14–22.
+No new tables, no routes, no UI; just the predictor contract +
+momentum module. Slice 15 wires the ensemble combiner.

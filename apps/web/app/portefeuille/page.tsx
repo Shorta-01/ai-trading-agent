@@ -14,6 +14,7 @@ import {
   AssetSuggestionResponse,
   DailyBriefingResponse,
   DecisionPackageExplanationResponse,
+  IbkrAccountModeResponse,
   IbkrCashSnapshot,
   IbkrExecutionSnapshot,
   IbkrOpenOrderSnapshot,
@@ -21,6 +22,8 @@ import {
   IbkrSyncStatusResponse,
   PortfolioValuationReadinessRow,
   PortfolioValuationReadinessResponse,
+  SchedulerJobsResponse,
+  SchedulerRunResponse,
 } from "@/lib/apiClient";
 
 function displayValue(value: string | null | undefined): string {
@@ -66,6 +69,9 @@ export default function PortfolioPage() {
   const [explanations, setExplanations] = useState<Record<string, DecisionPackageExplanationResponse | null>>({});
   const [explanationStatuses, setExplanationStatuses] = useState<Record<string, string>>({});
   const [dailyBriefing, setDailyBriefing] = useState<DailyBriefingResponse | null>(null);
+  const [accountMode, setAccountMode] = useState<IbkrAccountModeResponse | null>(null);
+  const [schedulerJobs, setSchedulerJobs] = useState<SchedulerJobsResponse | null>(null);
+  const [latestSchedulerRun, setLatestSchedulerRun] = useState<SchedulerRunResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -112,6 +118,22 @@ export default function PortfolioPage() {
     if (res.ok) {
       setDailyBriefing(res.data.item);
     }
+  };
+
+  const loadAccountMode = async () => {
+    const res = await apiClient.getIbkrAccountMode();
+    if (res.ok) {
+      setAccountMode(res.data);
+    }
+  };
+
+  const loadSchedulerInfo = async () => {
+    const [jobsRes, runRes] = await Promise.all([
+      apiClient.getSchedulerJobs(),
+      apiClient.getLatestSchedulerRun(),
+    ]);
+    if (jobsRes.ok) setSchedulerJobs(jobsRes.data);
+    if (runRes.ok) setLatestSchedulerRun(runRes.data.item);
   };
 
   const runDailyBriefing = async () => {
@@ -186,6 +208,8 @@ export default function PortfolioPage() {
   useEffect(() => {
     void loadData();
     void loadDailyBriefing();
+    void loadAccountMode();
+    void loadSchedulerInfo();
   }, []);
 
   const statusTone = useMemo(() => {
@@ -216,9 +240,31 @@ export default function PortfolioPage() {
       <section className="dashboard-panel">
         <div className="panel-head">
           <h2>Portefeuille</h2>
-          <button className="sync-button" type="button" onClick={() => void runSync()} disabled={syncing}>
-            {syncing ? "Synchroniseren..." : "Synchroniseer snapshots"}
-          </button>
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            {accountMode ? (
+              <span
+                title={accountMode.help_nl}
+                style={{
+                  padding: "0.15rem 0.5rem",
+                  borderRadius: "0.4rem",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  background: accountMode.mode === "live"
+                    ? "var(--ata-warning, #f59e0b)"
+                    : accountMode.mode === "paper"
+                      ? "var(--ata-info, #38bdf8)"
+                      : "var(--ata-muted, #64748b)",
+                  color: "white",
+                }}
+              >
+                {accountMode.display_label}
+              </span>
+            ) : null}
+            <button className="sync-button" type="button" onClick={() => void runSync()} disabled={syncing}>
+              {syncing ? "Synchroniseren..." : "Synchroniseer snapshots"}
+            </button>
+          </div>
         </div>
         <p className="top-sub">Read-only weergave van laatst opgeslagen IBKR snapshots voor posities, cash, open orders en uitvoeringen.</p>
 
@@ -297,6 +343,37 @@ export default function PortfolioPage() {
             title="Nog geen dagbriefing"
             message="Druk op 'Genereer briefing' om een deterministische samenvatting op te slaan."
           />
+        )}
+      </section>
+
+      <section className="dashboard-panel">
+        <div className="panel-head">
+          <h2>Scheduler</h2>
+          <button type="button" onClick={() => void loadSchedulerInfo()} style={{ fontSize: "0.85rem", padding: "0.2rem 0.6rem" }}>
+            Vernieuw
+          </button>
+        </div>
+        <p className="top-sub">
+          APScheduler in-process voor de 07:00 Brussel-briefing. Disabled-by-default; een scheduled run promoveert nooit naar een order.
+        </p>
+        {schedulerJobs ? (
+          <div className="portfolio-meta-grid">
+            <div><strong>Status:</strong> {schedulerJobs.status === "ok" ? "Actief" : "Uitgeschakeld"}</div>
+            <div><strong>Tijdzone:</strong> {schedulerJobs.scheduler_timezone}</div>
+            <div><strong>Daily cron:</strong> {schedulerJobs.scheduler_daily_briefing_cron}</div>
+            <div>
+              <strong>Volgende fire:</strong>{" "}
+              {schedulerJobs.items[0]?.next_run_at ?? "Niet beschikbaar (scheduler is uitgeschakeld of nog niet gestart)"}
+            </div>
+            <div>
+              <strong>Laatste run:</strong>{" "}
+              {latestSchedulerRun
+                ? `${latestSchedulerRun.status} @ ${latestSchedulerRun.started_at}${latestSchedulerRun.error_text ? ` — fout: ${latestSchedulerRun.error_text}` : ""}`
+                : "Nog geen scheduler-run."}
+            </div>
+          </div>
+        ) : (
+          <EmptyState title="Scheduler info niet beschikbaar" message="Endpoint nog niet geladen." />
         )}
       </section>
 

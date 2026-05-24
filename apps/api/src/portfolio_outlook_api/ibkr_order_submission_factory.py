@@ -5,13 +5,16 @@ This factory is the *single* gating point for any actual broker order
 submission. Returning ``None`` means the submission endpoint must respond
 with a blocked response — no fallback, no fake submission.
 
-Locked V1 gates (every one must pass):
+After the V1 §21.1 doctrine relock the account-mode (paper vs. live) is
+**not** an app-side gate — the connected IBKR account decides whether
+orders hit a paper or live book. The locked gates here are now:
 
 * ``ibkr_paper_order_submission_enabled``
 * ``ibkr_paper_order_submission_real_client_enabled``
-* ``ibkr_sync_account_mode == "paper"`` (paper-only locked rule)
-* ``ibkr_expected_environment == "paper"``
 * Host / port / client-id all set
+
+The remaining safety surface is the per-draft manual approval gate and
+the locked state machine, not an app-side ``paper_only`` flag.
 """
 
 from __future__ import annotations
@@ -31,10 +34,6 @@ def build_real_order_submission_client(
     if not settings.ibkr_paper_order_submission_enabled:
         return None
     if not settings.ibkr_paper_order_submission_real_client_enabled:
-        return None
-    if (settings.ibkr_sync_account_mode or "").strip().lower() != "paper":
-        return None
-    if (settings.ibkr_expected_environment or "").strip().lower() != "paper":
         return None
     host = settings.ibkr_paper_order_submission_host
     port = settings.ibkr_paper_order_submission_port

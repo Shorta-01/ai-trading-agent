@@ -375,6 +375,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "geen briefings; alle tellingen komen uit geüpdate persisted data."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0037_scheduler_runs",
+        previous_revision_id="0036_daily_briefings",
+        filename="0037_scheduler_runs.py",
+        label_nl="Scheduler runs audit",
+        description_nl=(
+            "Voegt scheduler_runs toe: één rij per APScheduler-aanroep "
+            "(job_name, scheduled_at, started/finished_at, status, "
+            "error_text, triggered_by). Een scheduler-run promoot nooit "
+            "naar een order; safety booleans blijven False."
+        ),
+    ),
 )
 
 
