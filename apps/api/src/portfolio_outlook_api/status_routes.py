@@ -2,10 +2,12 @@
 
 from dataclasses import asdict
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Annotated
 
 from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
+    SqlAlchemyAssetActionDraftRepository,
     SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetSuggestionRepository,
@@ -27,6 +29,10 @@ from portfolio_outlook_domain.market_data_foundation import (
     evaluate_market_data_readiness,
 )
 
+from portfolio_outlook_api.action_draft_sync import (
+    generate_action_drafts,
+    serialize_action_draft_for_response,
+)
 from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.decision_package_sync import (
     serialize_decision_package_for_response,
@@ -1607,6 +1613,250 @@ def read_latest_decision_package_for_conid(ibkr_conid: str) -> dict[str, object]
                 "status": "ok",
                 "status_nl": "Decision Package beschikbaar",
                 "item": serialize_decision_package_for_response(result.record),
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+def _build_blocked_action_draft_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "draft_total": 0,
+        "draft_persisted": 0,
+        "draft_skipped_non_actionable": 0,
+        "draft_skipped_sizing_blocked": 0,
+        "draft_failed": 0,
+        "dry_run_passed": 0,
+        "dry_run_failed": 0,
+        "failures": [],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/action-drafts/compute")
+def run_action_drafts_sync() -> dict[str, object]:
+    """Generate one editable LMT/DAY/whole-share draft per actionable
+    Decision Package, persist with Orderimpact + dry-run.
+
+    No order submission, no broker action — drafts only.
+    """
+
+    if not settings.action_drafts_sync_enabled:
+        return _build_blocked_action_draft_response(
+            reason="action_drafts_sync_disabled",
+            status_nl="Action drafts uitgeschakeld",
+            help_nl=(
+                "Stel `ACTION_DRAFTS_SYNC_ENABLED=true` in om de "
+                "action-draft generator te activeren."
+            ),
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_action_draft_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Action drafts vereisen schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return _build_blocked_action_draft_response(
+                    reason="no_ibkr_sync_run",
+                    status_nl="Geen IBKR-sync gevonden",
+                    help_nl="Voer eerst een IBKR-sync uit.",
+                )
+            positions = list(
+                ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id)
+            )
+            cash_snapshots = list(
+                ibkr_repo.list_ibkr_account_cash_snapshots(latest_run.sync_run_id)
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return _build_blocked_action_draft_response(
+                    reason="no_positions",
+                    status_nl="Geen posities",
+                    help_nl="Voer eerst een IBKR-sync uit met posities.",
+                )
+            package_records = list(
+                package_repo.list_latest_asset_decision_packages_by_conids(conids).records
+            )
+            if not package_records:
+                return _build_blocked_action_draft_response(
+                    reason="no_decision_packages",
+                    status_nl="Geen Decision Packages beschikbaar",
+                    help_nl="Voer eerst decision-packages-sync uit.",
+                )
+            exchanges = {
+                p.conid: (p.exchange, p.primary_exchange)
+                for p in positions
+                if p.conid
+            }
+            cash_currencies = sorted({c.base_currency for c in cash_snapshots if c.base_currency})
+            base_currency = cash_currencies[0] if len(cash_currencies) == 1 else None
+            total_portfolio_value: Decimal | None = None  # left None for V1 slice
+            report = generate_action_drafts(
+                decision_packages=package_records,
+                repo=draft_repo,
+                expected_account_mode=settings.ibkr_expected_environment,
+                total_portfolio_value=total_portfolio_value,
+                base_currency=base_currency,
+                default_buy_value=Decimal(settings.action_drafts_default_buy_value),
+                top_up_pct=Decimal(settings.action_drafts_top_up_pct),
+                reduce_pct=Decimal(settings.action_drafts_reduce_pct),
+                position_exchange_by_conid=exchanges,
+            )
+    except StorageConnectionError:
+        return _build_blocked_action_draft_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "draft_total": report.draft_total,
+        "draft_persisted": report.draft_persisted,
+        "draft_skipped_non_actionable": report.draft_skipped_non_actionable,
+        "draft_skipped_sizing_blocked": report.draft_skipped_sizing_blocked,
+        "draft_failed": report.draft_failed,
+        "dry_run_passed": report.dry_run_passed,
+        "dry_run_failed": report.dry_run_failed,
+        "failures": [dict(item) for item in report.failures],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/action-drafts/latest")
+def read_latest_action_drafts() -> dict[str, object]:
+    """Return the latest action draft per current position."""
+
+    base: dict[str, object] = {
+        "items": [],
+        "help_nl": (
+            "Action drafts zijn bewerkbaar maar nooit auto-verzonden. Geen "
+            "broker submission in deze slice."
+        ),
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return base | {
+                    "status": "no_ibkr_sync_run",
+                    "status_nl": "Geen IBKR-sync gevonden",
+                }
+            positions = list(
+                ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id)
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return base | {"status": "no_positions", "status_nl": "Geen posities"}
+            result = draft_repo.list_latest_asset_action_drafts_by_conids(conids)
+            return base | {
+                "status": "ok",
+                "status_nl": (
+                    "Action drafts beschikbaar"
+                    if result.records
+                    else "Nog geen action drafts"
+                ),
+                "items": [serialize_action_draft_for_response(r) for r in result.records],
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+@router.get("/action-drafts/{draft_id}")
+def read_action_draft_by_id(draft_id: str) -> dict[str, object]:
+    """Single-draft drilldown."""
+
+    base: dict[str, object] = {
+        "item": None,
+        "help_nl": "Action draft detail; geen submission.",
+        "actions_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            result = draft_repo.get_asset_action_draft_by_id(draft_id)
+            if not result.found or result.record is None:
+                return base | {"status": "not_found", "status_nl": "Geen draft gevonden"}
+            return base | {
+                "status": "ok",
+                "status_nl": "Action draft beschikbaar",
+                "item": serialize_action_draft_for_response(result.record),
             }
     except StorageConnectionError:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}

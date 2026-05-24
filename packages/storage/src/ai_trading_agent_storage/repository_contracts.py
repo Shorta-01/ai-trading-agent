@@ -1977,3 +1977,104 @@ class AssetDecisionPackageRecord:
                 "package never auto-promotes to an action draft, order, or "
                 "broker submission."
             )
+
+
+@dataclass(frozen=True)
+class AssetActionDraftRecord:
+    """Editable structured action-draft derived from a ready Decision Package.
+
+    V1 scope (locked in `version-1-product-experience-locks.md §10` and
+    `release-1-functional-workflow-blueprint.md §10`):
+
+    * stocks/ETFs only, whole shares only
+    * ``order_type == "LMT"`` only
+    * ``tif == "DAY"`` only
+    * ``action_side`` is ``"BUY"`` or ``"SELL"``
+
+    A draft never auto-promotes to broker submission. The persisted record
+    carries the dry-run outcome + the Orderimpact preview; the actual
+    user-approval + submission lives in later slices.
+    """
+
+    draft_id: str
+    decision_package_id: str
+    decision_package_content_hash: str
+    ibkr_conid: str
+    symbol: str
+    currency: str
+    exchange: str | None
+    primary_exchange: str | None
+    account_mode: str
+    expected_account_mode: str
+    action_side: str
+    order_type: str
+    tif: str
+    quantity: Decimal
+    limit_price: Decimal
+    estimated_order_value: Decimal | None
+    estimated_cash_before: Decimal | None
+    estimated_cash_after: Decimal | None
+    estimated_position_quantity_before: Decimal | None
+    estimated_position_quantity_after: Decimal | None
+    estimated_position_value_after: Decimal | None
+    estimated_portfolio_weight_after_pct: Decimal | None
+    estimated_concentration_impact_pct: Decimal | None
+    orderimpact_base_currency: str | None
+    source_action_label: str
+    source_action_label_nl: str
+    status: str
+    dry_run_status: str
+    dry_run_failures_json: tuple[str, ...] | None
+    blocking_reason: str | None
+    rationale_nl: str
+    explanation_nl: str
+    created_at: datetime
+    updated_at: datetime
+    safe_for_submission: bool = False
+    safe_for_orders: bool = False
+    safe_for_broker_submission: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "draft_id",
+            "decision_package_id",
+            "decision_package_content_hash",
+            "ibkr_conid",
+            "symbol",
+            "currency",
+            "account_mode",
+            "expected_account_mode",
+            "action_side",
+            "order_type",
+            "tif",
+            "source_action_label",
+            "source_action_label_nl",
+            "status",
+            "dry_run_status",
+            "rationale_nl",
+            "explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.action_side not in {"BUY", "SELL"}:
+            raise ValueError(
+                f"action_side must be BUY or SELL, got {self.action_side!r}"
+            )
+        if self.order_type != "LMT":
+            raise ValueError(
+                "V1 action-drafts only support LMT order_type."
+            )
+        if self.tif != "DAY":
+            raise ValueError("V1 action-drafts only support DAY tif.")
+        if self.quantity <= 0:
+            raise ValueError("quantity must be positive.")
+        if self.limit_price <= 0:
+            raise ValueError("limit_price must be positive.")
+        if (
+            self.safe_for_submission
+            or self.safe_for_orders
+            or self.safe_for_broker_submission
+        ):
+            raise ValueError(
+                "Action-draft safety booleans must remain false in V1: a "
+                "draft never auto-promotes to a broker submission."
+            )

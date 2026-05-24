@@ -28,6 +28,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_position_snapshots,
     ibkr_sync_runs,
     fx_rate_snapshots,
+    asset_action_drafts,
     asset_decision_packages,
     asset_forecasts,
     asset_suggestions,
@@ -63,6 +64,7 @@ from ai_trading_agent_storage.migration_readiness import (
     migration_readiness_is_safe_to_write,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetActionDraftRecord,
     AssetDecisionPackageRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
@@ -2298,3 +2300,96 @@ def _decision_package_from_row(row: RowMapping) -> AssetDecisionPackageRecord:
     data["evidence_links_json"] = _norm("evidence_links_json")
     data["audit_links_json"] = _norm("audit_links_json")
     return AssetDecisionPackageRecord(**data)
+
+
+class SqlAlchemyAssetActionDraftRepository(_Base):
+    def save_asset_action_draft(
+        self, record: AssetActionDraftRecord
+    ) -> StorageWriteResult:
+        values = asdict(record)
+        failures = values.get("dry_run_failures_json")
+        if isinstance(failures, tuple):
+            values["dry_run_failures_json"] = list(failures)
+        self._insert(asset_action_drafts, values)
+        return StorageWriteResult(
+            True,
+            record.draft_id,
+            asset_action_drafts.name,
+            True,
+            "Action draft opgeslagen.",
+        )
+
+    def get_asset_action_draft_by_id(
+        self, draft_id: str
+    ) -> StorageReadResult[AssetActionDraftRecord]:
+        row = _read_one_by_column(
+            self._connection, asset_action_drafts, "draft_id", draft_id
+        )
+        if row is None:
+            return StorageReadResult(
+                False, None, asset_action_drafts.name, "Geen action draft gevonden."
+            )
+        return StorageReadResult(
+            True,
+            _action_draft_from_row(row),
+            asset_action_drafts.name,
+            "Action draft opgehaald.",
+        )
+
+    def list_latest_asset_action_drafts_by_conids(
+        self, conids: tuple[str, ...]
+    ) -> StorageListResult[AssetActionDraftRecord]:
+        if not conids:
+            return StorageListResult((), asset_action_drafts.name, "Geen conids opgegeven.")
+        rows = (
+            self._connection.execute(
+                select(asset_action_drafts)
+                .where(asset_action_drafts.c.ibkr_conid.in_(conids))
+                .order_by(
+                    asset_action_drafts.c.ibkr_conid.asc(),
+                    asset_action_drafts.c.created_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest: dict[str, AssetActionDraftRecord] = {}
+        for row in rows:
+            record = _action_draft_from_row(row)
+            if record.ibkr_conid not in latest:
+                latest[record.ibkr_conid] = record
+        ordered = tuple(latest[c] for c in conids if c in latest)
+        return StorageListResult(
+            ordered,
+            asset_action_drafts.name,
+            f"{len(ordered)} action drafts opgehaald.",
+        )
+
+
+def _action_draft_from_row(row: RowMapping) -> AssetActionDraftRecord:
+    data = dict(row)
+    raw = data.get("dry_run_failures_json")
+    if raw is None:
+        data["dry_run_failures_json"] = None
+    elif isinstance(raw, list):
+        data["dry_run_failures_json"] = tuple(str(item) for item in raw)
+    elif isinstance(raw, tuple):
+        data["dry_run_failures_json"] = tuple(str(item) for item in raw)
+    elif isinstance(raw, str):
+        stripped = raw.strip()
+        if not stripped:
+            data["dry_run_failures_json"] = None
+        else:
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                data["dry_run_failures_json"] = None
+            else:
+                data["dry_run_failures_json"] = (
+                    tuple(str(item) for item in parsed)
+                    if isinstance(parsed, list)
+                    else None
+                )
+    else:
+        data["dry_run_failures_json"] = None
+    return AssetActionDraftRecord(**data)

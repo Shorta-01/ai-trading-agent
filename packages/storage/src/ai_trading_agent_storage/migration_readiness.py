@@ -292,6 +292,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "deze slice voegt geen drafts of orders toe."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0030_asset_action_drafts",
+        previous_revision_id="0029_asset_decision_packages",
+        filename="0030_asset_action_drafts.py",
+        label_nl="Action drafts met dry-run en Orderimpact",
+        description_nl=(
+            "Bewerkbare actie-drafts (LMT, DAY, hele aandelen) op basis van "
+            "ready Decision Packages; per draft worden dry-run safety checks "
+            "en Orderimpact-velden opgeslagen. Geen ordersubmissie, geen "
+            "brokeractie."
+        ),
+    ),
 )
 
 
