@@ -1,4 +1,9 @@
-# Task 143 — Add read-only session-status endpoint diagnostics for explicit TWS/Gateway adapter readiness and blocked runtime reasons.
+# Task 144 — Add explicit preflight checklist for future real TWS/Gateway read-only connection enablement without enabling runtime connectivity
 
-## Why this next
-Task 142 wired disabled-by-default adapter selection; Task 143 can expand endpoint diagnostics wording while preserving blocked/safe runtime defaults.
+## Why
+- Keep Milestone B conservative after Task 143 diagnostics hardening.
+- Prepare explicit readiness checklist before any future runtime-connectivity implementation.
+
+## Scope
+- Documentation/preflight checklist only.
+- No runtime connectivity enablement.
