@@ -23,7 +23,7 @@ from portfolio_outlook_domain.market_data_foundation import (
     evaluate_market_data_readiness,
 )
 
-from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
 from portfolio_outlook_api.ibkr_market_data import IbkrMarketDataAdapter, settings_from_runtime
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
@@ -196,7 +196,7 @@ def read_ibkr_session_status() -> dict[str, object]:
 
 
 def _run_manual_tws_readonly_status_check_endpoint(
-    runtime_settings,
+    runtime_settings: Settings,
     runtime_client: IbkrTwsReadonlyClient | None = None,
 ) -> dict[str, object]:
     return asdict(
