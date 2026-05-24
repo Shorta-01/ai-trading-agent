@@ -1,3 +1,4 @@
+- Task 145 completed: dependency-free handmatige TWS/Gateway read-only runtime status-check boundary toegevoegd met expliciete runtime opt-in (`ibkr_tws_readonly_runtime_enabled`, default `False`), paper-only/account-mode preflight gates en veilige failure-mapping. Alleen injected fake low-level clients in tests; geen echte IBKR-client, geen ibapi/ib_insync, geen sockets by default, geen auto-connect/reconnect/persistente session manager, geen sync/market-data/FX runtime en geen suggesties/action drafts/orders/broker execution.
 - Task 144 completed: expliciete preflight-checklist toegevoegd voor toekomstige echte TWS/Gateway read-only runtime-connection enablement, inclusief harde configuratie/account-mode/lifecycle/no-secret/failure-handling/test gates. Deze taak is documentatie/preflight-only: geen runtime connectivity enabled, geen echte low-level IBKR client, geen auto-connect/reconnect loop/persistente session manager, geen account/portfolio sync runtime, geen market-data/FX runtime, geen suggesties/action drafts/orders/broker execution en geen storage schema/migraties.
 ## Task 143 update
 - Task 143: **completed** — read-only session-status endpointdiagnostiek uitgebreid met expliciete adapterselectie, TWS/Gateway skeleton-readiness, deterministische blocked reason-codes en eenvoudige Nederlandse helpvelden voor runtime-blockers. Standaard blijft de veilige non-network adapter; expliciete TWS/Gateway setting maakt nog steeds geen echte low-level IBKR client aan en runtime-connectiviteit blijft geblokkeerd. Geen auto-connect/reconnect loop, geen persistente session manager, geen account/portfolio sync runtime, geen market-data/FX runtime, geen suggesties/action drafts/orders/broker execution en geen schema/migraties toegevoegd.
@@ -5,7 +6,7 @@
 ## Task 142 update
 - Task 142: **completed** — disabled-by-default TWS/Gateway session-status adapter factory/selection pad toegevoegd met expliciete setting `ibkr_tws_readonly_adapter_enabled`, veilige adapterdiagnostiek in statusresponse, en testbare opt-in selectie van de Task 141 skeletonadapter alleen via expliciete instelling (optioneel met geïnjecteerde testclient). Standaardruntime blijft non-network safe adapter zonder auto-connect/reconnect/persistente session manager; geen echte low-level IBKR client, geen account/portfolio sync runtime, geen market-data/FX runtime, geen suggesties/action drafts/orders/broker execution en geen storage schema/migraties toegevoegd.
 
-Huidige toestand: **na Task 144**
+Huidige toestand: **na Task 145**
 
 
 
