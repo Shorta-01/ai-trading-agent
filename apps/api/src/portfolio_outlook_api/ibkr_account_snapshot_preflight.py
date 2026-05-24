@@ -50,10 +50,36 @@ class IbkrAccountSnapshotPreflightResult:
 
 
 def _base_blocked(settings: Settings, reason: str) -> IbkrAccountSnapshotPreflightResult:
-    return IbkrAccountSnapshotPreflightResult(reason, "Geblokkeerd", False, True, (reason,), "Read-only", "Los blocker op", None, "blocked", settings.ibkr_expected_environment, False, False, False, False, False, False, False, (), (), 0, 0, False, False)
+    return IbkrAccountSnapshotPreflightResult(
+        reason,
+        "Geblokkeerd",
+        False,
+        True,
+        (reason,),
+        "Read-only",
+        "Los blocker op",
+        None,
+        "blocked",
+        settings.ibkr_expected_environment,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        (),
+        (),
+        0,
+        0,
+        False,
+        False,
+    )
 
 
-def run_manual_readonly_account_snapshot_preflight(settings: Settings, runtime_client: object | None) -> IbkrAccountSnapshotPreflightResult:
+def run_manual_readonly_account_snapshot_preflight(
+    settings: Settings, runtime_client: object | None
+) -> IbkrAccountSnapshotPreflightResult:
     if not settings.ibkr_account_snapshot_preflight_enabled:
         return _base_blocked(settings, "account_snapshot_preflight_disabled")
     if settings.ibkr_sync_host is None:
@@ -69,7 +95,9 @@ def run_manual_readonly_account_snapshot_preflight(settings: Settings, runtime_c
     return _base_blocked(settings, "snapshot_preflight_completed")
 
 
-def build_manual_readonly_account_snapshot_preflight_readiness(settings: Settings, runtime_client: object | None) -> IbkrAccountSnapshotPreflightResult:
+def build_manual_readonly_account_snapshot_preflight_readiness(
+    settings: Settings, runtime_client: object | None
+) -> IbkrAccountSnapshotPreflightResult:
     if not settings.ibkr_account_snapshot_preflight_enabled:
         return _base_blocked(settings, "account_snapshot_preflight_disabled")
     return _base_blocked(settings, "manual_snapshot_ready")

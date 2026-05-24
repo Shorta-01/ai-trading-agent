@@ -24,11 +24,11 @@ from portfolio_outlook_domain.market_data_foundation import (
 )
 
 from portfolio_outlook_api.config import Settings, settings
-from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
 from portfolio_outlook_api.ibkr_account_snapshot_preflight import (
     build_manual_readonly_account_snapshot_preflight_readiness,
     run_manual_readonly_account_snapshot_preflight,
 )
+from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
 from portfolio_outlook_api.ibkr_ibapi_manual_status_client import (
     IbapiManualReadonlyStatusClient,
 )
@@ -203,8 +203,6 @@ def read_ibkr_session_status() -> dict[str, object]:
     return build_ibkr_status_placeholder(settings)
 
 
-
-
 def _run_manual_tws_readonly_status_check_endpoint(
     runtime_settings: Settings,
     runtime_client: IbkrTwsReadonlyClient | None = None,
@@ -231,9 +229,7 @@ def run_manual_readonly_status_check() -> dict[str, object]:
             port=settings.ibkr_sync_port,
             client_id=settings.ibkr_sync_client_id,
         )
-    return _run_manual_tws_readonly_status_check_endpoint(
-        settings, runtime_client=runtime_client
-    )
+    return _run_manual_tws_readonly_status_check_endpoint(settings, runtime_client=runtime_client)
 
 
 @router.get("/ibkr/session/manual-readonly-status-check/readiness")
@@ -246,22 +242,35 @@ def read_manual_readonly_status_check_readiness() -> dict[str, object]:
     )
 
 
-
 def _run_manual_readonly_account_snapshot_preflight_endpoint(
     runtime_settings: Settings,
     runtime_client: object | None = None,
 ) -> dict[str, object]:
-    return asdict(run_manual_readonly_account_snapshot_preflight(runtime_settings, runtime_client=runtime_client))
+    return asdict(
+        run_manual_readonly_account_snapshot_preflight(
+            runtime_settings,
+            runtime_client=runtime_client,
+        )
+    )
 
 
 @router.post("/ibkr/session/manual-readonly-account-snapshot-preflight")
 def run_manual_readonly_account_snapshot_preflight_route() -> dict[str, object]:
-    return _run_manual_readonly_account_snapshot_preflight_endpoint(settings, runtime_client=None)
+    return _run_manual_readonly_account_snapshot_preflight_endpoint(
+        settings,
+        runtime_client=None,
+    )
 
 
 @router.get("/ibkr/session/manual-readonly-account-snapshot-preflight/readiness")
 def read_manual_readonly_account_snapshot_preflight_readiness() -> dict[str, object]:
-    return asdict(build_manual_readonly_account_snapshot_preflight_readiness(settings, runtime_client=None))
+    return asdict(
+        build_manual_readonly_account_snapshot_preflight_readiness(
+            settings,
+            runtime_client=None,
+        )
+    )
+
 
 @router.get("/portfolio/setup/status")
 def read_portfolio_setup_status() -> dict[str, object]:
@@ -558,8 +567,8 @@ def read_portfolio_reconciliation_readiness() -> PortfolioReconciliationReadines
     durable = read_latest_ibkr_sync_run(settings.storage)
     latest = durable.latest_run
     diagnostics_available = latest is not None
-    payload_status, payload_status_nl, payload_help = (
-        _payload_validation_summary_from_sync_record(latest)
+    payload_status, payload_status_nl, payload_help = _payload_validation_summary_from_sync_record(
+        latest
     )
     return build_portfolio_reconciliation_readiness(
         valuation=valuation,
