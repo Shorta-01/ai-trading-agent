@@ -2,6 +2,9 @@ from fastapi.testclient import TestClient
 
 from portfolio_outlook_api.config import Settings
 from portfolio_outlook_api.ibkr_tws_readonly_adapter import IbkrTwsReadonlyAdapterError
+from portfolio_outlook_api.ibkr_tws_readonly_runtime import (
+    build_manual_tws_readonly_status_check_readiness,
+)
 from portfolio_outlook_api.main import app
 from portfolio_outlook_api.status_routes import (
     _run_manual_tws_readonly_status_check_endpoint,
@@ -219,3 +222,41 @@ def test_no_secret_regression() -> None:
     blob = str(payload).lower()
     for key in forbidden:
         assert key not in blob
+
+
+def test_readiness_default_route_blocked_runtime_disabled() -> None:
+    payload = client.get("/ibkr/session/manual-readonly-status-check/readiness").json()
+    assert payload["status"] == "manual_status_check_blocked"
+    assert payload["ready"] is False
+    assert "runtime_disabled" in payload["blocked_reasons"]
+    assert payload["connect_attempted"] is False
+    assert payload["disconnect_attempted"] is False
+    assert payload["runtime_connection_allowed"] is False
+    assert payload["manual_status_check_allowed"] is False
+    _assert_safety_flags_false(payload)
+
+
+def test_readiness_runtime_enabled_adapter_disabled() -> None:
+    payload = build_manual_tws_readonly_status_check_readiness(
+        _settings(ibkr_tws_readonly_runtime_enabled=True),
+        runtime_client=None,
+    ).__dict__
+    assert "adapter_disabled" in payload["blocked_reasons"]
+    assert payload["connect_attempted"] is False
+
+
+def test_readiness_paper_only_and_expected_mode_blockers() -> None:
+    payload = build_manual_tws_readonly_status_check_readiness(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+            paper_only_mode=False,
+            ibkr_expected_environment="live",
+        ),
+        runtime_client=None,
+    ).__dict__
+    assert "paper_only_required" in payload["blocked_reasons"]
+    assert "expected_account_mode_not_paper" in payload["blocked_reasons"]
+    assert payload["runtime_client_available"] is False
+    assert payload["endpoint"] == "/ibkr/session/manual-readonly-status-check"
+    assert payload["method"] == "POST"
