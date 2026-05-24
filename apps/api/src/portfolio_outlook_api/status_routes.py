@@ -25,6 +25,9 @@ from portfolio_outlook_domain.market_data_foundation import (
 
 from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
+from portfolio_outlook_api.ibkr_ibapi_manual_status_client import (
+    IbapiManualReadonlyStatusClient,
+)
 from portfolio_outlook_api.ibkr_market_data import IbkrMarketDataAdapter, settings_from_runtime
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync import read_status, run_sync
@@ -212,7 +215,21 @@ def _run_manual_tws_readonly_status_check_endpoint(
 
 @router.post("/ibkr/session/manual-readonly-status-check")
 def run_manual_readonly_status_check() -> dict[str, object]:
-    return _run_manual_tws_readonly_status_check_endpoint(settings, runtime_client=None)
+    runtime_client: IbkrTwsReadonlyClient | None = None
+    if (
+        settings.ibkr_tws_readonly_real_client_enabled
+        and settings.ibkr_sync_host is not None
+        and settings.ibkr_sync_port is not None
+        and settings.ibkr_sync_client_id is not None
+    ):
+        runtime_client = IbapiManualReadonlyStatusClient(
+            host=settings.ibkr_sync_host,
+            port=settings.ibkr_sync_port,
+            client_id=settings.ibkr_sync_client_id,
+        )
+    return _run_manual_tws_readonly_status_check_endpoint(
+        settings, runtime_client=runtime_client
+    )
 
 
 @router.get("/ibkr/session/manual-readonly-status-check/readiness")

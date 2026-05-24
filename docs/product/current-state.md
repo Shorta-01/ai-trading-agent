@@ -14,7 +14,7 @@
 ## Task 142 update
 - Task 142: **completed** — disabled-by-default TWS/Gateway session-status adapter factory/selection pad toegevoegd met expliciete setting `ibkr_tws_readonly_adapter_enabled`, veilige adapterdiagnostiek in statusresponse, en testbare opt-in selectie van de Task 141 skeletonadapter alleen via expliciete instelling (optioneel met geïnjecteerde testclient). Standaardruntime blijft non-network safe adapter zonder auto-connect/reconnect/persistente session manager; geen echte low-level IBKR client, geen account/portfolio sync runtime, geen market-data/FX runtime, geen suggesties/action drafts/orders/broker execution en geen storage schema/migraties toegevoegd.
 
-Huidige toestand: **na Task 151**
+Huidige toestand: **na Task 152**
 
 
 

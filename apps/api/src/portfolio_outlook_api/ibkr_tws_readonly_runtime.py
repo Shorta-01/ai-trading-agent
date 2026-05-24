@@ -74,6 +74,10 @@ class IbkrTwsReadonlyStatusCheckReadinessResult:
     method: str
     runtime_enabled: bool
     adapter_enabled: bool
+    real_client_enabled: bool
+    host_configured: bool
+    port_configured: bool
+    client_id_configured: bool
     paper_only_mode: bool
     expected_account_mode: str | None
     runtime_client_available: bool
@@ -103,8 +107,14 @@ def check_tws_readonly_runtime_preflight(
 
     if not settings.ibkr_tws_readonly_runtime_enabled:
         blocked_reasons.append("runtime_disabled")
+    if not settings.ibkr_status_check_enabled:
+        blocked_reasons.append("status_check_disabled")
+    if not settings.ibkr_enabled:
+        blocked_reasons.append("ibkr_disabled")
     if not settings.ibkr_tws_readonly_adapter_enabled:
         blocked_reasons.append("adapter_disabled")
+    if not settings.ibkr_tws_readonly_real_client_enabled:
+        blocked_reasons.append("real_client_disabled")
     if not settings.paper_only_mode:
         blocked_reasons.append("paper_only_required")
 
@@ -112,6 +122,12 @@ def check_tws_readonly_runtime_preflight(
     if expected_mode != "paper":
         blocked_reasons.append("expected_account_mode_not_paper")
 
+    if settings.ibkr_sync_host is None:
+        blocked_reasons.append("missing_host")
+    if settings.ibkr_sync_port is None:
+        blocked_reasons.append("missing_port")
+    if settings.ibkr_sync_client_id is None:
+        blocked_reasons.append("missing_client_id")
     if runtime_client is None:
         blocked_reasons.append("missing_runtime_client")
 
@@ -399,6 +415,10 @@ def build_manual_tws_readonly_status_check_readiness(
         method="POST",
         runtime_enabled=settings.ibkr_tws_readonly_runtime_enabled,
         adapter_enabled=settings.ibkr_tws_readonly_adapter_enabled,
+        real_client_enabled=settings.ibkr_tws_readonly_real_client_enabled,
+        host_configured=settings.ibkr_sync_host is not None,
+        port_configured=settings.ibkr_sync_port is not None,
+        client_id_configured=settings.ibkr_sync_client_id is not None,
         paper_only_mode=settings.paper_only_mode,
         expected_account_mode=expected_mode,
         runtime_client_available=runtime_client is not None,
@@ -468,6 +488,12 @@ def _reason_nl(reason: str) -> str:
     mappings = {
         "runtime_disabled": "Runtime staat uit",
         "adapter_disabled": "TWS/Gateway adapter staat uit",
+        "real_client_disabled": "Echte IBKR statuscontrole staat uit",
+        "ibkr_disabled": "IBKR staat uit",
+        "status_check_disabled": "Statuscontrole staat uit",
+        "missing_host": "TWS/Gateway host ontbreekt",
+        "missing_port": "TWS/Gateway poort ontbreekt",
+        "missing_client_id": "Client-ID ontbreekt",
         "missing_runtime_client": "Runtime-client ontbreekt",
         "paper_only_required": "Paper-only is verplicht",
         "expected_account_mode_not_paper": "Verwachte accountmodus moet paper zijn",
