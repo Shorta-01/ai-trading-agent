@@ -1192,3 +1192,111 @@ def test_submission_record_rejects_safety_booleans_set_true() -> None:
         AssetActionDraftSubmissionRecord(**{**base, "safe_for_broker_submission": True})
     with pytest.raises(ValueError):
         AssetActionDraftSubmissionRecord(**{**base, "safe_for_orders": True})
+
+
+def test_prediction_diary_repository_upserts_by_suggestion_id() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        PredictionDiaryEntryRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyPredictionDiaryRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyPredictionDiaryRepository(conn, _report(True))
+
+        def _entry(entry_id: str, suggestion_id: str) -> PredictionDiaryEntryRecord:
+            now = datetime(2025, 5, 24, tzinfo=UTC)
+            return PredictionDiaryEntryRecord(
+                entry_id=entry_id,
+                suggestion_id=suggestion_id,
+                forecast_id="forecast-1",
+                ibkr_conid="265598",
+                symbol="AAPL",
+                currency="USD",
+                issued_at=now,
+                issued_action_label="Houden",
+                issued_action_label_nl="Houden",
+                issued_confidence_label="Hoog",
+                issued_horizon_days=21,
+                issued_price=Decimal("180"),
+                issued_p10_price=Decimal("170"),
+                issued_p50_price=Decimal("182"),
+                issued_p90_price=Decimal("194"),
+                issued_prob_gain=Decimal("0.6"),
+                issued_prob_loss=Decimal("0.4"),
+                user_decision=None,
+                realized_price_1d=Decimal("181"),
+                realized_price_1w=None,
+                realized_price_1m=None,
+                realized_return_pct_1d=Decimal("0.55"),
+                realized_return_pct_1w=None,
+                realized_return_pct_1m=None,
+                outcome_label_1d="inconclusive",
+                outcome_label_1w=None,
+                outcome_label_1m=None,
+                outcome_explanation_nl="test",
+                last_evaluated_at=now,
+                created_at=now,
+                updated_at=now,
+            )
+
+        repo.upsert_prediction_diary_entry(_entry("e1", "s1"))
+        # Updating the same suggestion replaces the row
+        repo.upsert_prediction_diary_entry(_entry("e2", "s1"))
+        repo.upsert_prediction_diary_entry(_entry("e3", "s2"))
+
+        listed = repo.list_prediction_diary_entries()
+        assert {r.entry_id for r in listed.records} == {"e2", "e3"}
+
+        loaded = repo.get_prediction_diary_entry_by_suggestion_id("s1")
+        assert loaded.found is True
+        assert loaded.record is not None
+        assert loaded.record.entry_id == "e2"
+
+
+def test_prediction_diary_record_rejects_safety_booleans_set_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        PredictionDiaryEntryRecord,
+    )
+
+    now = datetime(2025, 5, 24, tzinfo=UTC)
+    base = dict(
+        entry_id="e",
+        suggestion_id="s",
+        forecast_id=None,
+        ibkr_conid="1",
+        symbol="X",
+        currency="USD",
+        issued_at=now,
+        issued_action_label="Houden",
+        issued_action_label_nl="Houden",
+        issued_confidence_label="Middel",
+        issued_horizon_days=21,
+        issued_price=Decimal("100"),
+        issued_p10_price=Decimal("90"),
+        issued_p50_price=Decimal("100"),
+        issued_p90_price=Decimal("110"),
+        issued_prob_gain=Decimal("0.5"),
+        issued_prob_loss=Decimal("0.5"),
+        user_decision=None,
+        realized_price_1d=None,
+        realized_price_1w=None,
+        realized_price_1m=None,
+        realized_return_pct_1d=None,
+        realized_return_pct_1w=None,
+        realized_return_pct_1m=None,
+        outcome_label_1d=None,
+        outcome_label_1w=None,
+        outcome_label_1m=None,
+        outcome_explanation_nl="test",
+        last_evaluated_at=now,
+        created_at=now,
+        updated_at=now,
+    )
+    with pytest.raises(ValueError):
+        PredictionDiaryEntryRecord(**{**base, "safe_for_self_learning": True})
+    with pytest.raises(ValueError):
+        PredictionDiaryEntryRecord(**{**base, "safe_for_model_retraining": True})

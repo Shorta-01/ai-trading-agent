@@ -142,6 +142,17 @@ from .performance import (
     calculate_result_since_start,
     calculate_return_since_start,
 )
+from .prediction_diary_eval import (
+    DEFAULT_INCONCLUSIVE_TOLERANCE_PCT,
+    OUTCOME_EARLY,
+    OUTCOME_INCONCLUSIVE,
+    OUTCOME_NO_DATA,
+    OUTCOME_RIGHT,
+    OUTCOME_WRONG,
+    DiaryEvaluation,
+    HorizonEvaluation,
+    evaluate_diary_outcomes,
+)
 from .snapshot import (
     InstrumentPositionQuantity,
     InstrumentTransactionTotals,
@@ -351,5 +362,14 @@ __all__ = [
     "is_transition_allowed",
     "require_transition_allowed",
     "coerce_state",
+    "HorizonEvaluation",
+    "DiaryEvaluation",
+    "evaluate_diary_outcomes",
+    "DEFAULT_INCONCLUSIVE_TOLERANCE_PCT",
+    "OUTCOME_RIGHT",
+    "OUTCOME_WRONG",
+    "OUTCOME_INCONCLUSIVE",
+    "OUTCOME_EARLY",
+    "OUTCOME_NO_DATA",
 ]
 

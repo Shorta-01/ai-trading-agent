@@ -315,6 +315,17 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "voor elke state-transitie / approval / cancellation."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0032_prediction_diary_entries",
+        previous_revision_id="0031_action_draft_submissions_and_events",
+        filename="0032_prediction_diary_entries.py",
+        label_nl="Prediction Diary entries",
+        description_nl=(
+            "Eén entry per suggestion met de uitgegeven forecast en de "
+            "gerealiseerde prijs/return op 1d/1w/1m horizonten. "
+            "Outcome labels zijn deterministisch; geen AI scoring."
+        ),
+    ),
 )
 
 

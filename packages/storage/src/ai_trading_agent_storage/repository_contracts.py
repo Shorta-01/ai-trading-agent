@@ -2159,3 +2159,72 @@ class AssetActionDraftEventRecord:
     def __post_init__(self) -> None:
         for field_name in ("event_id", "draft_id", "event_type", "severity", "rationale_nl"):
             _require_non_empty(getattr(self, field_name), field_name)
+
+
+@dataclass(frozen=True)
+class PredictionDiaryEntryRecord:
+    """One Prediction Diary entry per suggestion.
+
+    Captures the *issued* forecast and the *realised* market outcome at
+    fixed horizons (1d/1w/1m). The outcome labels are computed by a pure-
+    Python rule engine (``packages/portfolio/prediction_diary_eval``);
+    AI never assigns the label.
+
+    Safety booleans stay ``False`` in V1 — the doctrine forbids silent
+    self-learning. Future model retraining flows must opt in explicitly
+    and are out of scope for V1.
+    """
+
+    entry_id: str
+    suggestion_id: str
+    forecast_id: str | None
+    ibkr_conid: str
+    symbol: str
+    currency: str
+    issued_at: datetime
+    issued_action_label: str
+    issued_action_label_nl: str
+    issued_confidence_label: str
+    issued_horizon_days: int
+    issued_price: Decimal
+    issued_p10_price: Decimal
+    issued_p50_price: Decimal
+    issued_p90_price: Decimal
+    issued_prob_gain: Decimal
+    issued_prob_loss: Decimal
+    user_decision: str | None
+    realized_price_1d: Decimal | None
+    realized_price_1w: Decimal | None
+    realized_price_1m: Decimal | None
+    realized_return_pct_1d: Decimal | None
+    realized_return_pct_1w: Decimal | None
+    realized_return_pct_1m: Decimal | None
+    outcome_label_1d: str | None
+    outcome_label_1w: str | None
+    outcome_label_1m: str | None
+    outcome_explanation_nl: str
+    last_evaluated_at: datetime
+    created_at: datetime
+    updated_at: datetime
+    safe_for_self_learning: bool = False
+    safe_for_model_retraining: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "entry_id",
+            "suggestion_id",
+            "ibkr_conid",
+            "symbol",
+            "currency",
+            "issued_action_label",
+            "issued_action_label_nl",
+            "issued_confidence_label",
+            "outcome_explanation_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_for_self_learning or self.safe_for_model_retraining:
+            raise ValueError(
+                "Prediction Diary safety booleans must remain false in V1."
+            )
+        if self.issued_horizon_days <= 0:
+            raise ValueError("issued_horizon_days must be positive")

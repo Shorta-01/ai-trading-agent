@@ -6,7 +6,9 @@ from decimal import Decimal
 from typing import Annotated
 
 from ai_trading_agent_storage import (
+    AssetActionDraftSubmissionRecord,
     IbkrSyncRunRecord,
+    MarketDataBarRecord,
     SqlAlchemyAssetActionDraftEventRepository,
     SqlAlchemyAssetActionDraftRepository,
     SqlAlchemyAssetActionDraftSubmissionRepository,
@@ -16,6 +18,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataBarRepository,
     SqlAlchemyMarketDataSnapshotRepository,
+    SqlAlchemyPredictionDiaryRepository,
     SqlAlchemyResearchSourceArchiveRepository,
     StorageConnectionError,
     StorageConnectionProvider,
@@ -121,6 +124,11 @@ from portfolio_outlook_api.portfolio_valuation_readiness import (
     build_portfolio_reconciliation_readiness,
     build_portfolio_valuation_readiness,
 )
+from portfolio_outlook_api.prediction_diary_sync import (
+    evaluate_prediction_diary,
+    serialize_prediction_diary_entry_for_response,
+)
+from portfolio_outlook_api.reconciliation_sync import reconcile_submissions
 from portfolio_outlook_api.status_builders import (
     build_ai_usage_summary,
     build_dutch_labels_summary,
@@ -2094,6 +2102,290 @@ def read_action_draft_status(draft_id: str) -> dict[str, object]:
                 ),
                 "submission": submission_payload,
                 "events": [serialize_event_for_response(r) for r in event_list.records],
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+def _build_blocked_reconciliation_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "submissions_total": 0,
+        "submissions_filled": 0,
+        "submissions_cancelled": 0,
+        "submissions_rejected": 0,
+        "submissions_still_working": 0,
+        "submissions_unchanged": 0,
+        "submissions_failed": 0,
+        "failures": [],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/action-drafts/reconcile")
+def run_action_drafts_reconciliation() -> dict[str, object]:
+    """Match in-flight submissions against IBKR sync open-orders +
+    executions, then transition to FILLED / CANCELLED / REJECTED →
+    RECONCILED."""
+
+    if not settings.reconciliation_sync_enabled:
+        return _build_blocked_reconciliation_response(
+            reason="reconciliation_sync_disabled",
+            status_nl="Reconciliatie uitgeschakeld",
+            help_nl="Stel `RECONCILIATION_SYNC_ENABLED=true` in om reconciliatie te activeren.",
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_reconciliation_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Reconciliatie vereist schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            submission_repo = SqlAlchemyAssetActionDraftSubmissionRepository(
+                checked.connection, checked.readiness
+            )
+            event_repo = SqlAlchemyAssetActionDraftEventRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return _build_blocked_reconciliation_response(
+                    reason="no_ibkr_sync_run",
+                    status_nl="Geen IBKR-sync gevonden",
+                    help_nl=(
+                        "Voer eerst een IBKR-sync uit zodat open orders "
+                        "+ executions beschikbaar zijn."
+                    ),
+                )
+            positions = list(
+                ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id)
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            submissions: list[AssetActionDraftSubmissionRecord] = []
+            submitted_quantity_by_draft_id: dict[str, Decimal] = {}
+            if conids:
+                drafts = list(
+                    draft_repo.list_latest_asset_action_drafts_by_conids(conids).records
+                )
+                for draft in drafts:
+                    submission_result = submission_repo.get_submission_by_draft_id(
+                        draft.draft_id
+                    )
+                    if submission_result.found and submission_result.record is not None:
+                        submissions.append(submission_result.record)
+                        submitted_quantity_by_draft_id[draft.draft_id] = draft.quantity
+            open_orders = list(
+                ibkr_repo.list_ibkr_open_order_snapshots(latest_run.sync_run_id)
+            )
+            executions = list(
+                ibkr_repo.list_ibkr_execution_snapshots(latest_run.sync_run_id)
+            )
+            report = reconcile_submissions(
+                submissions=submissions,
+                open_orders=open_orders,
+                executions=executions,
+                submitted_quantity_by_draft_id=submitted_quantity_by_draft_id,
+                submission_repo=submission_repo,
+                event_repo=event_repo,
+            )
+    except StorageConnectionError:
+        return _build_blocked_reconciliation_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "submissions_total": report.submissions_total,
+        "submissions_filled": report.submissions_filled,
+        "submissions_cancelled": report.submissions_cancelled,
+        "submissions_rejected": report.submissions_rejected,
+        "submissions_still_working": report.submissions_still_working,
+        "submissions_unchanged": report.submissions_unchanged,
+        "submissions_failed": report.submissions_failed,
+        "failures": [dict(item) for item in report.failures],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+def _build_blocked_diary_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "suggestion_total": 0,
+        "entry_total": 0,
+        "entries_persisted": 0,
+        "entries_skipped_no_forecast": 0,
+        "entries_failed": 0,
+        "failures": [],
+        "safe_for_self_learning": False,
+        "safe_for_model_retraining": False,
+    }
+
+
+@router.post("/prediction-diary/evaluate")
+def run_prediction_diary_evaluation() -> dict[str, object]:
+    """Build/refresh one Prediction Diary entry per suggestion using the
+    persisted EOD bars at 1d/1w/1m after the issue date."""
+
+    if not settings.prediction_diary_sync_enabled:
+        return _build_blocked_diary_response(
+            reason="prediction_diary_sync_disabled",
+            status_nl="Prediction Diary uitgeschakeld",
+            help_nl="Stel `PREDICTION_DIARY_SYNC_ENABLED=true` in om de diary te activeren.",
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_diary_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Prediction Diary vereist schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            forecast_repo = SqlAlchemyAssetForecastRepository(
+                checked.connection, checked.readiness
+            )
+            suggestion_repo = SqlAlchemyAssetSuggestionRepository(
+                checked.connection, checked.readiness
+            )
+            bar_repo = SqlAlchemyMarketDataBarRepository(
+                checked.connection, checked.readiness
+            )
+            diary_repo = SqlAlchemyPredictionDiaryRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            positions = (
+                list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+                if latest_run is not None
+                else []
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return _build_blocked_diary_response(
+                    reason="no_positions",
+                    status_nl="Geen posities",
+                    help_nl="Voer eerst een IBKR-sync uit met posities.",
+                )
+            suggestions = list(
+                suggestion_repo.list_latest_asset_suggestions_by_conids(conids).records
+            )
+            forecast_result = forecast_repo.list_latest_asset_forecasts_by_conids(conids)
+            forecasts_by_id = {f.forecast_id: f for f in forecast_result.records}
+            bars: list[MarketDataBarRecord] = []
+            for conid in conids:
+                bars.extend(bar_repo.list_market_data_bars_by_conid(conid).records)
+            tolerance = Decimal(settings.prediction_diary_inconclusive_tolerance_pct)
+            report = evaluate_prediction_diary(
+                suggestions=suggestions,
+                forecasts_by_id=forecasts_by_id,
+                bars=bars,
+                repo=diary_repo,
+                inconclusive_tolerance_pct=tolerance,
+            )
+    except StorageConnectionError:
+        return _build_blocked_diary_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "suggestion_total": report.suggestion_total,
+        "entry_total": report.entry_total,
+        "entries_persisted": report.entries_persisted,
+        "entries_skipped_no_forecast": report.entries_skipped_no_forecast,
+        "entries_failed": report.entries_failed,
+        "failures": [dict(item) for item in report.failures],
+        "safe_for_self_learning": False,
+        "safe_for_model_retraining": False,
+    }
+
+
+@router.get("/prediction-diary")
+def read_prediction_diary() -> dict[str, object]:
+    """Return all Prediction Diary entries (most recent first)."""
+
+    base: dict[str, object] = {
+        "items": [],
+        "help_nl": (
+            "Prediction Diary entries zijn deterministisch geclassificeerd. "
+            "Geen AI-scoring, geen silent self-learning."
+        ),
+        "safe_for_self_learning": False,
+        "safe_for_model_retraining": False,
+    }
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            diary_repo = SqlAlchemyPredictionDiaryRepository(
+                checked.connection, checked.readiness
+            )
+            result = diary_repo.list_prediction_diary_entries()
+            return base | {
+                "status": "ok",
+                "status_nl": (
+                    "Prediction Diary entries beschikbaar"
+                    if result.records
+                    else "Nog geen entries"
+                ),
+                "items": [
+                    serialize_prediction_diary_entry_for_response(r) for r in result.records
+                ],
             }
     except StorageConnectionError:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
