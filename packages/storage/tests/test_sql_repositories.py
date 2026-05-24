@@ -943,3 +943,121 @@ def test_asset_decision_package_rejects_safety_flags_true() -> None:
             blocking_reason=None,
             safe_for_action_drafts=True,  # invalid
         )
+
+
+def test_asset_action_draft_repository_roundtrip() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetActionDraftRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetActionDraftRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetActionDraftRepository(conn, _report(True))
+
+        def _draft(draft_id: str, conid: str, hour: int) -> AssetActionDraftRecord:
+            return AssetActionDraftRecord(
+                draft_id=draft_id,
+                decision_package_id="dp-1",
+                decision_package_content_hash="hash-1",
+                ibkr_conid=conid,
+                symbol="AAPL",
+                currency="USD",
+                exchange="SMART",
+                primary_exchange="NASDAQ",
+                account_mode="paper",
+                expected_account_mode="paper",
+                action_side="BUY",
+                order_type="LMT",
+                tif="DAY",
+                quantity=Decimal("5"),
+                limit_price=Decimal("180.00"),
+                estimated_order_value=Decimal("900"),
+                estimated_cash_before=Decimal("10000"),
+                estimated_cash_after=Decimal("9100"),
+                estimated_position_quantity_before=Decimal("0"),
+                estimated_position_quantity_after=Decimal("5"),
+                estimated_position_value_after=Decimal("900"),
+                estimated_portfolio_weight_after_pct=Decimal("9.0"),
+                estimated_concentration_impact_pct=Decimal("9.0"),
+                orderimpact_base_currency="USD",
+                source_action_label="Kopen",
+                source_action_label_nl="Kopen",
+                status="dry_run_passed",
+                dry_run_status="passed",
+                dry_run_failures_json=None,
+                blocking_reason=None,
+                rationale_nl="r",
+                explanation_nl="e",
+                created_at=datetime(2025, 5, 24, hour, 0, tzinfo=UTC),
+                updated_at=datetime(2025, 5, 24, hour, 0, tzinfo=UTC),
+            )
+
+        repo.save_asset_action_draft(_draft("d1", "265598", 9))
+        repo.save_asset_action_draft(_draft("d2", "265598", 11))  # newer for same conid
+        repo.save_asset_action_draft(_draft("d3", "272093", 9))
+
+        latest = repo.list_latest_asset_action_drafts_by_conids(("265598", "272093"))
+        assert {r.draft_id for r in latest.records} == {"d2", "d3"}
+
+        loaded = repo.get_asset_action_draft_by_id("d2")
+        assert loaded.found is True
+        assert loaded.record is not None
+        assert loaded.record.quantity == Decimal("5")
+        assert loaded.record.action_side == "BUY"
+
+
+def test_asset_action_draft_rejects_market_orders_and_unsafe_flags() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetActionDraftRecord
+
+    now = datetime.now(UTC)
+    base_kwargs = dict(
+        draft_id="d",
+        decision_package_id="dp",
+        decision_package_content_hash="hash",
+        ibkr_conid="1",
+        symbol="X",
+        currency="USD",
+        exchange=None,
+        primary_exchange=None,
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_side="BUY",
+        order_type="LMT",
+        tif="DAY",
+        quantity=Decimal("1"),
+        limit_price=Decimal("100"),
+        estimated_order_value=None,
+        estimated_cash_before=None,
+        estimated_cash_after=None,
+        estimated_position_quantity_before=None,
+        estimated_position_quantity_after=None,
+        estimated_position_value_after=None,
+        estimated_portfolio_weight_after_pct=None,
+        estimated_concentration_impact_pct=None,
+        orderimpact_base_currency=None,
+        source_action_label="Kopen",
+        source_action_label_nl="Kopen",
+        status="draft",
+        dry_run_status="not_attempted",
+        dry_run_failures_json=None,
+        blocking_reason=None,
+        rationale_nl="r",
+        explanation_nl="e",
+        created_at=now,
+        updated_at=now,
+    )
+
+    with pytest.raises(ValueError):
+        AssetActionDraftRecord(**{**base_kwargs, "order_type": "MKT"})
+    with pytest.raises(ValueError):
+        AssetActionDraftRecord(**{**base_kwargs, "tif": "GTC"})
+    with pytest.raises(ValueError):
+        AssetActionDraftRecord(**{**base_kwargs, "action_side": "SHORT"})
+    with pytest.raises(ValueError):
+        AssetActionDraftRecord(**{**base_kwargs, "quantity": Decimal("0")})
+    with pytest.raises(ValueError):
+        AssetActionDraftRecord(**{**base_kwargs, "safe_for_submission": True})
+    with pytest.raises(ValueError):
+        AssetActionDraftRecord(**{**base_kwargs, "safe_for_broker_submission": True})

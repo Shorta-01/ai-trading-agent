@@ -1,12 +1,15 @@
-# Task 161
+# Task 162
 
-Slice 6 — Action draft skeleton + dry-run + `Orderimpact`. Generate an
-editable, structured action-draft record (asset/conid/symbol/exchange/
-currency/action/quantity/order_type=LMT/limit_price/tif=DAY/account_mode)
-from a ready Decision Package, run a dry-run that recomputes safety
-checks (usable cash ≥ buy value, sell quantity ≤ held, FX freshness,
-market freshness, account-mode match), and surface a Dutch
-`Orderimpact` panel showing cash before/after, position size after,
-weight after, concentration impact. Persist to a new `asset_action_drafts`
-table. **Still no submission to IBKR** — that's Slice 7. Disabled-by-default;
-no order submission, no broker action.
+Slice 7 — User-approved IBKR paper submission with the locked
+state-machine handshake. Add an editable-draft API surface
+(`PATCH /action-drafts/{id}`) that re-runs sizing + dry-run, a separate
+final-confirmation endpoint (`POST /action-drafts/{id}/approve`) that
+re-validates everything one last time and persists an `approval_status`,
+then a single submission endpoint
+(`POST /action-drafts/{id}/submit-to-ibkr-paper`) gated **only** on a
+dry-run-passed + approved + paper-mode draft. Real `ibapi` order
+submission for LMT/DAY/whole shares only, tracked through the state
+machine `Draft → Safety checked → User approved → Submitted → Awaiting
+IBKR reply → Reply confirmed → Working → Filled/Cancelled/Rejected →
+Reconciled`. Disabled-by-default; paper account only; no auto-submission;
+critical alerts on every state transition.

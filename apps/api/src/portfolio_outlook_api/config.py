@@ -132,6 +132,10 @@ class Settings(BaseSettings):
     suggestions_valid_minutes: int = 1440
     decision_packages_sync_enabled: bool = False
     decision_packages_valid_minutes: int = 1440
+    action_drafts_sync_enabled: bool = False
+    action_drafts_default_buy_value: str = "1000"
+    action_drafts_top_up_pct: str = "0.25"
+    action_drafts_reduce_pct: str = "0.25"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

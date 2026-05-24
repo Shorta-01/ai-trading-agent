@@ -29,6 +29,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_open_order_snapshots,
     ibkr_position_snapshots,
     ibkr_sync_runs,
+    asset_action_drafts,
     asset_decision_packages,
     asset_forecasts,
     asset_suggestions,
@@ -77,6 +78,7 @@ from ai_trading_agent_storage.migration_readiness import (
     read_database_alembic_revision,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetActionDraftRecord,
     AssetDecisionPackageRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
@@ -152,6 +154,7 @@ from ai_trading_agent_storage.settings import (
     redact_database_url,
 )
 from ai_trading_agent_storage.sql_repositories import (
+    SqlAlchemyAssetActionDraftRepository,
     SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetSuggestionRepository,
@@ -272,6 +275,7 @@ __all__ = [
     "SqlAlchemyAssetForecastRepository",
     "SqlAlchemyAssetSuggestionRepository",
     "SqlAlchemyAssetDecisionPackageRepository",
+    "SqlAlchemyAssetActionDraftRepository",
     "SqlAlchemyIbkrSyncSnapshotRepository",
     "SqlAlchemyResearchSourceArchiveRepository",
     "SqlAlchemyRequestAuditRepository",
@@ -284,10 +288,12 @@ __all__ = [
     "AssetForecastRecord",
     "AssetSuggestionRecord",
     "AssetDecisionPackageRecord",
+    "AssetActionDraftRecord",
     "market_data_bars",
     "asset_forecasts",
     "asset_suggestions",
     "asset_decision_packages",
+    "asset_action_drafts",
     "IbkrAccountCashSnapshotRecord",
     "IbkrPositionSnapshotRecord",
     "IbkrOpenOrderSnapshotRecord",

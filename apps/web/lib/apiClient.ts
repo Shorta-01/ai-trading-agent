@@ -504,6 +504,58 @@ export type LatestDecisionPackagesResponse = {
   blocks_orders?: boolean;
 };
 
+export type AssetActionDraftResponse = {
+  draft_id: string;
+  decision_package_id: string;
+  decision_package_content_hash: string;
+  ibkr_conid: string;
+  symbol: string;
+  currency: string;
+  exchange: string | null;
+  primary_exchange: string | null;
+  account_mode: string;
+  expected_account_mode: string;
+  action_side: string;
+  order_type: string;
+  tif: string;
+  quantity: string;
+  limit_price: string;
+  estimated_order_value: string | null;
+  estimated_cash_before: string | null;
+  estimated_cash_after: string | null;
+  estimated_position_quantity_before: string | null;
+  estimated_position_quantity_after: string | null;
+  estimated_position_value_after: string | null;
+  estimated_portfolio_weight_after_pct: string | null;
+  estimated_concentration_impact_pct: string | null;
+  orderimpact_base_currency: string | null;
+  source_action_label: string;
+  source_action_label_nl: string;
+  status: string;
+  dry_run_status: string;
+  dry_run_failures: string[];
+  blocking_reason: string | null;
+  rationale_nl: string;
+  explanation_nl: string;
+  created_at: string;
+  updated_at: string;
+  safe_for_submission: boolean;
+  safe_for_orders: boolean;
+  safe_for_broker_submission: boolean;
+};
+
+export type LatestActionDraftsResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl: string;
+  items: AssetActionDraftResponse[];
+  actions_allowed?: boolean;
+  safe_for_submission?: boolean;
+  safe_for_orders?: boolean;
+  safe_for_broker_submission?: boolean;
+  blocks_orders?: boolean;
+};
+
 export type FreshnessAuditResponse = {
   freshness_audit_id: string;
   request_log_id: string | null;
@@ -620,6 +672,9 @@ export const apiClient = {
   getLatestDecisionPackages: () =>
     getJson<LatestDecisionPackagesResponse>("/decision-packages/latest"),
   runDecisionPackagesSync: () => postJson<{ status: string }>("/decision-packages/compute"),
+  getLatestActionDrafts: () =>
+    getJson<LatestActionDraftsResponse>("/action-drafts/latest"),
+  runActionDraftsSync: () => postJson<{ status: string }>("/action-drafts/compute"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

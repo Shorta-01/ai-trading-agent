@@ -8,6 +8,7 @@ import { PositionPlTraceDetails } from "@/components/PositionPlTraceDetails";
 import { ValuationTraceDetails } from "@/components/ValuationTraceDetails";
 import {
   apiClient,
+  AssetActionDraftResponse,
   AssetDecisionPackageResponse,
   AssetForecastResponse,
   AssetSuggestionResponse,
@@ -59,13 +60,14 @@ export default function PortfolioPage() {
   const [forecasts, setForecasts] = useState<AssetForecastResponse[]>([]);
   const [suggestions, setSuggestions] = useState<AssetSuggestionResponse[]>([]);
   const [decisionPackages, setDecisionPackages] = useState<AssetDecisionPackageResponse[]>([]);
+  const [actionDrafts, setActionDrafts] = useState<AssetActionDraftResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
-    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes, suggestionsRes, decisionPackagesRes] = await Promise.all([
+    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes, suggestionsRes, decisionPackagesRes, actionDraftsRes] = await Promise.all([
       apiClient.getIbkrSyncStatus(),
       apiClient.getPortfolioValuationReadiness(),
       apiClient.getIbkrPositions(),
@@ -75,6 +77,7 @@ export default function PortfolioPage() {
       apiClient.getLatestForecasts(),
       apiClient.getLatestSuggestions(),
       apiClient.getLatestDecisionPackages(),
+      apiClient.getLatestActionDrafts(),
     ]);
 
     setLoadFailed(!statusRes.ok && !valuationRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
@@ -87,6 +90,7 @@ export default function PortfolioPage() {
     if (forecastsRes.ok) setForecasts(forecastsRes.data.items ?? []);
     if (suggestionsRes.ok) setSuggestions(suggestionsRes.data.items ?? []);
     if (decisionPackagesRes.ok) setDecisionPackages(decisionPackagesRes.data.items ?? []);
+    if (actionDraftsRes.ok) setActionDrafts(actionDraftsRes.data.items ?? []);
     setLoading(false);
   };
 
@@ -319,6 +323,58 @@ export default function PortfolioPage() {
               <tr key={`${execution.sync_run_id}-${execution.execution_id}`}><td>{execution.execution_id}</td><td>{execution.symbol}</td><td>{execution.side}</td><td>{execution.quantity}</td><td>{execution.price}</td><td>{execution.execution_time}</td><td>{execution.currency}</td></tr>
             ))}
           </tbody></table>
+        )}
+      </section>
+
+      <section className="dashboard-panel">
+        <h2>Action drafts (LMT / DAY / hele aandelen)</h2>
+        <p className="top-sub">Bewerkbare drafts met Orderimpact en dry-run. Geen broker submission in deze fase.</p>
+        {actionDrafts.length === 0 ? (
+          <EmptyState
+            title="Nog geen action drafts"
+            message="Voer eerst decision-packages-sync uit en daarna action-drafts-sync."
+          />
+        ) : (
+          <table className="portfolio-table">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Action</th>
+                <th>Aantal</th>
+                <th>Limit</th>
+                <th>Orderwaarde</th>
+                <th>Cash voor → na</th>
+                <th>Positie voor → na</th>
+                <th>Gewicht na</th>
+                <th>Dry-run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {actionDrafts.map((draft) => {
+                const dryRunTone: "ok" | "info" | "wacht" | "aandacht" | "geblokkeerd" =
+                  draft.dry_run_status === "passed" ? "ok" :
+                  draft.dry_run_status === "failed" ? "geblokkeerd" : "info";
+                const dryRunLabel = draft.dry_run_status === "passed" ? "Geslaagd" :
+                  draft.dry_run_status === "failed" ? "Mislukt" : draft.dry_run_status;
+                const dryRunTooltip = draft.dry_run_failures.length > 0
+                  ? `Failures: ${draft.dry_run_failures.join(", ")}. Geen submission mogelijk.`
+                  : `Onderbouwing: ${draft.rationale_nl}. Geen submission in deze fase.`;
+                return (
+                  <tr key={draft.draft_id}>
+                    <td>{draft.symbol} ({draft.currency})</td>
+                    <td>{draft.action_side} {draft.order_type}/{draft.tif}</td>
+                    <td>{draft.quantity}</td>
+                    <td>{draft.limit_price}</td>
+                    <td>{displayValue(draft.estimated_order_value)}</td>
+                    <td>{displayValue(draft.estimated_cash_before)} → {displayValue(draft.estimated_cash_after)}</td>
+                    <td>{displayValue(draft.estimated_position_quantity_before)} → {displayValue(draft.estimated_position_quantity_after)}</td>
+                    <td>{draft.estimated_portfolio_weight_after_pct ? `${draft.estimated_portfolio_weight_after_pct}%` : "Niet beschikbaar"}</td>
+                    <td><StatusBadge label={dryRunLabel} status={dryRunTone} title={dryRunTooltip} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </section>
 
