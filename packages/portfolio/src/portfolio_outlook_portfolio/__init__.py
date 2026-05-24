@@ -143,6 +143,13 @@ from .daily_briefing import (
     BriefingSuggestionInput,
     compute_daily_briefing,
 )
+from .ensemble_combiner import (
+    ENSEMBLE_MODEL_CODE,
+    ENSEMBLE_MODEL_VERSION,
+    EnsembleContribution,
+    EnsembleResult,
+    compute_ensemble_forecast,
+)
 from .errors import (
     CurrencyMismatchError,
     InsufficientLotQuantityError,
@@ -174,6 +181,19 @@ from .lots import (
     calculate_remaining_quantity,
     derive_lot_status,
     validate_lot_quantities,
+)
+from .mean_reversion_predictor import (
+    BOLLINGER_PERIOD,
+    HURST_WINDOW,
+    MEAN_REVERSION_MIN_BARS,
+    RSI_PERIOD,
+    MeanReversionPredictor,
+)
+from .mean_reversion_predictor import (
+    MODEL_CODE as MEAN_REVERSION_MODEL_CODE,
+)
+from .mean_reversion_predictor import (
+    MODEL_VERSION as MEAN_REVERSION_MODEL_VERSION,
 )
 from .momentum_predictor import (
     MAX_ANNUAL_DRIFT_PCT as MOMENTUM_MAX_ANNUAL_DRIFT_PCT,
@@ -551,5 +571,17 @@ __all__ = [
     "MOMENTUM_MODEL_VERSION",
     "MOMENTUM_MIN_BARS",
     "MOMENTUM_MAX_ANNUAL_DRIFT_PCT",
+    "MeanReversionPredictor",
+    "MEAN_REVERSION_MODEL_CODE",
+    "MEAN_REVERSION_MODEL_VERSION",
+    "MEAN_REVERSION_MIN_BARS",
+    "RSI_PERIOD",
+    "BOLLINGER_PERIOD",
+    "HURST_WINDOW",
+    "ENSEMBLE_MODEL_CODE",
+    "ENSEMBLE_MODEL_VERSION",
+    "EnsembleContribution",
+    "EnsembleResult",
+    "compute_ensemble_forecast",
 ]
 
