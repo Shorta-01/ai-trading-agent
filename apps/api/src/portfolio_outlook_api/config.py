@@ -108,6 +108,10 @@ class Settings(BaseSettings):
     ibkr_sync_readonly: bool = True
     ibkr_sync_timeout_seconds: int = 10
     ibkr_sync_provider_code: str = "ibkr"
+    ibkr_sync_real_client_enabled: bool = False
+    ibkr_sync_account_summary_tags: str = (
+        "TotalCashValue,AvailableFunds,BuyingPower,NetLiquidation,GrossPositionValue"
+    )
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings
