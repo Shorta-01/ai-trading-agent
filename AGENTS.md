@@ -1,7 +1,7 @@
 # Development Guardrails
 
 ## Product safety boundaries
-- Version 1 is paper-only.
+- AI Trading Agent is account-mode-aware; implementation slices may be paper-gated where safety requires it.
 - Do not implement live trading.
 - Do not add broker execution in version 1.
 - Do not add IBKR live order flow.

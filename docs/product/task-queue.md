@@ -109,4 +109,4 @@
 
 ## Immediate lock-in update
 - Task 153-L is afgerond als documentatie/product-lock recovery en moet als afgeronde blocker worden beschouwd vóór verdere user-facing implementatie.
-- Eerstvolgende implementatietaak: **Task 154** (real IBKR paper-only read-only account snapshot preflight voor cash/positions, zonder persistence/valuation/market-data/FX/suggestions/action drafts/orders).
+- Eerstvolgende implementatietaak: **Task 155** (real IBKR account-mode-aware read-only account snapshot preflight voor cash/positions, zonder persistence/valuation/market-data/FX/suggestions/action drafts/orders).

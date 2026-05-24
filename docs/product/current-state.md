@@ -1,3 +1,6 @@
+Huidige toestand: **na Task 154-L**
+
+- Task 154-L completed: software name and account-mode scope lock corrected across source-of-truth docs; `AI Trading Agent` locked as active software name, `Portfolio Outlook Manager` marked legacy/historical only, blanket paper-only product-identity wording corrected to account-mode-aware wording with paper mode as safety/testing context, no automatic execution reaffirmed, and next implementation task moved to Task 155.
 - Task 153-L completed: documentatie/product-lock recovery voltooid; owner-agreed Version 1 product-, dashboard-, workflow- en daily-rhythm beslissingen geconsolideerd in `docs/product/version-1-product-experience-locks.md` en cross-referenced in kern productdocs. Product-tracking drift na Task 152-R7 gerepareerd en `next-task.md` verplaatst naar Task 154. Geen runtime/API/web/storage/migration/market-data/FX/suggestions/action-draft/order/broker-execution wijzigingen.
 - Task 152-R7 completed: repair-only merged-red CI fix na Task 152-R6 voor duplicate keyword pytest failure in `_fake_client_ready_settings(...)`; geen runtimeverbreding en alle bestaande safetygrenzen bleven intact.
 - Task 152-R6 completed: repair-only merged-red CI fix after Task 152-R5 for the `api` job `pytest` failures; fake-client execution helpers now enable the full Task 152 prerequisite gate set in tests, including dummy `ibkr_sync_host`, `ibkr_sync_port`, and `ibkr_sync_client_id` values alongside `ibkr_tws_readonly_real_client_enabled=True`. Missing host/port/client-id blockers remain tested for default/real configuration gaps, default-blocked tests still verify disabled-by-default safety-gated behavior, no-secret checks remain strict (no raw config/account payload leaks), and no production runtime behavior was widened (runtime default-disabled, readiness never connects, no sync/market-data/FX/suggestions/actions/orders/broker execution, no auto-connect/reconnect/persistent session manager, no schema/migrations, no `ib_insync`).
@@ -21,7 +24,6 @@
 ## Task 142 update
 - Task 142: **completed** — disabled-by-default TWS/Gateway session-status adapter factory/selection pad toegevoegd met expliciete setting `ibkr_tws_readonly_adapter_enabled`, veilige adapterdiagnostiek in statusresponse, en testbare opt-in selectie van de Task 141 skeletonadapter alleen via expliciete instelling (optioneel met geïnjecteerde testclient). Standaardruntime blijft non-network safe adapter zonder auto-connect/reconnect/persistente session manager; geen echte low-level IBKR client, geen account/portfolio sync runtime, geen market-data/FX runtime, geen suggesties/action drafts/orders/broker execution en geen storage schema/migraties toegevoegd.
 
-Huidige toestand: **na Task 153-L**
 
 
 

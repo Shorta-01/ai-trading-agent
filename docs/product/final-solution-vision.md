@@ -1,8 +1,8 @@
-# Final Solution Vision — Portfolio Outlook Manager (Ai Trading Agent)
+# Final Solution Vision — AI Trading Agent (Ai Trading Agent)
 
 ## 1) Product purpose
 
-Portfolio Outlook Manager is een professionele AI-ondersteunde **IBKR portfolio/watchlist intelligence- en suggestiesysteem**.
+AI Trading Agent is een professionele AI-ondersteunde **IBKR portfolio/watchlist intelligence- en suggestiesysteem**.
 
 - Het is **geen** automatische real-money trading bot.
 - Version 1 werkt account-mode-aware (paper of real-money zichtbaar), zonder automatische brokeracties.

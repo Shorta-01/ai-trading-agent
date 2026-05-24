@@ -1,3 +1,4 @@
+- Software name and account-mode scope lock: `AI Trading Agent` is the active software name; product is account-mode-aware and not paper-only as identity. See `docs/product/software-name-and-account-mode-scope-lock-task-154l.md`.
 # Locked Decisions (Version 1)
 
 ## Version 1 product experience locks
@@ -47,7 +48,7 @@ Kader:
 
 ## 1) Product en scope
 
-- Product-facing titel is `AI Trading Agent`; interne docs kunnen nog `Portfolio Outlook Manager` gebruiken.
+- Product-facing titel is `AI Trading Agent`; interne docs kunnen nog `AI Trading Agent` gebruiken.
 - Repository/werknaam blijft `AI-Trading-Agent`.
 - Version 1 ondersteunt paper en real-money accountmodus als zichtbare veiligheidscontext; productidentiteit blijft account-mode-aware en user-approved.
 - Accountmodus is veiligheidscontext en bepaalt niet de productidentiteit.
