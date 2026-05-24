@@ -1,0 +1,221 @@
+from fastapi.testclient import TestClient
+
+from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_tws_readonly_adapter import IbkrTwsReadonlyAdapterError
+from portfolio_outlook_api.main import app
+from portfolio_outlook_api.status_routes import (
+    _run_manual_tws_readonly_status_check_endpoint,
+)
+
+client = TestClient(app)
+
+
+class FakeRuntimeClient:
+    def __init__(
+        self,
+        *,
+        account_mode: str | None = "paper",
+        connect_error: Exception | None = None,
+        disconnect_error: Exception | None = None,
+    ) -> None:
+        self._account_mode = account_mode
+        self._connect_error = connect_error
+        self._disconnect_error = disconnect_error
+        self.connect_calls = 0
+        self.disconnect_calls = 0
+
+    def connect_readonly(self, timeout_seconds: int) -> None:
+        self.connect_calls += 1
+        if self._connect_error is not None:
+            raise self._connect_error
+
+    def disconnect(self) -> None:
+        self.disconnect_calls += 1
+        if self._disconnect_error is not None:
+            raise self._disconnect_error
+
+    def get_account_mode(self) -> str | None:
+        return self._account_mode
+
+
+def _settings(**kwargs: object) -> Settings:
+    return Settings(**kwargs)
+
+
+def _assert_safety_flags_false(payload: dict[str, object]) -> None:
+    assert payload["actions_allowed"] is False
+    assert payload["suggestions_allowed"] is False
+    assert payload["action_drafts_allowed"] is False
+    assert payload["orders_allowed"] is False
+    assert payload["order_submission_allowed"] is False
+    assert payload["order_modification_allowed"] is False
+    assert payload["order_cancellation_allowed"] is False
+    assert payload["can_submit_orders"] is False
+    assert payload["safe_for_orders"] is False
+    assert payload["blocks_orders"] is True
+
+
+def test_default_route_call_blocked_runtime_disabled() -> None:
+    payload = client.post("/ibkr/session/manual-readonly-status-check").json()
+    assert payload["status"] == "runtime_disabled"
+    assert "runtime_disabled" in payload["blocked_reasons"]
+    assert payload["connect_attempted"] is False
+    assert payload["disconnect_attempted"] is False
+    _assert_safety_flags_false(payload)
+
+
+def test_runtime_enabled_adapter_disabled_blocked() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(ibkr_tws_readonly_runtime_enabled=True),
+        runtime_client=None,
+    )
+    assert "adapter_disabled" in payload["blocked_reasons"]
+    assert payload["connect_attempted"] is False
+
+
+def test_adapter_enabled_runtime_disabled_blocked() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(ibkr_tws_readonly_adapter_enabled=True),
+        runtime_client=None,
+    )
+    assert "runtime_disabled" in payload["blocked_reasons"]
+    assert payload["connect_attempted"] is False
+
+
+def test_runtime_enabled_adapter_enabled_missing_client_blocked() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=None,
+    )
+    assert "missing_runtime_client" in payload["blocked_reasons"]
+    assert payload["connect_attempted"] is False
+
+
+def test_injected_fake_paper_client_completed() -> None:
+    fake = FakeRuntimeClient(account_mode="paper")
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=fake,
+    )
+    assert payload["status"] == "manual_status_check_completed"
+    assert payload["connect_attempted"] is True
+    assert payload["disconnect_attempted"] is True
+    assert payload["account_mode"] == "paper"
+    assert fake.connect_calls == 1
+    assert fake.disconnect_calls == 1
+    _assert_safety_flags_false(payload)
+
+
+def test_injected_fake_wrong_mode_client_blocked() -> None:
+    fake = FakeRuntimeClient(account_mode="live")
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=fake,
+    )
+    assert payload["status"] == "wrong_account_mode"
+    assert payload["disconnect_attempted"] is True
+    _assert_safety_flags_false(payload)
+
+
+def test_injected_fake_unknown_mode_client_blocked() -> None:
+    fake = FakeRuntimeClient(account_mode=None)
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=fake,
+    )
+    assert payload["status"] == "unknown_account_mode"
+    assert payload["disconnect_attempted"] is True
+
+
+def test_timeout_maps_safely_with_dutch_help() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=FakeRuntimeClient(connect_error=TimeoutError("timeout")),
+    )
+    assert payload["status"] == "timeout"
+    assert payload["help_nl"]
+
+
+def test_authentication_required_maps_safely() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=FakeRuntimeClient(
+            connect_error=IbkrTwsReadonlyAdapterError("authentication_required")
+        ),
+    )
+    assert payload["status"] == "authentication_required"
+
+
+def test_pacing_limited_maps_safely() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=FakeRuntimeClient(
+            connect_error=IbkrTwsReadonlyAdapterError("pacing_limited")
+        ),
+    )
+    assert payload["status"] == "pacing_limited"
+
+
+def test_connection_failed_maps_safely() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=FakeRuntimeClient(
+            connect_error=IbkrTwsReadonlyAdapterError("connection_failed")
+        ),
+    )
+    assert payload["status"] == "connection_failed"
+
+
+def test_unexpected_client_error_maps_safely() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=FakeRuntimeClient(connect_error=RuntimeError("boom")),
+    )
+    assert payload["status"] == "unexpected_client_error"
+
+
+def test_disconnect_failure_ignored_and_safe() -> None:
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _settings(
+            ibkr_tws_readonly_runtime_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+        ),
+        runtime_client=FakeRuntimeClient(disconnect_error=RuntimeError("disconnect boom")),
+    )
+    assert payload["disconnect_error_ignored"] is True
+    _assert_safety_flags_false(payload)
+
+
+def test_no_secret_regression() -> None:
+    payload = client.post("/ibkr/session/manual-readonly-status-check").json()
+    forbidden = ["password", "token", "secret", "host", "port", "client_id"]
+    blob = str(payload).lower()
+    for key in forbidden:
+        assert key not in blob
