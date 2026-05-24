@@ -380,4 +380,4 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Task 145 afgerond: manual IBKR read-only runtime boundary met fake-client tests only; blijft disabled-by-default en order/suggestie/action safety blijft geblokkeerd.
 
 - Task 153-L completed (docs/product-lock recovery).
-- Task 154 queued: real IBKR paper-only read-only account snapshot preflight for cash and positions without persistence/valuation and without market-data/FX/suggestions/action drafts/orders.
+- Task 155 queued: real IBKR account-mode-aware read-only account snapshot preflight for cash and positions without persistence/valuation and without market-data/FX/suggestions/action drafts/orders.

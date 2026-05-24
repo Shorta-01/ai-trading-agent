@@ -39,7 +39,7 @@
 - Bevestigd: readiness-blocking pad roept adapter niet aan; payloadvalidatiefouten blokkeren memory/durable persistence; timeout/provider-fouten worden niet als payloadvalidatiefout gelabeld.
 - Niet toegevoegd: echte TWS/Gateway runtime, persistente sessiemanager, storage schema/migraties, market-data runtime, suggesties/action drafts/orders/broker execution.
 
-# Project Handover — Portfolio Outlook Manager / Ai Trading Agent
+# Project Handover — AI Trading Agent (legacy: Portfolio Outlook Manager)
 
 - Producttrackingstatus: Task 137 is afgerond als planning/documentation-only Milestone B sliceslectie na Task 136. Geselecteerde volgende implementatietaak is Task 138: harden IBKR read-only adapter contracts + deterministic fake-adapter sync fixtures voor cash/positions/open orders/executions. Geen runtimecode, geen API/web behaviorwijziging, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties, action drafts, orders of broker execution toegevoegd.
 - Producttrackingstatus: Task 135B-R is afgerond als repair-only follow-up na merged-red Task 135B: API Ruff E501 line-too-long failures in IBKR sync validation/testbestanden zijn hersteld met formatting-only wijzigingen; geen runtime/API/storage/migratie/scope-uitbreiding, geen market-data runtime, suggesties, action drafts, orders of broker execution toegevoegd.
@@ -135,4 +135,4 @@ Aanvullend:
 - Task 145 afgerond: handmatige dependency-free TWS/Gateway read-only runtime status-check boundary toegevoegd (test-only injected fake clients), runtime default uit, geen echte connectivity/broker execution.
 
 - Nieuwe verplichte lockbron: `docs/product/version-1-product-experience-locks.md` (lees vóór user-facing productwerk).
-- Producttrackingstatus bijgewerkt: Task 153-L completed; volgende implementatie is Task 154.
+- Producttrackingstatus bijgewerkt: Task 153-L completed; volgende implementatie is Task 155.

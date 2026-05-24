@@ -9,7 +9,7 @@ Dit document consolideert owner-agreed Version 1 product experience beslissingen
 
 ## 2. Product naming lock
 - Product-facing/dashboard titel: `AI Trading Agent`.
-- Interne docs kunnen nog `Portfolio Outlook Manager` bevatten.
+- Interne docs kunnen nog `AI Trading Agent` bevatten.
 - Repository/projectnaam blijft `AI-Trading-Agent`.
 - Toekomstig user-facing dashboardwerk gebruikt `AI Trading Agent`, tenzij expliciete naammigratietaak dit wijzigt.
 - Niet willekeurig afwisselen van productnamen in UI.

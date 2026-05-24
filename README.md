@@ -1,7 +1,7 @@
-# Portfolio Outlook Manager
+# AI Trading Agent
 
 ## Doel van het project
-Portfolio Outlook Manager is een professionele **AI-ondersteunde paper portfolio research- en beslissingsomgeving**. Het systeem helpt een gebruiker bij het analyseren van toegelaten ETF's, aandelen en valuta's, en geeft duidelijke actiesuggesties in eenvoudige Nederlandse taal.
+AI Trading Agent is een professionele **AI-ondersteunde paper portfolio research- en beslissingsomgeving**. Het systeem helpt een gebruiker bij het analyseren van toegelaten ETF's, aandelen en valuta's, en geeft duidelijke actiesuggesties in eenvoudige Nederlandse taal.
 
 ## Belangrijke waarschuwing: versie 1 is paper-only
 - Versie 1 werkt **uitsluitend** met papergeld.
