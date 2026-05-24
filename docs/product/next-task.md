@@ -1,18 +1,18 @@
-# Task 149 — dependency-selectie compatibiliteitspreflight zonder runtime-connectiviteit
+# Task 150 — geselecteerde TWS/Gateway client dependency install/import CI preflight zonder runtime-connectiviteit
 
-Geselecteerde volgende taak: **Task 149**.
+Geselecteerde volgende taak: **Task 150**.
 
 ## Doel
-Voer een documenteerde en testbare compatibiliteitspreflight uit voor kandidaat TWS/Gateway client libraries (`ibapi`, `ib_insync`) zonder runtime-connectiviteit, zodat een veilige dependencykeuze in een volgende stap onderbouwd kan worden.
+Voer een dependency-only CI preflight uit voor de geselecteerde kandidaat (`ibapi`) met install/import verificatie per verplichte CI job, zonder runtime connectiviteit.
 
 ## Scope
-- Install/import-compatibiliteit vergelijken voor `ibapi` en `ib_insync` (Python/CI/arm64 risico’s).
-- Geen runtime clientintegratie, geen connectiepogingen, geen sockets.
-- Acceptance-rapport opleveren met duidelijke go/no-go criteria voor latere dependency-introductie.
+- Voeg tijdelijk/controlled dependency-introductie toe in projectmetadata voor CI install/import verificatie.
+- Verifieer Python-versie compatibiliteit en Linux x86_64 + arm64/Raspberry Pi geschiktheid in CI/gedocumenteerde checks.
+- Documenteer resultaten en rollbackpad.
 
 ## Non-goals
-- Geen runtime code.
-- Geen API/web/storage schemawijzigingen.
-- Geen dependency toevoegen aan projectmetadata.
-- Geen echte TWS/Gateway runtime, geen auto-connect/reconnect, geen session manager.
-- Geen account/portfolio sync runtime, market-data runtime, FX runtime, suggesties, action drafts, orders of broker execution.
+- Geen runtime code, geen production connectiestromen, geen sockets/open connecties.
+- Geen API/web behavior changes.
+- Geen storage schema/migraties.
+- Geen account/portfolio sync runtime, market-data runtime, FX runtime.
+- Geen suggesties, action drafts, orders of broker execution.

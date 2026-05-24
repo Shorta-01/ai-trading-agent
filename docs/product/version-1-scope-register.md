@@ -1,3 +1,4 @@
+- Task 149 completed: IBKR client dependency-selectie compatibiliteitspreflight (documentatie/preflight-only) toegevoegd; `ibapi` en `ib_insync` vergeleken zonder runtime-connectiviteit; geen runtime/API/web/storage-schemawijzigingen en geen dependency-introductie in projectmetadata. Aanbevolen vervolg: Task 150 dependency-only CI install/import preflight met voorkeur `ibapi`.
 ## Task 148 — IBKR client dependency decision gate
 - Status: afgerond (documentation/planning/decision-gate only).
 - Toegevoegd: `docs/product/ibkr-tws-client-dependency-decision-gate-task-148.md` met opties `ibapi`, `ib_insync`, dependency-free voortzetting en deferral, inclusief risico/safety-vergelijking en acceptatiecriteria.
