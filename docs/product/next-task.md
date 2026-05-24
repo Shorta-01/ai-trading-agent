@@ -1,14 +1,20 @@
-# Task 165
+# Task 166
 
-Slice 10 — AI explanation layer (RAG read-only). The product locks
-require an evidence-grounded AI explanation per suggestion that never
-originates a number; it summarises the Decision Package + linked
-research evidence in plain Dutch. This slice plugs in the first AI
-runtime behind a hard gate: explanations are generated only for
-already-persisted Decision Packages, the model is fed the canonical
-package JSON + research snippets, and the output is stored as a
-read-only `decision_package_explanation` row with the exact source-set
-content-hashes captured in a separate `explanation_evidence_ledger`. No
-auto-execution; no new financial numbers; safety booleans remain
-hard-False on every persisted row. Disabled-by-default; the AI provider
-factory returns `None` unless explicitly enabled.
+Slice 11 — Belgian tax module (TOB + 30% dividend roerende voorheffing).
+The V1 product locks require deterministic Belgian tax projections on
+every action draft Orderimpact and on every realised position.
+
+Scope:
+- Pure-Python `belgian_tax` module in `packages/portfolio` with
+  `compute_tob(*, transaction_value, security_class) -> Decimal` (locked
+  rates: 0.12% / 0.35% / 1.32% per asset class), and
+  `compute_dividend_withholding(*, gross_dividend) -> Decimal` (locked
+  30% rate).
+- Extend `action_draft_safety.compute_orderimpact(...)` to surface the
+  estimated TOB cost as a new `estimated_belgian_tob` field, threaded
+  through to the persisted `AssetActionDraftRecord` (migration 0035).
+- Surface the estimated TOB on the Action drafts table in the
+  Portefeuille page.
+
+Belgian-only tax math; no broker execution; no AI. The TOB is
+*informational* on the draft — it doesn't change order sizing in V1.

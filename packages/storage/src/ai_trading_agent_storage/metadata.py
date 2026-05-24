@@ -1566,6 +1566,51 @@ prediction_diary_entries = Table(
 )
 
 
+decision_package_explanations = Table(
+    "decision_package_explanations",
+    metadata,
+    Column("explanation_id", Text, primary_key=True),
+    Column("decision_package_id", Text, nullable=False),
+    Column("decision_package_content_hash", Text, nullable=False),
+    Column("ibkr_conid", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("model_provider_code", Text, nullable=False),
+    Column("model_name", Text, nullable=False),
+    Column("model_version", Text, nullable=False),
+    Column("input_evidence_hash", Text, nullable=False),
+    Column("output_text_hash", Text, nullable=False),
+    Column("explanation_nl", Text, nullable=False),
+    Column("risk_disclaimer_nl", Text, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("blocking_reason", Text, nullable=True),
+    Column("hallucinated_numbers_json", JSON, nullable=True),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_self_learning", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    UniqueConstraint(
+        "decision_package_id",
+        "decision_package_content_hash",
+        name="uq_decision_package_explanations_pkg_hash",
+    ),
+)
+
+
+explanation_evidence_ledger = Table(
+    "explanation_evidence_ledger",
+    metadata,
+    Column("ledger_id", Text, primary_key=True),
+    Column("explanation_id", Text, nullable=False),
+    Column("evidence_kind", Text, nullable=False),
+    Column("evidence_reference_id", Text, nullable=False),
+    Column("evidence_content_hash", Text, nullable=False),
+    Column("linked_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_self_learning", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_model_retraining", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_decision_packages = Table(
     "asset_decision_packages",
     metadata,

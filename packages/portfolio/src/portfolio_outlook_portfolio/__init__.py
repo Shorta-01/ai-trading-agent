@@ -34,6 +34,18 @@ from .action_draft_state_machine import (
     is_transition_allowed,
     require_transition_allowed,
 )
+from .ai_explanation_guards import (
+    BLOCKING_REASON_DISCLAIMER_MISSING,
+    BLOCKING_REASON_EMPTY_OUTPUT,
+    BLOCKING_REASON_HALLUCINATED_NUMBERS,
+    BLOCKING_REASON_OUTPUT_TOO_LONG,
+    EXPLANATION_STATUS_BLOCKED,
+    EXPLANATION_STATUS_FAILED,
+    EXPLANATION_STATUS_GENERATED,
+    LOCKED_RISK_DISCLAIMER_NL,
+    ExplanationValidationResult,
+    validate_explanation_output,
+)
 from .approval_guards import (
     build_approved_action,
     is_approval_decision_final,
@@ -403,5 +415,15 @@ __all__ = [
     "FRESHNESS_MIXED_MAX_DAYS",
     "BLOCKING_REASON_PROMPT_INJECTION_HIGH_RISK",
     "BLOCKING_REASON_CREDIBILITY_REJECTED",
+    "LOCKED_RISK_DISCLAIMER_NL",
+    "EXPLANATION_STATUS_GENERATED",
+    "EXPLANATION_STATUS_BLOCKED",
+    "EXPLANATION_STATUS_FAILED",
+    "BLOCKING_REASON_HALLUCINATED_NUMBERS",
+    "BLOCKING_REASON_DISCLAIMER_MISSING",
+    "BLOCKING_REASON_EMPTY_OUTPUT",
+    "BLOCKING_REASON_OUTPUT_TOO_LONG",
+    "ExplanationValidationResult",
+    "validate_explanation_output",
 ]
 

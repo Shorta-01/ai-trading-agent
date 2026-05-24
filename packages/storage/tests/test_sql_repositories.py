@@ -1445,3 +1445,156 @@ def test_prediction_diary_record_rejects_safety_booleans_set_true() -> None:
         PredictionDiaryEntryRecord(**{**base, "safe_for_self_learning": True})
     with pytest.raises(ValueError):
         PredictionDiaryEntryRecord(**{**base, "safe_for_model_retraining": True})
+
+
+def test_decision_package_explanation_repository_roundtrip() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        DecisionPackageExplanationRecord,
+        ExplanationEvidenceLedgerRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyDecisionPackageExplanationRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyDecisionPackageExplanationRepository(conn, _report(True))
+        now = datetime(2025, 5, 24, 12, 0, tzinfo=UTC)
+
+        explanation = DecisionPackageExplanationRecord(
+            explanation_id="exp-1",
+            decision_package_id="dp-1",
+            decision_package_content_hash="hash-1",
+            ibkr_conid="265598",
+            symbol="AAPL",
+            model_provider_code="stub",
+            model_name="deterministic_paraphrase",
+            model_version="v1",
+            input_evidence_hash="in-hash",
+            output_text_hash="out-hash",
+            explanation_nl="Test uitleg.",
+            risk_disclaimer_nl="Disclaimer.",
+            status="generated",
+            blocking_reason=None,
+            hallucinated_numbers_json=None,
+            generated_at=now,
+            created_at=now,
+        )
+        repo.save_decision_package_explanation(explanation)
+        repo.save_explanation_evidence_ledger_entry(
+            ExplanationEvidenceLedgerRecord(
+                ledger_id="led-1",
+                explanation_id="exp-1",
+                evidence_kind="decision_package",
+                evidence_reference_id="dp-1",
+                evidence_content_hash="hash-1",
+                linked_at=now,
+            )
+        )
+
+        latest = repo.get_latest_explanation_for_package("dp-1")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.explanation_id == "exp-1"
+        assert latest.record.status == "generated"
+        assert latest.record.safe_for_self_learning is False
+        assert latest.record.safe_for_action_drafts is False
+        assert latest.record.safe_for_orders is False
+
+        ledger = repo.list_evidence_ledger_for_explanation("exp-1")
+        assert len(ledger.records) == 1
+        assert ledger.records[0].evidence_kind == "decision_package"
+
+
+def test_decision_package_explanation_rejects_safety_flags_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        DecisionPackageExplanationRecord,
+    )
+
+    now = datetime(2025, 5, 24, 12, 0, tzinfo=UTC)
+    base = dict(
+        explanation_id="exp-x",
+        decision_package_id="dp-1",
+        decision_package_content_hash="hash-1",
+        ibkr_conid="265598",
+        symbol="AAPL",
+        model_provider_code="stub",
+        model_name="x",
+        model_version="v1",
+        input_evidence_hash="in",
+        output_text_hash="out",
+        explanation_nl="t",
+        risk_disclaimer_nl="d",
+        status="generated",
+        blocking_reason=None,
+        hallucinated_numbers_json=None,
+        generated_at=now,
+        created_at=now,
+    )
+    with pytest.raises(ValueError):
+        DecisionPackageExplanationRecord(**{**base, "safe_for_self_learning": True})
+    with pytest.raises(ValueError):
+        DecisionPackageExplanationRecord(**{**base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError):
+        DecisionPackageExplanationRecord(**{**base, "safe_for_orders": True})
+
+
+def test_explanation_evidence_ledger_rejects_safety_flags_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        ExplanationEvidenceLedgerRecord,
+    )
+
+    now = datetime(2025, 5, 24, 12, 0, tzinfo=UTC)
+    base = dict(
+        ledger_id="led-x",
+        explanation_id="exp-1",
+        evidence_kind="decision_package",
+        evidence_reference_id="dp-1",
+        evidence_content_hash="hash-1",
+        linked_at=now,
+    )
+    with pytest.raises(ValueError):
+        ExplanationEvidenceLedgerRecord(**{**base, "safe_for_self_learning": True})
+    with pytest.raises(ValueError):
+        ExplanationEvidenceLedgerRecord(**{**base, "safe_for_model_retraining": True})
+
+
+def test_explanation_can_persist_blocked_with_hallucinated_numbers() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        DecisionPackageExplanationRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyDecisionPackageExplanationRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyDecisionPackageExplanationRepository(conn, _report(True))
+        now = datetime(2025, 5, 24, 12, 0, tzinfo=UTC)
+        record = DecisionPackageExplanationRecord(
+            explanation_id="exp-blocked",
+            decision_package_id="dp-1",
+            decision_package_content_hash="hash-1",
+            ibkr_conid="265598",
+            symbol="AAPL",
+            model_provider_code="stub",
+            model_name="x",
+            model_version="v1",
+            input_evidence_hash="in",
+            output_text_hash="out",
+            explanation_nl="Doelprijs 999.",
+            risk_disclaimer_nl="d",
+            status="blocked",
+            blocking_reason="hallucinated_numbers",
+            hallucinated_numbers_json=("999", "1000"),
+            generated_at=now,
+            created_at=now,
+        )
+        repo.save_decision_package_explanation(record)
+        latest = repo.get_latest_explanation_for_package("dp-1")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.status == "blocked"
+        assert latest.record.hallucinated_numbers_json == ("999", "1000")

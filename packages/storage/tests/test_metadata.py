@@ -60,6 +60,8 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "asset_action_draft_submissions",
         "asset_action_draft_events",
         "prediction_diary_entries",
+        "decision_package_explanations",
+        "explanation_evidence_ledger",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

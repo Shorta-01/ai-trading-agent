@@ -338,6 +338,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "nooit een block op."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0034_decision_package_explanations",
+        previous_revision_id="0033_decision_package_research_evidence",
+        filename="0034_decision_package_explanations.py",
+        label_nl="Decision Package AI explanations + evidence ledger",
+        description_nl=(
+            "Voegt twee tabellen toe: decision_package_explanations (één AI-uitleg "
+            "per Decision Package versie, met input/output hashes en hallucinated "
+            "numbers JSON) en explanation_evidence_ledger (append-only audit van "
+            "welke exacte content-hashes het model heeft gezien). Safety booleans "
+            "blijven False; AI mag nooit nieuwe getallen introduceren."
+        ),
+    ),
 )
 
 

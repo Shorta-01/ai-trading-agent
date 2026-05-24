@@ -147,6 +147,10 @@ class Settings(BaseSettings):
     reconciliation_sync_enabled: bool = False
     prediction_diary_sync_enabled: bool = False
     prediction_diary_inconclusive_tolerance_pct: str = "0.25"
+    ai_explanation_enabled: bool = False
+    ai_explanation_real_client_enabled: bool = False
+    ai_explanation_provider_code: str = "stub"
+    ai_explanation_max_output_chars: int = 2000
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

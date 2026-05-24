@@ -509,6 +509,54 @@ export type LatestDecisionPackagesResponse = {
   blocks_orders?: boolean;
 };
 
+export type DecisionPackageExplanationResponse = {
+  explanation_id: string;
+  decision_package_id: string;
+  decision_package_content_hash: string;
+  ibkr_conid: string;
+  symbol: string;
+  model_provider_code: string;
+  model_name: string;
+  model_version: string;
+  input_evidence_hash: string;
+  output_text_hash: string;
+  explanation_nl: string;
+  risk_disclaimer_nl: string;
+  status: string;
+  blocking_reason: string | null;
+  hallucinated_numbers: string[];
+  generated_at: string;
+  safe_for_self_learning: boolean;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type DecisionPackageExplanationRunResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl?: string;
+  reason?: string;
+  requested_at?: string;
+  completed_at?: string;
+  explanation_id: string | null;
+  blocking_reason: string | null;
+  hallucinated_numbers: string[];
+  explanation: DecisionPackageExplanationResponse | null;
+  safe_for_self_learning?: boolean;
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+};
+
+export type DecisionPackageExplanationReadResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl: string;
+  item: DecisionPackageExplanationResponse | null;
+  safe_for_self_learning?: boolean;
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+};
+
 export type AssetActionDraftResponse = {
   draft_id: string;
   decision_package_id: string;
@@ -677,6 +725,14 @@ export const apiClient = {
   getLatestDecisionPackages: () =>
     getJson<LatestDecisionPackagesResponse>("/decision-packages/latest"),
   runDecisionPackagesSync: () => postJson<{ status: string }>("/decision-packages/compute"),
+  runDecisionPackageExplanation: (decisionPackageId: string) =>
+    postJson<DecisionPackageExplanationRunResponse>(
+      `/decision-packages/${decisionPackageId}/explanation`,
+    ),
+  getDecisionPackageExplanation: (decisionPackageId: string) =>
+    getJson<DecisionPackageExplanationReadResponse>(
+      `/decision-packages/${decisionPackageId}/explanation`,
+    ),
   getLatestActionDrafts: () =>
     getJson<LatestActionDraftsResponse>("/action-drafts/latest"),
   runActionDraftsSync: () => postJson<{ status: string }>("/action-drafts/compute"),

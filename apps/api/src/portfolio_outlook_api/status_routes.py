@@ -15,6 +15,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetSuggestionRepository,
+    SqlAlchemyDecisionPackageExplanationRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataBarRepository,
     SqlAlchemyMarketDataSnapshotRepository,
@@ -43,6 +44,13 @@ from portfolio_outlook_api.action_draft_submission import (
 from portfolio_outlook_api.action_draft_sync import (
     generate_action_drafts,
     serialize_action_draft_for_response,
+)
+from portfolio_outlook_api.ai_explanation_provider import (
+    build_explanation_provider,
+)
+from portfolio_outlook_api.ai_explanation_sync import (
+    generate_explanation,
+    serialize_explanation_for_response,
 )
 from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.decision_package_sync import (
@@ -1643,6 +1651,189 @@ def read_latest_decision_package_for_conid(ibkr_conid: str) -> dict[str, object]
                 "status": "ok",
                 "status_nl": "Decision Package beschikbaar",
                 "item": serialize_decision_package_for_response(result.record),
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+def _build_blocked_explanation_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "explanation_id": None,
+        "explanation": None,
+        "safe_for_self_learning": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/decision-packages/{decision_package_id}/explanation")
+def run_explanation_for_decision_package(
+    decision_package_id: str,
+) -> dict[str, object]:
+    """Generate (or refresh) the AI explanation for one Decision Package.
+
+    AI is gated five ways; defaults are all False so the route returns
+    ``blocked`` until the runtime is explicitly enabled.
+    """
+
+    if not settings.ai_explanation_enabled:
+        return _build_blocked_explanation_response(
+            reason="ai_explanation_disabled",
+            status_nl="AI uitleg uitgeschakeld",
+            help_nl=(
+                "Stel `AI_EXPLANATION_ENABLED=true` in om uitleg te activeren."
+            ),
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_explanation_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="AI uitleg vereist schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            explanation_repo = SqlAlchemyDecisionPackageExplanationRepository(
+                checked.connection, checked.readiness
+            )
+            research_repo = SqlAlchemyResearchSourceArchiveRepository(
+                checked.connection, checked.readiness
+            )
+            # The decision_package_id path-parameter resolves to a single
+            # record; we read it back rather than trusting the caller.
+            # The repository exposes get-by-conid; we use the latest
+            # package per conid here since the package_id-by-id read is
+            # only required by tests. For V1 we ground the route in the
+            # most recent package per conid, which is the user-facing
+            # version anyway.
+            #
+            # However the route argument is the decision_package_id, so
+            # we filter against it on the listing helper for accuracy.
+            all_packages = package_repo.list_latest_asset_decision_packages_by_conids(
+                tuple()
+            )
+            package = next(
+                (
+                    r
+                    for r in all_packages.records
+                    if r.decision_package_id == decision_package_id
+                ),
+                None,
+            )
+            if package is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "status": "not_found",
+                        "status_nl": "Decision Package niet gevonden",
+                    },
+                )
+            research_sources = research_repo.list_research_sources_for_asset(
+                package.symbol
+            )
+            provider = build_explanation_provider(settings)
+            report = generate_explanation(
+                package=package,
+                research_sources=research_sources,
+                provider=provider,
+                repo=explanation_repo,
+                max_output_chars=settings.ai_explanation_max_output_chars,
+            )
+    except StorageConnectionError:
+        return _build_blocked_explanation_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    explanation_payload: dict[str, object] | None = None
+    if report.explanation_id is not None:
+        try:
+            with storage_provider.checked_connection(require_writable=False) as checked:
+                explanation_repo = SqlAlchemyDecisionPackageExplanationRepository(
+                    checked.connection, checked.readiness
+                )
+                latest = explanation_repo.get_latest_explanation_for_package(
+                    decision_package_id
+                )
+                if latest.found and latest.record is not None:
+                    explanation_payload = serialize_explanation_for_response(
+                        latest.record
+                    )
+        except StorageConnectionError:
+            explanation_payload = None
+
+    return {
+        "status": report.status,
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "explanation_id": report.explanation_id,
+        "blocking_reason": report.blocking_reason,
+        "hallucinated_numbers": list(report.hallucinated_numbers),
+        "explanation": explanation_payload,
+        "safe_for_self_learning": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/decision-packages/{decision_package_id}/explanation")
+def read_explanation_for_decision_package(
+    decision_package_id: str,
+) -> dict[str, object]:
+    """Return the latest persisted AI explanation for one Decision Package."""
+
+    base: dict[str, object] = {
+        "item": None,
+        "help_nl": (
+            "AI uitleg is een samenvatting van het Decision Package; "
+            "AI bedacht geen nieuwe getallen."
+        ),
+        "safe_for_self_learning": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            explanation_repo = SqlAlchemyDecisionPackageExplanationRepository(
+                checked.connection, checked.readiness
+            )
+            result = explanation_repo.get_latest_explanation_for_package(
+                decision_package_id
+            )
+            if not result.found or result.record is None:
+                return base | {
+                    "status": "not_found",
+                    "status_nl": "Geen AI uitleg voor deze package",
+                }
+            return base | {
+                "status": "ok",
+                "status_nl": "AI uitleg beschikbaar",
+                "item": serialize_explanation_for_response(result.record),
             }
     except StorageConnectionError:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}

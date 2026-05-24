@@ -2238,3 +2238,101 @@ class PredictionDiaryEntryRecord:
             )
         if self.issued_horizon_days <= 0:
             raise ValueError("issued_horizon_days must be positive")
+
+
+@dataclass(frozen=True)
+class DecisionPackageExplanationRecord:
+    """One AI-generated Dutch explanation per (decision_package_id,
+    decision_package_content_hash) — immutable per package version.
+
+    The doctrine (release-1-functional-workflow-blueprint.md §6 + §8) is
+    that AI **never** originates a financial number; an explanation may
+    only paraphrase the persisted Decision Package + linked research
+    evidence. The boundary is enforced by ``hallucinated_numbers_json``
+    being non-null/non-empty → ``status="blocked"``.
+
+    All safety booleans stay ``False`` in V1: an explanation must never
+    self-promote into retraining, action drafts, or orders.
+    """
+
+    explanation_id: str
+    decision_package_id: str
+    decision_package_content_hash: str
+    ibkr_conid: str
+    symbol: str
+    model_provider_code: str
+    model_name: str
+    model_version: str
+    input_evidence_hash: str
+    output_text_hash: str
+    explanation_nl: str
+    risk_disclaimer_nl: str
+    status: str
+    blocking_reason: str | None
+    hallucinated_numbers_json: tuple[str, ...] | None
+    generated_at: datetime
+    created_at: datetime
+    safe_for_self_learning: bool = False
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "explanation_id",
+            "decision_package_id",
+            "decision_package_content_hash",
+            "ibkr_conid",
+            "symbol",
+            "model_provider_code",
+            "model_name",
+            "model_version",
+            "input_evidence_hash",
+            "output_text_hash",
+            "explanation_nl",
+            "risk_disclaimer_nl",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if (
+            self.safe_for_self_learning
+            or self.safe_for_action_drafts
+            or self.safe_for_orders
+        ):
+            raise ValueError(
+                "Explanation safety booleans must remain false in V1: an "
+                "explanation never self-promotes into retraining, action "
+                "drafts, or orders."
+            )
+
+
+@dataclass(frozen=True)
+class ExplanationEvidenceLedgerRecord:
+    """Append-only audit row: which content-hashes did the model see?
+
+    One row per (explanation, evidence_item). The combination of
+    ``evidence_kind`` + ``evidence_reference_id`` + ``evidence_content_hash``
+    is what makes the input set replayable.
+    """
+
+    ledger_id: str
+    explanation_id: str
+    evidence_kind: str
+    evidence_reference_id: str
+    evidence_content_hash: str
+    linked_at: datetime
+    safe_for_self_learning: bool = False
+    safe_for_model_retraining: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "ledger_id",
+            "explanation_id",
+            "evidence_kind",
+            "evidence_reference_id",
+            "evidence_content_hash",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_for_self_learning or self.safe_for_model_retraining:
+            raise ValueError(
+                "Evidence ledger safety booleans must remain false in V1."
+            )

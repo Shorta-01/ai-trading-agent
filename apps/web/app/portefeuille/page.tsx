@@ -12,6 +12,7 @@ import {
   AssetDecisionPackageResponse,
   AssetForecastResponse,
   AssetSuggestionResponse,
+  DecisionPackageExplanationResponse,
   IbkrCashSnapshot,
   IbkrExecutionSnapshot,
   IbkrOpenOrderSnapshot,
@@ -61,6 +62,8 @@ export default function PortfolioPage() {
   const [suggestions, setSuggestions] = useState<AssetSuggestionResponse[]>([]);
   const [decisionPackages, setDecisionPackages] = useState<AssetDecisionPackageResponse[]>([]);
   const [actionDrafts, setActionDrafts] = useState<AssetActionDraftResponse[]>([]);
+  const [explanations, setExplanations] = useState<Record<string, DecisionPackageExplanationResponse | null>>({});
+  const [explanationStatuses, setExplanationStatuses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -92,6 +95,27 @@ export default function PortfolioPage() {
     if (decisionPackagesRes.ok) setDecisionPackages(decisionPackagesRes.data.items ?? []);
     if (actionDraftsRes.ok) setActionDrafts(actionDraftsRes.data.items ?? []);
     setLoading(false);
+  };
+
+  const loadExplanation = async (decisionPackageId: string) => {
+    const res = await apiClient.getDecisionPackageExplanation(decisionPackageId);
+    if (res.ok) {
+      setExplanations((prev) => ({ ...prev, [decisionPackageId]: res.data.item }));
+      setExplanationStatuses((prev) => ({ ...prev, [decisionPackageId]: res.data.status }));
+    }
+  };
+
+  const runExplanation = async (decisionPackageId: string) => {
+    setExplanationStatuses((prev) => ({ ...prev, [decisionPackageId]: "running" }));
+    const res = await apiClient.runDecisionPackageExplanation(decisionPackageId);
+    if (res.ok) {
+      setExplanationStatuses((prev) => ({ ...prev, [decisionPackageId]: res.data.status }));
+      if (res.data.explanation) {
+        setExplanations((prev) => ({ ...prev, [decisionPackageId]: res.data.explanation }));
+      }
+    } else {
+      setExplanationStatuses((prev) => ({ ...prev, [decisionPackageId]: "request_failed" }));
+    }
   };
 
   const forecastBySymbol = useMemo(() => {
@@ -436,6 +460,64 @@ export default function PortfolioPage() {
                       </div>
                     ) : null}
                     <div style={{ fontSize: "0.88rem", opacity: 0.85 }}>{dp.research_snippet_nl ?? "Geen onderzoek-snippet."}</div>
+                  </div>
+                  <div style={{
+                    marginTop: "0.5rem",
+                    padding: "0.5rem 0.75rem",
+                    borderLeft: "3px solid var(--ata-info, #a78bfa)",
+                    background: "rgba(167,139,250,0.06)",
+                  }}>
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                      <strong>AI uitleg:</strong>
+                      <button
+                        type="button"
+                        onClick={() => runExplanation(dp.decision_package_id)}
+                        style={{ fontSize: "0.85rem", padding: "0.2rem 0.5rem" }}
+                      >
+                        Genereer / vernieuw
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => loadExplanation(dp.decision_package_id)}
+                        style={{ fontSize: "0.85rem", padding: "0.2rem 0.5rem" }}
+                      >
+                        Lees laatste
+                      </button>
+                      {explanationStatuses[dp.decision_package_id] ? (
+                        <span style={{ fontSize: "0.82rem", opacity: 0.7 }}>
+                          status: {explanationStatuses[dp.decision_package_id]}
+                        </span>
+                      ) : null}
+                    </div>
+                    {explanations[dp.decision_package_id] ? (
+                      <div style={{ marginTop: "0.4rem" }}>
+                        <div style={{ fontSize: "0.82rem", opacity: 0.75 }}>
+                          provider: {explanations[dp.decision_package_id]?.model_provider_code}
+                          {" • "}
+                          model: {explanations[dp.decision_package_id]?.model_name} ({explanations[dp.decision_package_id]?.model_version})
+                          {" • "}
+                          status: {explanations[dp.decision_package_id]?.status}
+                        </div>
+                        {explanations[dp.decision_package_id]?.blocking_reason ? (
+                          <div style={{ color: "var(--ata-warning, #f97316)", fontSize: "0.85rem" }}>
+                            <strong>Geblokkeerd:</strong> {explanations[dp.decision_package_id]?.blocking_reason}
+                            {explanations[dp.decision_package_id] && (explanations[dp.decision_package_id]?.hallucinated_numbers.length ?? 0) > 0
+                              ? ` (verzonnen getallen: ${explanations[dp.decision_package_id]?.hallucinated_numbers.join(", ")})`
+                              : ""}
+                          </div>
+                        ) : null}
+                        <p style={{ marginTop: "0.4rem", fontSize: "0.9rem", whiteSpace: "pre-wrap" }}>
+                          {explanations[dp.decision_package_id]?.explanation_nl}
+                        </p>
+                        <div style={{ fontSize: "0.78rem", opacity: 0.6 }}>
+                          input-hash: {explanations[dp.decision_package_id]?.input_evidence_hash.slice(0, 12)}…
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "0.85rem", opacity: 0.7, marginTop: "0.3rem" }}>
+                        Nog geen AI uitleg geladen. AI bedacht nooit een getal; lees of genereer een samenvatting.
+                      </div>
+                    )}
                   </div>
                   <div style={{ fontSize: "0.82rem", opacity: 0.7 }}><strong>Content-hash:</strong> {dp.content_hash}</div>
                 </div>
