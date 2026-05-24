@@ -28,6 +28,8 @@ from ai_trading_agent_storage.metadata import (
     ibkr_position_snapshots,
     ibkr_sync_runs,
     fx_rate_snapshots,
+    asset_action_draft_events,
+    asset_action_draft_submissions,
     asset_action_drafts,
     asset_decision_packages,
     asset_forecasts,
@@ -64,7 +66,9 @@ from ai_trading_agent_storage.migration_readiness import (
     migration_readiness_is_safe_to_write,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetActionDraftEventRecord,
     AssetActionDraftRecord,
+    AssetActionDraftSubmissionRecord,
     AssetDecisionPackageRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
@@ -2393,3 +2397,126 @@ def _action_draft_from_row(row: RowMapping) -> AssetActionDraftRecord:
     else:
         data["dry_run_failures_json"] = None
     return AssetActionDraftRecord(**data)
+
+
+class SqlAlchemyAssetActionDraftSubmissionRepository(_Base):
+    def save_asset_action_draft_submission(
+        self, record: AssetActionDraftSubmissionRecord
+    ) -> StorageWriteResult:
+        values = asdict(record)
+        failures = values.get("approval_dry_run_failures_json")
+        if isinstance(failures, tuple):
+            values["approval_dry_run_failures_json"] = list(failures)
+        self._insert(asset_action_draft_submissions, values)
+        return StorageWriteResult(
+            True,
+            record.submission_id,
+            asset_action_draft_submissions.name,
+            True,
+            "Submission opgeslagen.",
+        )
+
+    def upsert_asset_action_draft_submission(
+        self, record: AssetActionDraftSubmissionRecord
+    ) -> StorageWriteResult:
+        """Insert-or-replace by ``draft_id`` (the 1:1 link).
+
+        Submissions are versioned via the events log, not by row history,
+        so an idempotent replace on the same draft is the expected path.
+        """
+
+        self._connection.execute(
+            asset_action_draft_submissions.delete().where(
+                asset_action_draft_submissions.c.draft_id == record.draft_id
+            )
+        )
+        return self.save_asset_action_draft_submission(record)
+
+    def get_submission_by_draft_id(
+        self, draft_id: str
+    ) -> StorageReadResult[AssetActionDraftSubmissionRecord]:
+        row = (
+            self._connection.execute(
+                select(asset_action_draft_submissions)
+                .where(asset_action_draft_submissions.c.draft_id == draft_id)
+                .order_by(asset_action_draft_submissions.c.created_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                asset_action_draft_submissions.name,
+                "Geen submission gevonden.",
+            )
+        return StorageReadResult(
+            True,
+            _submission_from_row(row),
+            asset_action_draft_submissions.name,
+            "Submission opgehaald.",
+        )
+
+
+class SqlAlchemyAssetActionDraftEventRepository(_Base):
+    def save_asset_action_draft_event(
+        self, record: AssetActionDraftEventRecord
+    ) -> StorageWriteResult:
+        values = asdict(record)
+        self._insert(asset_action_draft_events, values)
+        return StorageWriteResult(
+            True,
+            record.event_id,
+            asset_action_draft_events.name,
+            True,
+            "Event opgeslagen.",
+        )
+
+    def list_asset_action_draft_events(
+        self, draft_id: str, *, limit: int = 100
+    ) -> StorageListResult[AssetActionDraftEventRecord]:
+        rows = (
+            self._connection.execute(
+                select(asset_action_draft_events)
+                .where(asset_action_draft_events.c.draft_id == draft_id)
+                .order_by(asset_action_draft_events.c.occurred_at.asc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(AssetActionDraftEventRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            asset_action_draft_events.name,
+            f"{len(records)} events opgehaald.",
+        )
+
+
+def _submission_from_row(row: RowMapping) -> AssetActionDraftSubmissionRecord:
+    data = dict(row)
+    raw = data.get("approval_dry_run_failures_json")
+    if raw is None:
+        data["approval_dry_run_failures_json"] = None
+    elif isinstance(raw, list | tuple):
+        data["approval_dry_run_failures_json"] = tuple(str(item) for item in raw)
+    elif isinstance(raw, str):
+        stripped = raw.strip()
+        if not stripped:
+            data["approval_dry_run_failures_json"] = None
+        else:
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                data["approval_dry_run_failures_json"] = None
+            else:
+                data["approval_dry_run_failures_json"] = (
+                    tuple(str(item) for item in parsed)
+                    if isinstance(parsed, list)
+                    else None
+                )
+    else:
+        data["approval_dry_run_failures_json"] = None
+    return AssetActionDraftSubmissionRecord(**data)

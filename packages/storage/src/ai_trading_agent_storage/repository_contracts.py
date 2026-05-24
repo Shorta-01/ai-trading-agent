@@ -2078,3 +2078,84 @@ class AssetActionDraftRecord:
                 "Action-draft safety booleans must remain false in V1: a "
                 "draft never auto-promotes to a broker submission."
             )
+
+
+@dataclass(frozen=True)
+class AssetActionDraftSubmissionRecord:
+    """1:1 submission record for an :class:`AssetActionDraftRecord`.
+
+    Tracks the locked state machine
+    (``draft → safety_checked → user_approved → submitted →
+    awaiting_ibkr_reply → reply_confirmed → working → filled/cancelled/
+    rejected → reconciled``) and the IBKR-side ids returned by
+    ``placeOrder``.
+
+    Safety booleans must remain ``False`` in V1 — the doctrine forbids
+    auto-promotion of a submission to a "safe for orders" record.
+    """
+
+    submission_id: str
+    draft_id: str
+    state: str
+    approval_status: str
+    approved_at: datetime | None
+    approved_by: str | None
+    approval_dry_run_status: str | None
+    approval_dry_run_failures_json: tuple[str, ...] | None
+    submitted_at: datetime | None
+    ibkr_order_id: int | None
+    ibkr_perm_id: int | None
+    ibkr_client_id: int | None
+    ibkr_status_text: str | None
+    filled_quantity: Decimal | None
+    remaining_quantity: Decimal | None
+    average_fill_price: Decimal | None
+    cancelled_at: datetime | None
+    cancellation_reason: str | None
+    rejected_reason: str | None
+    reconciled_at: datetime | None
+    account_mode: str
+    expected_account_mode: str
+    provider_code: str
+    created_at: datetime
+    updated_at: datetime
+    last_state_transition_at: datetime
+    safe_for_broker_submission: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "submission_id",
+            "draft_id",
+            "state",
+            "approval_status",
+            "account_mode",
+            "expected_account_mode",
+            "provider_code",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_for_broker_submission or self.safe_for_orders:
+            raise ValueError(
+                "Submission safety booleans must remain false in V1."
+            )
+
+
+@dataclass(frozen=True)
+class AssetActionDraftEventRecord:
+    """Append-only audit log entry for a draft / submission state change."""
+
+    event_id: str
+    draft_id: str
+    submission_id: str | None
+    event_type: str
+    severity: str
+    from_state: str | None
+    to_state: str | None
+    occurred_at: datetime
+    acknowledged_at: datetime | None
+    rationale_nl: str
+    details_json: dict[str, str] | None
+
+    def __post_init__(self) -> None:
+        for field_name in ("event_id", "draft_id", "event_type", "severity", "rationale_nl"):
+            _require_non_empty(getattr(self, field_name), field_name)

@@ -1476,6 +1476,57 @@ asset_action_drafts = Table(
 )
 
 
+asset_action_draft_submissions = Table(
+    "asset_action_draft_submissions",
+    metadata,
+    Column("submission_id", Text, primary_key=True),
+    Column("draft_id", Text, nullable=False, unique=True),
+    Column("state", Text, nullable=False),
+    Column("approval_status", Text, nullable=False),
+    Column("approved_at", DateTime(timezone=True), nullable=True),
+    Column("approved_by", Text, nullable=True),
+    Column("approval_dry_run_status", Text, nullable=True),
+    Column("approval_dry_run_failures_json", JSON, nullable=True),
+    Column("submitted_at", DateTime(timezone=True), nullable=True),
+    Column("ibkr_order_id", Integer, nullable=True),
+    Column("ibkr_perm_id", Integer, nullable=True),
+    Column("ibkr_client_id", Integer, nullable=True),
+    Column("ibkr_status_text", Text, nullable=True),
+    Column("filled_quantity", MONEY_NUMERIC, nullable=True),
+    Column("remaining_quantity", MONEY_NUMERIC, nullable=True),
+    Column("average_fill_price", MONEY_NUMERIC, nullable=True),
+    Column("cancelled_at", DateTime(timezone=True), nullable=True),
+    Column("cancellation_reason", Text, nullable=True),
+    Column("rejected_reason", Text, nullable=True),
+    Column("reconciled_at", DateTime(timezone=True), nullable=True),
+    Column("account_mode", Text, nullable=False),
+    Column("expected_account_mode", Text, nullable=False),
+    Column("provider_code", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("last_state_transition_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
+asset_action_draft_events = Table(
+    "asset_action_draft_events",
+    metadata,
+    Column("event_id", Text, primary_key=True),
+    Column("draft_id", Text, nullable=False),
+    Column("submission_id", Text, nullable=True),
+    Column("event_type", Text, nullable=False),
+    Column("severity", Text, nullable=False),
+    Column("from_state", Text, nullable=True),
+    Column("to_state", Text, nullable=True),
+    Column("occurred_at", DateTime(timezone=True), nullable=False),
+    Column("acknowledged_at", DateTime(timezone=True), nullable=True),
+    Column("rationale_nl", Text, nullable=False),
+    Column("details_json", JSON, nullable=True),
+)
+
+
 asset_decision_packages = Table(
     "asset_decision_packages",
     metadata,
