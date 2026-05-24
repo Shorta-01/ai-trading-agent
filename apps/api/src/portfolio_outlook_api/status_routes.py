@@ -15,6 +15,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyAssetActionDraftSubmissionRepository,
     SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
+    SqlAlchemyAssetFundamentalsSnapshotRepository,
     SqlAlchemyAssetSuggestionRepository,
     SqlAlchemyDailyBriefingRepository,
     SqlAlchemyDecisionPackageExplanationRepository,
@@ -24,6 +25,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyPredictionDiaryRepository,
     SqlAlchemyResearchSourceArchiveRepository,
     SqlAlchemySchedulerRunRepository,
+    SqlAlchemyUniverseScanRunRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -3083,3 +3085,160 @@ def read_ibkr_account_mode() -> dict[str, object]:
         "safe_for_orders": False,
         "blocks_orders": True,
     }
+
+
+def _build_blocked_universe_scan_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "run_id": None,
+        "scanned_count": 0,
+        "persisted_count": 0,
+        "failed_count": 0,
+        "ranked_count": 0,
+        "universe_size": 0,
+        "failures": [],
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/universe/scan/run")
+def run_universe_scan() -> dict[str, object]:
+    """Run one universe-scan invocation; persists fundamentals + audit row."""
+
+    from portfolio_outlook_api.eodhd_client import EodhdClient
+    from portfolio_outlook_api.universe_scan_sync import scan_universe
+
+    if not settings.universe_scan_sync_enabled:
+        return _build_blocked_universe_scan_response(
+            reason="universe_scan_sync_disabled",
+            status_nl="Universe-scan uitgeschakeld",
+            help_nl=(
+                "Stel `UNIVERSE_SCAN_SYNC_ENABLED=true` in om de scan te activeren."
+            ),
+        )
+    if not settings.eodhd_enabled or not settings.eodhd_api_key:
+        return _build_blocked_universe_scan_response(
+            reason="eodhd_not_configured",
+            status_nl="EODHD niet geconfigureerd",
+            help_nl=(
+                "Stel `EODHD_ENABLED=true` en `EODHD_API_KEY` in voordat de "
+                "universe-scan kan starten."
+            ),
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_universe_scan_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Universe-scan vereist schrijfbare opslag.",
+        )
+
+    client = EodhdClient(
+        api_key=settings.eodhd_api_key,
+        base_url=settings.eodhd_base_url,
+        request_timeout_seconds=settings.eodhd_request_timeout_seconds,
+    )
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            snapshot_repo = SqlAlchemyAssetFundamentalsSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            scan_repo = SqlAlchemyUniverseScanRunRepository(
+                checked.connection, checked.readiness
+            )
+            report = scan_universe(
+                client=client,
+                snapshot_repo=snapshot_repo,
+                scan_repo=scan_repo,
+                max_tickers=settings.universe_scan_max_tickers_per_run,
+                history_lookback_days=settings.universe_scan_history_lookback_days,
+                triggered_by="manual",
+            )
+    except StorageConnectionError:
+        return _build_blocked_universe_scan_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": report.status,
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "run_id": report.run_id,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "universe_size": report.universe_size,
+        "scanned_count": report.scanned_count,
+        "persisted_count": report.persisted_count,
+        "failed_count": report.failed_count,
+        "ranked_count": report.ranked_count,
+        "blocking_reason": report.blocking_reason,
+        "failures": [dict(item) for item in report.failures],
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/universe/scan/runs/latest")
+def read_latest_universe_scan_run() -> dict[str, object]:
+    """Return the most recent universe-scan audit row."""
+
+    base: dict[str, object] = {
+        "item": None,
+        "help_nl": (
+            "Universe-scan-runs zijn audit-rows; één per dag-scan. Een "
+            "scan promoveert nooit naar een order."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyUniverseScanRunRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.get_latest_run()
+            if not result.found or result.record is None:
+                return base | {
+                    "status": "not_found",
+                    "status_nl": "Nog geen universe-scan-run",
+                }
+            r = result.record
+            return base | {
+                "status": "ok",
+                "status_nl": "Laatste universe-scan-run opgehaald",
+                "item": {
+                    "run_id": r.run_id,
+                    "started_at": r.started_at.isoformat(),
+                    "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+                    "status": r.status,
+                    "triggered_by": r.triggered_by,
+                    "scanned_count": r.scanned_count,
+                    "persisted_count": r.persisted_count,
+                    "failed_count": r.failed_count,
+                    "ranked_count": r.ranked_count,
+                    "universe_size": r.universe_size,
+                    "error_text": r.error_text,
+                },
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}

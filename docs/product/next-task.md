@@ -1,27 +1,38 @@
-# Task 172
+# Task 173
 
-Slice 17 — Universe scan. Wires the daily scan that populates the
-`asset_fundamentals_snapshots` table for the QVM predictor (Slice 16)
-and surfaces ranked candidates in the daily briefing.
+Slice 18 — AI foundation TS-model predictor. Fifth and final concrete
+step of the V1 §21.4 ensemble lock. Plugs an AI time-series model into
+the predictor protocol behind the same gate pattern as Slice 10's
+explanation provider.
 
 Scope:
-- New `universe_registry` module in `apps/api` listing the V1 locked
-  universe: Bel20, AEX, CAC40, DAX, STOXX 600, S&P 500, NASDAQ-100
-  (~5 000 tickers). Each ticker carries its EODHD symbol, sector and
-  the index it belongs to. Static Python tables — no dynamic load.
-- New `universe_scan_sync` orchestrator that, per ticker:
-  * fetches the latest bars via `EodhdClient.fetch_eod_bars`
-  * fetches fundamentals via `EodhdClient.fetch_fundamentals`
-  * persists an `AssetFundamentalsSnapshotRecord`
-  * computes a per-asset QVM score against the running universe snapshot
-- Storage migration `0039_universe_scan_runs` adds a small
-  `universe_scan_runs` table with one row per scan invocation
-  (started_at, finished_at, status, scanned_count, persisted_count,
-  failed_count, ranked_count, error_text). Safety booleans hard-False.
-- New route `POST /universe/scan/run` gated on
-  `universe_scan_sync_enabled` (default False) + writable storage +
-  EODHD configured. Returns a structured summary.
-- New route `GET /universe/scan/runs/latest` returns the most recent
-  audit row.
+- New `ai_ts_predictor` module in `apps/api` with:
+  * `TsModelProviderInputs` (bars + horizon + asset metadata) and
+    `TsModelProviderResult` (p10/p50/p90 + prob_gain + explanation +
+    model identity).
+  * `TsModelProviderProtocol` with a single `forecast(inputs)` method.
+  * `StubTsModelProvider` — deterministic Python: takes the last N
+    bars, computes a small-sample empirical quantile + simple drift,
+    returns a `TsModelProviderResult`. No AI runtime — keeps the
+    boundary testable. Mirrors Slice 10's `StubExplanationProvider`
+    pattern.
+  * `build_ts_model_provider(settings)` factory: returns the stub
+    when `ai_ts_predictor_enabled=True` + `ai_ts_predictor_provider_code="stub"`,
+    otherwise returns an `Unavailable` reason. Real providers
+    (TimesFM / Chronos / Lag-Llama) return
+    `real_client_not_implemented` for V1.
+- New pure-Python `AiTsPredictor` in `packages/portfolio` implementing
+  `PredictorProtocol`: delegates to a provider (factory-injected),
+  validates the result (numeric quantile ordering, prob_gain ∈ [0, 1]),
+  and returns a `PredictionDistribution`. Gracefully degrades to
+  ``status=blocked`` with `provider_unavailable` when the provider is
+  not built.
+- New settings: `ai_ts_predictor_enabled` (default `False`),
+  `ai_ts_predictor_real_client_enabled` (default `False`),
+  `ai_ts_predictor_provider_code` (default `"stub"`).
+- Tests cover the protocol, the stub provider, the factory gates, the
+  predictor's graceful-degrade path on provider unavailability, and
+  the validation guards.
 
-Disabled-by-default; no broker action; safety booleans remain hard-False.
+No orchestrator change yet; the AI predictor joins the ensemble when
+Slice 19+ wires `forecast_sync` to compose all five predictors.

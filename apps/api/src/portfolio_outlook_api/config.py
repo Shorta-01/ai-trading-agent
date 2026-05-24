@@ -156,6 +156,9 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = False
     scheduler_timezone: str = "Europe/Brussels"
     scheduler_daily_briefing_cron: str = "30 6 * * *"
+    universe_scan_sync_enabled: bool = False
+    universe_scan_max_tickers_per_run: int = 50
+    universe_scan_history_lookback_days: int = 400
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

@@ -1675,6 +1675,25 @@ scheduler_runs = Table(
 )
 
 
+universe_scan_runs = Table(
+    "universe_scan_runs",
+    metadata,
+    Column("run_id", Text, primary_key=True),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("finished_at", DateTime(timezone=True), nullable=True),
+    Column("status", Text, nullable=False),
+    Column("triggered_by", Text, nullable=False),
+    Column("scanned_count", Integer, nullable=False),
+    Column("persisted_count", Integer, nullable=False),
+    Column("failed_count", Integer, nullable=False),
+    Column("ranked_count", Integer, nullable=False),
+    Column("universe_size", Integer, nullable=False),
+    Column("error_text", Text, nullable=True),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_fundamentals_snapshots = Table(
     "asset_fundamentals_snapshots",
     metadata,
