@@ -48,6 +48,9 @@ def _settings(**updates: object) -> Settings:
         ibkr_tws_readonly_runtime_enabled=False,
         ibkr_expected_environment="paper",
         paper_only_mode=True,
+        ibkr_sync_host="127.0.0.1",
+        ibkr_sync_port=4002,
+        ibkr_sync_client_id=1,
     )
     return base.model_copy(update=updates)
 
@@ -61,6 +64,9 @@ def _fake_client_ready_settings(**updates: object) -> Settings:
         ibkr_tws_readonly_real_client_enabled=True,
         ibkr_expected_environment="paper",
         paper_only_mode=True,
+        ibkr_sync_host="127.0.0.1",
+        ibkr_sync_port=4002,
+        ibkr_sync_client_id=1,
         **updates,
     )
 
@@ -248,9 +254,9 @@ def test_no_secret_leak_in_result_text() -> None:
     client = FakeRuntimeClient()
     result = run_manual_tws_readonly_status_check(
         _fake_client_ready_settings(
-            ibkr_tws_host="sensitive-host.local",
-            ibkr_tws_port=40123,
-            ibkr_client_id=98765,
+            ibkr_sync_host="sensitive-host.local",
+            ibkr_sync_port=40123,
+            ibkr_sync_client_id=98765,
             ibkr_account_id="DU1234567",
         ),
         runtime_client=client,

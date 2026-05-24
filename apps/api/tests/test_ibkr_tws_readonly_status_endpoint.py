@@ -54,6 +54,9 @@ def _fake_client_ready_settings(**kwargs: object) -> Settings:
         ibkr_tws_readonly_real_client_enabled=True,
         ibkr_expected_environment="paper",
         paper_only_mode=True,
+        ibkr_sync_host="127.0.0.1",
+        ibkr_sync_port=4002,
+        ibkr_sync_client_id=1,
         **kwargs,
     )
 
@@ -193,9 +196,9 @@ def test_unexpected_client_error_maps_safely() -> None:
 def test_disconnect_failure_ignored_and_safe() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
         _fake_client_ready_settings(
-            ibkr_tws_host="sensitive-host.local",
-            ibkr_tws_port=40123,
-            ibkr_client_id=98765,
+            ibkr_sync_host="sensitive-host.local",
+            ibkr_sync_port=40123,
+            ibkr_sync_client_id=98765,
             ibkr_account_id="DU1234567",
         ),
         runtime_client=FakeRuntimeClient(disconnect_error=RuntimeError("disconnect boom")),
@@ -207,9 +210,9 @@ def test_disconnect_failure_ignored_and_safe() -> None:
 def test_no_secret_regression() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
         _fake_client_ready_settings(
-            ibkr_tws_host="sensitive-host.local",
-            ibkr_tws_port=40123,
-            ibkr_client_id=98765,
+            ibkr_sync_host="sensitive-host.local",
+            ibkr_sync_port=40123,
+            ibkr_sync_client_id=98765,
             ibkr_account_id="DU1234567",
         ),
         runtime_client=FakeRuntimeClient(account_mode="paper"),
