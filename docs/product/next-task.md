@@ -1,4 +1,4 @@
-# Task 142 - Wire disabled-by-default TWS/Gateway session-status adapter factory behind explicit settings and readiness diagnostics
+# Task 143 — Add read-only session-status endpoint diagnostics for explicit TWS/Gateway adapter readiness and blocked runtime reasons.
 
-## Why
-Task 141 introduced a safe injected-client-only adapter skeleton. Task 142 should add explicit factory wiring while keeping default non-network behavior and existing readiness safety gates unchanged.
+## Why this next
+Task 142 wired disabled-by-default adapter selection; Task 143 can expand endpoint diagnostics wording while preserving blocked/safe runtime defaults.

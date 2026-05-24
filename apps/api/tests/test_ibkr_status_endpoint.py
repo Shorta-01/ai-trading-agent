@@ -37,6 +37,8 @@ def test_ibkr_status_endpoint_disabled_default_response() -> None:
     assert payload["suggestions_allowed"] is False
     assert payload["can_submit_orders"] is False
     assert payload["blocks_orders"] is True
+    assert payload["session_adapter_family"] == "default_safe"
+    assert payload["tws_readonly_adapter_enabled"] is False
 
 
 def test_ibkr_status_not_configured_response() -> None:
@@ -85,6 +87,26 @@ def test_ibkr_status_default_adapter_no_network_safe_status() -> None:
     assert payload["session_check_attempted"] is True
     assert payload["blocks_orders"] is True
 
+
+
+
+def test_ibkr_status_explicit_tws_setting_without_client_stays_blocked() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=True,
+            ibkr_status_check_enabled=True,
+            ibkr_tws_readonly_adapter_enabled=True,
+            ibkr_gateway_url="https://gateway.internal",
+            ibkr_account_id_hint="DU123",
+        )
+    )
+
+    assert payload["session_adapter_family"] == "tws_readonly"
+    assert payload["tws_readonly_adapter_enabled"] is True
+    assert payload["tws_readonly_adapter_runtime_available"] is False
+    assert payload["connection_status"] == "configured_not_connected"
+    assert payload["actions_allowed"] is False
+    assert payload["order_submission_allowed"] is False
 
 def test_ibkr_status_wrong_account_mode_via_fake_adapter() -> None:
     payload = build_ibkr_status_placeholder(

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.ibkr_session_adapter_factory import (
+    build_ibkr_session_status_adapter,
+)
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_tws_readonly_adapter import (
     IbkrTwsReadonlyAdapterError,
@@ -159,3 +162,49 @@ def test_client_disconnect_called_once_on_check() -> None:
 
     assert client.connect_calls == 1
     assert client.disconnect_calls == 1
+
+
+def test_factory_defaults_to_safe_non_network_adapter() -> None:
+    adapter, diagnostics = build_ibkr_session_status_adapter(_settings())
+
+    assert adapter.__class__.__name__ == "DefaultSafeIbkrSessionStatusAdapter"
+    assert diagnostics.session_adapter_family == "default_safe"
+    assert diagnostics.tws_readonly_adapter_enabled is False
+
+
+def test_factory_requires_explicit_setting_for_tws_selection() -> None:
+    settings = _settings()
+    settings = settings.model_copy(
+        update={
+            "ibkr_enabled": True,
+            "ibkr_status_check_enabled": True,
+            "ibkr_tws_readonly_adapter_enabled": False,
+        }
+    )
+
+    adapter, diagnostics = build_ibkr_session_status_adapter(settings)
+
+    assert adapter.__class__.__name__ == "DefaultSafeIbkrSessionStatusAdapter"
+    assert diagnostics.session_adapter_reason == "tws_readonly_adapter_disabled_by_setting"
+
+
+def test_factory_selects_tws_skeleton_when_explicitly_enabled_without_client() -> None:
+    settings = _settings().model_copy(update={"ibkr_tws_readonly_adapter_enabled": True})
+
+    adapter, diagnostics = build_ibkr_session_status_adapter(settings)
+
+    assert isinstance(adapter, IbkrTwsReadonlySessionStatusAdapter)
+    assert diagnostics.tws_readonly_adapter_runtime_available is False
+    assert diagnostics.session_adapter_reason == "tws_readonly_missing_injected_client"
+
+
+def test_factory_selects_tws_skeleton_with_injected_client() -> None:
+    settings = _settings().model_copy(update={"ibkr_tws_readonly_adapter_enabled": True})
+    test_client = FakeReadonlyClient(connected=True, account_mode="paper")
+
+    adapter, diagnostics = build_ibkr_session_status_adapter(settings, client=test_client)
+    result = adapter.check_session_status(settings)
+
+    assert result.connection_status == "connected_readonly"
+    assert diagnostics.tws_readonly_adapter_runtime_available is True
+    assert diagnostics.session_adapter_reason == "tws_readonly_injected_client"
