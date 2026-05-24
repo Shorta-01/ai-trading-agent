@@ -57,6 +57,7 @@ from portfolio_outlook_api.ibkr_watchlists import (
     list_ibkr_watchlist_instruments,
     list_ibkr_watchlists,
 )
+from portfolio_outlook_api.market_data_adapter_factory import build_market_data_provider
 from portfolio_outlook_api.market_data_readiness import (
     READINESS_HELP_NL,
     LatestSnapshotResponse,
@@ -73,6 +74,7 @@ from portfolio_outlook_api.market_data_readiness import (
     build_readiness_snapshot_metadata,
     utc_now_iso,
 )
+from portfolio_outlook_api.market_data_sync import sync_market_data_and_fx
 from portfolio_outlook_api.online_storage_status import (
     OnlineStorageStatusResponse,
     build_online_storage_status,
@@ -761,6 +763,138 @@ def read_market_data_readiness_watchlist_item(watchlist_item_id: str) -> Readine
         if row.watchlist_item_id == watchlist_item_id:
             return ReadinessDetailResponse(item=row)
     return ReadinessDetailResponse(item=None, message_nl="Volglijst-item niet gevonden.")
+
+
+def _build_blocked_market_data_sync_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "provider_code": settings.market_data_provider,
+        "asset_total": 0,
+        "asset_success": 0,
+        "asset_skipped_unknown_exchange": 0,
+        "asset_failed": 0,
+        "fx_total": 0,
+        "fx_success": 0,
+        "fx_failed": 0,
+        "failures": [],
+        "market_snapshots_persisted": 0,
+        "fx_snapshots_persisted": 0,
+        "base_currency": None,
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/market-data/sync")
+def run_market_data_sync() -> dict[str, object]:
+    """Run one market-data + FX sync cycle using the configured provider.
+
+    The route is disabled by default. Even when enabled it only persists
+    read-only snapshots into the existing market-data and FX storage tables;
+    no suggestions, action drafts, orders or broker actions are produced.
+    """
+
+    provider = build_market_data_provider(settings)
+    if provider is None:
+        return _build_blocked_market_data_sync_response(
+            reason="market_data_provider_not_configured",
+            status_nl="Marktdata-sync niet geconfigureerd",
+            help_nl=(
+                "Stel `MARKET_DATA_SYNC_ENABLED=true`, "
+                "`MARKET_DATA_PROVIDER=eodhd`, `EODHD_ENABLED=true` en "
+                "`EODHD_API_KEY=...` in om marktdata op te halen."
+            ),
+        )
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_market_data_sync_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl=(
+                "Marktdata-sync vereist een schrijfbare opslag; "
+                "controleer STORAGE__ENABLED, STORAGE__DATABASE_URL en "
+                "STORAGE__WRITES_ENABLED."
+            ),
+        )
+
+    provider_obj = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with provider_obj.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection,
+                checked.readiness,
+            )
+            market_repo = SqlAlchemyMarketDataSnapshotRepository(
+                checked.connection,
+                checked.readiness,
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return _build_blocked_market_data_sync_response(
+                    reason="no_ibkr_sync_run",
+                    status_nl="Geen IBKR-sync gevonden",
+                    help_nl=(
+                        "Marktdata-sync gebruikt de laatst opgeslagen IBKR-sync "
+                        "om te bepalen voor welke posities prijzen nodig zijn; "
+                        "voer eerst een handmatige read-only IBKR-sync uit."
+                    ),
+                )
+            positions = ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id)
+            cash_snapshots = ibkr_repo.list_ibkr_account_cash_snapshots(latest_run.sync_run_id)
+            report = sync_market_data_and_fx(
+                provider=provider,
+                market_repo=market_repo,
+                fx_repo=ibkr_repo,
+                positions=list(positions),
+                cash_snapshots=list(cash_snapshots),
+                max_assets=settings.market_data_sync_max_assets,
+            )
+    except StorageConnectionError:
+        return _build_blocked_market_data_sync_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt; geen marktdata opgeslagen.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "provider_code": report.provider_code,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "asset_total": report.asset_total,
+        "asset_success": report.asset_success,
+        "asset_skipped_unknown_exchange": report.asset_skipped_unknown_exchange,
+        "asset_failed": report.asset_failed,
+        "fx_total": report.fx_total,
+        "fx_success": report.fx_success,
+        "fx_failed": report.fx_failed,
+        "failures": [dict(item) for item in report.failures],
+        "market_snapshots_persisted": report.market_snapshots_persisted,
+        "fx_snapshots_persisted": report.fx_snapshots_persisted,
+        "base_currency": report.base_currency,
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "suggestions_allowed": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
 
 
 @router.post(

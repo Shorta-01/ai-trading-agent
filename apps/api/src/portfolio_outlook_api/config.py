@@ -112,6 +112,15 @@ class Settings(BaseSettings):
     ibkr_sync_account_summary_tags: str = (
         "TotalCashValue,AvailableFunds,BuyingPower,NetLiquidation,GrossPositionValue"
     )
+    market_data_provider: str = "none"
+    market_data_sync_enabled: bool = False
+    market_data_sync_max_assets: int = 50
+    eodhd_enabled: bool = False
+    eodhd_api_key: str | None = None
+    eodhd_base_url: str = "https://eodhd.com/api"
+    eodhd_request_timeout_seconds: int = 10
+    fx_provider: str = "none"
+    fx_sync_enabled: bool = False
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings
