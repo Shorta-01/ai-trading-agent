@@ -1,5 +1,16 @@
 # Locked Decisions (Version 1)
 
+## Version 1 product experience locks
+
+**Verplicht source-of-truth document:** `docs/product/version-1-product-experience-locks.md`
+
+Kernsamenvatting:
+- dashboardtitel `AI Trading Agent` met decision-first mission-control UX;
+- daily rhythm met 07:00 briefing (Europe/Brussels), market-open refreshes, hourly ritme 08:00–20:00 en quiet mode;
+- Action Center als verplichte workflowlaag voor review/edit/approve/reject/final confirmation;
+- Research Desk/Onderzoeksdesk + evidence-first flow als verplichte bronketen;
+- Decision Package-gedragen suggesties, structured drafts met `Orderimpact`, en Prediction Diary/no-action auditability.
+
 ## Task 130Q owner workshop lock (Version 1)
 
 Task 130Q vergrendelt de owner workshop-beslissingen als product source-of-truth in:
@@ -36,8 +47,8 @@ Kader:
 
 ## 1) Product en scope
 
-- Portfolio Outlook Manager is de productnaam.
-- Ai Trading Agent is de repository/werknaam.
+- Product-facing titel is `AI Trading Agent`; interne docs kunnen nog `Portfolio Outlook Manager` gebruiken.
+- Repository/werknaam blijft `AI-Trading-Agent`.
 - Version 1 ondersteunt paper en real-money accountmodus als zichtbare veiligheidscontext; productidentiteit blijft account-mode-aware en user-approved.
 - Accountmodus is veiligheidscontext en bepaalt niet de productidentiteit.
 - Account-risico is beperkt, maar architectuur blijft professioneel.

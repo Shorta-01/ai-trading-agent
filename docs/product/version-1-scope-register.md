@@ -413,3 +413,6 @@ Task 101 heeft de Task 100 read-only readiness termenset verankerd op product-ko
 - Task 139 scope-resultaat: diagnostics-only uitbreiding voor read-only IBKR syncrun history/detail en conservatieve payload-validatievelden; storage-schema ongewijzigd.
 
 - Task 145 scope: dependency-free runtime boundary + fake-client tests only; geen ibapi/ib_insync, geen sockets/runtime sync/market-data/FX/orders.
+
+- Task 153-L added as completed documentation/product-lock consolidation scope; no runtime code changes.
+- Task 154 registered as next implementation scope (read-only IBKR cash/positions preflight only).

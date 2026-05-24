@@ -106,3 +106,7 @@
 ## Task 130Q alignment note
 - Milestones voor Dashboard/Action Center/Decision Packages/Suggestion Engine/Research Desk/Prediction Diary volgen de vergrendelde owner workshop richting uit `version-1-owner-workshop-decision-locks-task-130q.md`.
 - Runtimevolgorde binnen Milestone B (geauditeerd in Task 135A): Task 133B readiness/preflight gate = voltooid, Task 134B manual sync execution blocking = voltooid, Task 134B-R + 134B-R2 repairs = voltooid; Task 135B is de eerstvolgende implementatiestap binnen read-only veiligheidsgrens.
+
+## Immediate lock-in update
+- Task 153-L is afgerond als documentatie/product-lock recovery en moet als afgeronde blocker worden beschouwd vóór verdere user-facing implementatie.
+- Eerstvolgende implementatietaak: **Task 154** (real IBKR paper-only read-only account snapshot preflight voor cash/positions, zonder persistence/valuation/market-data/FX/suggestions/action drafts/orders).

@@ -18,6 +18,7 @@
 - `docs/product/project-handover.md`
 - `docs/product/current-state.md`
 - `docs/product/locked-decisions.md`
+- `docs/product/version-1-product-experience-locks.md` *(verplicht voor UI/dashboard/daily briefing/workflow/suggestions/Decision Packages/Action Center/Research Desk/watchlist/portfolio user-facing/product planning taken)*
 - `docs/product/version-1-backlog.md`
 - `docs/product/next-task.md`
 - `docs/product/task-history.md`

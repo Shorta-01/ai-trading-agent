@@ -1,5 +1,22 @@
-# Task 153 — Add real IBKR paper-only read-only account snapshot preflight for cash and positions without persistence or valuation
+# Task 154 — Add real IBKR paper-only read-only account snapshot preflight for cash and positions without persistence or valuation
 
-Task 152-R6 is completed as a repair-only merged-red fix after Task 152-R5 (`api` job `pytest`), enabling the remaining fake-client real-client gate prerequisites in test helpers, including dummy `ibkr_sync_host` / `ibkr_sync_port` / `ibkr_sync_client_id` values and correcting stale fake-client execution/error-path tests to use `_fake_client_ready_settings(...)` while preserving disabled-by-default runtime behavior and no-secret safety checks.
+Task 153-L is completed as a documentation/product-lock recovery task that consolidated Version 1 product experience decisions into GitHub source-of-truth docs.
 
-Continue with Task 153 only, while preserving current safety boundaries, disabled-by-default runtime behavior, and readiness semantics.
+Proceed with **Task 154** as the next implementation task.
+
+## Scope (copy-paste lock)
+- Use the verified manual IBKR status path.
+- Request read-only cash/positions preflight data only.
+- No persistence yet (unless explicitly re-scoped in a future task).
+- No valuation logic.
+- No market-data fetch.
+- No FX fetch.
+- No suggestions runtime.
+- No action-draft runtime.
+- No order submit/modify/cancel.
+
+## Safety boundaries
+- Version 1 remains paper-only.
+- No live trading automation.
+- No real-money automatic execution.
+- No broker execution expansion in this task.

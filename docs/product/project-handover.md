@@ -133,3 +133,6 @@ Aanvullend:
 - Nieuw in Task 139: status-only inspectie van recente IBKR syncruns via `/ibkr/sync/runs` en detail via `/ibkr/sync/runs/{sync_run_id}`. In-memory history, geen real-runtime toevoegingen.
 
 - Task 145 afgerond: handmatige dependency-free TWS/Gateway read-only runtime status-check boundary toegevoegd (test-only injected fake clients), runtime default uit, geen echte connectivity/broker execution.
+
+- Nieuwe verplichte lockbron: `docs/product/version-1-product-experience-locks.md` (lees vóór user-facing productwerk).
+- Producttrackingstatus bijgewerkt: Task 153-L completed; volgende implementatie is Task 154.
