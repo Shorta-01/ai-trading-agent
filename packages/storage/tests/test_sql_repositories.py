@@ -571,3 +571,153 @@ def test_fx_rate_snapshot_roundtrip_and_latest_lookup() -> None:
         by_pairs = repo.list_latest_fx_rate_snapshots_by_pairs(("EUR/USD", "GBP/USD"))
         assert len(by_pairs) == 1
         assert by_pairs[0].snapshot_id == "fx-2"
+
+
+def test_market_data_bars_save_and_list_returns_chronological() -> None:
+    from datetime import date
+
+    from ai_trading_agent_storage.repository_contracts import MarketDataBarRecord
+    from ai_trading_agent_storage.sql_repositories import SqlAlchemyMarketDataBarRepository
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyMarketDataBarRepository(conn, _report(True))
+        now = datetime(2025, 5, 24, 10, 0, tzinfo=UTC)
+
+        def _bar(bar_id: str, day: int, close: str) -> MarketDataBarRecord:
+            return MarketDataBarRecord(
+                bar_id=bar_id,
+                ibkr_conid="265598",
+                symbol="AAPL",
+                currency="USD",
+                exchange="SMART",
+                primary_exchange="NASDAQ",
+                provider_code="eodhd",
+                bar_date=date(2025, 5, day),
+                interval_code="1day",
+                open_price=Decimal("100"),
+                high_price=Decimal("105"),
+                low_price=Decimal("99"),
+                close_price=Decimal(close),
+                adjusted_close_price=Decimal(close),
+                volume=Decimal("1000000"),
+                provider_as_of=now,
+                received_at=now,
+                stored_at=now,
+                source_type="eodhd_eod",
+                explanation_nl="test",
+            )
+
+        repo.save_market_data_bars(
+            [_bar("b1", 21, "180"), _bar("b2", 22, "182"), _bar("b3", 23, "181")]
+        )
+
+        bars = repo.list_market_data_bars_by_conid("265598")
+        assert len(bars.records) == 3
+        # Chronological (asc by bar_date)
+        assert [r.bar_id for r in bars.records] == ["b1", "b2", "b3"]
+        assert bars.records[-1].close_price == Decimal("181")
+
+
+def test_asset_forecast_save_get_and_list_returns_latest_per_conid() -> None:
+    from datetime import date
+
+    from ai_trading_agent_storage.repository_contracts import AssetForecastRecord
+    from ai_trading_agent_storage.sql_repositories import SqlAlchemyAssetForecastRepository
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetForecastRepository(conn, _report(True))
+
+        def _forecast(forecast_id: str, conid: str, generated_hour: int) -> AssetForecastRecord:
+            return AssetForecastRecord(
+                forecast_id=forecast_id,
+                ibkr_conid=conid,
+                symbol="AAPL",
+                currency="USD",
+                model_code="baseline_gbm",
+                model_version="v1",
+                horizon_days=21,
+                generated_at=datetime(2025, 5, 24, generated_hour, 0, tzinfo=UTC),
+                valid_until=datetime(2025, 6, 14, generated_hour, 0, tzinfo=UTC),
+                data_points_used=200,
+                history_first_bar_date=date(2024, 8, 1),
+                history_last_bar_date=date(2025, 5, 23),
+                current_price=Decimal("180"),
+                expected_return_pct=Decimal("0.5"),
+                p10_price=Decimal("170"),
+                p50_price=Decimal("181"),
+                p90_price=Decimal("192"),
+                prob_gain=Decimal("0.55"),
+                prob_loss=Decimal("0.45"),
+                prob_loss_gt_5pct=Decimal("0.20"),
+                prob_loss_gt_10pct=Decimal("0.05"),
+                prob_gain_gt_5pct=Decimal("0.25"),
+                prob_gain_gt_10pct=Decimal("0.08"),
+                expected_volatility_annual=Decimal("0.22"),
+                downside_risk_score=Decimal("0.10"),
+                confidence_score=Decimal("0.85"),
+                direction_label="slight_up",
+                direction_label_nl="Lichte stijging verwacht",
+                explanation_nl="baseline gbm",
+                status="ready",
+                blocking_reason=None,
+            )
+
+        repo.save_asset_forecast(_forecast("f1", "265598", 9))
+        repo.save_asset_forecast(_forecast("f2", "265598", 10))  # newer for same conid
+        repo.save_asset_forecast(_forecast("f3", "272093", 9))
+
+        latest = repo.get_latest_asset_forecast_by_conid("265598")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.forecast_id == "f2"
+
+        listed = repo.list_latest_asset_forecasts_by_conids(("265598", "272093", "999"))
+        assert len(listed.records) == 2
+        ids = {r.forecast_id for r in listed.records}
+        assert ids == {"f2", "f3"}
+
+
+def test_asset_forecast_record_rejects_safe_flags_true() -> None:
+    from datetime import date
+
+    from ai_trading_agent_storage.repository_contracts import AssetForecastRecord
+
+    with pytest.raises(ValueError):
+        AssetForecastRecord(
+            forecast_id="x",
+            ibkr_conid="1",
+            symbol="X",
+            currency="USD",
+            model_code="baseline_gbm",
+            model_version="v1",
+            horizon_days=21,
+            generated_at=datetime.now(UTC),
+            valid_until=datetime.now(UTC),
+            data_points_used=100,
+            history_first_bar_date=date(2024, 1, 1),
+            history_last_bar_date=date(2025, 1, 1),
+            current_price=Decimal("100"),
+            expected_return_pct=Decimal("0"),
+            p10_price=Decimal("90"),
+            p50_price=Decimal("100"),
+            p90_price=Decimal("110"),
+            prob_gain=Decimal("0.5"),
+            prob_loss=Decimal("0.5"),
+            prob_loss_gt_5pct=Decimal("0.1"),
+            prob_loss_gt_10pct=Decimal("0.0"),
+            prob_gain_gt_5pct=Decimal("0.1"),
+            prob_gain_gt_10pct=Decimal("0.0"),
+            expected_volatility_annual=Decimal("0.2"),
+            downside_risk_score=Decimal("0.1"),
+            confidence_score=Decimal("0.8"),
+            direction_label="neutral",
+            direction_label_nl="Neutraal",
+            explanation_nl="test",
+            status="ready",
+            blocking_reason=None,
+            safe_for_analysis=True,
+        )

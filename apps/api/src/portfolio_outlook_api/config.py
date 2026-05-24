@@ -121,6 +121,12 @@ class Settings(BaseSettings):
     eodhd_request_timeout_seconds: int = 10
     fx_provider: str = "none"
     fx_sync_enabled: bool = False
+    forecast_sync_enabled: bool = False
+    forecast_history_lookback_days: int = 400
+    forecast_horizon_trading_days: int = 21
+    forecast_minimum_bars_required: int = 60
+    forecast_max_assets_per_run: int = 50
+    forecast_valid_minutes: int = 1440
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

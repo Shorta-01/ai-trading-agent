@@ -12,7 +12,6 @@ from portfolio_outlook_api.config import Settings
 from portfolio_outlook_api.eodhd_client import (
     EodhdAuthError,
     EodhdClient,
-    EodhdMarketDataProvider,
     HttpFetcher,
 )
 
@@ -21,7 +20,7 @@ def build_market_data_provider(
     settings: Settings,
     *,
     http_fetcher: HttpFetcher | None = None,
-) -> EodhdMarketDataProvider | None:
+) -> EodhdClient | None:
     """Return a real EODHD client when fully configured, else ``None``.
 
     Gates:

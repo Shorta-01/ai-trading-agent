@@ -36,7 +36,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Protocol
 
@@ -82,6 +82,19 @@ class EodhdFxRate:
     rate: Decimal | None
     previous_close: Decimal | None
     provider_as_of: datetime | None
+
+
+@dataclass(frozen=True)
+class EodhdBar:
+    """Parsed EODHD historical daily bar from ``/eod/{symbol}``."""
+
+    bar_date: date
+    open_price: Decimal | None
+    high_price: Decimal | None
+    low_price: Decimal | None
+    close_price: Decimal | None
+    adjusted_close: Decimal | None
+    volume: Decimal | None
 
 
 class EodhdClientError(Exception):
@@ -166,10 +179,38 @@ class EodhdClient:
         payload = self._get(url)
         return _parse_fx_rate(pair_code, base, quote, payload)
 
+    def fetch_eod_bars(
+        self,
+        eodhd_symbol: str,
+        *,
+        from_date: date,
+        to_date: date,
+    ) -> list[EodhdBar]:
+        """Fetch historical daily bars for one EODHD symbol.
+
+        Endpoint: ``/eod/{SYMBOL.EX}?from=YYYY-MM-DD&to=YYYY-MM-DD&period=d``.
+        Returns chronologically sorted bars; gaps (holidays, halts) are
+        naturally absent.
+        """
+
+        cleaned = eodhd_symbol.strip()
+        if not cleaned:
+            raise EodhdClientError("empty_symbol")
+        if from_date > to_date:
+            raise EodhdClientError("from_date_after_to_date")
+        path = f"eod/{urllib.parse.quote(cleaned, safe='.')}"
+        extra = {"from": from_date.isoformat(), "to": to_date.isoformat(), "period": "d"}
+        url = self._build_url(path, extra=extra)
+        payload = self._get(url)
+        return _parse_eod_bars(payload)
+
     # ---- private helpers ----
 
-    def _build_url(self, path: str) -> str:
-        query = urllib.parse.urlencode({"api_token": self._api_key, "fmt": "json"})
+    def _build_url(self, path: str, *, extra: dict[str, str] | None = None) -> str:
+        params: dict[str, str] = {"api_token": self._api_key, "fmt": "json"}
+        if extra is not None:
+            params.update(extra)
+        query = urllib.parse.urlencode(params)
         return f"{self._base_url}/{path.lstrip('/')}?{query}"
 
     def _get(self, url: str) -> object:
@@ -288,9 +329,50 @@ def _parse_fx_rate(
     )
 
 
+def _parse_eod_bars(payload: object) -> list[EodhdBar]:
+    if not isinstance(payload, list):
+        raise EodhdClientError("eod_payload_not_array")
+    bars: list[EodhdBar] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        date_str = str(item.get("date") or "").strip()
+        if not date_str:
+            continue
+        try:
+            bar_date = date.fromisoformat(date_str)
+        except ValueError:
+            continue
+        bars.append(
+            EodhdBar(
+                bar_date=bar_date,
+                open_price=_decimal_or_none(item.get("open")),
+                high_price=_decimal_or_none(item.get("high")),
+                low_price=_decimal_or_none(item.get("low")),
+                close_price=_decimal_or_none(item.get("close")),
+                adjusted_close=_decimal_or_none(item.get("adjusted_close")),
+                volume=_decimal_or_none(item.get("volume")),
+            )
+        )
+    bars.sort(key=lambda b: b.bar_date)
+    return bars
+
+
 class EodhdMarketDataProvider(Protocol):
     """Narrow protocol so ``market_data_sync`` can inject a fake in tests."""
 
     def fetch_quote(self, eodhd_symbol: str) -> EodhdQuote: ...
 
     def fetch_fx_rate(self, base_currency: str, quote_currency: str) -> EodhdFxRate: ...
+
+
+class EodhdHistoricalProvider(Protocol):
+    """Narrow protocol for fetching historical bars (used by forecast sync)."""
+
+    def fetch_eod_bars(
+        self,
+        eodhd_symbol: str,
+        *,
+        from_date: date,
+        to_date: date,
+    ) -> list[EodhdBar]: ...

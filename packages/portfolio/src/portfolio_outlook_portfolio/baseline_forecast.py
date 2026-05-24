@@ -1,0 +1,349 @@
+"""Pure-Python baseline forecast engine (V1.1 stage, single asset).
+
+Lognormal Geometric-Brownian-Motion (GBM) baseline:
+
+* Sample daily log returns from the provided historical bars.
+* Annualize drift (μ) and volatility (σ) using a configurable trading-day count.
+* Project forward over the requested horizon (in trading days) and report:
+  p10/p50/p90 price quantiles, P(gain) / P(loss), P(loss > 5%) and similar,
+  the annualized volatility, a simple downside-risk score and a confidence
+  score driven by sample size.
+
+The doctrine in ``docs/product/probabilistic-asset-outlook-doctrine.md`` is
+explicit that V1 must never produce a single exact future price as the primary
+output. This module is the deterministic, AI-free baseline that satisfies that
+contract — model selection from V1.1 in the staged plan
+(``docs/product/asset-value-prediction-engine-roadmap.md``).
+
+The code uses ``Decimal`` for prices and ``float`` only for the GBM math
+(``exp/log/sqrt/erf`` aren't defined on ``Decimal``); each ``float`` step is
+narrow and wrapped back into ``Decimal`` before returning.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Final
+
+DEFAULT_TRADING_DAYS_PER_YEAR: Final[int] = 252
+DEFAULT_HORIZON_TRADING_DAYS: Final[int] = 21  # ~1 calendar month
+MINIMUM_BARS_REQUIRED: Final[int] = 60
+MODEL_CODE: Final[str] = "baseline_gbm"
+MODEL_VERSION: Final[str] = "v1.0.0"
+
+# Standard-normal quantiles used for p10/p50/p90 — stable constants so the
+# math doesn't need an inverse-erf implementation.
+Z_10: Final[float] = -1.2815515655446004
+Z_50: Final[float] = 0.0
+Z_90: Final[float] = 1.2815515655446004
+
+
+@dataclass(frozen=True)
+class HistoricalBar:
+    """Inputs to the forecaster. ``close_price`` is the value used for the
+    log-return calculation."""
+
+    bar_date: date
+    close_price: Decimal
+
+
+@dataclass(frozen=True)
+class BaselineForecast:
+    """Result of one forecast run for one asset."""
+
+    horizon_days: int
+    data_points_used: int
+    history_first_bar_date: date | None
+    history_last_bar_date: date | None
+    current_price: Decimal
+    expected_return_pct: Decimal
+    p10_price: Decimal
+    p50_price: Decimal
+    p90_price: Decimal
+    prob_gain: Decimal
+    prob_loss: Decimal
+    prob_loss_gt_5pct: Decimal
+    prob_loss_gt_10pct: Decimal
+    prob_gain_gt_5pct: Decimal
+    prob_gain_gt_10pct: Decimal
+    expected_volatility_annual: Decimal
+    downside_risk_score: Decimal
+    confidence_score: Decimal
+    direction_label: str
+    direction_label_nl: str
+    explanation_nl: str
+    status: str
+    blocking_reason: str | None
+    model_code: str = MODEL_CODE
+    model_version: str = MODEL_VERSION
+
+
+def _decimal(value: float, places: int = 6) -> Decimal:
+    """Round a float to a deterministic Decimal at ``places`` precision."""
+
+    quant = Decimal(1).scaleb(-places)
+    return Decimal(repr(value)).quantize(quant, rounding=ROUND_HALF_UP)
+
+
+def _money(value: float) -> Decimal:
+    return _decimal(value, places=6)
+
+
+def _prob(value: float) -> Decimal:
+    """Clamp a float to [0,1] and quantize to 6 decimals."""
+
+    if value < 0.0:
+        clamped = 0.0
+    elif value > 1.0:
+        clamped = 1.0
+    else:
+        clamped = value
+    return _decimal(clamped, places=6)
+
+
+def _normal_cdf(z: float) -> float:
+    """Standard-normal CDF using ``math.erf``."""
+
+    return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+
+def _log_returns(bars: Sequence[HistoricalBar]) -> list[float]:
+    """Compute daily log returns from a chronologically sorted bar series."""
+
+    if len(bars) < 2:
+        return []
+    returns: list[float] = []
+    previous_close = float(bars[0].close_price)
+    if previous_close <= 0:
+        return []
+    for bar in bars[1:]:
+        close = float(bar.close_price)
+        if close <= 0:
+            return []
+        returns.append(math.log(close / previous_close))
+        previous_close = close
+    return returns
+
+
+def _sample_mean(values: Sequence[float]) -> float:
+    return sum(values) / len(values)
+
+
+def _sample_stdev(values: Sequence[float], mean: float) -> float:
+    """Sample standard deviation (Bessel-corrected). Returns 0.0 for n < 2."""
+
+    if len(values) < 2:
+        return 0.0
+    squared_devs = sum((v - mean) ** 2 for v in values)
+    return math.sqrt(squared_devs / (len(values) - 1))
+
+
+def _direction_label(expected_return_pct: float) -> tuple[str, str]:
+    """Translate the expected log-return drift over the horizon to a Dutch
+    direction label.
+
+    Thresholds are deliberately conservative — the doctrine forbids
+    overconfident headlines. Anything between ``-2%`` and ``+2%`` is neutral.
+    """
+
+    if expected_return_pct >= 10.0:
+        return "strong_up", "Sterke stijging verwacht"
+    if expected_return_pct >= 2.0:
+        return "slight_up", "Lichte stijging verwacht"
+    if expected_return_pct > -2.0:
+        return "neutral", "Geen duidelijke richting"
+    if expected_return_pct > -10.0:
+        return "slight_down", "Lichte daling verwacht"
+    return "strong_down", "Duidelijke daling verwacht"
+
+
+def _confidence_from_sample_size(n: int) -> float:
+    """Bounded confidence score: 0.4 at the minimum sample, asymptotes to 0.95
+    at one year, capped there. Purely a heuristic — communicates "more bars,
+    more confidence" without overclaiming."""
+
+    if n <= MINIMUM_BARS_REQUIRED:
+        return 0.40
+    if n >= DEFAULT_TRADING_DAYS_PER_YEAR:
+        return 0.95
+    span = DEFAULT_TRADING_DAYS_PER_YEAR - MINIMUM_BARS_REQUIRED
+    progress = (n - MINIMUM_BARS_REQUIRED) / span
+    return 0.40 + 0.55 * progress
+
+
+def _blocked_forecast(
+    *,
+    current_price: Decimal,
+    horizon_days: int,
+    bars: Sequence[HistoricalBar],
+    reason: str,
+    explanation_nl: str,
+) -> BaselineForecast:
+    first = bars[0].bar_date if bars else None
+    last = bars[-1].bar_date if bars else None
+    zero = Decimal("0.000000")
+    return BaselineForecast(
+        horizon_days=horizon_days,
+        data_points_used=len(bars),
+        history_first_bar_date=first,
+        history_last_bar_date=last,
+        current_price=current_price,
+        expected_return_pct=zero,
+        p10_price=current_price,
+        p50_price=current_price,
+        p90_price=current_price,
+        prob_gain=zero,
+        prob_loss=zero,
+        prob_loss_gt_5pct=zero,
+        prob_loss_gt_10pct=zero,
+        prob_gain_gt_5pct=zero,
+        prob_gain_gt_10pct=zero,
+        expected_volatility_annual=zero,
+        downside_risk_score=zero,
+        confidence_score=zero,
+        direction_label="blocked",
+        direction_label_nl="Geblokkeerd",
+        explanation_nl=explanation_nl,
+        status="blocked",
+        blocking_reason=reason,
+    )
+
+
+def compute_baseline_forecast(
+    *,
+    bars: Sequence[HistoricalBar],
+    current_price: Decimal,
+    horizon_trading_days: int = DEFAULT_HORIZON_TRADING_DAYS,
+    trading_days_per_year: int = DEFAULT_TRADING_DAYS_PER_YEAR,
+    minimum_bars_required: int = MINIMUM_BARS_REQUIRED,
+) -> BaselineForecast:
+    """Compute a baseline GBM forecast or return a blocked result.
+
+    Blocking conditions (each maps to a deterministic ``blocking_reason``):
+
+    * ``current_price <= 0`` → ``"invalid_current_price"``
+    * ``len(bars) < minimum_bars_required`` → ``"insufficient_history"``
+    * ``horizon_trading_days <= 0`` → ``"invalid_horizon"``
+    * any non-positive close in the series → ``"invalid_bar_price"``
+    * computed volatility ``== 0`` → ``"zero_volatility"`` (a flat series
+      can't be projected as a distribution; we refuse rather than fake one)
+    """
+
+    if horizon_trading_days <= 0:
+        return _blocked_forecast(
+            current_price=current_price,
+            horizon_days=max(horizon_trading_days, 0),
+            bars=bars,
+            reason="invalid_horizon",
+            explanation_nl="Ongeldige voorspellingshorizon.",
+        )
+    if current_price <= 0:
+        return _blocked_forecast(
+            current_price=current_price,
+            horizon_days=horizon_trading_days,
+            bars=bars,
+            reason="invalid_current_price",
+            explanation_nl="Huidige prijs ontbreekt of is niet positief.",
+        )
+    if len(bars) < minimum_bars_required:
+        return _blocked_forecast(
+            current_price=current_price,
+            horizon_days=horizon_trading_days,
+            bars=bars,
+            reason="insufficient_history",
+            explanation_nl=(
+                f"Minimaal {minimum_bars_required} historische bars vereist; "
+                f"slechts {len(bars)} aanwezig."
+            ),
+        )
+
+    returns = _log_returns(bars)
+    if not returns:
+        return _blocked_forecast(
+            current_price=current_price,
+            horizon_days=horizon_trading_days,
+            bars=bars,
+            reason="invalid_bar_price",
+            explanation_nl="Historische bar bevat ongeldige prijs.",
+        )
+
+    mu_daily = _sample_mean(returns)
+    sigma_daily = _sample_stdev(returns, mu_daily)
+    if sigma_daily <= 0.0:
+        return _blocked_forecast(
+            current_price=current_price,
+            horizon_days=horizon_trading_days,
+            bars=bars,
+            reason="zero_volatility",
+            explanation_nl=(
+                "Historische volatiliteit is nul; baseline-voorspelling kan "
+                "geen verdeling produceren."
+            ),
+        )
+
+    horizon_years = horizon_trading_days / float(trading_days_per_year)
+    sigma_annual = sigma_daily * math.sqrt(trading_days_per_year)
+    mu_annual = mu_daily * trading_days_per_year
+
+    s0 = float(current_price)
+    drift_log = (mu_annual - 0.5 * sigma_annual**2) * horizon_years
+    diffusion_log = sigma_annual * math.sqrt(horizon_years)
+
+    p10 = s0 * math.exp(drift_log + diffusion_log * Z_10)
+    p50 = s0 * math.exp(drift_log + diffusion_log * Z_50)
+    p90 = s0 * math.exp(drift_log + diffusion_log * Z_90)
+    expected_return_pct = (math.exp(drift_log) - 1.0) * 100.0
+
+    # Probability mass under GBM: ln(S_T / S_0) ~ N(drift_log, diffusion_log^2).
+    def _prob_below_ratio(ratio: float) -> float:
+        z = (math.log(ratio) - drift_log) / diffusion_log
+        return _normal_cdf(z)
+
+    prob_loss = _prob_below_ratio(1.0)
+    prob_gain = 1.0 - prob_loss
+    prob_loss_gt_5pct = _prob_below_ratio(0.95)
+    prob_loss_gt_10pct = _prob_below_ratio(0.90)
+    prob_gain_gt_5pct = 1.0 - _prob_below_ratio(1.05)
+    prob_gain_gt_10pct = 1.0 - _prob_below_ratio(1.10)
+
+    # Downside risk score: percentage drawdown to the p10 level vs current.
+    downside_risk = max(0.0, (s0 - p10) / s0) * 100.0
+    confidence = _confidence_from_sample_size(len(returns))
+    label, label_nl = _direction_label(expected_return_pct)
+
+    explanation_nl = (
+        f"Baseline GBM op {len(returns)} dagrendementen: drift "
+        f"{mu_annual * 100:.2f}%/jaar, volatiliteit "
+        f"{sigma_annual * 100:.2f}%/jaar; horizon {horizon_trading_days} "
+        f"handelsdagen. Geen suggesties of orders gegenereerd."
+    )
+
+    return BaselineForecast(
+        horizon_days=horizon_trading_days,
+        data_points_used=len(returns),
+        history_first_bar_date=bars[0].bar_date,
+        history_last_bar_date=bars[-1].bar_date,
+        current_price=current_price,
+        expected_return_pct=_decimal(expected_return_pct, places=6),
+        p10_price=_money(p10),
+        p50_price=_money(p50),
+        p90_price=_money(p90),
+        prob_gain=_prob(prob_gain),
+        prob_loss=_prob(prob_loss),
+        prob_loss_gt_5pct=_prob(prob_loss_gt_5pct),
+        prob_loss_gt_10pct=_prob(prob_loss_gt_10pct),
+        prob_gain_gt_5pct=_prob(prob_gain_gt_5pct),
+        prob_gain_gt_10pct=_prob(prob_gain_gt_10pct),
+        expected_volatility_annual=_decimal(sigma_annual, places=6),
+        downside_risk_score=_decimal(downside_risk, places=6),
+        confidence_score=_decimal(confidence, places=6),
+        direction_label=label,
+        direction_label_nl=label_nl,
+        explanation_nl=explanation_nl,
+        status="ready",
+        blocking_reason=None,
+    )

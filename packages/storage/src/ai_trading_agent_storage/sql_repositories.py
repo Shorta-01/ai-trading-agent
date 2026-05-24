@@ -28,6 +28,8 @@ from ai_trading_agent_storage.metadata import (
     ibkr_position_snapshots,
     ibkr_sync_runs,
     fx_rate_snapshots,
+    asset_forecasts,
+    market_data_bars,
     market_data_snapshots,
     market_data_latest_snapshots,
     paper_portfolio_setups,
@@ -59,6 +61,7 @@ from ai_trading_agent_storage.migration_readiness import (
     migration_readiness_is_safe_to_write,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetForecastRecord,
     AssetIdentifierAliasRecord,
     AssetListingRecord,
     AssetMasterRecord,
@@ -85,6 +88,7 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
     FxRateSnapshotRecord,
+    MarketDataBarRecord,
     RepositoryHealthStatus,
     ResearchDocumentClassificationRecord,
     ResearchDocumentSetMemberRecord,
@@ -1953,4 +1957,128 @@ class SqlAlchemyRequestAuditRepository(_Base):
             tuple(FreshnessAuditRecord(**dict(r)) for r in rows),
             freshness_audit_records.name,
             "Freshness-audits opgehaald.",
+        )
+
+
+class SqlAlchemyMarketDataBarRepository(_Base):
+    def save_market_data_bar(self, record: MarketDataBarRecord) -> StorageWriteResult:
+        values = asdict(record)
+        self._insert(market_data_bars, values)
+        return StorageWriteResult(
+            True,
+            record.bar_id,
+            market_data_bars.name,
+            True,
+            "Historische marktdata-bar opgeslagen.",
+        )
+
+    def save_market_data_bars(
+        self, records: list[MarketDataBarRecord]
+    ) -> StorageWriteResult:
+        count = 0
+        for record in records:
+            self.save_market_data_bar(record)
+            count += 1
+        return StorageWriteResult(
+            True,
+            None,
+            market_data_bars.name,
+            True,
+            f"{count} historische marktdata-bars opgeslagen.",
+        )
+
+    def list_market_data_bars_by_conid(
+        self,
+        ibkr_conid: str,
+        *,
+        interval_code: str = "1day",
+        limit: int = 750,
+    ) -> StorageListResult[MarketDataBarRecord]:
+        rows = (
+            self._connection.execute(
+                select(market_data_bars)
+                .where(market_data_bars.c.ibkr_conid == ibkr_conid)
+                .where(market_data_bars.c.interval_code == interval_code)
+                .order_by(market_data_bars.c.bar_date.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(MarketDataBarRecord(**dict(row)) for row in rows)
+        # Caller expects chronological order; reverse the desc-sorted batch.
+        ordered = tuple(reversed(records))
+        return StorageListResult(
+            ordered,
+            market_data_bars.name,
+            f"{len(ordered)} historische bars opgehaald.",
+        )
+
+
+class SqlAlchemyAssetForecastRepository(_Base):
+    def save_asset_forecast(self, record: AssetForecastRecord) -> StorageWriteResult:
+        values = asdict(record)
+        self._insert(asset_forecasts, values)
+        return StorageWriteResult(
+            True,
+            record.forecast_id,
+            asset_forecasts.name,
+            True,
+            "Assetvoorspelling opgeslagen.",
+        )
+
+    def get_latest_asset_forecast_by_conid(
+        self, ibkr_conid: str
+    ) -> StorageReadResult[AssetForecastRecord]:
+        row = (
+            self._connection.execute(
+                select(asset_forecasts)
+                .where(asset_forecasts.c.ibkr_conid == ibkr_conid)
+                .order_by(asset_forecasts.c.generated_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                asset_forecasts.name,
+                "Geen assetvoorspelling gevonden voor conid.",
+            )
+        return StorageReadResult(
+            True,
+            AssetForecastRecord(**dict(row)),
+            asset_forecasts.name,
+            "Assetvoorspelling opgehaald voor conid.",
+        )
+
+    def list_latest_asset_forecasts_by_conids(
+        self, conids: tuple[str, ...]
+    ) -> StorageListResult[AssetForecastRecord]:
+        if not conids:
+            return StorageListResult((), asset_forecasts.name, "Geen conids opgegeven.")
+        rows = (
+            self._connection.execute(
+                select(asset_forecasts)
+                .where(asset_forecasts.c.ibkr_conid.in_(conids))
+                .order_by(
+                    asset_forecasts.c.ibkr_conid.asc(),
+                    asset_forecasts.c.generated_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest: dict[str, AssetForecastRecord] = {}
+        for row in rows:
+            record = AssetForecastRecord(**dict(row))
+            if record.ibkr_conid not in latest:
+                latest[record.ibkr_conid] = record
+        ordered = tuple(latest[c] for c in conids if c in latest)
+        return StorageListResult(
+            ordered,
+            asset_forecasts.name,
+            f"{len(ordered)} assetvoorspellingen opgehaald.",
         )
