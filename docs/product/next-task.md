@@ -1,20 +1,25 @@
-# Task 166
+# Task 167
 
-Slice 11 — Belgian tax module (TOB + 30% dividend roerende voorheffing).
-The V1 product locks require deterministic Belgian tax projections on
-every action draft Orderimpact and on every realised position.
+Slice 12 — Daily briefing + alert digest. The V1 product locks describe
+a once-per-day Dutch briefing that summarises (a) the user's
+portfolio status (positions, cash, FX freshness), (b) any new
+suggestions / Decision Packages / action drafts produced since the last
+briefing, (c) any prediction-diary outcomes that closed since the last
+briefing, and (d) any critical action-draft state events.
 
 Scope:
-- Pure-Python `belgian_tax` module in `packages/portfolio` with
-  `compute_tob(*, transaction_value, security_class) -> Decimal` (locked
-  rates: 0.12% / 0.35% / 1.32% per asset class), and
-  `compute_dividend_withholding(*, gross_dividend) -> Decimal` (locked
-  30% rate).
-- Extend `action_draft_safety.compute_orderimpact(...)` to surface the
-  estimated TOB cost as a new `estimated_belgian_tob` field, threaded
-  through to the persisted `AssetActionDraftRecord` (migration 0035).
-- Surface the estimated TOB on the Action drafts table in the
-  Portefeuille page.
+- Storage migration adding `daily_briefings` table (one row per
+  briefing) and `briefing_alerts` (append-only items the briefing
+  references).
+- Pure-Python `daily_briefing` module in `packages/portfolio` that takes
+  the typed inputs (positions, suggestions, drafts, diary entries,
+  events) and returns a deterministic Dutch summary + structured alert
+  list. AI never authors the briefing.
+- New routes `POST /briefings/daily/compute` (gated on
+  `daily_briefing_sync_enabled` + writable storage) and
+  `GET /briefings/daily/latest`.
+- Web "Dagbriefing" panel on the Portefeuille page surfacing the latest
+  briefing and unread critical alerts.
 
-Belgian-only tax math; no broker execution; no AI. The TOB is
-*informational* on the draft — it doesn't change order sizing in V1.
+Disabled-by-default; no broker execution; safety booleans remain
+hard-False; no auto-execution from a briefing.

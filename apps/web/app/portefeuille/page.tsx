@@ -367,6 +367,7 @@ export default function PortfolioPage() {
                 <th>Aantal</th>
                 <th>Limit</th>
                 <th>Orderwaarde</th>
+                <th>TOB (BE)</th>
                 <th>Cash voor → na</th>
                 <th>Positie voor → na</th>
                 <th>Gewicht na</th>
@@ -390,6 +391,7 @@ export default function PortfolioPage() {
                     <td>{draft.quantity}</td>
                     <td>{draft.limit_price}</td>
                     <td>{displayValue(draft.estimated_order_value)}</td>
+                    <td title={draft.belgian_tob_security_class ? `Beurstaks tarief: ${draft.belgian_tob_security_class}` : "Geen TOB beschikbaar"}>{displayValue(draft.estimated_belgian_tob)}</td>
                     <td>{displayValue(draft.estimated_cash_before)} → {displayValue(draft.estimated_cash_after)}</td>
                     <td>{displayValue(draft.estimated_position_quantity_before)} → {displayValue(draft.estimated_position_quantity_after)}</td>
                     <td>{draft.estimated_portfolio_weight_after_pct ? `${draft.estimated_portfolio_weight_after_pct}%` : "Niet beschikbaar"}</td>

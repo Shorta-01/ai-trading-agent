@@ -351,6 +351,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "blijven False; AI mag nooit nieuwe getallen introduceren."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0035_action_draft_belgian_tob",
+        previous_revision_id="0034_decision_package_explanations",
+        filename="0035_action_draft_belgian_tob.py",
+        label_nl="Action-draft Belgian TOB kolommen",
+        description_nl=(
+            "Voegt twee kolommen toe aan asset_action_drafts: "
+            "estimated_belgian_tob (geschatte beurstaks in EUR-cent) en "
+            "belgian_tob_security_class (welke TOB-tariefklasse gebruikt is). "
+            "Informational only — TOB verandert de ordersizing niet."
+        ),
+    ),
 )
 
 

@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from typing import Final
 
+from .belgian_tax import TobSecurityClass, compute_tob
+
 # Locked sizing constants ---------------------------------------------------
 
 DEFAULT_BUY_VALUE_EUR: Final[Decimal] = Decimal("1000")
@@ -122,6 +124,8 @@ class Orderimpact:
     estimated_portfolio_weight_after_pct: Decimal | None
     estimated_concentration_impact_pct: Decimal | None
     base_currency: str | None
+    estimated_belgian_tob: Decimal
+    belgian_tob_security_class: str
 
 
 @dataclass(frozen=True)
@@ -240,8 +244,16 @@ def derive_action_draft_sizing(
 def compute_orderimpact(
     context: DraftSourceContext,
     sizing: DraftSizing,
+    *,
+    belgian_tob_security_class: TobSecurityClass = TobSecurityClass.STANDARD_STOCK,
 ) -> Orderimpact:
-    """Compute the deterministic Orderimpact preview from the sizing."""
+    """Compute the deterministic Orderimpact preview from the sizing.
+
+    ``belgian_tob_security_class`` controls which TOB rate is applied
+    to the estimated_belgian_tob field. V1 default is
+    ``STANDARD_STOCK`` (0.35%) because the action-draft scope is
+    locked to listed shares.
+    """
 
     quantity = sizing.quantity
     limit_price = sizing.limit_price
@@ -279,6 +291,11 @@ def compute_orderimpact(
         before_weight = (before_value / context.total_portfolio_value) * Decimal("100")
         concentration = _percentage(weight_after - before_weight)
 
+    belgian_tob = compute_tob(
+        transaction_value=order_value,
+        security_class=belgian_tob_security_class,
+    )
+
     return Orderimpact(
         estimated_order_value=order_value,
         estimated_cash_before=cash_before,
@@ -289,6 +306,8 @@ def compute_orderimpact(
         estimated_portfolio_weight_after_pct=weight_after,
         estimated_concentration_impact_pct=concentration,
         base_currency=context.base_currency,
+        estimated_belgian_tob=belgian_tob,
+        belgian_tob_security_class=belgian_tob_security_class.value,
     )
 
 

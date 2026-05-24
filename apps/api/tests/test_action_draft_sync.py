@@ -287,3 +287,45 @@ def test_serializer_renders_decimals_as_strings_and_strips_safety_flags() -> Non
     assert rendered["safe_for_orders"] is False
     assert rendered["safe_for_broker_submission"] is False
     assert isinstance(rendered["dry_run_failures"], list)
+
+
+def test_belgian_tob_is_computed_at_standard_rate_on_kopen() -> None:
+    repo = FakeRepo()
+
+    generate_action_drafts(
+        decision_packages=[_package(action_label="Kopen")],
+        repo=repo,
+        expected_account_mode="paper",
+        total_portfolio_value=Decimal("100000"),
+        base_currency="USD",
+        default_buy_value=Decimal("1000"),
+        top_up_pct=Decimal("0.25"),
+        reduce_pct=Decimal("0.25"),
+        position_exchange_by_conid={"1": ("SMART", "NASDAQ")},
+    )
+
+    record = repo.saved[0]
+    # default Kopen sizing → buy_value_eur / limit_price = floor(1000/180) = 5
+    # estimated_order_value = 5 * 180 = 900 → TOB 900 * 0.0035 = 3.15
+    assert record.estimated_order_value == Decimal("900")
+    assert record.estimated_belgian_tob == Decimal("3.15")
+    assert record.belgian_tob_security_class == "standard_stock"
+
+
+def test_belgian_tob_is_serialized_as_string_on_response() -> None:
+    repo = FakeRepo()
+    generate_action_drafts(
+        decision_packages=[_package(action_label="Kopen")],
+        repo=repo,
+        expected_account_mode="paper",
+        total_portfolio_value=Decimal("100000"),
+        base_currency="USD",
+        default_buy_value=Decimal("1000"),
+        top_up_pct=Decimal("0.25"),
+        reduce_pct=Decimal("0.25"),
+        position_exchange_by_conid={"1": ("SMART", "NASDAQ")},
+    )
+
+    rendered = serialize_action_draft_for_response(repo.saved[0])
+    assert rendered["estimated_belgian_tob"] == "3.15"
+    assert rendered["belgian_tob_security_class"] == "standard_stock"

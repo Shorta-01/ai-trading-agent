@@ -235,6 +235,8 @@ def generate_action_drafts(
             estimated_portfolio_weight_after_pct=impact.estimated_portfolio_weight_after_pct,
             estimated_concentration_impact_pct=impact.estimated_concentration_impact_pct,
             orderimpact_base_currency=impact.base_currency,
+            estimated_belgian_tob=impact.estimated_belgian_tob,
+            belgian_tob_security_class=impact.belgian_tob_security_class,
             source_action_label=package.suggestion_action_label,
             source_action_label_nl=package.suggestion_action_label_nl,
             status=status,
@@ -337,6 +339,8 @@ def serialize_action_draft_for_response(
             record.estimated_concentration_impact_pct
         ),
         "orderimpact_base_currency": record.orderimpact_base_currency,
+        "estimated_belgian_tob": _decimal_or_none_str(record.estimated_belgian_tob),
+        "belgian_tob_security_class": record.belgian_tob_security_class,
         "source_action_label": record.source_action_label,
         "source_action_label_nl": record.source_action_label_nl,
         "status": record.status,

@@ -154,6 +154,28 @@ def test_orderimpact_buy_decreases_cash_and_increases_position() -> None:
     assert impact.estimated_position_quantity_after == Decimal("5")
     assert impact.estimated_position_value_after == Decimal("500.000000")
     assert impact.estimated_portfolio_weight_after_pct is not None
+    # Belgian TOB default: standard_stock 0.35% on 500 = 1.75
+    assert impact.estimated_belgian_tob == Decimal("1.75")
+    assert impact.belgian_tob_security_class == "standard_stock"
+
+
+def test_orderimpact_uses_explicit_security_class_when_provided() -> None:
+    from portfolio_outlook_portfolio import TobSecurityClass
+
+    context = _context(
+        action_label="Kopen", held_quantity="0", market_price="100", cash="10000"
+    )
+    sizing = derive_action_draft_sizing(
+        context, default_buy_value_in_quote_currency=Decimal("1000")
+    )
+    impact = compute_orderimpact(
+        context,
+        sizing,
+        belgian_tob_security_class=TobSecurityClass.ACCUMULATING_ETF,
+    )
+    # 10 * 100 = 1000 → 1000 * 1.32% = 13.20
+    assert impact.estimated_belgian_tob == Decimal("13.20")
+    assert impact.belgian_tob_security_class == "accumulating_etf"
 
 
 def test_orderimpact_sell_increases_cash_and_decreases_position() -> None:

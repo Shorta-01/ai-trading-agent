@@ -1127,6 +1127,8 @@ def test_asset_action_draft_repository_roundtrip() -> None:
                 estimated_portfolio_weight_after_pct=Decimal("9.0"),
                 estimated_concentration_impact_pct=Decimal("9.0"),
                 orderimpact_base_currency="USD",
+                estimated_belgian_tob=Decimal("3.15"),
+                belgian_tob_security_class="standard_stock",
                 source_action_label="Kopen",
                 source_action_label_nl="Kopen",
                 status="dry_run_passed",
@@ -1151,6 +1153,52 @@ def test_asset_action_draft_repository_roundtrip() -> None:
         assert loaded.record is not None
         assert loaded.record.quantity == Decimal("5")
         assert loaded.record.action_side == "BUY"
+        assert loaded.record.estimated_belgian_tob == Decimal("3.15")
+        assert loaded.record.belgian_tob_security_class == "standard_stock"
+
+
+def test_asset_action_draft_rejects_negative_belgian_tob() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetActionDraftRecord
+
+    now = datetime.now(UTC)
+    base = dict(
+        draft_id="d",
+        decision_package_id="dp",
+        decision_package_content_hash="hash",
+        ibkr_conid="1",
+        symbol="AAPL",
+        currency="USD",
+        exchange="SMART",
+        primary_exchange="NASDAQ",
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_side="BUY",
+        order_type="LMT",
+        tif="DAY",
+        quantity=Decimal("5"),
+        limit_price=Decimal("180"),
+        estimated_order_value=Decimal("900"),
+        estimated_cash_before=None,
+        estimated_cash_after=None,
+        estimated_position_quantity_before=Decimal("0"),
+        estimated_position_quantity_after=Decimal("5"),
+        estimated_position_value_after=Decimal("900"),
+        estimated_portfolio_weight_after_pct=None,
+        estimated_concentration_impact_pct=None,
+        orderimpact_base_currency="USD",
+        source_action_label="Kopen",
+        source_action_label_nl="Kopen",
+        status="dry_run_passed",
+        dry_run_status="passed",
+        dry_run_failures_json=None,
+        blocking_reason=None,
+        rationale_nl="r",
+        explanation_nl="e",
+        created_at=now,
+        updated_at=now,
+    )
+    with pytest.raises(ValueError, match="estimated_belgian_tob"):
+        AssetActionDraftRecord(**{**base, "estimated_belgian_tob": Decimal("-1")})
 
 
 def test_asset_action_draft_rejects_market_orders_and_unsafe_flags() -> None:

@@ -91,6 +91,20 @@ from .baseline_label_translator import (
 from .baseline_label_translator import (
     MODEL_VERSION as BASELINE_LABEL_TRANSLATOR_MODEL_VERSION,
 )
+from .belgian_tax import (
+    BELGIAN_DIVIDEND_WITHHOLDING_RATE,
+    TOB_CAP_ACCUMULATING,
+    TOB_CAP_BOND,
+    TOB_CAP_STANDARD,
+    TOB_RATE_ACCUMULATING,
+    TOB_RATE_BOND,
+    TOB_RATE_STANDARD,
+    TobRateInfo,
+    TobSecurityClass,
+    compute_dividend_withholding,
+    compute_tob,
+    tob_rate_info,
+)
 from .broker_reconciliation_guards import (
     check_no_blocking_reconciliation_differences,
     check_reconciliation_allows_suggestions,
@@ -425,5 +439,17 @@ __all__ = [
     "BLOCKING_REASON_OUTPUT_TOO_LONG",
     "ExplanationValidationResult",
     "validate_explanation_output",
+    "TobSecurityClass",
+    "TobRateInfo",
+    "TOB_RATE_BOND",
+    "TOB_RATE_STANDARD",
+    "TOB_RATE_ACCUMULATING",
+    "TOB_CAP_BOND",
+    "TOB_CAP_STANDARD",
+    "TOB_CAP_ACCUMULATING",
+    "BELGIAN_DIVIDEND_WITHHOLDING_RATE",
+    "tob_rate_info",
+    "compute_tob",
+    "compute_dividend_withholding",
 ]
 
