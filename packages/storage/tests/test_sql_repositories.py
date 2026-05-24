@@ -881,9 +881,154 @@ def test_asset_decision_package_repository_persists_and_returns_latest() -> None
             "ibkr-sync-run:abc",
             "market-data-sync-run:def",
         )
+        # Research evidence columns default to the "no_research" baseline
+        # when the record is built without explicit research summary.
+        assert latest.record.research_evidence_count == 0
+        assert latest.record.research_credibility_summary is None
+        assert latest.record.research_freshness_status is None
+        assert latest.record.research_blocking_reason is None
+        assert latest.record.research_snippet_nl is None
 
         listed = repo.list_latest_asset_decision_packages_by_conids(("265598", "272093"))
         assert {r.decision_package_id for r in listed.records} == {"dp-2", "dp-3"}
+
+
+def test_asset_decision_package_repository_persists_research_evidence_fields() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetDecisionPackageRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetDecisionPackageRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetDecisionPackageRepository(conn, _report(True))
+
+        record = AssetDecisionPackageRecord(
+            decision_package_id="dp-research-1",
+            content_hash="hash-research-1",
+            ibkr_conid="265598",
+            symbol="AAPL",
+            currency="USD",
+            risk_profile="Gebalanceerd",
+            generated_at=datetime(2025, 5, 24, 9, 0, tzinfo=UTC),
+            valid_until=datetime(2025, 6, 14, 9, 0, tzinfo=UTC),
+            position_snapshot_id=None,
+            position_quantity=None,
+            position_average_cost=None,
+            cash_snapshot_id=None,
+            cash_base_currency=None,
+            cash_amount=None,
+            market_snapshot_id=None,
+            market_last_price=None,
+            market_freshness_status=None,
+            market_provider_code=None,
+            market_provider_as_of=None,
+            fx_pair=None,
+            fx_rate=None,
+            fx_freshness_status=None,
+            forecast_id=None,
+            forecast_model_code=None,
+            forecast_model_version=None,
+            forecast_horizon_days=None,
+            forecast_p10_price=None,
+            forecast_p50_price=None,
+            forecast_p90_price=None,
+            forecast_prob_gain=None,
+            forecast_prob_loss=None,
+            forecast_expected_return_pct=None,
+            forecast_expected_volatility_annual=None,
+            forecast_downside_risk_score=None,
+            forecast_confidence_score=None,
+            suggestion_id="suggestion-1",
+            suggestion_model_code="baseline_label_translator",
+            suggestion_action_label="Bekijken",
+            suggestion_action_label_nl="Bekijken",
+            suggestion_confidence_label="Laag",
+            suggestion_confidence_label_nl="Laag",
+            suggestion_status="control_needed",
+            has_position=False,
+            gate_outcomes_json=None,
+            evidence_links_json=None,
+            audit_links_json=None,
+            rationale_nl="Test rationale.",
+            explanation_nl="Test explanation.",
+            status="control_needed",
+            blocking_reason=None,
+            research_evidence_count=2,
+            research_credibility_summary="high",
+            research_freshness_status="fresh",
+            research_blocking_reason=None,
+            research_snippet_nl="2 onderzoeksbron(nen) gekoppeld; hoge credibility, vers.",
+        )
+        repo.save_asset_decision_package(record)
+        latest = repo.get_latest_asset_decision_package_by_conid("265598")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.research_evidence_count == 2
+        assert latest.record.research_credibility_summary == "high"
+        assert latest.record.research_freshness_status == "fresh"
+        assert latest.record.research_blocking_reason is None
+        assert "hoge credibility" in (latest.record.research_snippet_nl or "")
+
+
+def test_asset_decision_package_rejects_negative_research_evidence_count() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetDecisionPackageRecord
+
+    with pytest.raises(ValueError, match="non-negative"):
+        AssetDecisionPackageRecord(
+            decision_package_id="dp-x",
+            content_hash="hash-x",
+            ibkr_conid="265598",
+            symbol="AAPL",
+            currency="USD",
+            risk_profile="Gebalanceerd",
+            generated_at=datetime(2025, 5, 24, tzinfo=UTC),
+            valid_until=datetime(2025, 6, 14, tzinfo=UTC),
+            position_snapshot_id=None,
+            position_quantity=None,
+            position_average_cost=None,
+            cash_snapshot_id=None,
+            cash_base_currency=None,
+            cash_amount=None,
+            market_snapshot_id=None,
+            market_last_price=None,
+            market_freshness_status=None,
+            market_provider_code=None,
+            market_provider_as_of=None,
+            fx_pair=None,
+            fx_rate=None,
+            fx_freshness_status=None,
+            forecast_id=None,
+            forecast_model_code=None,
+            forecast_model_version=None,
+            forecast_horizon_days=None,
+            forecast_p10_price=None,
+            forecast_p50_price=None,
+            forecast_p90_price=None,
+            forecast_prob_gain=None,
+            forecast_prob_loss=None,
+            forecast_expected_return_pct=None,
+            forecast_expected_volatility_annual=None,
+            forecast_downside_risk_score=None,
+            forecast_confidence_score=None,
+            suggestion_id=None,
+            suggestion_model_code=None,
+            suggestion_action_label="Houden",
+            suggestion_action_label_nl="Houden",
+            suggestion_confidence_label="Hoog",
+            suggestion_confidence_label_nl="Hoog",
+            suggestion_status="ready",
+            has_position=False,
+            gate_outcomes_json=None,
+            evidence_links_json=None,
+            audit_links_json=None,
+            rationale_nl="ok",
+            explanation_nl="ok",
+            status="ready",
+            blocking_reason=None,
+            research_evidence_count=-1,
+        )
 
 
 def test_asset_decision_package_rejects_safety_flags_true() -> None:

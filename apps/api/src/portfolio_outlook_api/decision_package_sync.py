@@ -36,6 +36,16 @@ from ai_trading_agent_storage import (
     IbkrAccountCashSnapshotRecord,
     IbkrPositionSnapshotRecord,
     MarketDataLatestSnapshotRecord,
+    ResearchSourceCredibilityAssessmentRecord,
+    ResearchSourcePromptInjectionScanRecord,
+    ResearchSourceRecord,
+)
+from portfolio_outlook_portfolio import (
+    CREDIBILITY_NO_RESEARCH,
+    FRESHNESS_NO_RESEARCH,
+    ResearchEvidenceInputs,
+    ResearchEvidenceSummary,
+    summarize_research_for_asset,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,6 +69,68 @@ class _DecisionPackageRepoProtocol(Protocol):
     def save_asset_decision_package(
         self, record: AssetDecisionPackageRecord
     ) -> object: ...
+
+
+class _ResearchRepoProtocol(Protocol):
+    def list_research_sources_for_asset(
+        self, asset_symbol: str
+    ) -> tuple[ResearchSourceRecord, ...]: ...
+
+    def get_latest_source_credibility_assessment(
+        self, library_source_id: str
+    ) -> ResearchSourceCredibilityAssessmentRecord | None: ...
+
+    def get_latest_prompt_injection_scan(
+        self, library_source_id: str
+    ) -> ResearchSourcePromptInjectionScanRecord | None: ...
+
+
+def build_research_summary_by_symbol(
+    symbols: list[str],
+    *,
+    research_repo: _ResearchRepoProtocol,
+    now: datetime,
+) -> dict[str, ResearchEvidenceSummary]:
+    """Gather research evidence for each symbol and run the summarizer.
+
+    Pulls every research source linked to the asset symbol, fetches the
+    latest credibility-assessment and prompt-injection-scan per source,
+    derives the most-recent ``last_signal_at`` per source, and feeds
+    everything to the pure-Python summarizer. Symbols with no linked
+    sources still get an entry (the ``no_research`` summary).
+    """
+
+    summary_by_symbol: dict[str, ResearchEvidenceSummary] = {}
+    for symbol in symbols:
+        sources = research_repo.list_research_sources_for_asset(symbol)
+        inputs: list[ResearchEvidenceInputs] = []
+        for source in sources:
+            credibility = research_repo.get_latest_source_credibility_assessment(
+                source.library_source_id
+            )
+            prompt_scan = research_repo.get_latest_prompt_injection_scan(
+                source.library_source_id
+            )
+            timestamps: list[datetime] = []
+            if credibility is not None:
+                timestamps.append(credibility.checked_at)
+            if prompt_scan is not None:
+                timestamps.append(prompt_scan.checked_at)
+            last_signal_at = max(timestamps) if timestamps else source.updated_at
+            inputs.append(
+                ResearchEvidenceInputs(
+                    library_source_id=source.library_source_id,
+                    credibility_level=(
+                        credibility.credibility_level if credibility is not None else None
+                    ),
+                    prompt_injection_risk_level=(
+                        prompt_scan.risk_level if prompt_scan is not None else None
+                    ),
+                    last_signal_at=last_signal_at,
+                )
+            )
+        summary_by_symbol[symbol] = summarize_research_for_asset(inputs, now=now)
+    return summary_by_symbol
 
 
 def _decimal_or_none_str(value: Decimal | None) -> str | None:
@@ -132,6 +204,17 @@ class _AssemblyContext:
     market: MarketDataLatestSnapshotRecord | None
     fx: FxRateSnapshotRecord | None
     fx_required: bool
+    research_summary: ResearchEvidenceSummary | None = None
+
+
+def _empty_research_summary() -> ResearchEvidenceSummary:
+    return ResearchEvidenceSummary(
+        research_evidence_count=0,
+        research_credibility_summary=CREDIBILITY_NO_RESEARCH,
+        research_freshness_status=FRESHNESS_NO_RESEARCH,
+        research_blocking_reason=None,
+        research_snippet_nl="Geen onderzoek gekoppeld aan dit asset.",
+    )
 
 
 def build_decision_package_record(
@@ -156,6 +239,8 @@ def build_decision_package_record(
     market = context.market
     fx = context.fx
 
+    research_summary = context.research_summary or _empty_research_summary()
+
     hash_payload: dict[str, object] = {
         "ibkr_conid": suggestion.ibkr_conid,
         "symbol": suggestion.symbol,
@@ -170,6 +255,10 @@ def build_decision_package_record(
         "suggestion_id": suggestion.suggestion_id,
         "action_label": suggestion.action_label,
         "suggestion_status": suggestion.status,
+        "research_evidence_count": research_summary.research_evidence_count,
+        "research_credibility_summary": research_summary.research_credibility_summary,
+        "research_freshness_status": research_summary.research_freshness_status,
+        "research_blocking_reason": research_summary.research_blocking_reason,
     }
     content_hash = _compute_content_hash(hash_payload)
 
@@ -255,6 +344,11 @@ def build_decision_package_record(
             else ("control_needed" if suggestion.status == "control_needed" else "ready")
         ),
         blocking_reason=suggestion.blocking_reason,
+        research_evidence_count=research_summary.research_evidence_count,
+        research_credibility_summary=research_summary.research_credibility_summary,
+        research_freshness_status=research_summary.research_freshness_status,
+        research_blocking_reason=research_summary.research_blocking_reason,
+        research_snippet_nl=research_summary.research_snippet_nl,
     )
 
 
@@ -270,6 +364,7 @@ def sync_decision_packages(
     risk_profile: str,
     repo: _DecisionPackageRepoProtocol,
     valid_minutes: int,
+    research_summary_by_symbol: dict[str, ResearchEvidenceSummary] | None = None,
 ) -> DecisionPackageSyncReport:
     """Build and persist one Decision Package per suggestion."""
 
@@ -316,6 +411,9 @@ def sync_decision_packages(
 
         generated_at = datetime.now(UTC)
         valid_until = generated_at + timedelta(minutes=valid_minutes)
+        research_summary = None
+        if research_summary_by_symbol:
+            research_summary = research_summary_by_symbol.get(suggestion.symbol)
         context = _AssemblyContext(
             suggestion=suggestion,
             forecast=forecast,
@@ -324,6 +422,7 @@ def sync_decision_packages(
             market=market,
             fx=fx,
             fx_required=fx_required,
+            research_summary=research_summary,
         )
         record = build_decision_package_record(
             context,
@@ -442,4 +541,9 @@ def serialize_decision_package_for_response(
         "safe_for_action_drafts": False,
         "safe_for_orders": False,
         "safe_for_broker_submission": False,
+        "research_evidence_count": record.research_evidence_count,
+        "research_credibility_summary": record.research_credibility_summary,
+        "research_freshness_status": record.research_freshness_status,
+        "research_blocking_reason": record.research_blocking_reason,
+        "research_snippet_nl": record.research_snippet_nl,
     }

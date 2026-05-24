@@ -423,6 +423,20 @@ export default function PortfolioPage() {
                   <div><strong>Toelichting:</strong> {dp.explanation_nl}</div>
                   <div><strong>Gate-uitkomsten:</strong> {dp.gate_outcomes.length > 0 ? dp.gate_outcomes.join(" • ") : "Geen"}</div>
                   <div><strong>Audit links:</strong> {dp.audit_links.length > 0 ? dp.audit_links.join(" • ") : "Geen"}</div>
+                  <div style={{
+                    marginTop: "0.5rem",
+                    padding: "0.5rem 0.75rem",
+                    borderLeft: "3px solid var(--ata-accent, #38bdf8)",
+                    background: "rgba(56,189,248,0.05)",
+                  }}>
+                    <div><strong>Onderzoek:</strong> {dp.research_evidence_count} bron(nen) {dp.research_credibility_summary ? `• ${dp.research_credibility_summary} credibility` : ""}{dp.research_freshness_status ? ` • ${dp.research_freshness_status}` : ""}</div>
+                    {dp.research_blocking_reason ? (
+                      <div style={{ color: "var(--ata-warning, #f97316)" }}>
+                        <strong>Onderzoek block:</strong> {dp.research_blocking_reason}
+                      </div>
+                    ) : null}
+                    <div style={{ fontSize: "0.88rem", opacity: 0.85 }}>{dp.research_snippet_nl ?? "Geen onderzoek-snippet."}</div>
+                  </div>
                   <div style={{ fontSize: "0.82rem", opacity: 0.7 }}><strong>Content-hash:</strong> {dp.content_hash}</div>
                 </div>
               </details>

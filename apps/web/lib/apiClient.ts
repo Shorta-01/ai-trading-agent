@@ -491,6 +491,11 @@ export type AssetDecisionPackageResponse = {
   safe_for_action_drafts: boolean;
   safe_for_orders: boolean;
   safe_for_broker_submission: boolean;
+  research_evidence_count: number;
+  research_credibility_summary: string | null;
+  research_freshness_status: string | null;
+  research_blocking_reason: string | null;
+  research_snippet_nl: string | null;
 };
 
 export type LatestDecisionPackagesResponse = {

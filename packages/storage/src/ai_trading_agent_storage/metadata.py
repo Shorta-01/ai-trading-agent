@@ -1622,6 +1622,11 @@ asset_decision_packages = Table(
     Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
     Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
     Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    Column("research_evidence_count", Integer, nullable=False, server_default="0"),
+    Column("research_credibility_summary", Text, nullable=True),
+    Column("research_freshness_status", Text, nullable=True),
+    Column("research_blocking_reason", Text, nullable=True),
+    Column("research_snippet_nl", Text, nullable=True),
 )
 
 

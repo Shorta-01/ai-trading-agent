@@ -1948,6 +1948,14 @@ class AssetDecisionPackageRecord:
     safe_for_action_drafts: bool = False
     safe_for_orders: bool = False
     safe_for_broker_submission: bool = False
+    # Research evidence summary (Slice 9). Surfaced as read-only context;
+    # research evidence never lifts a block — see
+    # ``ResearchSourceEvidenceItemRecord`` for the underlying invariants.
+    research_evidence_count: int = 0
+    research_credibility_summary: str | None = None
+    research_freshness_status: str | None = None
+    research_blocking_reason: str | None = None
+    research_snippet_nl: str | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -1977,6 +1985,8 @@ class AssetDecisionPackageRecord:
                 "package never auto-promotes to an action draft, order, or "
                 "broker submission."
             )
+        if self.research_evidence_count < 0:
+            raise ValueError("research_evidence_count must be non-negative.")
 
 
 @dataclass(frozen=True)

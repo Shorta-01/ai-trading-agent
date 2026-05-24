@@ -163,6 +163,22 @@ def _fake_storage(
         lambda *a, **k: _FakeDecisionPackageRepo(),
     )
 
+    class _FakeResearchRepo:
+        def list_research_sources_for_asset(self, _symbol):
+            return ()
+
+        def get_latest_source_credibility_assessment(self, _library_source_id):
+            return None
+
+        def get_latest_prompt_injection_scan(self, _library_source_id):
+            return None
+
+    monkeypatch.setattr(
+        status_routes,
+        "SqlAlchemyResearchSourceArchiveRepository",
+        lambda *a, **k: _FakeResearchRepo(),
+    )
+
 
 def test_compute_blocked_when_no_positions(monkeypatch) -> None:
     api_settings.decision_packages_sync_enabled = True
