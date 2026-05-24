@@ -90,6 +90,7 @@ class Settings(BaseSettings):
     ibkr_tws_readonly_adapter_enabled: bool = False
     ibkr_tws_readonly_runtime_enabled: bool = False
     ibkr_tws_readonly_real_client_enabled: bool = False
+    ibkr_account_snapshot_preflight_enabled: bool = False
     ibkr_market_data_enabled: bool = False
     ibkr_market_data_host: str | None = None
     ibkr_market_data_port: int | None = None

@@ -101,6 +101,14 @@ def test_production_runtime_source_only_allows_ibapi_in_facade() -> None:
             / "portfolio_outlook_api"
             / "ibkr_ibapi_manual_status_client.py"
         ).resolve(),
+        (
+            REPO_ROOT
+            / "apps"
+            / "api"
+            / "src"
+            / "portfolio_outlook_api"
+            / "ibkr_ibapi_account_snapshot_client.py"
+        ).resolve(),
     }
 
     for file_path in _iter_production_source_files():

@@ -25,6 +25,10 @@ from portfolio_outlook_domain.market_data_foundation import (
 
 from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate_ibkr_contract
+from portfolio_outlook_api.ibkr_account_snapshot_preflight import (
+    build_manual_readonly_account_snapshot_preflight_readiness,
+    run_manual_readonly_account_snapshot_preflight,
+)
 from portfolio_outlook_api.ibkr_ibapi_manual_status_client import (
     IbapiManualReadonlyStatusClient,
 )
@@ -240,6 +244,24 @@ def read_manual_readonly_status_check_readiness() -> dict[str, object]:
             runtime_client=None,
         )
     )
+
+
+
+def _run_manual_readonly_account_snapshot_preflight_endpoint(
+    runtime_settings: Settings,
+    runtime_client: object | None = None,
+) -> dict[str, object]:
+    return asdict(run_manual_readonly_account_snapshot_preflight(runtime_settings, runtime_client=runtime_client))
+
+
+@router.post("/ibkr/session/manual-readonly-account-snapshot-preflight")
+def run_manual_readonly_account_snapshot_preflight_route() -> dict[str, object]:
+    return _run_manual_readonly_account_snapshot_preflight_endpoint(settings, runtime_client=None)
+
+
+@router.get("/ibkr/session/manual-readonly-account-snapshot-preflight/readiness")
+def read_manual_readonly_account_snapshot_preflight_readiness() -> dict[str, object]:
+    return asdict(build_manual_readonly_account_snapshot_preflight_readiness(settings, runtime_client=None))
 
 @router.get("/portfolio/setup/status")
 def read_portfolio_setup_status() -> dict[str, object]:
