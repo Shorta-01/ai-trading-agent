@@ -271,6 +271,16 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "baseline-assetvoorspellingen (read-only, geen suggesties)."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0028_asset_suggestions",
+        previous_revision_id="0027_market_data_bars_and_asset_forecasts",
+        filename="0028_asset_suggestions.py",
+        label_nl="Asset-suggesties met vergrendelde actielabels",
+        description_nl=(
+            "Duurzame opslag voor deterministische asset-suggesties; "
+            "Python-regels beslissen, AI nooit. Geen action drafts of orders."
+        ),
+    ),
 )
 
 

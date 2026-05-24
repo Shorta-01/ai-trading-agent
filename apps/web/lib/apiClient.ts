@@ -398,6 +398,45 @@ export type LatestForecastsResponse = {
   blocks_orders?: boolean;
 };
 
+export type AssetSuggestionResponse = {
+  suggestion_id: string;
+  ibkr_conid: string;
+  symbol: string;
+  currency: string;
+  forecast_id: string | null;
+  model_code: string;
+  model_version: string;
+  generated_at: string;
+  valid_until: string;
+  risk_profile: string;
+  has_position: boolean;
+  action_label: string;
+  action_label_nl: string;
+  confidence_label: string;
+  confidence_label_nl: string;
+  confidence_score: string;
+  rationale_nl: string;
+  drivers: string[];
+  blockers: string[];
+  status: string;
+  blocking_reason: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+  safe_for_broker_submission: boolean;
+};
+
+export type LatestSuggestionsResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  risk_profile: string;
+  items: AssetSuggestionResponse[];
+  actions_allowed?: boolean;
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+  blocks_orders?: boolean;
+};
+
 export type FreshnessAuditResponse = {
   freshness_audit_id: string;
   request_log_id: string | null;
@@ -509,6 +548,8 @@ export const apiClient = {
   getIbkrExecutions: () => getJson<{ items: IbkrExecutionSnapshot[] }>("/ibkr/executions"),
   getLatestForecasts: () => getJson<LatestForecastsResponse>("/forecasts/latest"),
   runForecastSync: () => postJson<{ status: string }>("/forecasts/compute"),
+  getLatestSuggestions: () => getJson<LatestSuggestionsResponse>("/suggestions/latest"),
+  runSuggestionsSync: () => postJson<{ status: string }>("/suggestions/compute"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

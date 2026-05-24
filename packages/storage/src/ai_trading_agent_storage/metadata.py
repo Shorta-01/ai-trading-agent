@@ -1433,6 +1433,36 @@ market_data_bars = Table(
 )
 
 
+asset_suggestions = Table(
+    "asset_suggestions",
+    metadata,
+    Column("suggestion_id", Text, primary_key=True),
+    Column("ibkr_conid", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("currency", Text, nullable=False),
+    Column("forecast_id", Text, nullable=True),
+    Column("model_code", Text, nullable=False),
+    Column("model_version", Text, nullable=False),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("valid_until", DateTime(timezone=True), nullable=False),
+    Column("risk_profile", Text, nullable=False),
+    Column("has_position", Boolean, nullable=False, server_default="0"),
+    Column("action_label", Text, nullable=False),
+    Column("action_label_nl", Text, nullable=False),
+    Column("confidence_label", Text, nullable=False),
+    Column("confidence_label_nl", Text, nullable=False),
+    Column("confidence_score", Numeric(10, 6), nullable=False),
+    Column("rationale_nl", Text, nullable=False),
+    Column("drivers_json", JSON, nullable=True),
+    Column("blockers_json", JSON, nullable=True),
+    Column("status", Text, nullable=False),
+    Column("blocking_reason", Text, nullable=True),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_forecasts = Table(
     "asset_forecasts",
     metadata,

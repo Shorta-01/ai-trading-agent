@@ -7,6 +7,7 @@ from typing import Annotated
 from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
     SqlAlchemyAssetForecastRepository,
+    SqlAlchemyAssetSuggestionRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataBarRepository,
     SqlAlchemyMarketDataSnapshotRepository,
@@ -115,6 +116,10 @@ from portfolio_outlook_api.status_models import (
 from portfolio_outlook_api.storage_status import (
     StorageStatusResponse,
     build_storage_status,
+)
+from portfolio_outlook_api.suggestion_sync import (
+    serialize_suggestion_for_response,
+    sync_suggestions,
 )
 from portfolio_outlook_api.system_event_mutations import (
     SystemEventMutationInput,
@@ -1110,6 +1115,206 @@ def read_latest_forecasts() -> dict[str, object]:
                     else "Nog geen voorspellingen"
                 ),
                 "items": [serialize_forecast_for_response(r) for r in result.records],
+            }
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+        }
+
+
+def _build_blocked_suggestion_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "model_code": "baseline_label_translator",
+        "risk_profile": settings.suggestions_risk_profile,
+        "suggestion_total": 0,
+        "suggestion_persisted": 0,
+        "suggestion_failed": 0,
+        "held_positions": 0,
+        "cold_start_positions": 0,
+        "failures": [],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/suggestions/compute")
+def run_suggestions_sync() -> dict[str, object]:
+    """Translate the latest baseline forecasts into locked Dutch labels.
+
+    AI never decides the label; this is a pure-Python rule engine over
+    evidence-gated inputs. Default-off. No action drafts or orders.
+    """
+
+    if not settings.suggestions_sync_enabled:
+        return _build_blocked_suggestion_response(
+            reason="suggestions_sync_disabled",
+            status_nl="Suggesties uitgeschakeld",
+            help_nl="Stel `SUGGESTIONS_SYNC_ENABLED=true` in om de label-translator te activeren.",
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_suggestion_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl=(
+                "Suggesties vereisen schrijfbare opslag; controleer "
+                "STORAGE__ENABLED, STORAGE__DATABASE_URL en STORAGE__WRITES_ENABLED."
+            ),
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            forecast_repo = SqlAlchemyAssetForecastRepository(
+                checked.connection, checked.readiness
+            )
+            suggestion_repo = SqlAlchemyAssetSuggestionRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            positions = (
+                list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+                if latest_run is not None
+                else []
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return _build_blocked_suggestion_response(
+                    reason="no_positions",
+                    status_nl="Geen posities beschikbaar",
+                    help_nl=(
+                        "Suggesties draaien op het IBKR-positie-universum. "
+                        "Voer eerst een IBKR-sync uit."
+                    ),
+                )
+            forecast_result = forecast_repo.list_latest_asset_forecasts_by_conids(conids)
+            forecasts = list(forecast_result.records)
+            if not forecasts:
+                return _build_blocked_suggestion_response(
+                    reason="no_forecasts",
+                    status_nl="Geen voorspellingen beschikbaar",
+                    help_nl=(
+                        "Suggesties hebben recente baseline-voorspellingen nodig. "
+                        "Voer eerst een forecast-sync uit."
+                    ),
+                )
+            report = sync_suggestions(
+                forecasts=forecasts,
+                positions=positions,
+                risk_profile=settings.suggestions_risk_profile,
+                repo=suggestion_repo,
+                valid_minutes=settings.suggestions_valid_minutes,
+            )
+    except StorageConnectionError:
+        return _build_blocked_suggestion_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt; geen suggesties opgeslagen.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "model_code": report.model_code,
+        "model_version": report.model_version,
+        "risk_profile": report.risk_profile,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "suggestion_total": report.suggestion_total,
+        "suggestion_persisted": report.suggestion_persisted,
+        "suggestion_failed": report.suggestion_failed,
+        "held_positions": report.held_positions,
+        "cold_start_positions": report.cold_start_positions,
+        "failures": [dict(item) for item in report.failures],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/suggestions/latest")
+def read_latest_suggestions() -> dict[str, object]:
+    """Return the latest persisted suggestion per current position."""
+
+    base = {
+        "items": [],
+        "help_nl": (
+            "Suggesties zijn deterministische Python-uitkomsten op basis van "
+            "evidence-gated baseline-voorspellingen. Geen action drafts, "
+            "geen orders, geen broker-submission."
+        ),
+        "risk_profile": settings.suggestions_risk_profile,
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            suggestion_repo = SqlAlchemyAssetSuggestionRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return base | {
+                    "status": "no_ibkr_sync_run",
+                    "status_nl": "Geen IBKR-sync gevonden",
+                }
+            positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return base | {
+                    "status": "no_positions",
+                    "status_nl": "Geen posities",
+                }
+            result = suggestion_repo.list_latest_asset_suggestions_by_conids(conids)
+            return base | {
+                "status": "ok",
+                "status_nl": (
+                    "Suggesties beschikbaar"
+                    if result.records
+                    else "Nog geen suggesties"
+                ),
+                "items": [serialize_suggestion_for_response(r) for r in result.records],
             }
     except StorageConnectionError:
         return base | {
