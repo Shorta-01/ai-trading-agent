@@ -1,4 +1,4 @@
-Huidige toestand: **na Task 154-L**
+Huidige toestand: **na Task 155**
 
 - Task 154-L completed: software name and account-mode scope lock corrected across source-of-truth docs; `AI Trading Agent` locked as active software name, `Portfolio Outlook Manager` marked legacy/historical only, blanket paper-only product-identity wording corrected to account-mode-aware wording with paper mode as safety/testing context, no automatic execution reaffirmed, and next implementation task moved to Task 155.
 - Task 153-L completed: documentatie/product-lock recovery voltooid; owner-agreed Version 1 product-, dashboard-, workflow- en daily-rhythm beslissingen geconsolideerd in `docs/product/version-1-product-experience-locks.md` en cross-referenced in kern productdocs. Product-tracking drift na Task 152-R7 gerepareerd en `next-task.md` verplaatst naar Task 154. Geen runtime/API/web/storage/migration/market-data/FX/suggestions/action-draft/order/broker-execution wijzigingen.
