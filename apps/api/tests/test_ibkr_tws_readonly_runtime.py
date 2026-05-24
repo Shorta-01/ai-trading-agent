@@ -52,6 +52,18 @@ def _settings(**updates: object) -> Settings:
     return base.model_copy(update=updates)
 
 
+def _fake_client_ready_settings(**updates: object) -> Settings:
+    return _settings(
+        ibkr_enabled=True,
+        ibkr_status_check_enabled=True,
+        ibkr_tws_readonly_adapter_enabled=True,
+        ibkr_tws_readonly_runtime_enabled=True,
+        ibkr_expected_environment="paper",
+        paper_only_mode=True,
+        **updates,
+    )
+
+
 def _assert_safety_flags_false(result: object) -> None:
     assert result.actions_allowed is False
     assert result.suggestions_allowed is False
@@ -115,10 +127,7 @@ def test_runtime_opt_in_with_adapter_disabled_blocked() -> None:
 
 def test_runtime_opt_in_without_client_blocked() -> None:
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=None,
     )
     assert "missing_runtime_client" in result.blocked_reasons
@@ -142,10 +151,7 @@ def test_expected_mode_not_paper_blocked() -> None:
 def test_happy_path_connect_check_disconnect() -> None:
     client = FakeRuntimeClient(account_mode="paper")
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "manual_status_check_completed"
@@ -159,10 +165,7 @@ def test_happy_path_connect_check_disconnect() -> None:
 def test_wrong_account_mode_blocks() -> None:
     client = FakeRuntimeClient(account_mode="live")
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "wrong_account_mode"
@@ -174,10 +177,7 @@ def test_wrong_account_mode_blocks() -> None:
 def test_unknown_account_mode_blocks() -> None:
     client = FakeRuntimeClient(account_mode=None)
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "unknown_account_mode"
@@ -187,10 +187,7 @@ def test_unknown_account_mode_blocks() -> None:
 def test_timeout_maps_safely() -> None:
     client = FakeRuntimeClient(connect_error=TimeoutError("timeout"))
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "timeout"
@@ -202,10 +199,7 @@ def test_authentication_required_maps_safely() -> None:
         connect_error=IbkrTwsReadonlyAdapterError("authentication_required")
     )
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "authentication_required"
@@ -214,10 +208,7 @@ def test_authentication_required_maps_safely() -> None:
 def test_pacing_limited_maps_safely() -> None:
     client = FakeRuntimeClient(connect_error=IbkrTwsReadonlyAdapterError("pacing_limited"))
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "pacing_limited"
@@ -228,10 +219,7 @@ def test_connection_failed_maps_safely() -> None:
         connect_error=IbkrTwsReadonlyAdapterError("connection_failed")
     )
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "connection_failed"
@@ -240,10 +228,7 @@ def test_connection_failed_maps_safely() -> None:
 def test_unexpected_error_maps_safely() -> None:
     client = FakeRuntimeClient(connect_error=RuntimeError("boom"))
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.status == "unexpected_client_error"
@@ -264,16 +249,19 @@ def test_disconnect_error_ignored() -> None:
 def test_no_secret_leak_in_result_text() -> None:
     client = FakeRuntimeClient()
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
+        _fake_client_ready_settings(
+            ibkr_tws_host="sensitive-host.local",
+            ibkr_tws_port=40123,
+            ibkr_client_id=98765,
+            ibkr_account_id="DU1234567",
         ),
         runtime_client=client,
     )
     dumped = str(result).lower()
+    assert "sensitive-host.local" not in dumped
+    assert "40123" not in dumped
+    assert "98765" not in dumped
+    assert "du1234567" not in dumped
     assert "password" not in dumped
     assert "token" not in dumped
     assert "secret" not in dumped
-    assert "host" not in dumped
-    assert "port" not in dumped
-    assert "client_id" not in dumped

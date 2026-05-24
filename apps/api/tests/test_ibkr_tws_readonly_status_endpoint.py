@@ -45,6 +45,18 @@ def _settings(**kwargs: object) -> Settings:
     return Settings(**kwargs)
 
 
+def _fake_client_ready_settings(**kwargs: object) -> Settings:
+    return _settings(
+        ibkr_enabled=True,
+        ibkr_status_check_enabled=True,
+        ibkr_tws_readonly_adapter_enabled=True,
+        ibkr_tws_readonly_runtime_enabled=True,
+        ibkr_expected_environment="paper",
+        paper_only_mode=True,
+        **kwargs,
+    )
+
+
 def _assert_safety_flags_false(payload: dict[str, object]) -> None:
     assert payload["actions_allowed"] is False
     assert payload["suggestions_allowed"] is False
@@ -87,10 +99,7 @@ def test_adapter_enabled_runtime_disabled_blocked() -> None:
 
 def test_runtime_enabled_adapter_enabled_missing_client_blocked() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=None,
     )
     assert "missing_runtime_client" in payload["blocked_reasons"]
@@ -100,10 +109,7 @@ def test_runtime_enabled_adapter_enabled_missing_client_blocked() -> None:
 def test_injected_fake_paper_client_completed() -> None:
     fake = FakeRuntimeClient(account_mode="paper")
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=fake,
     )
     assert payload["status"] == "manual_status_check_completed"
@@ -118,10 +124,7 @@ def test_injected_fake_paper_client_completed() -> None:
 def test_injected_fake_wrong_mode_client_blocked() -> None:
     fake = FakeRuntimeClient(account_mode="live")
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=fake,
     )
     assert payload["status"] == "wrong_account_mode"
@@ -132,10 +135,7 @@ def test_injected_fake_wrong_mode_client_blocked() -> None:
 def test_injected_fake_unknown_mode_client_blocked() -> None:
     fake = FakeRuntimeClient(account_mode=None)
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=fake,
     )
     assert payload["status"] == "unknown_account_mode"
@@ -144,10 +144,7 @@ def test_injected_fake_unknown_mode_client_blocked() -> None:
 
 def test_timeout_maps_safely_with_dutch_help() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=FakeRuntimeClient(connect_error=TimeoutError("timeout")),
     )
     assert payload["status"] == "timeout"
@@ -156,10 +153,7 @@ def test_timeout_maps_safely_with_dutch_help() -> None:
 
 def test_authentication_required_maps_safely() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=FakeRuntimeClient(
             connect_error=IbkrTwsReadonlyAdapterError("authentication_required")
         ),
@@ -169,10 +163,7 @@ def test_authentication_required_maps_safely() -> None:
 
 def test_pacing_limited_maps_safely() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=FakeRuntimeClient(
             connect_error=IbkrTwsReadonlyAdapterError("pacing_limited")
         ),
@@ -182,10 +173,7 @@ def test_pacing_limited_maps_safely() -> None:
 
 def test_connection_failed_maps_safely() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=FakeRuntimeClient(
             connect_error=IbkrTwsReadonlyAdapterError("connection_failed")
         ),
@@ -206,9 +194,11 @@ def test_unexpected_client_error_maps_safely() -> None:
 
 def test_disconnect_failure_ignored_and_safe() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
+        _fake_client_ready_settings(
+            ibkr_tws_host="sensitive-host.local",
+            ibkr_tws_port=40123,
+            ibkr_client_id=98765,
+            ibkr_account_id="DU1234567",
         ),
         runtime_client=FakeRuntimeClient(disconnect_error=RuntimeError("disconnect boom")),
     )
@@ -217,11 +207,23 @@ def test_disconnect_failure_ignored_and_safe() -> None:
 
 
 def test_no_secret_regression() -> None:
-    payload = client.post("/ibkr/session/manual-readonly-status-check").json()
-    forbidden = ["password", "token", "secret", "host", "port", "client_id"]
+    payload = _run_manual_tws_readonly_status_check_endpoint(
+        _fake_client_ready_settings(
+            ibkr_tws_host="sensitive-host.local",
+            ibkr_tws_port=40123,
+            ibkr_client_id=98765,
+            ibkr_account_id="DU1234567",
+        ),
+        runtime_client=FakeRuntimeClient(account_mode="paper"),
+    )
     blob = str(payload).lower()
-    for key in forbidden:
-        assert key not in blob
+    assert "sensitive-host.local" not in blob
+    assert "40123" not in blob
+    assert "98765" not in blob
+    assert "du1234567" not in blob
+    assert "password" not in blob
+    assert "token" not in blob
+    assert "secret" not in blob
 
 
 def test_readiness_default_route_blocked_runtime_disabled() -> None:
