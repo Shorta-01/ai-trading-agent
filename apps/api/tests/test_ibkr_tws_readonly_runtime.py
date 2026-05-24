@@ -56,19 +56,20 @@ def _settings(**updates: object) -> Settings:
 
 
 def _fake_client_ready_settings(**updates: object) -> Settings:
-    return _settings(
-        ibkr_enabled=True,
-        ibkr_status_check_enabled=True,
-        ibkr_tws_readonly_adapter_enabled=True,
-        ibkr_tws_readonly_runtime_enabled=True,
-        ibkr_tws_readonly_real_client_enabled=True,
-        ibkr_expected_environment="paper",
-        paper_only_mode=True,
-        ibkr_sync_host="127.0.0.1",
-        ibkr_sync_port=4002,
-        ibkr_sync_client_id=1,
-        **updates,
-    )
+    defaults: dict[str, object] = {
+        "ibkr_enabled": True,
+        "ibkr_status_check_enabled": True,
+        "ibkr_tws_readonly_adapter_enabled": True,
+        "ibkr_tws_readonly_runtime_enabled": True,
+        "ibkr_tws_readonly_real_client_enabled": True,
+        "ibkr_expected_environment": "paper",
+        "paper_only_mode": True,
+        "ibkr_sync_host": "127.0.0.1",
+        "ibkr_sync_port": 4002,
+        "ibkr_sync_client_id": 1,
+    }
+    defaults.update(updates)
+    return _settings(**defaults)
 
 
 def _assert_safety_flags_false(result: object) -> None:
