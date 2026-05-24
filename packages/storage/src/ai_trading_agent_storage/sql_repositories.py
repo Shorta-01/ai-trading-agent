@@ -36,6 +36,7 @@ from ai_trading_agent_storage.metadata import (
     asset_suggestions,
     market_data_bars,
     market_data_snapshots,
+    prediction_diary_entries,
     market_data_latest_snapshots,
     paper_portfolio_setups,
     request_logs,
@@ -70,6 +71,7 @@ from ai_trading_agent_storage.repository_contracts import (
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
     AssetDecisionPackageRecord,
+    PredictionDiaryEntryRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
     AssetListingRecord,
@@ -2520,3 +2522,68 @@ def _submission_from_row(row: RowMapping) -> AssetActionDraftSubmissionRecord:
     else:
         data["approval_dry_run_failures_json"] = None
     return AssetActionDraftSubmissionRecord(**data)
+
+
+class SqlAlchemyPredictionDiaryRepository(_Base):
+    def upsert_prediction_diary_entry(
+        self, record: PredictionDiaryEntryRecord
+    ) -> StorageWriteResult:
+        """Insert-or-replace by ``suggestion_id`` (the UNIQUE link).
+
+        Entries evolve over time as horizons mature; replacing in place
+        keeps the diary keyed by suggestion while tracking the latest
+        realised values.
+        """
+
+        self._connection.execute(
+            prediction_diary_entries.delete().where(
+                prediction_diary_entries.c.suggestion_id == record.suggestion_id
+            )
+        )
+        self._insert(prediction_diary_entries, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.entry_id,
+            prediction_diary_entries.name,
+            True,
+            "Prediction Diary entry opgeslagen.",
+        )
+
+    def get_prediction_diary_entry_by_suggestion_id(
+        self, suggestion_id: str
+    ) -> StorageReadResult[PredictionDiaryEntryRecord]:
+        row = _read_one_by_column(
+            self._connection, prediction_diary_entries, "suggestion_id", suggestion_id
+        )
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                prediction_diary_entries.name,
+                "Geen Prediction Diary entry gevonden.",
+            )
+        return StorageReadResult(
+            True,
+            PredictionDiaryEntryRecord(**dict(row)),
+            prediction_diary_entries.name,
+            "Prediction Diary entry opgehaald.",
+        )
+
+    def list_prediction_diary_entries(
+        self, *, limit: int = 200
+    ) -> StorageListResult[PredictionDiaryEntryRecord]:
+        rows = (
+            self._connection.execute(
+                select(prediction_diary_entries)
+                .order_by(prediction_diary_entries.c.issued_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(PredictionDiaryEntryRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            prediction_diary_entries.name,
+            f"{len(records)} Prediction Diary entries opgehaald.",
+        )

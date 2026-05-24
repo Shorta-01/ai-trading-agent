@@ -144,6 +144,9 @@ class Settings(BaseSettings):
     ibkr_paper_order_submission_timeout_seconds: int = 10
     ibkr_paper_order_submission_provider_code: str = "ibkr"
     action_draft_approval_valid_minutes: int = 5
+    reconciliation_sync_enabled: bool = False
+    prediction_diary_sync_enabled: bool = False
+    prediction_diary_inconclusive_tolerance_pct: str = "0.25"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

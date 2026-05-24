@@ -1527,6 +1527,45 @@ asset_action_draft_events = Table(
 )
 
 
+prediction_diary_entries = Table(
+    "prediction_diary_entries",
+    metadata,
+    Column("entry_id", Text, primary_key=True),
+    Column("suggestion_id", Text, nullable=False, unique=True),
+    Column("forecast_id", Text, nullable=True),
+    Column("ibkr_conid", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("currency", Text, nullable=False),
+    Column("issued_at", DateTime(timezone=True), nullable=False),
+    Column("issued_action_label", Text, nullable=False),
+    Column("issued_action_label_nl", Text, nullable=False),
+    Column("issued_confidence_label", Text, nullable=False),
+    Column("issued_horizon_days", Integer, nullable=False),
+    Column("issued_price", MONEY_NUMERIC, nullable=False),
+    Column("issued_p10_price", MONEY_NUMERIC, nullable=False),
+    Column("issued_p50_price", MONEY_NUMERIC, nullable=False),
+    Column("issued_p90_price", MONEY_NUMERIC, nullable=False),
+    Column("issued_prob_gain", Numeric(10, 6), nullable=False),
+    Column("issued_prob_loss", Numeric(10, 6), nullable=False),
+    Column("user_decision", Text, nullable=True),
+    Column("realized_price_1d", MONEY_NUMERIC, nullable=True),
+    Column("realized_price_1w", MONEY_NUMERIC, nullable=True),
+    Column("realized_price_1m", MONEY_NUMERIC, nullable=True),
+    Column("realized_return_pct_1d", MONEY_NUMERIC, nullable=True),
+    Column("realized_return_pct_1w", MONEY_NUMERIC, nullable=True),
+    Column("realized_return_pct_1m", MONEY_NUMERIC, nullable=True),
+    Column("outcome_label_1d", Text, nullable=True),
+    Column("outcome_label_1w", Text, nullable=True),
+    Column("outcome_label_1m", Text, nullable=True),
+    Column("outcome_explanation_nl", Text, nullable=False),
+    Column("last_evaluated_at", DateTime(timezone=True), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_self_learning", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_model_retraining", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_decision_packages = Table(
     "asset_decision_packages",
     metadata,
