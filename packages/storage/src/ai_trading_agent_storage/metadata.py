@@ -1473,6 +1473,8 @@ asset_action_drafts = Table(
     Column("safe_for_submission", Boolean, nullable=False, server_default="0"),
     Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
     Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    Column("estimated_belgian_tob", MONEY_NUMERIC, nullable=True),
+    Column("belgian_tob_security_class", Text, nullable=True),
 )
 
 

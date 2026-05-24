@@ -582,6 +582,8 @@ export type AssetActionDraftResponse = {
   estimated_portfolio_weight_after_pct: string | null;
   estimated_concentration_impact_pct: string | null;
   orderimpact_base_currency: string | null;
+  estimated_belgian_tob: string | null;
+  belgian_tob_security_class: string | null;
   source_action_label: string;
   source_action_label_nl: string;
   status: string;

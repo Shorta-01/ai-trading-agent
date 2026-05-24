@@ -2043,6 +2043,11 @@ class AssetActionDraftRecord:
     safe_for_submission: bool = False
     safe_for_orders: bool = False
     safe_for_broker_submission: bool = False
+    # Belgian tax preview (Slice 11). Informational on the draft; the TOB
+    # does not change order sizing. ``None`` means the value was not
+    # computed (older drafts).
+    estimated_belgian_tob: Decimal | None = None
+    belgian_tob_security_class: str | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -2088,6 +2093,8 @@ class AssetActionDraftRecord:
                 "Action-draft safety booleans must remain false in V1: a "
                 "draft never auto-promotes to a broker submission."
             )
+        if self.estimated_belgian_tob is not None and self.estimated_belgian_tob < 0:
+            raise ValueError("estimated_belgian_tob must not be negative.")
 
 
 @dataclass(frozen=True)
