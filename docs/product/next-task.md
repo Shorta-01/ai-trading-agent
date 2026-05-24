@@ -1,3 +1,5 @@
+Task 147 — Add explicit operator-facing readiness diagnostics for manual TWS/Gateway status-check endpoint without enabling runtime connectivity.
+
 # Task 146 - Add manual read-only TWS/Gateway status-check endpoint shell
 
 ## Why
