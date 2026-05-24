@@ -1,22 +1,30 @@
 # Task 168
 
-Slice 13 — Deployment hardening + V1 release readiness. With every
-critical-path slice now in place (IBKR sync, market data, forecasts,
-suggestions, Decision Packages, action drafts, paper submission,
-reconciliation + Prediction Diary, Research Desk, AI explanation,
-Belgian tax, daily briefing), the next slice tightens the deployment
-posture before V1 cut-over.
+Slice 13 — Doctrine relock + scheduler skeleton. This slice
+implements the doctrine relocks captured in
+`version-1-product-experience-locks.md §21` after the owner brainstorm
+that followed Slice 12.
 
 Scope:
-- Storage migration adding a single `release_readiness_audits` table
-  (one row per audit run) capturing the deterministic readiness
-  scorecard: which feature flags are enabled, which providers are
-  configured, which safety boolean defaults are still hard-False, the
-  Alembic head, and the audit's Dutch summary.
-- Pure-Python `release_readiness` module in `packages/portfolio` that
-  takes the typed inputs and returns a deterministic readiness scorecard
-  + Dutch summary. AI is not invoked.
-- New route `POST /release/readiness/audit` and `GET /release/readiness/latest`.
-- Web "Release readiness" panel summarising the scorecard.
+- Relax `paper_only_mode` + `ibkr_expected_environment` from
+  "blocks order" to "reports the mode the connected IBKR account is in".
+  Add a dashboard `PAPER` / `LIVE` badge that surfaces the account mode
+  IBKR reports; the runtime is identical for both.
+- Drop the `account_mode_mismatch` dry-run failure code.
+- Add APScheduler in-process (FastAPI lifespan-wired). New settings
+  `scheduler_enabled` (default `False`) and `daily_briefing_cron`
+  (default `0 30 6 * * *` Europe/Brussels). When enabled, the schedule
+  triggers the existing daily briefing endpoint.
+- Storage migration adding `scheduler_runs` table (one row per
+  scheduled run: job name, scheduled_at, started_at, finished_at,
+  status, error_text, safe booleans hard-False) so the audit chain
+  records every automatic invocation.
+- New routes `GET /scheduler/jobs` (read which jobs are registered) and
+  `GET /scheduler/runs/latest` (read the most recent run).
+- Web update: add the `PAPER` / `LIVE` badge on the Portefeuille page
+  header and a small "Scheduler" panel showing the last run + next-fire
+  time.
 
-Disabled-by-default; safety booleans hard-False; no broker action.
+Disabled-by-default; manual approval gate stays; safety booleans
+hard-False on every record and every response. No new predictors yet —
+this slice clears the runway for slices 14–22.

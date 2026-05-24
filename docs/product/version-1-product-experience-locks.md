@@ -221,3 +221,62 @@ Verticale progressie omvat:
 - suggestions/action drafts met gates.
 
 Vermijd eindeloze facade/preflight/doc-only taken tenzij ze een echte blocker wegnemen.
+
+## 21. V1 expansion lock — owner brainstorm (post-Slice 12)
+
+Deze sectie vervangt **niet** secties 1-20 hierboven; ze verfijnt drie eerdere locks op basis van een owner-brainstorm na Slice 12. De rest van de doctrine (manual approval, geen auto-execution, Decimal-only math, evidence-gated decisions, Dutch labels, Belgian tax) blijft ongewijzigd.
+
+### 21.1. Account-mode lock — relaxed
+- Account-mode (paper / live) wordt vastgesteld door het verbonden IBKR-account, **niet** door een app-side gate.
+- De runtime gedraagt zich identiek voor paper en live: dezelfde sync, dezelfde forecast, dezelfde Decision Package, dezelfde action-draft + approval flow, dezelfde submission.
+- Het dashboard **labelt** zichtbaar welke modus IBKR rapporteert (`PAPER` / `LIVE` badge), zodat de gebruiker dit weet vóór elke approval.
+- De `paper_only_mode` setting + `ibkr_expected_environment` check + `account_mode_mismatch` dry-run failure worden gewijzigd van "blocks order" naar "reports mode".
+- Real-money veiligheid leeft op het IBKR-accountkeuze-niveau en op de manual per-draft approval — niet in een app-side `paper_only` flag.
+
+### 21.2. AI lock — relaxed to ensemble vote
+- AI mag een numerieke voorspelling **als één lid van een ensemble** leveren.
+- De ensemble-stem (deterministische regel over alle predictor-outputs) bepaalt het locked Dutch action-label, niet enige single predictor.
+- AI's voorspelling wordt per asset opgeslagen naast die van elke andere predictor; de Prediction Diary tracked AI-accuratesse net zoals elke andere predictor.
+- De AI explanation layer (Slice 10) blijft paraphrase-only: AI mag nooit een prijs/getal originaten in de uitleg-output.
+- AI mag een suggestie of action-draft nooit auto-promotion naar order veroorzaken (manual approval blijft).
+
+### 21.3. Order scope lock — extended
+- V1 ondersteunt de volledige IBKR-order-vocabulary die paper én live accounts delen: LMT, MKT, STP, STP LMT, TRAIL, TRAIL LMT, bracket, conditional, IB Algos.
+- Hele aandelen, geen leverage / shorts / opties / futures / crypto / CFDs blijven gelden.
+- Per-type dry-run safety checks verplicht.
+
+### 21.4. Predictor ensemble lock
+Locked ensemble at V1 launch:
+- **Lognormal GBM** (huidige baseline, behoud)
+- **Momentum** (12-1 + time-series momentum)
+- **Mean-reversion** (RSI, Bollinger, Hurst, z-score)
+- **QVM factor** (Quality + Value + Momentum cross-sectional score)
+- **AI foundation TS-model** (TimesFM / Chronos / Lag-Llama via stub-or-real provider)
+
+Combiner is deterministisch: equal-weight at launch; evolves to inverse-variance once Diary heeft track-record. Geen single-predictor override.
+
+### 21.5. Sizing lock — Fractional Kelly + risk parity
+- Position sizing uses fractional Kelly (default ½ Kelly) over de ensemble's distribution (p10/p50/p90 + prob_gain).
+- Risk parity across portfolio zorgt dat elke positie ongeveer evenveel risk contribution heeft.
+- Hard caps: max 5% van portfolio per asset, max 30% per sector.
+- Vervangt de huidige fixed-buy-value sizing.
+
+### 21.6. Universe-scan lock
+- Daily scan loopt over een vastgelegde universe registry: Bel20 + AEX + CAC40 + DAX + STOXX 600 + S&P 500 + NASDAQ-100 (~5 000 tickers).
+- QVM-score rangschikt het universe; top-N kandidaten worden in de Dagbriefing meegenomen naast portfolio + watchlist.
+- Universe-uitbreiding (LSE, TSX, Asia) is een expliciete latere lock-update.
+
+### 21.7. Scheduler lock
+- APScheduler in-process binnen de FastAPI runtime; geen externe scheduler dependency.
+- Default cron: `0 30 6 * * *` Europe/Brussels (06:30 lokaal), zodat de briefing om 07:00 klaarstaat.
+- Run-target: laptop initieel; later Raspberry Pi (zelfde code-pad).
+- Scheduler is disabled-by-default; explicit `SCHEDULER_ENABLED=true` vereist.
+
+### 21.8. What stays unchanged
+- Manual per-draft approval (geen auto-execution).
+- Decimal-only money math.
+- Locked Dutch action-label set (10 labels).
+- Decision Package as evidence chain anchor.
+- Prediction Diary as deterministic outcome tracker.
+- All `safe_for_*` booleans default-False on persisted records (the boundary that lifts them is the locked state-machine + manual approval, not a flag flip).
+
