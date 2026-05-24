@@ -1646,3 +1646,159 @@ def test_explanation_can_persist_blocked_with_hallucinated_numbers() -> None:
         assert latest.record is not None
         assert latest.record.status == "blocked"
         assert latest.record.hallucinated_numbers_json == ("999", "1000")
+
+
+def test_daily_briefing_repository_upserts_by_date_and_lists_alerts() -> None:
+    from datetime import date as _date
+
+    from ai_trading_agent_storage.repository_contracts import (
+        BriefingAlertRecord,
+        DailyBriefingRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyDailyBriefingRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyDailyBriefingRepository(conn, _report(True))
+        now = datetime(2025, 5, 24, 9, 0, tzinfo=UTC)
+
+        def _briefing(briefing_id: str, summary: str) -> DailyBriefingRecord:
+            return DailyBriefingRecord(
+                briefing_id=briefing_id,
+                briefing_date=_date(2025, 5, 24),
+                generated_at=now,
+                lookback_started_at=now,
+                position_count=0,
+                base_currency=None,
+                total_position_value=None,
+                cash_total=None,
+                fx_freshness_status=None,
+                new_suggestion_count=0,
+                new_decision_package_count=0,
+                new_action_draft_count=0,
+                diary_outcomes_closed_count=0,
+                critical_event_count=0,
+                alert_count=0,
+                summary_nl=summary,
+                help_nl="ok",
+                status="ready",
+                blocking_reason=None,
+            )
+
+        repo.upsert_daily_briefing(_briefing("brief-1", "eerste"))
+        # Re-running for the same date replaces the row.
+        repo.upsert_daily_briefing(_briefing("brief-2", "tweede"))
+        latest = repo.get_latest_daily_briefing()
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.briefing_id == "brief-2"
+        assert latest.record.summary_nl == "tweede"
+
+        repo.save_briefing_alert(
+            BriefingAlertRecord(
+                alert_id="alrt-1",
+                briefing_id="brief-2",
+                alert_kind="new_suggestion",
+                severity="info",
+                reference_kind="suggestion",
+                reference_id="sug-1",
+                title_nl="t",
+                body_nl="b",
+                acknowledged_at=None,
+                linked_at=now,
+            )
+        )
+        alerts = repo.list_alerts_for_briefing("brief-2")
+        assert len(alerts.records) == 1
+        assert alerts.records[0].severity == "info"
+
+        repo.delete_alerts_for_briefing("brief-2")
+        alerts = repo.list_alerts_for_briefing("brief-2")
+        assert len(alerts.records) == 0
+
+
+def test_daily_briefing_rejects_safety_booleans_set_true() -> None:
+    from datetime import date as _date
+
+    from ai_trading_agent_storage.repository_contracts import (
+        BriefingAlertRecord,
+        DailyBriefingRecord,
+    )
+
+    now = datetime(2025, 5, 24, 9, 0, tzinfo=UTC)
+    briefing_base = dict(
+        briefing_id="b",
+        briefing_date=_date(2025, 5, 24),
+        generated_at=now,
+        lookback_started_at=now,
+        position_count=0,
+        base_currency=None,
+        total_position_value=None,
+        cash_total=None,
+        fx_freshness_status=None,
+        new_suggestion_count=0,
+        new_decision_package_count=0,
+        new_action_draft_count=0,
+        diary_outcomes_closed_count=0,
+        critical_event_count=0,
+        alert_count=0,
+        summary_nl="t",
+        help_nl="t",
+        status="ready",
+        blocking_reason=None,
+    )
+    with pytest.raises(ValueError):
+        DailyBriefingRecord(**{**briefing_base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError):
+        DailyBriefingRecord(**{**briefing_base, "safe_for_orders": True})
+
+    alert_base = dict(
+        alert_id="a",
+        briefing_id="b",
+        alert_kind="new_suggestion",
+        severity="info",
+        reference_kind=None,
+        reference_id=None,
+        title_nl="t",
+        body_nl="b",
+        acknowledged_at=None,
+        linked_at=now,
+    )
+    with pytest.raises(ValueError):
+        BriefingAlertRecord(**{**alert_base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError, match="severity"):
+        BriefingAlertRecord(**{**alert_base, "severity": "unknown"})
+
+
+def test_daily_briefing_rejects_negative_counts() -> None:
+    from datetime import date as _date
+
+    from ai_trading_agent_storage.repository_contracts import DailyBriefingRecord
+
+    now = datetime(2025, 5, 24, 9, 0, tzinfo=UTC)
+    base = dict(
+        briefing_id="b",
+        briefing_date=_date(2025, 5, 24),
+        generated_at=now,
+        lookback_started_at=now,
+        position_count=0,
+        base_currency=None,
+        total_position_value=None,
+        cash_total=None,
+        fx_freshness_status=None,
+        new_suggestion_count=0,
+        new_decision_package_count=0,
+        new_action_draft_count=0,
+        diary_outcomes_closed_count=0,
+        critical_event_count=0,
+        alert_count=0,
+        summary_nl="t",
+        help_nl="t",
+        status="ready",
+        blocking_reason=None,
+    )
+    with pytest.raises(ValueError, match="non-negative"):
+        DailyBriefingRecord(**{**base, "position_count": -1})

@@ -34,6 +34,8 @@ from ai_trading_agent_storage.metadata import (
     asset_decision_packages,
     asset_forecasts,
     asset_suggestions,
+    briefing_alerts,
+    daily_briefings,
     decision_package_explanations,
     explanation_evidence_ledger,
     market_data_bars,
@@ -73,6 +75,8 @@ from ai_trading_agent_storage.repository_contracts import (
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
     AssetDecisionPackageRecord,
+    BriefingAlertRecord,
+    DailyBriefingRecord,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     PredictionDiaryEntryRecord,
@@ -2697,4 +2701,92 @@ class SqlAlchemyDecisionPackageExplanationRepository(_Base):
             records,
             explanation_evidence_ledger.name,
             f"{len(records)} evidence ledger entries opgehaald.",
+        )
+
+
+class SqlAlchemyDailyBriefingRepository(_Base):
+    def upsert_daily_briefing(
+        self, record: DailyBriefingRecord
+    ) -> StorageWriteResult:
+        """Insert-or-replace by ``briefing_date`` (UNIQUE).
+
+        A briefing can be re-run mid-day; the latest snapshot wins.
+        """
+
+        self._connection.execute(
+            daily_briefings.delete().where(
+                daily_briefings.c.briefing_date == record.briefing_date
+            )
+        )
+        self._insert(daily_briefings, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.briefing_id,
+            daily_briefings.name,
+            True,
+            "Daily briefing opgeslagen.",
+        )
+
+    def get_latest_daily_briefing(
+        self,
+    ) -> StorageReadResult[DailyBriefingRecord]:
+        statement = (
+            select(daily_briefings)
+            .order_by(daily_briefings.c.briefing_date.desc())
+            .limit(1)
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                daily_briefings.name,
+                "Nog geen daily briefing.",
+            )
+        return StorageReadResult(
+            True,
+            DailyBriefingRecord(**dict(row)),
+            daily_briefings.name,
+            "Daily briefing opgehaald.",
+        )
+
+    def save_briefing_alert(
+        self, record: BriefingAlertRecord
+    ) -> StorageWriteResult:
+        self._insert(briefing_alerts, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.alert_id,
+            briefing_alerts.name,
+            True,
+            "Briefing alert opgeslagen.",
+        )
+
+    def list_alerts_for_briefing(
+        self, briefing_id: str
+    ) -> StorageListResult[BriefingAlertRecord]:
+        rows = _read_many_by_column(
+            self._connection, briefing_alerts, "briefing_id", briefing_id
+        )
+        records = tuple(BriefingAlertRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            briefing_alerts.name,
+            f"{len(records)} briefing alerts opgehaald.",
+        )
+
+    def delete_alerts_for_briefing(self, briefing_id: str) -> StorageWriteResult:
+        """Used when a briefing is re-run: drop the old alerts for the day."""
+
+        self._connection.execute(
+            briefing_alerts.delete().where(
+                briefing_alerts.c.briefing_id == briefing_id
+            )
+        )
+        return StorageWriteResult(
+            True,
+            briefing_id,
+            briefing_alerts.name,
+            True,
+            "Briefing alerts verwijderd.",
         )

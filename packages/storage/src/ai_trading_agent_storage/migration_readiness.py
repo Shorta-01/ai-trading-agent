@@ -363,6 +363,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Informational only — TOB verandert de ordersizing niet."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0036_daily_briefings",
+        previous_revision_id="0035_action_draft_belgian_tob",
+        filename="0036_daily_briefings.py",
+        label_nl="Daily briefings + alerts",
+        description_nl=(
+            "Voegt twee tabellen toe: daily_briefings (één deterministische "
+            "samenvatting per dag, UNIQUE op briefing_date) en briefing_alerts "
+            "(append-only items waarnaar de briefing verwijst). AI schrijft "
+            "geen briefings; alle tellingen komen uit geüpdate persisted data."
+        ),
+    ),
 )
 
 

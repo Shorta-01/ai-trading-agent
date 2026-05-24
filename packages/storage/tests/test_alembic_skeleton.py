@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_thirty_five_revision_files_exist_with_expected_names() -> None:
+def test_exactly_thirty_six_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -71,6 +71,7 @@ def test_exactly_thirty_five_revision_files_exist_with_expected_names() -> None:
         "0033_decision_package_research_evidence.py",
         "0034_decision_package_explanations.py",
         "0035_action_draft_belgian_tob.py",
+        "0036_daily_briefings.py",
     ]
 
 

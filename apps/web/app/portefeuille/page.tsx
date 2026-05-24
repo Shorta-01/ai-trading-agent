@@ -12,6 +12,7 @@ import {
   AssetDecisionPackageResponse,
   AssetForecastResponse,
   AssetSuggestionResponse,
+  DailyBriefingResponse,
   DecisionPackageExplanationResponse,
   IbkrCashSnapshot,
   IbkrExecutionSnapshot,
@@ -64,6 +65,7 @@ export default function PortfolioPage() {
   const [actionDrafts, setActionDrafts] = useState<AssetActionDraftResponse[]>([]);
   const [explanations, setExplanations] = useState<Record<string, DecisionPackageExplanationResponse | null>>({});
   const [explanationStatuses, setExplanationStatuses] = useState<Record<string, string>>({});
+  const [dailyBriefing, setDailyBriefing] = useState<DailyBriefingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -102,6 +104,20 @@ export default function PortfolioPage() {
     if (res.ok) {
       setExplanations((prev) => ({ ...prev, [decisionPackageId]: res.data.item }));
       setExplanationStatuses((prev) => ({ ...prev, [decisionPackageId]: res.data.status }));
+    }
+  };
+
+  const loadDailyBriefing = async () => {
+    const res = await apiClient.getLatestDailyBriefing();
+    if (res.ok) {
+      setDailyBriefing(res.data.item);
+    }
+  };
+
+  const runDailyBriefing = async () => {
+    const res = await apiClient.runDailyBriefing();
+    if (res.ok && res.data.briefing_id) {
+      await loadDailyBriefing();
     }
   };
 
@@ -169,6 +185,7 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     void loadData();
+    void loadDailyBriefing();
   }, []);
 
   const statusTone = useMemo(() => {
@@ -231,6 +248,57 @@ export default function PortfolioPage() {
 
       {loading ? <EmptyState title="Laden..." message="IBKR snapshots worden opgehaald." /> : null}
       {!loading && loadFailed ? <EmptyState title="Sync mislukt. Controleer de IBKR-koppeling." message="Nog geen IBKR-sync uitgevoerd" /> : null}
+
+      <section className="dashboard-panel">
+        <div className="panel-head">
+          <h2>Dagbriefing</h2>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button type="button" onClick={() => void runDailyBriefing()} style={{ fontSize: "0.85rem", padding: "0.2rem 0.6rem" }}>
+              Genereer briefing
+            </button>
+            <button type="button" onClick={() => void loadDailyBriefing()} style={{ fontSize: "0.85rem", padding: "0.2rem 0.6rem" }}>
+              Vernieuw
+            </button>
+          </div>
+        </div>
+        <p className="top-sub">Deterministische dagsamenvatting + alerts; geen AI auteur, geen broker actie.</p>
+        {dailyBriefing ? (
+          <div>
+            <div style={{ marginBottom: "0.5rem", fontSize: "0.92rem" }}>{dailyBriefing.summary_nl}</div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.75 }}>
+              briefing-datum: {dailyBriefing.briefing_date}
+              {" • "}
+              alerts: {dailyBriefing.alert_count}
+              {" • "}
+              positions: {dailyBriefing.position_count}
+            </div>
+            {dailyBriefing.alerts.length > 0 ? (
+              <ul style={{ marginTop: "0.5rem", paddingLeft: "1.1rem" }}>
+                {dailyBriefing.alerts.map((alert) => (
+                  <li
+                    key={alert.alert_id}
+                    style={{
+                      fontSize: "0.88rem",
+                      color: alert.severity === "critical"
+                        ? "var(--ata-warning, #f97316)"
+                        : alert.severity === "warning"
+                          ? "var(--ata-warning, #f59e0b)"
+                          : undefined,
+                    }}
+                  >
+                    <strong>[{alert.severity}]</strong> {alert.title_nl} — {alert.body_nl}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : (
+          <EmptyState
+            title="Nog geen dagbriefing"
+            message="Druk op 'Genereer briefing' om een deterministische samenvatting op te slaan."
+          />
+        )}
+      </section>
 
       <section className="dashboard-panel">
         <h2>Posities</h2>
