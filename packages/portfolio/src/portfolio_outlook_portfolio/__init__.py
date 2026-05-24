@@ -24,6 +24,16 @@ from .action_draft_safety import (
     derive_action_draft_sizing,
     run_dry_run_safety_checks,
 )
+from .action_draft_state_machine import (
+    ALLOWED_TRANSITIONS,
+    LIVE_AT_BROKER_STATES,
+    TERMINAL_STATES,
+    ActionDraftState,
+    InvalidStateTransitionError,
+    coerce_state,
+    is_transition_allowed,
+    require_transition_allowed,
+)
 from .approval_guards import (
     build_approved_action,
     is_approval_decision_final,
@@ -333,5 +343,13 @@ __all__ = [
     "DEFAULT_BUY_VALUE_EUR",
     "DEFAULT_TOP_UP_PCT",
     "DEFAULT_REDUCE_PCT",
+    "ActionDraftState",
+    "ALLOWED_TRANSITIONS",
+    "TERMINAL_STATES",
+    "LIVE_AT_BROKER_STATES",
+    "InvalidStateTransitionError",
+    "is_transition_allowed",
+    "require_transition_allowed",
+    "coerce_state",
 ]
 

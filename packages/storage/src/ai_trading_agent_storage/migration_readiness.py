@@ -304,6 +304,17 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "brokeractie."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0031_action_draft_submissions_and_events",
+        previous_revision_id="0030_asset_action_drafts",
+        filename="0031_action_draft_submissions_and_events.py",
+        label_nl="Action draft submissions + audit events",
+        description_nl=(
+            "1:1 submission record per action draft met state machine + IBKR "
+            "ids + safety booleans (False) en een append-only events tabel "
+            "voor elke state-transitie / approval / cancellation."
+        ),
+    ),
 )
 
 

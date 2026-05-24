@@ -136,6 +136,14 @@ class Settings(BaseSettings):
     action_drafts_default_buy_value: str = "1000"
     action_drafts_top_up_pct: str = "0.25"
     action_drafts_reduce_pct: str = "0.25"
+    ibkr_paper_order_submission_enabled: bool = False
+    ibkr_paper_order_submission_real_client_enabled: bool = False
+    ibkr_paper_order_submission_host: str | None = None
+    ibkr_paper_order_submission_port: int | None = None
+    ibkr_paper_order_submission_client_id: int | None = None
+    ibkr_paper_order_submission_timeout_seconds: int = 10
+    ibkr_paper_order_submission_provider_code: str = "ibkr"
+    action_draft_approval_valid_minutes: int = 5
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

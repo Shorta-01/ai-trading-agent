@@ -1061,3 +1061,134 @@ def test_asset_action_draft_rejects_market_orders_and_unsafe_flags() -> None:
         AssetActionDraftRecord(**{**base_kwargs, "safe_for_submission": True})
     with pytest.raises(ValueError):
         AssetActionDraftRecord(**{**base_kwargs, "safe_for_broker_submission": True})
+
+
+def test_asset_action_draft_submission_repository_upserts_by_draft_id() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        AssetActionDraftSubmissionRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetActionDraftSubmissionRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetActionDraftSubmissionRepository(conn, _report(True))
+
+        def _sub(submission_id: str, state: str) -> AssetActionDraftSubmissionRecord:
+            now = datetime(2025, 5, 24, tzinfo=UTC)
+            return AssetActionDraftSubmissionRecord(
+                submission_id=submission_id,
+                draft_id="d1",
+                state=state,
+                approval_status="approved",
+                approved_at=now,
+                approved_by="owner",
+                approval_dry_run_status="passed",
+                approval_dry_run_failures_json=None,
+                submitted_at=None,
+                ibkr_order_id=None,
+                ibkr_perm_id=None,
+                ibkr_client_id=None,
+                ibkr_status_text=None,
+                filled_quantity=None,
+                remaining_quantity=None,
+                average_fill_price=None,
+                cancelled_at=None,
+                cancellation_reason=None,
+                rejected_reason=None,
+                reconciled_at=None,
+                account_mode="paper",
+                expected_account_mode="paper",
+                provider_code="ibkr",
+                created_at=now,
+                updated_at=now,
+                last_state_transition_at=now,
+            )
+
+        repo.upsert_asset_action_draft_submission(_sub("s1", "user_approved"))
+        repo.upsert_asset_action_draft_submission(_sub("s2", "submitted"))
+
+        latest = repo.get_submission_by_draft_id("d1")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.submission_id == "s2"
+        assert latest.record.state == "submitted"
+
+
+def test_asset_action_draft_event_repository_lists_events_chronologically() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetActionDraftEventRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetActionDraftEventRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetActionDraftEventRepository(conn, _report(True))
+
+        def _ev(
+            event_id: str, when_hour: int, severity: str = "info"
+        ) -> AssetActionDraftEventRecord:
+            return AssetActionDraftEventRecord(
+                event_id=event_id,
+                draft_id="d1",
+                submission_id=None,
+                event_type="state_transition",
+                severity=severity,
+                from_state="draft",
+                to_state="safety_checked",
+                occurred_at=datetime(2025, 5, 24, when_hour, 0, tzinfo=UTC),
+                acknowledged_at=None,
+                rationale_nl="test",
+                details_json=None,
+            )
+
+        repo.save_asset_action_draft_event(_ev("e1", 11))
+        repo.save_asset_action_draft_event(_ev("e2", 9))
+        repo.save_asset_action_draft_event(_ev("e3", 10, severity="critical"))
+
+        listed = repo.list_asset_action_draft_events("d1")
+        assert [r.event_id for r in listed.records] == ["e2", "e3", "e1"]
+        assert listed.records[1].severity == "critical"
+
+
+def test_submission_record_rejects_safety_booleans_set_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        AssetActionDraftSubmissionRecord,
+    )
+
+    now = datetime.now(UTC)
+    base = dict(
+        submission_id="s",
+        draft_id="d",
+        state="user_approved",
+        approval_status="approved",
+        approved_at=now,
+        approved_by="owner",
+        approval_dry_run_status="passed",
+        approval_dry_run_failures_json=None,
+        submitted_at=None,
+        ibkr_order_id=None,
+        ibkr_perm_id=None,
+        ibkr_client_id=None,
+        ibkr_status_text=None,
+        filled_quantity=None,
+        remaining_quantity=None,
+        average_fill_price=None,
+        cancelled_at=None,
+        cancellation_reason=None,
+        rejected_reason=None,
+        reconciled_at=None,
+        account_mode="paper",
+        expected_account_mode="paper",
+        provider_code="ibkr",
+        created_at=now,
+        updated_at=now,
+        last_state_transition_at=now,
+    )
+    with pytest.raises(ValueError):
+        AssetActionDraftSubmissionRecord(**{**base, "safe_for_broker_submission": True})
+    with pytest.raises(ValueError):
+        AssetActionDraftSubmissionRecord(**{**base, "safe_for_orders": True})

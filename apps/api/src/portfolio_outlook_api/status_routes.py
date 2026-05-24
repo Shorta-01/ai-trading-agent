@@ -7,7 +7,9 @@ from typing import Annotated
 
 from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
+    SqlAlchemyAssetActionDraftEventRepository,
     SqlAlchemyAssetActionDraftRepository,
+    SqlAlchemyAssetActionDraftSubmissionRepository,
     SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetSuggestionRepository,
@@ -29,6 +31,12 @@ from portfolio_outlook_domain.market_data_foundation import (
     evaluate_market_data_readiness,
 )
 
+from portfolio_outlook_api.action_draft_submission import (
+    approve_action_draft,
+    serialize_event_for_response,
+    serialize_submission_for_response,
+    submit_action_draft_to_paper,
+)
 from portfolio_outlook_api.action_draft_sync import (
     generate_action_drafts,
     serialize_action_draft_for_response,
@@ -52,6 +60,9 @@ from portfolio_outlook_api.ibkr_ibapi_manual_status_client import (
 )
 from portfolio_outlook_api.ibkr_ibapi_sync_client import real_sync_client_session
 from portfolio_outlook_api.ibkr_market_data import IbkrMarketDataAdapter, settings_from_runtime
+from portfolio_outlook_api.ibkr_order_submission_factory import (
+    build_real_order_submission_client,
+)
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync import read_status, run_sync
 from portfolio_outlook_api.ibkr_sync_adapter_factory import build_real_sync_adapter
@@ -1857,6 +1868,232 @@ def read_action_draft_by_id(draft_id: str) -> dict[str, object]:
                 "status": "ok",
                 "status_nl": "Action draft beschikbaar",
                 "item": serialize_action_draft_for_response(result.record),
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+def _build_blocked_submission_response(
+    *, reason: str, status_nl: str, help_nl: str, state: str = "draft"
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "submission_id": None,
+        "state": state,
+        "ibkr_order_id": None,
+        "ibkr_perm_id": None,
+        "ibkr_status_text": None,
+        "blocking_reason": reason,
+        "failures": [],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/action-drafts/{draft_id}/approve")
+def approve_action_draft_endpoint(draft_id: str) -> dict[str, object]:
+    """Final-confirmation step: re-validate the draft and persist approval."""
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_submission_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Approval vereist schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            submission_repo = SqlAlchemyAssetActionDraftSubmissionRepository(
+                checked.connection, checked.readiness
+            )
+            event_repo = SqlAlchemyAssetActionDraftEventRepository(
+                checked.connection, checked.readiness
+            )
+            draft_result = draft_repo.get_asset_action_draft_by_id(draft_id)
+            if not draft_result.found or draft_result.record is None:
+                raise HTTPException(status_code=404, detail="Action draft not found.")
+            result = approve_action_draft(
+                draft=draft_result.record,
+                submission_repo=submission_repo,
+                event_repo=event_repo,
+                expected_account_mode=settings.ibkr_expected_environment,
+                provider_code=settings.ibkr_paper_order_submission_provider_code,
+            )
+    except StorageConnectionError:
+        return _build_blocked_submission_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": result.status,
+        "status_nl": result.status_nl,
+        "help_nl": result.help_nl,
+        "submission_id": result.submission_id,
+        "state": result.state,
+        "blocking_reason": result.blocking_reason,
+        "failures": list(result.failures),
+        "actions_allowed": False,
+        "order_submission_allowed": result.status == "approved",
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/action-drafts/{draft_id}/submit-to-ibkr-paper")
+def submit_action_draft_to_paper_endpoint(draft_id: str) -> dict[str, object]:
+    """Submit a previously-approved draft to the IBKR paper gateway."""
+
+    if not settings.ibkr_paper_order_submission_enabled:
+        return _build_blocked_submission_response(
+            reason="ibkr_paper_order_submission_disabled",
+            status_nl="Submission uitgeschakeld",
+            help_nl=(
+                "Stel `IBKR_PAPER_ORDER_SUBMISSION_ENABLED=true` (plus de real-"
+                "client flag en host/port/client-id) in om paper orders te kunnen "
+                "verzenden."
+            ),
+        )
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_submission_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Submission vereist schrijfbare opslag.",
+        )
+
+    submission_client = build_real_order_submission_client(settings)
+    if submission_client is None:
+        return _build_blocked_submission_response(
+            reason="submission_client_unavailable",
+            status_nl="Submission client niet geconfigureerd",
+            help_nl=(
+                "Real ibapi submission client niet beschikbaar; controleer de "
+                "submission-flags + host/port/client-id en paper account-mode."
+            ),
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            submission_repo = SqlAlchemyAssetActionDraftSubmissionRepository(
+                checked.connection, checked.readiness
+            )
+            event_repo = SqlAlchemyAssetActionDraftEventRepository(
+                checked.connection, checked.readiness
+            )
+            draft_result = draft_repo.get_asset_action_draft_by_id(draft_id)
+            if not draft_result.found or draft_result.record is None:
+                raise HTTPException(status_code=404, detail="Action draft not found.")
+            result = submit_action_draft_to_paper(
+                draft=draft_result.record,
+                submission_repo=submission_repo,
+                event_repo=event_repo,
+                submission_client=submission_client,
+                expected_account_mode=settings.ibkr_expected_environment,
+                provider_code=settings.ibkr_paper_order_submission_provider_code,
+                approval_valid_minutes=settings.action_draft_approval_valid_minutes,
+            )
+    except StorageConnectionError:
+        return _build_blocked_submission_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": result.status,
+        "status_nl": result.status_nl,
+        "help_nl": result.help_nl,
+        "submission_id": result.submission_id,
+        "state": result.state,
+        "ibkr_order_id": result.ibkr_order_id,
+        "ibkr_perm_id": result.ibkr_perm_id,
+        "ibkr_status_text": result.ibkr_status_text,
+        "blocking_reason": result.blocking_reason,
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/action-drafts/{draft_id}/status")
+def read_action_draft_status(draft_id: str) -> dict[str, object]:
+    """Return current submission state + event audit log for one draft."""
+
+    base: dict[str, object] = {
+        "submission": None,
+        "events": [],
+        "help_nl": "Read-only status van de draft + audit-log.",
+        "actions_allowed": False,
+        "safe_for_submission": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            submission_repo = SqlAlchemyAssetActionDraftSubmissionRepository(
+                checked.connection, checked.readiness
+            )
+            event_repo = SqlAlchemyAssetActionDraftEventRepository(
+                checked.connection, checked.readiness
+            )
+            submission_result = submission_repo.get_submission_by_draft_id(draft_id)
+            event_list = event_repo.list_asset_action_draft_events(draft_id)
+            submission_payload = (
+                serialize_submission_for_response(submission_result.record)
+                if submission_result.found and submission_result.record is not None
+                else None
+            )
+            return base | {
+                "status": "ok",
+                "status_nl": (
+                    "Submission gevonden"
+                    if submission_payload is not None
+                    else "Nog geen submission"
+                ),
+                "submission": submission_payload,
+                "events": [serialize_event_for_response(r) for r in event_list.records],
             }
     except StorageConnectionError:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
