@@ -362,3 +362,5 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - [x] Task 138-R — Repair-only: API pytest regressie na Task 138 hersteld; timeout/provider adapterfouten rapporteren nu `payload_validation_status=not_attempted` i.p.v. `passed`; adapter/runtimefouten blijven gescheiden van payloadvalidatiefouten; geen runtimeverbreding, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties/action drafts/orders.
 
 - Task 139 afgerond: read-only IBKR sync history/diagnostics verdiept; geen runtime-verbreding naar echte brokerconnectiviteit of orders.
+
+- Task 145 afgerond: manual IBKR read-only runtime boundary met fake-client tests only; blijft disabled-by-default en order/suggestie/action safety blijft geblokkeerd.

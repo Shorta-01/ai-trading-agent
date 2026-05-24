@@ -117,3 +117,5 @@ Aanvullend:
 - Task 131B is afgerond en Task 131B-R heeft de merged-red API statusregressie gerepareerd; volgende implementatierichting is Task 133B (tenzij latere inspectie een veiligere batch oplevert).
 
 - Nieuw in Task 139: status-only inspectie van recente IBKR syncruns via `/ibkr/sync/runs` en detail via `/ibkr/sync/runs/{sync_run_id}`. In-memory history, geen real-runtime toevoegingen.
+
+- Task 145 afgerond: handmatige dependency-free TWS/Gateway read-only runtime status-check boundary toegevoegd (test-only injected fake clients), runtime default uit, geen echte connectivity/broker execution.

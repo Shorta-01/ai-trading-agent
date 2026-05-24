@@ -725,3 +725,6 @@ Bevestiging scope:
 - Runtime impact: geen runtimewijzigingen aan API/web/storage/sync/market-data/FX/suggesties/action drafts/Decision Packages/orders/broker execution; geen financiële berekeningen of fake data toegevoegd.
 
 - Task 139 voltooid: read-only IBKR sync run history/diagnostics endpoints toegevoegd (`/ibkr/sync/runs`, `/ibkr/sync/runs/{sync_run_id}`) met status/counts/payload-validatie samenvatting en safetybooleans blijvend geblokkeerd. Geen TWS/Gateway runtime, geen session manager, geen schema/migraties.
+
+## Task 145 — completed
+- Milestone B runtime-boundary slice: dependency-free manual TWS/Gateway read-only status-check runtime boundary toegevoegd met injected fake clients in tests only. Runtime blijft disabled-by-default en paper-only enforced; geen real IBKR low-level client, geen ibapi/ib_insync, geen sockets by default, geen auto-connect/reconnect/persistente session manager, geen sync/market-data/FX runtime en geen suggesties/action drafts/orders/broker execution.

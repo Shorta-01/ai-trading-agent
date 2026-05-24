@@ -1,15 +1,11 @@
-# Task 145 — Add dependency-free manual TWS/Gateway read-only status-check runtime client boundary with injected fake client tests only
+# Task 146 - Add manual read-only TWS/Gateway status-check endpoint shell
 
 ## Why
-- Task 144 preflight-checklist is vastgesteld en definieert harde gates vóór runtime wiring.
-- Volgende kleinste veilige stap is een dependency-free runtime-client boundary met fake-client tests, zonder real connectivity enablement by default.
+Task 145 introduced the dependency-free manual runtime boundary with fake-client tests only.
+A small follow-up endpoint shell can expose this safely behind disabled runtime gates.
 
 ## Scope
-- Implement a manual/status-check-only runtime client boundary behind explicit runtime opt-in.
-- Injected fake low-level client tests verplicht voor lifecycle, timeout, account-mode en failure mappings.
-- Keep runtime disabled by default; no auto-connect, no reconnect loop, no persistent session manager.
-- No third-party IBKR dependency (`ibapi`, `ib_insync`) in this slice.
-
-## Non-goals
-- No real low-level IBKR client implementation.
-- No orderflow, broker execution, market-data runtime, FX runtime, suggestions, action drafts or sync runtime expansion.
+- Keep runtime disabled by default.
+- Add endpoint shell only, no real IBKR client, no sockets by default.
+- Use injected fake clients in tests only.
+- Keep order/suggestion/action booleans blocked.
