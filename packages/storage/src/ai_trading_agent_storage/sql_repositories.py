@@ -28,6 +28,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_position_snapshots,
     ibkr_sync_runs,
     fx_rate_snapshots,
+    asset_decision_packages,
     asset_forecasts,
     asset_suggestions,
     market_data_bars,
@@ -62,6 +63,7 @@ from ai_trading_agent_storage.migration_readiness import (
     migration_readiness_is_safe_to_write,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    AssetDecisionPackageRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
     AssetListingRecord,
@@ -2191,3 +2193,108 @@ def _suggestion_from_row(row: RowMapping) -> AssetSuggestionRecord:
     data["drivers_json"] = _normalise_json("drivers_json")
     data["blockers_json"] = _normalise_json("blockers_json")
     return AssetSuggestionRecord(**data)
+
+
+class SqlAlchemyAssetDecisionPackageRepository(_Base):
+    def save_asset_decision_package(
+        self, record: AssetDecisionPackageRecord
+    ) -> StorageWriteResult:
+        values = asdict(record)
+        for key in ("gate_outcomes_json", "evidence_links_json", "audit_links_json"):
+            raw = values.get(key)
+            if isinstance(raw, tuple):
+                values[key] = list(raw)
+        self._insert(asset_decision_packages, values)
+        return StorageWriteResult(
+            True,
+            record.decision_package_id,
+            asset_decision_packages.name,
+            True,
+            "Decision Package opgeslagen.",
+        )
+
+    def get_latest_asset_decision_package_by_conid(
+        self, ibkr_conid: str
+    ) -> StorageReadResult[AssetDecisionPackageRecord]:
+        row = (
+            self._connection.execute(
+                select(asset_decision_packages)
+                .where(asset_decision_packages.c.ibkr_conid == ibkr_conid)
+                .order_by(asset_decision_packages.c.generated_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                asset_decision_packages.name,
+                "Geen Decision Package gevonden voor conid.",
+            )
+        return StorageReadResult(
+            True,
+            _decision_package_from_row(row),
+            asset_decision_packages.name,
+            "Decision Package opgehaald voor conid.",
+        )
+
+    def list_latest_asset_decision_packages_by_conids(
+        self, conids: tuple[str, ...]
+    ) -> StorageListResult[AssetDecisionPackageRecord]:
+        if not conids:
+            return StorageListResult((), asset_decision_packages.name, "Geen conids opgegeven.")
+        rows = (
+            self._connection.execute(
+                select(asset_decision_packages)
+                .where(asset_decision_packages.c.ibkr_conid.in_(conids))
+                .order_by(
+                    asset_decision_packages.c.ibkr_conid.asc(),
+                    asset_decision_packages.c.generated_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest: dict[str, AssetDecisionPackageRecord] = {}
+        for row in rows:
+            record = _decision_package_from_row(row)
+            if record.ibkr_conid not in latest:
+                latest[record.ibkr_conid] = record
+        ordered = tuple(latest[c] for c in conids if c in latest)
+        return StorageListResult(
+            ordered,
+            asset_decision_packages.name,
+            f"{len(ordered)} Decision Packages opgehaald.",
+        )
+
+
+def _decision_package_from_row(row: RowMapping) -> AssetDecisionPackageRecord:
+    data = dict(row)
+
+    def _norm(name: str) -> tuple[str, ...] | None:
+        value = data.get(name)
+        if value is None:
+            return None
+        if isinstance(value, list):
+            return tuple(str(item) for item in value)
+        if isinstance(value, tuple):
+            return tuple(str(item) for item in value)
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                return None
+            if isinstance(parsed, list):
+                return tuple(str(item) for item in parsed)
+            return None
+        return None
+
+    data["gate_outcomes_json"] = _norm("gate_outcomes_json")
+    data["evidence_links_json"] = _norm("evidence_links_json")
+    data["audit_links_json"] = _norm("audit_links_json")
+    return AssetDecisionPackageRecord(**data)

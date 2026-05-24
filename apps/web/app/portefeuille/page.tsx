@@ -8,6 +8,7 @@ import { PositionPlTraceDetails } from "@/components/PositionPlTraceDetails";
 import { ValuationTraceDetails } from "@/components/ValuationTraceDetails";
 import {
   apiClient,
+  AssetDecisionPackageResponse,
   AssetForecastResponse,
   AssetSuggestionResponse,
   IbkrCashSnapshot,
@@ -57,13 +58,14 @@ export default function PortfolioPage() {
   const [executions, setExecutions] = useState<IbkrExecutionSnapshot[]>([]);
   const [forecasts, setForecasts] = useState<AssetForecastResponse[]>([]);
   const [suggestions, setSuggestions] = useState<AssetSuggestionResponse[]>([]);
+  const [decisionPackages, setDecisionPackages] = useState<AssetDecisionPackageResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
-    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes, suggestionsRes] = await Promise.all([
+    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes, suggestionsRes, decisionPackagesRes] = await Promise.all([
       apiClient.getIbkrSyncStatus(),
       apiClient.getPortfolioValuationReadiness(),
       apiClient.getIbkrPositions(),
@@ -72,6 +74,7 @@ export default function PortfolioPage() {
       apiClient.getIbkrExecutions(),
       apiClient.getLatestForecasts(),
       apiClient.getLatestSuggestions(),
+      apiClient.getLatestDecisionPackages(),
     ]);
 
     setLoadFailed(!statusRes.ok && !valuationRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
@@ -83,6 +86,7 @@ export default function PortfolioPage() {
     if (executionsRes.ok) setExecutions(executionsRes.data.items ?? []);
     if (forecastsRes.ok) setForecasts(forecastsRes.data.items ?? []);
     if (suggestionsRes.ok) setSuggestions(suggestionsRes.data.items ?? []);
+    if (decisionPackagesRes.ok) setDecisionPackages(decisionPackagesRes.data.items ?? []);
     setLoading(false);
   };
 
@@ -315,6 +319,59 @@ export default function PortfolioPage() {
               <tr key={`${execution.sync_run_id}-${execution.execution_id}`}><td>{execution.execution_id}</td><td>{execution.symbol}</td><td>{execution.side}</td><td>{execution.quantity}</td><td>{execution.price}</td><td>{execution.execution_time}</td><td>{execution.currency}</td></tr>
             ))}
           </tbody></table>
+        )}
+      </section>
+
+      <section className="dashboard-panel">
+        <h2>Decision Packages</h2>
+        <p className="top-sub">Immutable evidence-bundels die elke suggestion ondersteunen. Geen action drafts, geen orders.</p>
+        {decisionPackages.length === 0 ? (
+          <EmptyState
+            title="Nog geen Decision Packages"
+            message="Voer eerst suggesties-sync uit en daarna decision-packages-sync."
+          />
+        ) : (
+          <div className="portfolio-meta-grid" style={{ gap: "1rem" }}>
+            {decisionPackages.map((dp) => (
+              <details
+                key={dp.decision_package_id}
+                style={{
+                  border: "1px solid var(--ata-border, #334155)",
+                  borderRadius: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  background: "var(--ata-surface, transparent)",
+                }}
+              >
+                <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                  {dp.symbol} — {dp.suggestion_action_label_nl} (vertrouwen {dp.suggestion_confidence_label_nl})
+                </summary>
+                <div style={{ marginTop: "0.75rem", display: "grid", gap: "0.25rem", fontSize: "0.92rem" }}>
+                  <div><strong>Gegenereerd:</strong> {displayValue(dp.generated_at)}</div>
+                  <div><strong>Geldig tot:</strong> {displayValue(dp.valid_until)}</div>
+                  <div><strong>Risicoprofiel:</strong> {dp.risk_profile}</div>
+                  <div><strong>Conid:</strong> {dp.ibkr_conid} • <strong>Valuta:</strong> {dp.currency}</div>
+                  <div><strong>Status:</strong> {dp.status}{dp.blocking_reason ? ` (${dp.blocking_reason})` : ""}</div>
+                  <div><strong>Huidige prijs (markt):</strong> {displayValue(dp.market_last_price)} ({displayValue(dp.market_freshness_status)}, {displayValue(dp.market_provider_code)})</div>
+                  <div>
+                    <strong>Voorspelling:</strong>{" "}
+                    p10 {displayValue(dp.forecast_p10_price)} /
+                    p50 {displayValue(dp.forecast_p50_price)} /
+                    p90 {displayValue(dp.forecast_p90_price)} •
+                    kans op stijging {displayValue(dp.forecast_prob_gain)} •
+                    horizon {displayValue(dp.forecast_horizon_days?.toString() ?? null)} dagen
+                  </div>
+                  <div><strong>Positie:</strong> {dp.has_position ? `${displayValue(dp.position_quantity)} stuks @ kost ${displayValue(dp.position_average_cost)}` : "Niet aangehouden"}</div>
+                  <div><strong>Cash:</strong> {dp.cash_amount ? `${dp.cash_base_currency} ${dp.cash_amount}` : "Niet beschikbaar"}</div>
+                  {dp.fx_pair ? <div><strong>FX {dp.fx_pair}:</strong> {dp.fx_rate} ({dp.fx_freshness_status})</div> : null}
+                  <div><strong>Onderbouwing:</strong> {dp.rationale_nl}</div>
+                  <div><strong>Toelichting:</strong> {dp.explanation_nl}</div>
+                  <div><strong>Gate-uitkomsten:</strong> {dp.gate_outcomes.length > 0 ? dp.gate_outcomes.join(" • ") : "Geen"}</div>
+                  <div><strong>Audit links:</strong> {dp.audit_links.length > 0 ? dp.audit_links.join(" • ") : "Geen"}</div>
+                  <div style={{ fontSize: "0.82rem", opacity: 0.7 }}><strong>Content-hash:</strong> {dp.content_hash}</div>
+                </div>
+              </details>
+            ))}
+          </div>
         )}
       </section>
     </main>

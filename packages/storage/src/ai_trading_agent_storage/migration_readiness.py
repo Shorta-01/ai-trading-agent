@@ -281,6 +281,17 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Python-regels beslissen, AI nooit. Geen action drafts of orders."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0029_asset_decision_packages",
+        previous_revision_id="0028_asset_suggestions",
+        filename="0029_asset_decision_packages.py",
+        label_nl="Asset Decision Packages (immutable evidence-bundels)",
+        description_nl=(
+            "Onveranderlijke versie-gehashte Decision Packages per (conid, "
+            "suggestion). Verplicht vóór elke toekomstige action draft; "
+            "deze slice voegt geen drafts of orders toe."
+        ),
+    ),
 )
 
 

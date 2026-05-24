@@ -1867,3 +1867,113 @@ class AssetSuggestionRecord:
                 "Suggestion safety booleans must remain false in V1: suggestions "
                 "are never auto-promoted to action drafts or orders."
             )
+
+
+@dataclass(frozen=True)
+class AssetDecisionPackageRecord:
+    """Immutable, content-hashed bundle of the evidence that backs one
+    suggestion at one point in time.
+
+    The doctrine in ``release-1-functional-workflow-blueprint.md §6`` requires
+    a Decision Package before any suggestion may produce an action draft. V1
+    Slice 5 persists the parts of the evidence chain that are currently
+    grounded (position, cash, market-data, FX, baseline forecast, label
+    translator output); research evidence and AI signals fold in once those
+    runtimes exist (later slices).
+
+    ``content_hash`` is a SHA-256 of the canonical JSON of the bundle's
+    audit-relevant fields; once written, never updated.
+    """
+
+    decision_package_id: str
+    content_hash: str
+    ibkr_conid: str
+    symbol: str
+    currency: str
+    risk_profile: str
+    generated_at: datetime
+    valid_until: datetime
+    # Position evidence (held-position snapshot)
+    position_snapshot_id: str | None
+    position_quantity: Decimal | None
+    position_average_cost: Decimal | None
+    # Cash evidence (account-level cash from latest IBKR sync)
+    cash_snapshot_id: str | None
+    cash_base_currency: str | None
+    cash_amount: Decimal | None
+    # Market-data evidence
+    market_snapshot_id: str | None
+    market_last_price: Decimal | None
+    market_freshness_status: str | None
+    market_provider_code: str | None
+    market_provider_as_of: datetime | None
+    # FX evidence (only when position currency != base currency)
+    fx_pair: str | None
+    fx_rate: Decimal | None
+    fx_freshness_status: str | None
+    # Forecast evidence (denormalised so the package is self-contained)
+    forecast_id: str | None
+    forecast_model_code: str | None
+    forecast_model_version: str | None
+    forecast_horizon_days: int | None
+    forecast_p10_price: Decimal | None
+    forecast_p50_price: Decimal | None
+    forecast_p90_price: Decimal | None
+    forecast_prob_gain: Decimal | None
+    forecast_prob_loss: Decimal | None
+    forecast_expected_return_pct: Decimal | None
+    forecast_expected_volatility_annual: Decimal | None
+    forecast_downside_risk_score: Decimal | None
+    forecast_confidence_score: Decimal | None
+    # Suggestion (locked-label translator output)
+    suggestion_id: str | None
+    suggestion_model_code: str | None
+    suggestion_action_label: str
+    suggestion_action_label_nl: str
+    suggestion_confidence_label: str
+    suggestion_confidence_label_nl: str
+    suggestion_status: str
+    has_position: bool
+    # Gate / evidence / audit links
+    gate_outcomes_json: tuple[str, ...] | None
+    evidence_links_json: tuple[str, ...] | None
+    audit_links_json: tuple[str, ...] | None
+    # Dutch text
+    rationale_nl: str
+    explanation_nl: str
+    # Status
+    status: str
+    blocking_reason: str | None
+    # Safety booleans (must remain False)
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+    safe_for_broker_submission: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "decision_package_id",
+            "content_hash",
+            "ibkr_conid",
+            "symbol",
+            "currency",
+            "risk_profile",
+            "suggestion_action_label",
+            "suggestion_action_label_nl",
+            "suggestion_confidence_label",
+            "suggestion_confidence_label_nl",
+            "suggestion_status",
+            "rationale_nl",
+            "explanation_nl",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if (
+            self.safe_for_action_drafts
+            or self.safe_for_orders
+            or self.safe_for_broker_submission
+        ):
+            raise ValueError(
+                "Decision Package safety booleans must remain false: a "
+                "package never auto-promotes to an action draft, order, or "
+                "broker submission."
+            )
