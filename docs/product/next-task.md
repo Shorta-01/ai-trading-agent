@@ -1,32 +1,32 @@
-# Task 170
+# Task 171
 
-Slice 15 — Mean-reversion predictor + ensemble combiner. Second step of
-the V1 §21.4 ensemble lock.
+Slice 16 — QVM (Quality + Value + Momentum) factor predictor. Third
+step of the V1 §21.4 ensemble lock.
 
 Scope:
-- New `MeanReversionPredictor` in `packages/portfolio` (deterministic
-  Python):
-  * RSI (Relative Strength Index, 14-day)
-  * Bollinger position (z-score against 20-day moving average)
-  * Hurst exponent (rescaled-range estimator, 100-day window) — if
-    the Hurst exponent is below 0.5 the series is mean-reverting
-  * Combine into a composite reversion score; map to a
-    `PredictionDistribution` that pulls the projection back towards
-    the moving average rather than chasing momentum.
-- New deterministic `ensemble_combiner` module in
-  `packages/portfolio`:
-  * `compute_ensemble_forecast(predictors, inputs, weights)` runs
-    every predictor, drops blocked ones, and combines the surviving
-    distributions into one `PredictionDistribution` with model_code
-    `ensemble_v1`.
-  * Default weighting is equal-weight at launch; the protocol accepts
-    an optional `weights: dict[str, Decimal]` so Slice 16+ can move
-    to inverse-variance once Diary track-record exists.
-  * Per-predictor contributions are exposed via a sibling
-    `EnsembleContribution` dataclass for downstream Diary tracking.
-- Tests cover the predictor against synthetic mean-reverting series,
-  and the combiner against fixtures with mixed ready/blocked
-  predictors, weight overrides, and the empty-set edge case.
+- Extend the `EodhdClient` in `apps/api` with a `fetch_fundamentals(symbol)`
+  helper that pulls the JSON fundamentals endpoint (financial highlights,
+  earnings, balance sheet ratios) for one ticker. Stdlib `urllib`-only,
+  injectable HTTP fetcher (same pattern as the existing bar/quote calls).
+- Storage migration adding `asset_fundamentals_snapshots` table: one row
+  per (symbol, fetched_at) carrying ROIC, gross_margin, P/E, P/B,
+  EV/EBITDA, return_6m_pct, return_12m_pct, dividend_yield, sector,
+  raw_payload_hash; locked safety booleans hard-False.
+- New pure-Python `QvmFactorPredictor` in `packages/portfolio`
+  implementing the predictor protocol:
+  * Quality score = z-score of (ROIC + gross_margin) within the
+    snapshot universe
+  * Value score = z-score of (-P/E + -P/B + -EV/EBITDA), each clipped
+    to a sane range first
+  * Momentum score = z-score of (return_6m + return_12m)
+  * Composite QVM = average of the three; mapped to a horizon-return
+    projection (same conservative cap as Momentum: ±25 % annualised).
+- The cross-sectional z-scores require a *universe snapshot*; in this
+  slice the predictor accepts an injected `UniverseFundamentals`
+  fixture so it remains pure-Python. Slice 17 will wire the daily
+  scan that populates the universe.
+- Tests cover the QVM math against synthetic universes and the predictor
+  blocking when the symbol is absent from the universe snapshot.
 
-No orchestrator change yet; Slice 17 wires the ensemble into the
-forecast sync.
+No orchestrator change yet; the QVM predictor joins the ensemble once
+Slice 17 wires the universe scan into `forecast_sync`.
