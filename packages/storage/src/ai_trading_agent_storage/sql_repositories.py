@@ -34,6 +34,8 @@ from ai_trading_agent_storage.metadata import (
     asset_decision_packages,
     asset_forecasts,
     asset_suggestions,
+    decision_package_explanations,
+    explanation_evidence_ledger,
     market_data_bars,
     market_data_snapshots,
     prediction_diary_entries,
@@ -71,6 +73,8 @@ from ai_trading_agent_storage.repository_contracts import (
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
     AssetDecisionPackageRecord,
+    DecisionPackageExplanationRecord,
+    ExplanationEvidenceLedgerRecord,
     PredictionDiaryEntryRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
@@ -2586,4 +2590,111 @@ class SqlAlchemyPredictionDiaryRepository(_Base):
             records,
             prediction_diary_entries.name,
             f"{len(records)} Prediction Diary entries opgehaald.",
+        )
+
+
+class SqlAlchemyDecisionPackageExplanationRepository(_Base):
+    def save_decision_package_explanation(
+        self, record: DecisionPackageExplanationRecord
+    ) -> StorageWriteResult:
+        values = asdict(record)
+        values["hallucinated_numbers_json"] = (
+            None
+            if record.hallucinated_numbers_json is None
+            else list(record.hallucinated_numbers_json)
+        )
+        self._insert(decision_package_explanations, values)
+        return StorageWriteResult(
+            True,
+            record.explanation_id,
+            decision_package_explanations.name,
+            True,
+            "Explanation opgeslagen.",
+        )
+
+    def get_latest_explanation_for_package(
+        self, decision_package_id: str
+    ) -> StorageReadResult[DecisionPackageExplanationRecord]:
+        statement = (
+            select(decision_package_explanations)
+            .where(
+                decision_package_explanations.c.decision_package_id == decision_package_id
+            )
+            .order_by(decision_package_explanations.c.generated_at.desc())
+            .limit(1)
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                decision_package_explanations.name,
+                "Geen explanation gevonden voor dit Decision Package.",
+            )
+        values = dict(row)
+        values["hallucinated_numbers_json"] = _json_tuple_or_none(
+            values.get("hallucinated_numbers_json")
+        )
+        return StorageReadResult(
+            True,
+            DecisionPackageExplanationRecord(**values),
+            decision_package_explanations.name,
+            "Explanation opgehaald.",
+        )
+
+    def get_explanation_for_package_version(
+        self,
+        *,
+        decision_package_id: str,
+        content_hash: str,
+    ) -> StorageReadResult[DecisionPackageExplanationRecord]:
+        statement = select(decision_package_explanations).where(
+            decision_package_explanations.c.decision_package_id == decision_package_id,
+            decision_package_explanations.c.decision_package_content_hash == content_hash,
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                decision_package_explanations.name,
+                "Geen explanation gevonden voor deze package versie.",
+            )
+        values = dict(row)
+        values["hallucinated_numbers_json"] = _json_tuple_or_none(
+            values.get("hallucinated_numbers_json")
+        )
+        return StorageReadResult(
+            True,
+            DecisionPackageExplanationRecord(**values),
+            decision_package_explanations.name,
+            "Explanation opgehaald.",
+        )
+
+    def save_explanation_evidence_ledger_entry(
+        self, record: ExplanationEvidenceLedgerRecord
+    ) -> StorageWriteResult:
+        self._insert(explanation_evidence_ledger, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.ledger_id,
+            explanation_evidence_ledger.name,
+            True,
+            "Evidence ledger entry opgeslagen.",
+        )
+
+    def list_evidence_ledger_for_explanation(
+        self, explanation_id: str
+    ) -> StorageListResult[ExplanationEvidenceLedgerRecord]:
+        rows = _read_many_by_column(
+            self._connection,
+            explanation_evidence_ledger,
+            "explanation_id",
+            explanation_id,
+        )
+        records = tuple(ExplanationEvidenceLedgerRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            explanation_evidence_ledger.name,
+            f"{len(records)} evidence ledger entries opgehaald.",
         )
