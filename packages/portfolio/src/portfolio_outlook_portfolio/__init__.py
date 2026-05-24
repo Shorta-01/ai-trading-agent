@@ -156,6 +156,11 @@ from .execution_guards import (
     require_execution_mode_available,
     require_manual_approval_required,
 )
+from .gbm_predictor import (
+    GBM_MODEL_CODE,
+    GBM_MODEL_VERSION,
+    GbmPredictor,
+)
 from .ledger_services import (
     build_paper_transaction,
     create_cash_entry_for_transaction,
@@ -169,6 +174,19 @@ from .lots import (
     calculate_remaining_quantity,
     derive_lot_status,
     validate_lot_quantities,
+)
+from .momentum_predictor import (
+    MAX_ANNUAL_DRIFT_PCT as MOMENTUM_MAX_ANNUAL_DRIFT_PCT,
+)
+from .momentum_predictor import (
+    MODEL_CODE as MOMENTUM_MODEL_CODE,
+)
+from .momentum_predictor import (
+    MODEL_VERSION as MOMENTUM_MODEL_VERSION,
+)
+from .momentum_predictor import (
+    MOMENTUM_MIN_BARS,
+    MomentumPredictor,
 )
 from .money import add_money, ensure_same_currency, multiply_quantity_by_price, subtract_money
 from .paper_setup_guards import (
@@ -199,6 +217,26 @@ from .prediction_diary_eval import (
     DiaryEvaluation,
     HorizonEvaluation,
     evaluate_diary_outcomes,
+)
+from .predictor_protocol import (
+    BLOCKING_REASON_FLAT_HISTORY,
+    BLOCKING_REASON_INSUFFICIENT_HISTORY,
+    BLOCKING_REASON_INVALID_CURRENT_PRICE,
+    BLOCKING_REASON_INVALID_HORIZON,
+    DIRECTION_FLAT,
+    DIRECTION_SLIGHT_DOWN,
+    DIRECTION_SLIGHT_UP,
+    DIRECTION_STRONG_DOWN,
+    DIRECTION_STRONG_UP,
+    PredictionDistribution,
+    PredictorInputs,
+    PredictorProtocol,
+)
+from .predictor_protocol import (
+    STATUS_BLOCKED as PREDICTOR_STATUS_BLOCKED,
+)
+from .predictor_protocol import (
+    STATUS_READY as PREDICTOR_STATUS_READY,
 )
 from .research_evidence_summary import (
     BLOCKING_REASON_CREDIBILITY_REJECTED,
@@ -491,5 +529,27 @@ __all__ = [
     "BriefingAlertResult",
     "BriefingResult",
     "compute_daily_briefing",
+    "PredictorInputs",
+    "PredictionDistribution",
+    "PredictorProtocol",
+    "DIRECTION_STRONG_UP",
+    "DIRECTION_SLIGHT_UP",
+    "DIRECTION_FLAT",
+    "DIRECTION_SLIGHT_DOWN",
+    "DIRECTION_STRONG_DOWN",
+    "PREDICTOR_STATUS_READY",
+    "PREDICTOR_STATUS_BLOCKED",
+    "BLOCKING_REASON_INVALID_CURRENT_PRICE",
+    "BLOCKING_REASON_INSUFFICIENT_HISTORY",
+    "BLOCKING_REASON_INVALID_HORIZON",
+    "BLOCKING_REASON_FLAT_HISTORY",
+    "GbmPredictor",
+    "GBM_MODEL_CODE",
+    "GBM_MODEL_VERSION",
+    "MomentumPredictor",
+    "MOMENTUM_MODEL_CODE",
+    "MOMENTUM_MODEL_VERSION",
+    "MOMENTUM_MIN_BARS",
+    "MOMENTUM_MAX_ANNUAL_DRIFT_PCT",
 ]
 
