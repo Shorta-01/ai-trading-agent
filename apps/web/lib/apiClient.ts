@@ -557,6 +557,63 @@ export type DecisionPackageExplanationReadResponse = {
   safe_for_orders?: boolean;
 };
 
+export type BriefingAlertResponse = {
+  alert_id: string;
+  alert_kind: string;
+  severity: string;
+  reference_kind: string | null;
+  reference_id: string | null;
+  title_nl: string;
+  body_nl: string;
+  acknowledged_at: string | null;
+  linked_at: string;
+};
+
+export type DailyBriefingResponse = {
+  briefing_id: string;
+  briefing_date: string;
+  generated_at: string;
+  lookback_started_at: string;
+  position_count: number;
+  base_currency: string | null;
+  total_position_value: string | null;
+  cash_total: string | null;
+  fx_freshness_status: string | null;
+  new_suggestion_count: number;
+  new_decision_package_count: number;
+  new_action_draft_count: number;
+  diary_outcomes_closed_count: number;
+  critical_event_count: number;
+  alert_count: number;
+  summary_nl: string;
+  help_nl: string;
+  status: string;
+  blocking_reason: string | null;
+  alerts: BriefingAlertResponse[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type DailyBriefingRunResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl?: string;
+  reason?: string;
+  briefing_id: string | null;
+  alert_count: number;
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+};
+
+export type DailyBriefingReadResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl: string;
+  item: DailyBriefingResponse | null;
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+};
+
 export type AssetActionDraftResponse = {
   draft_id: string;
   decision_package_id: string;
@@ -738,6 +795,10 @@ export const apiClient = {
   getLatestActionDrafts: () =>
     getJson<LatestActionDraftsResponse>("/action-drafts/latest"),
   runActionDraftsSync: () => postJson<{ status: string }>("/action-drafts/compute"),
+  runDailyBriefing: () =>
+    postJson<DailyBriefingRunResponse>("/briefings/daily/compute"),
+  getLatestDailyBriefing: () =>
+    getJson<DailyBriefingReadResponse>("/briefings/daily/latest"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

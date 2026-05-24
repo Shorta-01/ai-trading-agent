@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from ai_trading_agent_storage import (
+    AssetActionDraftEventRecord,
     AssetActionDraftSubmissionRecord,
     IbkrSyncRunRecord,
     MarketDataBarRecord,
@@ -15,6 +16,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetSuggestionRepository,
+    SqlAlchemyDailyBriefingRepository,
     SqlAlchemyDecisionPackageExplanationRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataBarRepository,
@@ -53,6 +55,10 @@ from portfolio_outlook_api.ai_explanation_sync import (
     serialize_explanation_for_response,
 )
 from portfolio_outlook_api.config import Settings, settings
+from portfolio_outlook_api.daily_briefing_sync import (
+    generate_daily_briefing,
+    serialize_briefing_for_response,
+)
 from portfolio_outlook_api.decision_package_sync import (
     build_research_summary_by_symbol,
     serialize_decision_package_for_response,
@@ -2588,6 +2594,210 @@ def read_prediction_diary() -> dict[str, object]:
                 "items": [
                     serialize_prediction_diary_entry_for_response(r) for r in result.records
                 ],
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+def _build_blocked_briefing_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "briefing_id": None,
+        "alert_count": 0,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/briefings/daily/compute")
+def run_daily_briefing() -> dict[str, object]:
+    """Build and persist one deterministic daily Dutch briefing.
+
+    The briefing is computed from the persisted positions / cash /
+    suggestions / Decision Packages / action drafts / diary entries /
+    critical events. AI never authors the summary.
+    """
+
+    if not settings.daily_briefing_sync_enabled:
+        return _build_blocked_briefing_response(
+            reason="daily_briefing_sync_disabled",
+            status_nl="Dagbriefing uitgeschakeld",
+            help_nl=(
+                "Stel `DAILY_BRIEFING_SYNC_ENABLED=true` in om de "
+                "dagbriefing te activeren."
+            ),
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_briefing_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Dagbriefing vereist schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            suggestion_repo = SqlAlchemyAssetSuggestionRepository(
+                checked.connection, checked.readiness
+            )
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            draft_repo = SqlAlchemyAssetActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            event_repo = SqlAlchemyAssetActionDraftEventRepository(
+                checked.connection, checked.readiness
+            )
+            diary_repo = SqlAlchemyPredictionDiaryRepository(
+                checked.connection, checked.readiness
+            )
+            briefing_repo = SqlAlchemyDailyBriefingRepository(
+                checked.connection, checked.readiness
+            )
+
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            positions = (
+                list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+                if latest_run is not None
+                else []
+            )
+            cash_snapshots = (
+                list(
+                    ibkr_repo.list_ibkr_account_cash_snapshots(latest_run.sync_run_id)
+                )
+                if latest_run is not None
+                else []
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            suggestions = (
+                list(
+                    suggestion_repo.list_latest_asset_suggestions_by_conids(
+                        conids
+                    ).records
+                )
+                if conids
+                else []
+            )
+            decision_packages = (
+                list(
+                    package_repo.list_latest_asset_decision_packages_by_conids(
+                        conids
+                    ).records
+                )
+                if conids
+                else []
+            )
+            action_drafts = (
+                list(
+                    draft_repo.list_latest_asset_action_drafts_by_conids(
+                        conids
+                    ).records
+                )
+                if conids
+                else []
+            )
+            diary_entries = list(diary_repo.list_prediction_diary_entries().records)
+            critical_events: list[AssetActionDraftEventRecord] = []
+            for draft in action_drafts:
+                events_result = event_repo.list_asset_action_draft_events(
+                    draft.draft_id
+                )
+                critical_events.extend(
+                    e for e in events_result.records if e.severity == "critical"
+                )
+
+            base_currencies = sorted(
+                {c.base_currency for c in cash_snapshots if c.base_currency}
+            )
+            base_currency = (
+                base_currencies[0] if len(base_currencies) == 1 else None
+            )
+
+            report = generate_daily_briefing(
+                positions=positions,
+                cash_snapshots=cash_snapshots,
+                suggestions=suggestions,
+                decision_packages=decision_packages,
+                action_drafts=action_drafts,
+                diary_entries=diary_entries,
+                critical_events=critical_events,
+                base_currency=base_currency,
+                fx_freshness_status=None,
+                lookback_hours=settings.daily_briefing_lookback_hours,
+                repo=briefing_repo,
+            )
+    except StorageConnectionError:
+        return _build_blocked_briefing_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": report.status,
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "briefing_id": report.briefing_id,
+        "alert_count": report.alert_count,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/briefings/daily/latest")
+def read_latest_daily_briefing() -> dict[str, object]:
+    """Return the latest persisted daily briefing + its alerts."""
+
+    base: dict[str, object] = {
+        "item": None,
+        "help_nl": (
+            "Dagbriefings zijn deterministisch gebouwd uit reeds opgeslagen "
+            "evidence. AI schrijft geen briefings."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            briefing_repo = SqlAlchemyDailyBriefingRepository(
+                checked.connection, checked.readiness
+            )
+            result = briefing_repo.get_latest_daily_briefing()
+            if not result.found or result.record is None:
+                return base | {
+                    "status": "not_found",
+                    "status_nl": "Nog geen dagbriefing",
+                }
+            alerts = briefing_repo.list_alerts_for_briefing(
+                result.record.briefing_id
+            )
+            return base | {
+                "status": "ok",
+                "status_nl": "Dagbriefing beschikbaar",
+                "item": serialize_briefing_for_response(result.record, alerts.records),
             }
     except StorageConnectionError:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}

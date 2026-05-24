@@ -151,6 +151,8 @@ class Settings(BaseSettings):
     ai_explanation_real_client_enabled: bool = False
     ai_explanation_provider_code: str = "stub"
     ai_explanation_max_output_chars: int = 2000
+    daily_briefing_sync_enabled: bool = False
+    daily_briefing_lookback_hours: int = 24
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

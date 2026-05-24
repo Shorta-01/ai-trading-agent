@@ -1613,6 +1613,52 @@ explanation_evidence_ledger = Table(
 )
 
 
+daily_briefings = Table(
+    "daily_briefings",
+    metadata,
+    Column("briefing_id", Text, primary_key=True),
+    Column("briefing_date", Date, nullable=False),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("lookback_started_at", DateTime(timezone=True), nullable=False),
+    Column("position_count", Integer, nullable=False),
+    Column("base_currency", Text, nullable=True),
+    Column("total_position_value", MONEY_NUMERIC, nullable=True),
+    Column("cash_total", MONEY_NUMERIC, nullable=True),
+    Column("fx_freshness_status", Text, nullable=True),
+    Column("new_suggestion_count", Integer, nullable=False),
+    Column("new_decision_package_count", Integer, nullable=False),
+    Column("new_action_draft_count", Integer, nullable=False),
+    Column("diary_outcomes_closed_count", Integer, nullable=False),
+    Column("critical_event_count", Integer, nullable=False),
+    Column("alert_count", Integer, nullable=False),
+    Column("summary_nl", Text, nullable=False),
+    Column("help_nl", Text, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("blocking_reason", Text, nullable=True),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    UniqueConstraint("briefing_date", name="uq_daily_briefings_briefing_date"),
+)
+
+
+briefing_alerts = Table(
+    "briefing_alerts",
+    metadata,
+    Column("alert_id", Text, primary_key=True),
+    Column("briefing_id", Text, nullable=False),
+    Column("alert_kind", Text, nullable=False),
+    Column("severity", Text, nullable=False),
+    Column("reference_kind", Text, nullable=True),
+    Column("reference_id", Text, nullable=True),
+    Column("title_nl", Text, nullable=False),
+    Column("body_nl", Text, nullable=False),
+    Column("acknowledged_at", DateTime(timezone=True), nullable=True),
+    Column("linked_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_decision_packages = Table(
     "asset_decision_packages",
     metadata,

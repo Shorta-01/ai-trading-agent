@@ -2343,3 +2343,105 @@ class ExplanationEvidenceLedgerRecord:
             raise ValueError(
                 "Evidence ledger safety booleans must remain false in V1."
             )
+
+
+@dataclass(frozen=True)
+class DailyBriefingRecord:
+    """One deterministic daily briefing summary.
+
+    UNIQUE on ``briefing_date`` — one briefing per day. Counts are
+    derived deterministically from the persisted suggestions / Decision
+    Packages / action drafts / diary entries / events that fall after
+    the lookback boundary. AI never authors the summary.
+
+    Safety booleans stay ``False`` in V1: a briefing never auto-promotes
+    into an order or a draft state change.
+    """
+
+    briefing_id: str
+    briefing_date: date
+    generated_at: datetime
+    lookback_started_at: datetime
+    position_count: int
+    base_currency: str | None
+    total_position_value: Decimal | None
+    cash_total: Decimal | None
+    fx_freshness_status: str | None
+    new_suggestion_count: int
+    new_decision_package_count: int
+    new_action_draft_count: int
+    diary_outcomes_closed_count: int
+    critical_event_count: int
+    alert_count: int
+    summary_nl: str
+    help_nl: str
+    status: str
+    blocking_reason: str | None
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "briefing_id",
+            "summary_nl",
+            "help_nl",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        for count_name in (
+            "position_count",
+            "new_suggestion_count",
+            "new_decision_package_count",
+            "new_action_draft_count",
+            "diary_outcomes_closed_count",
+            "critical_event_count",
+            "alert_count",
+        ):
+            if getattr(self, count_name) < 0:
+                raise ValueError(f"{count_name} must be non-negative.")
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Daily briefing safety booleans must remain false in V1."
+            )
+
+
+@dataclass(frozen=True)
+class BriefingAlertRecord:
+    """Append-only alert row attached to one daily briefing.
+
+    Used by the operator UI to surface the deterministic counter-based
+    findings (new suggestion, FX stale, critical state event, diary
+    outcome closed). Safety booleans stay ``False``.
+    """
+
+    alert_id: str
+    briefing_id: str
+    alert_kind: str
+    severity: str
+    reference_kind: str | None
+    reference_id: str | None
+    title_nl: str
+    body_nl: str
+    acknowledged_at: datetime | None
+    linked_at: datetime
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "alert_id",
+            "briefing_id",
+            "alert_kind",
+            "severity",
+            "title_nl",
+            "body_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.severity not in {"info", "warning", "critical"}:
+            raise ValueError(
+                f"severity must be info/warning/critical, got {self.severity!r}"
+            )
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Briefing alert safety booleans must remain false in V1."
+            )
