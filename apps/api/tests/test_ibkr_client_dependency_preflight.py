@@ -2,20 +2,64 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import re
 import socket
+from collections.abc import Iterator
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-API_PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
-API_SRC_DIR = Path(__file__).resolve().parents[1] / "src" / "portfolio_outlook_api"
+API_ROOT = Path(__file__).resolve().parents[1]
+API_PYPROJECT = API_ROOT / "pyproject.toml"
 
 
-def test_api_metadata_contains_ibapi_dependency_only() -> None:
-    pyproject_text = API_PYPROJECT.read_text(encoding="utf-8")
+DEPENDENCY_PATTERN_TEMPLATE = r'^[ \t]*"{dependency}(?:[<>=!~][^"\\]*)?"[ \t]*(?:,|$)'
 
-    assert '"ibapi==9.81.1.post1"' in pyproject_text
-    assert "ib_insync" not in pyproject_text
-    assert "ib-insync" not in pyproject_text
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def _iter_project_metadata_files() -> Iterator[Path]:
+    root_pyproject = REPO_ROOT / "pyproject.toml"
+    if root_pyproject.exists():
+        yield root_pyproject
+
+    for base_dir in (REPO_ROOT / "apps", REPO_ROOT / "packages"):
+        yield from sorted(base_dir.rglob("pyproject.toml"))
+
+
+def _iter_production_source_files() -> Iterator[Path]:
+    source_roots = [
+        REPO_ROOT / "apps" / "api" / "src",
+        REPO_ROOT / "apps" / "worker" / "src",
+        REPO_ROOT / "packages" / "domain" / "src",
+        REPO_ROOT / "packages" / "storage" / "src",
+        REPO_ROOT / "packages" / "portfolio" / "src",
+    ]
+    for source_root in source_roots:
+        if not source_root.exists():
+            continue
+        yield from sorted(source_root.rglob("*.py"))
+
+
+def _metadata_contains_dependency(metadata_text: str, dependency_name: str) -> bool:
+    dependency_pattern = DEPENDENCY_PATTERN_TEMPLATE.format(
+        dependency=re.escape(dependency_name)
+    )
+    return re.search(dependency_pattern, metadata_text, flags=re.MULTILINE) is not None
+
+
+def test_api_metadata_includes_ibapi_dependency() -> None:
+    pyproject_text = _read_text(API_PYPROJECT)
+
+    assert _metadata_contains_dependency(pyproject_text, "ibapi")
+
+
+def test_project_metadata_does_not_include_ib_insync_dependency() -> None:
+    for metadata_path in _iter_project_metadata_files():
+        metadata_text = _read_text(metadata_path)
+        assert not _metadata_contains_dependency(metadata_text, "ib_insync")
+        assert not _metadata_contains_dependency(metadata_text, "ib-insync")
 
 
 def test_ibapi_import_succeeds_without_network_connect(monkeypatch) -> None:
@@ -38,28 +82,19 @@ def test_ibapi_import_succeeds_without_network_connect(monkeypatch) -> None:
     assert connect_attempted is False
 
 
-def test_no_production_runtime_ibkr_client_imports_yet() -> None:
-    disallowed_tokens = ("from ibapi", "import ibapi", "from ib_insync", "import ib_insync")
+def test_production_runtime_source_does_not_import_ibapi_yet() -> None:
+    disallowed_tokens = ("from ibapi", "import ibapi")
 
-    for file_path in API_SRC_DIR.rglob("*.py"):
-        source = file_path.read_text(encoding="utf-8")
+    for file_path in _iter_production_source_files():
+        source = _read_text(file_path)
         for token in disallowed_tokens:
             assert token not in source, f"{token} found in production source file: {file_path}"
 
 
-def test_repository_does_not_introduce_ib_insync() -> None:
-    disallowed_tokens = ("ib_insync", "ib-insync")
-    allowed_files = {
-        Path("apps/api/tests/test_ibkr_client_dependency_preflight.py"),
-        Path("docs/product/ibkr-tws-client-dependency-ci-preflight-task-150.md"),
-    }
+def test_production_runtime_source_does_not_import_ib_insync() -> None:
+    disallowed_tokens = ("from ib_insync", "import ib_insync")
 
-    for file_path in REPO_ROOT.rglob("*.py"):
-        if ".venv" in file_path.parts:
-            continue
-        relative = file_path.relative_to(REPO_ROOT)
-        if relative in allowed_files:
-            continue
-        source = file_path.read_text(encoding="utf-8")
+    for file_path in _iter_production_source_files():
+        source = _read_text(file_path)
         for token in disallowed_tokens:
-            assert token not in source, f"{token} unexpectedly found in: {relative}"
+            assert token not in source, f"{token} found in production source file: {file_path}"

@@ -1,3 +1,5 @@
+Task 150-R repairstatus: afgerond; API pytest preflightscan is vernauwd naar metadata + productiebroncode zonder runtimeverbreding.
+
 # Task 151 — dependency-geïsoleerde `ibapi` client façade zonder connectiegedrag
 
 Geselecteerde volgende taak: **Task 151**.
