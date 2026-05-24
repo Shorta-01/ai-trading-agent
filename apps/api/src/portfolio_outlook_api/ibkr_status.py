@@ -1,10 +1,11 @@
 from portfolio_outlook_domain.broker_adapter import BrokerProvider
 
 from portfolio_outlook_api.config import Settings
-from portfolio_outlook_api.ibkr_session_status import (
-    DefaultSafeIbkrSessionStatusAdapter,
-    IbkrSessionStatusAdapter,
+from portfolio_outlook_api.ibkr_session_adapter_factory import (
+    IbkrSessionAdapterSelectionDiagnostics,
+    build_ibkr_session_status_adapter,
 )
+from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapter
 
 _KNOWN_CONNECTION_STATUSES = {
     "configured_not_connected",
@@ -114,6 +115,20 @@ def _status_content(connection_status: str) -> tuple[str, str, str, str]:
     )
 
 
+
+
+def _default_adapter_selection_diagnostics() -> IbkrSessionAdapterSelectionDiagnostics:
+    return IbkrSessionAdapterSelectionDiagnostics(
+        session_adapter_family="default_safe",
+        session_adapter_source="none",
+        session_adapter_enabled=False,
+        session_adapter_reason="status_check_not_attempted",
+        tws_readonly_adapter_enabled=False,
+        tws_readonly_adapter_runtime_available=False,
+        tws_readonly_adapter_help_nl=(
+            "TWS/Gateway adapter staat uit. Geen automatische verbinding."
+        ),
+    )
 def build_ibkr_status_placeholder(
     runtime_settings: Settings,
     session_status_adapter: IbkrSessionStatusAdapter | None = None,
@@ -130,6 +145,7 @@ def build_ibkr_status_placeholder(
     session_check_attempted = False
     session_check_source = "none"
     session_status_reason = "disabled"
+    adapter_selection = _default_adapter_selection_diagnostics()
 
     if not runtime_settings.ibkr_enabled:
         connection_status = "disabled"
@@ -140,7 +156,11 @@ def build_ibkr_status_placeholder(
         connection_status = "status_check_disabled"
         session_status_reason = "status_check_disabled"
     else:
-        adapter = session_status_adapter or DefaultSafeIbkrSessionStatusAdapter()
+        if session_status_adapter is None:
+            adapter, adapter_selection = build_ibkr_session_status_adapter(runtime_settings)
+        else:
+            adapter = session_status_adapter
+            adapter_selection = _default_adapter_selection_diagnostics()
         try:
             result = adapter.check_session_status(runtime_settings)
         except Exception:
@@ -225,6 +245,17 @@ def build_ibkr_status_placeholder(
         "session_check_attempted": session_check_attempted,
         "session_check_source": session_check_source,
         "session_status_reason": session_status_reason,
+        "session_adapter_family": adapter_selection.session_adapter_family,
+        "session_adapter_source": adapter_selection.session_adapter_source,
+        "session_adapter_enabled": adapter_selection.session_adapter_enabled,
+        "session_adapter_reason": adapter_selection.session_adapter_reason,
+        "tws_readonly_adapter_enabled": adapter_selection.tws_readonly_adapter_enabled,
+        "tws_readonly_adapter_runtime_available": (
+            adapter_selection.tws_readonly_adapter_runtime_available
+        ),
+        "tws_readonly_adapter_help_nl": (
+            adapter_selection.tws_readonly_adapter_help_nl
+        ),
         "sync_allowed": False,
         "actions_allowed": False,
         "order_submission_allowed": False,
