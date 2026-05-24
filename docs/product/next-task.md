@@ -1,22 +1,13 @@
-Task 150-R repairstatus: afgerond; API pytest preflightscan is vernauwd naar metadata + productiebroncode zonder runtimeverbreding.
+# Task 152 — Add disabled-by-default `ibapi` manual status client skeleton behind the isolated façade without connecting to TWS/Gateway
 
-# Task 151 — dependency-geïsoleerde `ibapi` client façade zonder connectiegedrag
-
-Geselecteerde volgende taak: **Task 151**.
-
-## Doel
-Introduceer een dependency-geïsoleerde `ibapi` façade-module zonder socket/connectiegedrag en zonder production runtime wiring.
-
-## Scope
-- Voeg een kleine façade/interface module toe voor toekomstig `ibapi` gebruik.
-- Geen runtime wiring naar endpoints of actieve statuschecks.
-- Behoud disabled-by-default runtime boundary.
-
-## Non-goals
-- Geen TWS/Gateway connecties.
-- Geen sockets openen.
-- Geen auto-connect/reconnect loop.
-- Geen persistente session manager.
-- Geen account/portfolio sync runtime.
-- Geen market-data runtime of FX runtime.
-- Geen suggestions, action drafts, orders of broker execution.
+## Scope constraints
+- No socket open.
+- No connect to TWS/Gateway.
+- No endpoint wiring.
+- No runtime factory wiring.
+- No auto-connect/reconnect loop.
+- No persistent session manager.
+- No account/portfolio sync runtime.
+- No market-data runtime.
+- No FX runtime.
+- No suggestions, action drafts, orders, or broker execution.

@@ -82,13 +82,25 @@ def test_ibapi_import_succeeds_without_network_connect(monkeypatch) -> None:
     assert connect_attempted is False
 
 
-def test_production_runtime_source_does_not_import_ibapi_yet() -> None:
+def test_production_runtime_source_only_allows_ibapi_in_facade() -> None:
     disallowed_tokens = ("from ibapi", "import ibapi")
+    allowed_file = (
+        REPO_ROOT
+        / "apps"
+        / "api"
+        / "src"
+        / "portfolio_outlook_api"
+        / "ibkr_ibapi_client_facade.py"
+    ).resolve()
 
     for file_path in _iter_production_source_files():
         source = _read_text(file_path)
         for token in disallowed_tokens:
-            assert token not in source, f"{token} found in production source file: {file_path}"
+            if token not in source:
+                continue
+            assert file_path.resolve() == allowed_file, (
+                f"{token} found outside isolated facade: {file_path}"
+            )
 
 
 def test_production_runtime_source_does_not_import_ib_insync() -> None:
