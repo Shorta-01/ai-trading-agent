@@ -721,3 +721,83 @@ def test_asset_forecast_record_rejects_safe_flags_true() -> None:
             blocking_reason=None,
             safe_for_analysis=True,
         )
+
+
+def test_asset_suggestion_repository_persists_and_returns_latest_per_conid() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetSuggestionRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetSuggestionRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetSuggestionRepository(conn, _report(True))
+
+        def _record(suggestion_id: str, conid: str, generated_hour: int) -> AssetSuggestionRecord:
+            return AssetSuggestionRecord(
+                suggestion_id=suggestion_id,
+                ibkr_conid=conid,
+                symbol="AAPL",
+                currency="USD",
+                forecast_id="forecast-x",
+                model_code="baseline_label_translator",
+                model_version="v1.0.0",
+                generated_at=datetime(2025, 5, 24, generated_hour, 0, tzinfo=UTC),
+                valid_until=datetime(2025, 6, 14, generated_hour, 0, tzinfo=UTC),
+                risk_profile="Gebalanceerd",
+                has_position=True,
+                action_label="Houden",
+                action_label_nl="Houden",
+                confidence_label="Hoog",
+                confidence_label_nl="Hoog",
+                confidence_score=Decimal("0.82"),
+                rationale_nl="test rationale",
+                drivers_json=("direction_label=neutral", "prob_gain=0.5"),
+                blockers_json=None,
+                status="ready",
+                blocking_reason=None,
+            )
+
+        repo.save_asset_suggestion(_record("s1", "265598", 9))
+        repo.save_asset_suggestion(_record("s2", "265598", 11))  # newer
+        repo.save_asset_suggestion(_record("s3", "272093", 9))
+
+        latest = repo.get_latest_asset_suggestion_by_conid("265598")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.suggestion_id == "s2"
+        assert latest.record.drivers_json == ("direction_label=neutral", "prob_gain=0.5")
+
+        listed = repo.list_latest_asset_suggestions_by_conids(("265598", "272093", "999"))
+        assert {r.suggestion_id for r in listed.records} == {"s2", "s3"}
+
+
+def test_asset_suggestion_record_rejects_safety_flags_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetSuggestionRecord
+
+    with pytest.raises(ValueError):
+        AssetSuggestionRecord(
+            suggestion_id="x",
+            ibkr_conid="1",
+            symbol="X",
+            currency="USD",
+            forecast_id=None,
+            model_code="baseline_label_translator",
+            model_version="v1",
+            generated_at=datetime.now(UTC),
+            valid_until=datetime.now(UTC),
+            risk_profile="Gebalanceerd",
+            has_position=False,
+            action_label="Kopen",
+            action_label_nl="Kopen",
+            confidence_label="Hoog",
+            confidence_label_nl="Hoog",
+            confidence_score=Decimal("0.8"),
+            rationale_nl="test",
+            drivers_json=None,
+            blockers_json=None,
+            status="ready",
+            blocking_reason=None,
+            safe_for_orders=True,
+        )

@@ -29,6 +29,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_sync_runs,
     fx_rate_snapshots,
     asset_forecasts,
+    asset_suggestions,
     market_data_bars,
     market_data_snapshots,
     market_data_latest_snapshots,
@@ -65,6 +66,7 @@ from ai_trading_agent_storage.repository_contracts import (
     AssetIdentifierAliasRecord,
     AssetListingRecord,
     AssetMasterRecord,
+    AssetSuggestionRecord,
     BrokerAccountRecord,
     BrokerCashSnapshotRecord,
     BrokerCommissionSnapshotRecord,
@@ -2082,3 +2084,110 @@ class SqlAlchemyAssetForecastRepository(_Base):
             asset_forecasts.name,
             f"{len(ordered)} assetvoorspellingen opgehaald.",
         )
+
+
+class SqlAlchemyAssetSuggestionRepository(_Base):
+    def save_asset_suggestion(
+        self, record: AssetSuggestionRecord
+    ) -> StorageWriteResult:
+        values = asdict(record)
+        # JSON columns must be plain lists (SQLite/Postgres JSON serialisation).
+        drivers = values.get("drivers_json")
+        if isinstance(drivers, tuple):
+            values["drivers_json"] = list(drivers)
+        blockers = values.get("blockers_json")
+        if isinstance(blockers, tuple):
+            values["blockers_json"] = list(blockers)
+        self._insert(asset_suggestions, values)
+        return StorageWriteResult(
+            True,
+            record.suggestion_id,
+            asset_suggestions.name,
+            True,
+            "Assetsuggestie opgeslagen.",
+        )
+
+    def get_latest_asset_suggestion_by_conid(
+        self, ibkr_conid: str
+    ) -> StorageReadResult[AssetSuggestionRecord]:
+        row = (
+            self._connection.execute(
+                select(asset_suggestions)
+                .where(asset_suggestions.c.ibkr_conid == ibkr_conid)
+                .order_by(asset_suggestions.c.generated_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                asset_suggestions.name,
+                "Geen assetsuggestie gevonden voor conid.",
+            )
+        return StorageReadResult(
+            True,
+            _suggestion_from_row(row),
+            asset_suggestions.name,
+            "Assetsuggestie opgehaald voor conid.",
+        )
+
+    def list_latest_asset_suggestions_by_conids(
+        self, conids: tuple[str, ...]
+    ) -> StorageListResult[AssetSuggestionRecord]:
+        if not conids:
+            return StorageListResult((), asset_suggestions.name, "Geen conids opgegeven.")
+        rows = (
+            self._connection.execute(
+                select(asset_suggestions)
+                .where(asset_suggestions.c.ibkr_conid.in_(conids))
+                .order_by(
+                    asset_suggestions.c.ibkr_conid.asc(),
+                    asset_suggestions.c.generated_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest: dict[str, AssetSuggestionRecord] = {}
+        for row in rows:
+            record = _suggestion_from_row(row)
+            if record.ibkr_conid not in latest:
+                latest[record.ibkr_conid] = record
+        ordered = tuple(latest[c] for c in conids if c in latest)
+        return StorageListResult(
+            ordered,
+            asset_suggestions.name,
+            f"{len(ordered)} assetsuggesties opgehaald.",
+        )
+
+
+def _suggestion_from_row(row: RowMapping) -> AssetSuggestionRecord:
+    data = dict(row)
+
+    def _normalise_json(name: str) -> tuple[str, ...] | None:
+        value = data.get(name)
+        if value is None:
+            return None
+        if isinstance(value, list):
+            return tuple(str(item) for item in value)
+        if isinstance(value, tuple):
+            return tuple(str(item) for item in value)
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                return None
+            if isinstance(parsed, list):
+                return tuple(str(item) for item in parsed)
+            return None
+        return None
+
+    data["drivers_json"] = _normalise_json("drivers_json")
+    data["blockers_json"] = _normalise_json("blockers_json")
+    return AssetSuggestionRecord(**data)

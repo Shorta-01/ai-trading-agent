@@ -1812,3 +1812,58 @@ class AssetForecastRecord:
             raise ValueError(
                 "All safe_for_* fields must remain false for V1 baseline forecasts."
             )
+
+
+@dataclass(frozen=True)
+class AssetSuggestionRecord:
+    suggestion_id: str
+    ibkr_conid: str
+    symbol: str
+    currency: str
+    forecast_id: str | None
+    model_code: str
+    model_version: str
+    generated_at: datetime
+    valid_until: datetime
+    risk_profile: str
+    has_position: bool
+    action_label: str
+    action_label_nl: str
+    confidence_label: str
+    confidence_label_nl: str
+    confidence_score: Decimal
+    rationale_nl: str
+    drivers_json: tuple[str, ...] | None
+    blockers_json: tuple[str, ...] | None
+    status: str
+    blocking_reason: str | None
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+    safe_for_broker_submission: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "suggestion_id",
+            "ibkr_conid",
+            "symbol",
+            "currency",
+            "model_code",
+            "model_version",
+            "risk_profile",
+            "action_label",
+            "action_label_nl",
+            "confidence_label",
+            "confidence_label_nl",
+            "rationale_nl",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if (
+            self.safe_for_action_drafts
+            or self.safe_for_orders
+            or self.safe_for_broker_submission
+        ):
+            raise ValueError(
+                "Suggestion safety booleans must remain false in V1: suggestions "
+                "are never auto-promoted to action drafts or orders."
+            )
