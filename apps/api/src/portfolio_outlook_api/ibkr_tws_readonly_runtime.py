@@ -59,6 +59,42 @@ class IbkrTwsReadonlyRuntimeCheckResult:
     blocks_orders: bool = True
 
 
+@dataclass(frozen=True)
+class IbkrTwsReadonlyStatusCheckReadinessResult:
+    status: str
+    status_nl: str
+    ready: bool
+    ready_nl: str
+    blocked: bool
+    blocked_reasons: tuple[str, ...]
+    blocking_summary_nl: str
+    help_nl: str
+    next_step_nl: str
+    endpoint: str
+    method: str
+    runtime_enabled: bool
+    adapter_enabled: bool
+    paper_only_mode: bool
+    expected_account_mode: str | None
+    runtime_client_available: bool
+    runtime_connection_allowed: bool
+    runtime_connection_blocked_reason: str | None
+    manual_status_check_allowed: bool
+    manual_status_check_allowed_nl: str
+    connect_attempted: bool
+    disconnect_attempted: bool
+    actions_allowed: bool = False
+    suggestions_allowed: bool = False
+    action_drafts_allowed: bool = False
+    orders_allowed: bool = False
+    order_submission_allowed: bool = False
+    order_modification_allowed: bool = False
+    order_cancellation_allowed: bool = False
+    can_submit_orders: bool = False
+    safe_for_orders: bool = False
+    blocks_orders: bool = True
+
+
 def check_tws_readonly_runtime_preflight(
     settings: Settings,
     runtime_client: IbkrTwsReadonlyClient | None,
@@ -325,6 +361,53 @@ def _blocked_result(gate: IbkrTwsReadonlyRuntimeGateResult) -> IbkrTwsReadonlyRu
         connect_attempted=False,
         disconnect_attempted=False,
         disconnect_error_ignored=False,
+    )
+
+
+def build_manual_tws_readonly_status_check_readiness(
+    settings: Settings,
+    runtime_client: IbkrTwsReadonlyClient | None,
+) -> IbkrTwsReadonlyStatusCheckReadinessResult:
+    gate = check_tws_readonly_runtime_preflight(settings, runtime_client)
+    expected_mode = _normalize_mode(settings.ibkr_expected_environment)
+    status = (
+        "manual_status_check_ready_for_test_client"
+        if gate.allowed
+        else "manual_status_check_blocked"
+    )
+    status_nl = (
+        "Handmatige read-only statuscontrole klaar voor testclient"
+        if gate.allowed
+        else "Handmatige read-only statuscontrole geblokkeerd"
+    )
+    summary = (
+        "Geen blokkades; alleen handmatige testclient-controle toegestaan"
+        if gate.allowed
+        else ", ".join(_reason_nl(reason) for reason in gate.blocked_reasons)
+    )
+    return IbkrTwsReadonlyStatusCheckReadinessResult(
+        status=status,
+        status_nl=status_nl,
+        ready=gate.allowed,
+        ready_nl="Klaar" if gate.allowed else "Niet klaar",
+        blocked=gate.blocked,
+        blocked_reasons=gate.blocked_reasons,
+        blocking_summary_nl=summary,
+        help_nl="Alleen diagnostiek; geen verbinding geprobeerd",
+        next_step_nl="Gebruik alleen veilige testinjectie; brokeracties blijven geblokkeerd",
+        endpoint="/ibkr/session/manual-readonly-status-check",
+        method="POST",
+        runtime_enabled=settings.ibkr_tws_readonly_runtime_enabled,
+        adapter_enabled=settings.ibkr_tws_readonly_adapter_enabled,
+        paper_only_mode=settings.paper_only_mode,
+        expected_account_mode=expected_mode,
+        runtime_client_available=runtime_client is not None,
+        runtime_connection_allowed=gate.runtime_connection_allowed,
+        runtime_connection_blocked_reason=gate.runtime_connection_blocked_reason,
+        manual_status_check_allowed=gate.manual_status_check_allowed,
+        manual_status_check_allowed_nl=gate.manual_status_check_allowed_nl,
+        connect_attempted=False,
+        disconnect_attempted=False,
     )
 
 

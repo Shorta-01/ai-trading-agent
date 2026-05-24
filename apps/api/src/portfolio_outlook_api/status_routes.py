@@ -37,7 +37,10 @@ from portfolio_outlook_api.ibkr_sync_read_model import (
     serialize_sync_status_record,
 )
 from portfolio_outlook_api.ibkr_tws_readonly_adapter import IbkrTwsReadonlyClient
-from portfolio_outlook_api.ibkr_tws_readonly_runtime import run_manual_tws_readonly_status_check
+from portfolio_outlook_api.ibkr_tws_readonly_runtime import (
+    build_manual_tws_readonly_status_check_readiness,
+    run_manual_tws_readonly_status_check,
+)
 from portfolio_outlook_api.ibkr_watchlists import (
     import_by_id,
     import_ibkr_watchlist,
@@ -210,6 +213,16 @@ def _run_manual_tws_readonly_status_check_endpoint(
 @router.post("/ibkr/session/manual-readonly-status-check")
 def run_manual_readonly_status_check() -> dict[str, object]:
     return _run_manual_tws_readonly_status_check_endpoint(settings, runtime_client=None)
+
+
+@router.get("/ibkr/session/manual-readonly-status-check/readiness")
+def read_manual_readonly_status_check_readiness() -> dict[str, object]:
+    return asdict(
+        build_manual_tws_readonly_status_check_readiness(
+            settings,
+            runtime_client=None,
+        )
+    )
 
 @router.get("/portfolio/setup/status")
 def read_portfolio_setup_status() -> dict[str, object]:
