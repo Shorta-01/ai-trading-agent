@@ -58,6 +58,7 @@ def _fake_client_ready_settings(**updates: object) -> Settings:
         ibkr_status_check_enabled=True,
         ibkr_tws_readonly_adapter_enabled=True,
         ibkr_tws_readonly_runtime_enabled=True,
+        ibkr_tws_readonly_real_client_enabled=True,
         ibkr_expected_environment="paper",
         paper_only_mode=True,
         **updates,
@@ -237,10 +238,7 @@ def test_unexpected_error_maps_safely() -> None:
 def test_disconnect_error_ignored() -> None:
     client = FakeRuntimeClient(disconnect_error=RuntimeError("disconnect failed"))
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=client,
     )
     assert result.disconnect_error_ignored is True
