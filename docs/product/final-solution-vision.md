@@ -8,6 +8,10 @@ Portfolio Outlook Manager is een professionele AI-ondersteunde **IBKR portfolio/
 - Version 1 werkt account-mode-aware (paper of real-money zichtbaar), zonder automatische brokeracties.
 - Het systeem ondersteunt beslissingen met evidence, probabilistische analyses en auditability.
 
+## 1B) Product experience locks (Version 1)
+
+Dashboard/user-experience/daily-rhythm/workflow locks staan centraal in `docs/product/version-1-product-experience-locks.md` en zijn verplicht voor alle user-facing productimplementatie.
+
 ## 2) Final user workflow (target state)
 
 De gedetailleerde en vergrendelde Release 1 workflowblauwdruk staat in `docs/product/release-1-functional-workflow-blueprint.md`. Die blueprint is leidend voor implementatievolgorde en afbakening van Decision Packages, Suggestions-grid, IBKR Action Center, sync/recompute en AI-analytics.

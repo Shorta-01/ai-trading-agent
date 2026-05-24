@@ -742,3 +742,5 @@ Bevestiging scope:
 
 ## Task 145 — completed
 - Milestone B runtime-boundary slice: dependency-free manual TWS/Gateway read-only status-check runtime boundary toegevoegd met injected fake clients in tests only. Runtime blijft disabled-by-default en paper-only enforced; geen real IBKR low-level client, geen ibapi/ib_insync, geen sockets by default, geen auto-connect/reconnect/persistente session manager, geen sync/market-data/FX runtime en geen suggesties/action drafts/orders/broker execution.
+
+- Task 153-L — completed (documentation/product-lock recovery): consolidated owner-agreed Version 1 product experience locks in `docs/product/version-1-product-experience-locks.md`, repaired product-tracking drift after Task 152-R7, and set next task to Task 154.
