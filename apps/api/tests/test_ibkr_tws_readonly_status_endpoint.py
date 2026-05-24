@@ -51,6 +51,7 @@ def _fake_client_ready_settings(**kwargs: object) -> Settings:
         ibkr_status_check_enabled=True,
         ibkr_tws_readonly_adapter_enabled=True,
         ibkr_tws_readonly_runtime_enabled=True,
+        ibkr_tws_readonly_real_client_enabled=True,
         ibkr_expected_environment="paper",
         paper_only_mode=True,
         **kwargs,
@@ -183,10 +184,7 @@ def test_connection_failed_maps_safely() -> None:
 
 def test_unexpected_client_error_maps_safely() -> None:
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
-        ),
+        _fake_client_ready_settings(),
         runtime_client=FakeRuntimeClient(connect_error=RuntimeError("boom")),
     )
     assert payload["status"] == "unexpected_client_error"
