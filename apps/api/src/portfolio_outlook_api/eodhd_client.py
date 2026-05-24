@@ -29,6 +29,7 @@ This module is HTTP-only — it does not touch storage, settings, or the
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import urllib.error
@@ -95,6 +96,31 @@ class EodhdBar:
     close_price: Decimal | None
     adjusted_close: Decimal | None
     volume: Decimal | None
+
+
+@dataclass(frozen=True)
+class EodhdFundamentals:
+    """Parsed EODHD fundamentals payload (a subset of the very large
+    ``/fundamentals/{symbol}`` JSON document).
+
+    Only the fields needed for the QVM factor predictor are surfaced.
+    EODHD's payload is sparse — any field may be ``None`` if the
+    underlying datapoint is unavailable for the ticker.
+    """
+
+    eodhd_symbol: str
+    sector: str | None
+    currency: str | None
+    market_cap: Decimal | None
+    pe_ratio: Decimal | None
+    pb_ratio: Decimal | None
+    ev_ebitda: Decimal | None
+    roic_pct: Decimal | None
+    gross_margin_pct: Decimal | None
+    dividend_yield_pct: Decimal | None
+    return_6m_pct: Decimal | None
+    return_12m_pct: Decimal | None
+    raw_payload_hash: str
 
 
 class EodhdClientError(Exception):
@@ -203,6 +229,23 @@ class EodhdClient:
         url = self._build_url(path, extra=extra)
         payload = self._get(url)
         return _parse_eod_bars(payload)
+
+    def fetch_fundamentals(self, eodhd_symbol: str) -> EodhdFundamentals:
+        """Fetch the fundamentals payload for one EODHD symbol.
+
+        Endpoint: ``/fundamentals/{SYMBOL.EX}``. The response is a
+        large nested JSON; this method extracts the subset needed for
+        QVM factor scoring. Missing keys map to ``None``; never raise
+        for sparse data.
+        """
+
+        cleaned = eodhd_symbol.strip()
+        if not cleaned:
+            raise EodhdClientError("empty_symbol")
+        path = f"fundamentals/{urllib.parse.quote(cleaned, safe='.')}"
+        url = self._build_url(path)
+        payload = self._get(url)
+        return _parse_fundamentals(cleaned, payload)
 
     # ---- private helpers ----
 
@@ -356,6 +399,90 @@ def _parse_eod_bars(payload: object) -> list[EodhdBar]:
         )
     bars.sort(key=lambda b: b.bar_date)
     return bars
+
+
+def _percent_or_none(value: object) -> Decimal | None:
+    """EODHD reports percentage-like ratios sometimes as `0.42` and
+    sometimes as `42.0`. We treat anything with absolute value ≤ 1.5
+    as a fraction and multiply by 100; otherwise it is already a
+    percentage."""
+
+    raw = _decimal_or_none(value)
+    if raw is None:
+        return None
+    if abs(raw) <= Decimal("1.5"):
+        return raw * Decimal("100")
+    return raw
+
+
+def _parse_fundamentals(eodhd_symbol: str, payload: object) -> EodhdFundamentals:
+    if not isinstance(payload, dict):
+        raise EodhdClientError("fundamentals_payload_not_object")
+
+    general = payload.get("General")
+    if not isinstance(general, dict):
+        general = {}
+    highlights = payload.get("Highlights")
+    if not isinstance(highlights, dict):
+        highlights = {}
+    valuation = payload.get("Valuation")
+    if not isinstance(valuation, dict):
+        valuation = {}
+    technicals = payload.get("Technicals")
+    if not isinstance(technicals, dict):
+        technicals = {}
+
+    sector_raw = general.get("Sector")
+    sector = str(sector_raw).strip() if isinstance(sector_raw, str) else None
+    currency_raw = (
+        general.get("CurrencyCode")
+        or general.get("CurrencyName")
+        or highlights.get("ReportedCurrency")
+    )
+    currency = (
+        str(currency_raw).strip().upper() if isinstance(currency_raw, str) else None
+    )
+
+    market_cap = _decimal_or_none(
+        highlights.get("MarketCapitalization") or general.get("MarketCapitalization")
+    )
+    pe_ratio = _decimal_or_none(highlights.get("PERatio") or valuation.get("TrailingPE"))
+    pb_ratio = _decimal_or_none(valuation.get("PriceBookMRQ") or highlights.get("PriceBookMRQ"))
+    ev_ebitda = _decimal_or_none(valuation.get("EnterpriseValueEbitda"))
+    roic_pct = _percent_or_none(
+        highlights.get("ReturnOnEquityTTM")  # EODHD often uses ROE as the closest stable proxy
+        or highlights.get("ROIC")
+        or highlights.get("ReturnOnInvestedCapitalTTM")
+    )
+    gross_margin_pct = _percent_or_none(
+        highlights.get("GrossProfitTTM") and highlights.get("ProfitMargin")
+        # ProfitMargin is the simplest, near-universal payload key.
+        or highlights.get("ProfitMargin")
+    )
+    dividend_yield_pct = _percent_or_none(highlights.get("DividendYield"))
+    return_6m_pct = _decimal_or_none(technicals.get("6m_perf_pct"))
+    return_12m_pct = _decimal_or_none(technicals.get("52WeekChange"))
+    if return_12m_pct is not None and abs(return_12m_pct) <= Decimal("1.5"):
+        return_12m_pct = return_12m_pct * Decimal("100")
+
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    raw_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    return EodhdFundamentals(
+        eodhd_symbol=eodhd_symbol,
+        sector=sector or None,
+        currency=currency,
+        market_cap=market_cap,
+        pe_ratio=pe_ratio,
+        pb_ratio=pb_ratio,
+        ev_ebitda=ev_ebitda,
+        roic_pct=roic_pct,
+        gross_margin_pct=gross_margin_pct,
+        dividend_yield_pct=dividend_yield_pct,
+        return_6m_pct=return_6m_pct,
+        return_12m_pct=return_12m_pct,
+        raw_payload_hash=raw_hash,
+    )
 
 
 class EodhdMarketDataProvider(Protocol):

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, cast
 
-from sqlalchemy import Table, select
+from sqlalchemy import Table, func, select
 from sqlalchemy.engine import Connection, RowMapping
 
 from ai_trading_agent_storage.metadata import (
@@ -33,6 +33,7 @@ from ai_trading_agent_storage.metadata import (
     asset_action_drafts,
     asset_decision_packages,
     asset_forecasts,
+    asset_fundamentals_snapshots,
     asset_suggestions,
     briefing_alerts,
     daily_briefings,
@@ -76,6 +77,7 @@ from ai_trading_agent_storage.repository_contracts import (
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
     AssetDecisionPackageRecord,
+    AssetFundamentalsSnapshotRecord,
     BriefingAlertRecord,
     DailyBriefingRecord,
     DecisionPackageExplanationRecord,
@@ -2857,4 +2859,79 @@ class SqlAlchemySchedulerRunRepository(_Base):
             records,
             scheduler_runs.name,
             f"{len(records)} scheduler-runs opgehaald.",
+        )
+
+
+class SqlAlchemyAssetFundamentalsSnapshotRepository(_Base):
+    def save_snapshot(
+        self, record: AssetFundamentalsSnapshotRecord
+    ) -> StorageWriteResult:
+        self._insert(asset_fundamentals_snapshots, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.snapshot_id,
+            asset_fundamentals_snapshots.name,
+            True,
+            "Fundamentals snapshot opgeslagen.",
+        )
+
+    def get_latest_snapshot_for_symbol(
+        self, eodhd_symbol: str
+    ) -> StorageReadResult[AssetFundamentalsSnapshotRecord]:
+        statement = (
+            select(asset_fundamentals_snapshots)
+            .where(asset_fundamentals_snapshots.c.eodhd_symbol == eodhd_symbol)
+            .order_by(asset_fundamentals_snapshots.c.fetched_at.desc())
+            .limit(1)
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                asset_fundamentals_snapshots.name,
+                "Nog geen fundamentals snapshot voor dit symbool.",
+            )
+        return StorageReadResult(
+            True,
+            AssetFundamentalsSnapshotRecord(**dict(row)),
+            asset_fundamentals_snapshots.name,
+            "Fundamentals snapshot opgehaald.",
+        )
+
+    def list_latest_universe_snapshots(
+        self, *, limit: int = 5000
+    ) -> StorageListResult[AssetFundamentalsSnapshotRecord]:
+        """Return the most-recent snapshot per symbol, up to ``limit`` rows."""
+
+        # Two-step: rank by fetched_at within (eodhd_symbol), keep the
+        # first per symbol. SQLite + Postgres both support the
+        # window-function path; here we use a simpler self-join that
+        # works on every backend we run against.
+        latest_by_symbol = (
+            select(
+                asset_fundamentals_snapshots.c.eodhd_symbol,
+                func.max(asset_fundamentals_snapshots.c.fetched_at).label("latest"),
+            )
+            .group_by(asset_fundamentals_snapshots.c.eodhd_symbol)
+            .subquery()
+        )
+        statement = (
+            select(asset_fundamentals_snapshots)
+            .join(
+                latest_by_symbol,
+                (asset_fundamentals_snapshots.c.eodhd_symbol == latest_by_symbol.c.eodhd_symbol)
+                & (asset_fundamentals_snapshots.c.fetched_at == latest_by_symbol.c.latest),
+            )
+            .order_by(asset_fundamentals_snapshots.c.eodhd_symbol.asc())
+            .limit(_bounded_limit(limit))
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            AssetFundamentalsSnapshotRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            asset_fundamentals_snapshots.name,
+            f"{len(records)} fundamentals snapshots in latest universe.",
         )

@@ -387,6 +387,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "naar een order; safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0038_asset_fundamentals_snapshots",
+        previous_revision_id="0037_scheduler_runs",
+        filename="0038_asset_fundamentals_snapshots.py",
+        label_nl="Asset fundamentals snapshots voor QVM-factor scoring",
+        description_nl=(
+            "Voegt asset_fundamentals_snapshots toe: één rij per (symbol, "
+            "fetched_at) met QVM-bouwstenen (ROIC, gross_margin, P/E, "
+            "P/B, EV/EBITDA, 6m/12m returns, dividend_yield, sector). "
+            "Safety booleans blijven False; fundamentals zijn input voor "
+            "een predictor, niet voor een order."
+        ),
+    ),
 )
 
 

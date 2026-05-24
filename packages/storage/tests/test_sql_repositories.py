@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -1880,3 +1880,86 @@ def test_scheduler_run_record_invariants() -> None:
         SchedulerRunRecord(**{**base, "safe_for_action_drafts": True})
     with pytest.raises(ValueError):
         SchedulerRunRecord(**{**base, "safe_for_orders": True})
+
+
+def test_asset_fundamentals_snapshot_repository_roundtrip() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        AssetFundamentalsSnapshotRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetFundamentalsSnapshotRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetFundamentalsSnapshotRepository(conn, _report(True))
+        now = datetime(2026, 6, 2, 8, 0, tzinfo=UTC)
+
+        def _record(symbol: str, fetched_at: datetime) -> AssetFundamentalsSnapshotRecord:
+            return AssetFundamentalsSnapshotRecord(
+                snapshot_id=f"snap-{symbol}-{fetched_at.isoformat()}",
+                ibkr_conid=None,
+                eodhd_symbol=f"{symbol}.US",
+                symbol=symbol,
+                sector="Technology",
+                currency="USD",
+                market_cap=Decimal("1000000000"),
+                pe_ratio=Decimal("20"),
+                pb_ratio=Decimal("3"),
+                ev_ebitda=Decimal("15"),
+                roic_pct=Decimal("12"),
+                gross_margin_pct=Decimal("45"),
+                dividend_yield_pct=Decimal("1.5"),
+                return_6m_pct=Decimal("8"),
+                return_12m_pct=Decimal("20"),
+                raw_payload_hash="hash",
+                provider_code="eodhd",
+                fetched_at=fetched_at,
+                stored_at=now,
+            )
+
+        repo.save_snapshot(_record("AAPL", now - timedelta(days=2)))
+        repo.save_snapshot(_record("AAPL", now))
+        repo.save_snapshot(_record("MSFT", now))
+
+        latest_aapl = repo.get_latest_snapshot_for_symbol("AAPL.US")
+        assert latest_aapl.found is True
+        assert latest_aapl.record is not None
+        assert latest_aapl.record.symbol == "AAPL"
+
+        universe = repo.list_latest_universe_snapshots()
+        assert {r.symbol for r in universe.records} == {"AAPL", "MSFT"}
+
+
+def test_asset_fundamentals_snapshot_rejects_safety_flags_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        AssetFundamentalsSnapshotRecord,
+    )
+
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    base = dict(
+        snapshot_id="s",
+        ibkr_conid=None,
+        eodhd_symbol="AAPL.US",
+        symbol="AAPL",
+        sector=None,
+        currency=None,
+        market_cap=None,
+        pe_ratio=None,
+        pb_ratio=None,
+        ev_ebitda=None,
+        roic_pct=None,
+        gross_margin_pct=None,
+        dividend_yield_pct=None,
+        return_6m_pct=None,
+        return_12m_pct=None,
+        raw_payload_hash="hash",
+        provider_code="eodhd",
+        fetched_at=now,
+        stored_at=now,
+    )
+    with pytest.raises(ValueError):
+        AssetFundamentalsSnapshotRecord(**{**base, "safe_for_orders": True})
+    with pytest.raises(ValueError):
+        AssetFundamentalsSnapshotRecord(**{**base, "safe_for_action_drafts": True})

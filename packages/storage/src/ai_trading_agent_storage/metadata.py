@@ -1675,6 +1675,38 @@ scheduler_runs = Table(
 )
 
 
+asset_fundamentals_snapshots = Table(
+    "asset_fundamentals_snapshots",
+    metadata,
+    Column("snapshot_id", Text, primary_key=True),
+    Column("ibkr_conid", Text, nullable=True),
+    Column("eodhd_symbol", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("sector", Text, nullable=True),
+    Column("currency", Text, nullable=True),
+    Column("market_cap", Numeric(24, 6), nullable=True),
+    Column("pe_ratio", Numeric(20, 6), nullable=True),
+    Column("pb_ratio", Numeric(20, 6), nullable=True),
+    Column("ev_ebitda", Numeric(20, 6), nullable=True),
+    Column("roic_pct", Numeric(20, 6), nullable=True),
+    Column("gross_margin_pct", Numeric(20, 6), nullable=True),
+    Column("dividend_yield_pct", Numeric(20, 6), nullable=True),
+    Column("return_6m_pct", Numeric(20, 6), nullable=True),
+    Column("return_12m_pct", Numeric(20, 6), nullable=True),
+    Column("raw_payload_hash", Text, nullable=False),
+    Column("provider_code", Text, nullable=False),
+    Column("fetched_at", DateTime(timezone=True), nullable=False),
+    Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    UniqueConstraint(
+        "eodhd_symbol",
+        "fetched_at",
+        name="uq_asset_fundamentals_snapshots_symbol_fetched_at",
+    ),
+)
+
+
 asset_decision_packages = Table(
     "asset_decision_packages",
     metadata,
