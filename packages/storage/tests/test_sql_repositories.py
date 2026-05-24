@@ -1802,3 +1802,81 @@ def test_daily_briefing_rejects_negative_counts() -> None:
     )
     with pytest.raises(ValueError, match="non-negative"):
         DailyBriefingRecord(**{**base, "position_count": -1})
+
+
+def test_scheduler_run_repository_save_update_and_latest() -> None:
+    from ai_trading_agent_storage.repository_contracts import SchedulerRunRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemySchedulerRunRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemySchedulerRunRepository(conn, _report(True))
+        scheduled = datetime(2026, 6, 1, 6, 30, tzinfo=UTC)
+        started = datetime(2026, 6, 1, 6, 30, 5, tzinfo=UTC)
+        finished = datetime(2026, 6, 1, 6, 30, 12, tzinfo=UTC)
+
+        running = SchedulerRunRecord(
+            run_id="run-1",
+            job_name="daily_briefing",
+            scheduled_at=scheduled,
+            started_at=started,
+            finished_at=None,
+            status="running",
+            error_text=None,
+            triggered_by="scheduler",
+        )
+        repo.save_scheduler_run(running)
+        latest = repo.get_latest_scheduler_run()
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.status == "running"
+
+        succeeded = SchedulerRunRecord(
+            run_id="run-1",
+            job_name="daily_briefing",
+            scheduled_at=scheduled,
+            started_at=started,
+            finished_at=finished,
+            status="succeeded",
+            error_text=None,
+            triggered_by="scheduler",
+        )
+        repo.update_scheduler_run(succeeded)
+        latest = repo.get_latest_scheduler_run(job_name="daily_briefing")
+        assert latest.record is not None
+        assert latest.record.status == "succeeded"
+        # SQLite strips tzinfo on read; compare naive components only.
+        assert latest.record.finished_at is not None
+        assert latest.record.finished_at.replace(tzinfo=None) == finished.replace(
+            tzinfo=None
+        )
+
+        runs = repo.list_scheduler_runs()
+        assert len(runs.records) == 1
+
+
+def test_scheduler_run_record_invariants() -> None:
+    from ai_trading_agent_storage.repository_contracts import SchedulerRunRecord
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base = dict(
+        run_id="r",
+        job_name="daily_briefing",
+        scheduled_at=now,
+        started_at=now,
+        finished_at=None,
+        status="running",
+        error_text=None,
+        triggered_by="scheduler",
+    )
+    with pytest.raises(ValueError, match="status must"):
+        SchedulerRunRecord(**{**base, "status": "bogus"})
+    with pytest.raises(ValueError, match="triggered_by"):
+        SchedulerRunRecord(**{**base, "triggered_by": "cron"})
+    with pytest.raises(ValueError):
+        SchedulerRunRecord(**{**base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError):
+        SchedulerRunRecord(**{**base, "safe_for_orders": True})

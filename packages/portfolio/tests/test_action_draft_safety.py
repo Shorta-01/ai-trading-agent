@@ -230,13 +230,41 @@ def test_dry_run_passes_for_a_clean_buy() -> None:
     assert result.failures == ()
 
 
-def test_dry_run_flags_account_mode_mismatch() -> None:
-    context = _context(account_mode="paper", expected_account_mode="real")
-    sizing = derive_action_draft_sizing(context, default_buy_value_in_quote_currency=Decimal("500"))
+def test_dry_run_no_longer_blocks_on_account_mode_mismatch() -> None:
+    """V1 §21.1 relock: account-mode is reported, not gated.
+
+    A paper-vs-live difference between the connected IBKR account and
+    the operator's expected_account_mode is informational; it must not
+    fail dry-run anymore. The remaining safety surface is per-draft
+    manual approval + the broker's own account selection.
+    """
+
+    context = _context(
+        account_mode="paper",
+        expected_account_mode="real",
+        market_freshness="fresh",
+    )
+    sizing = derive_action_draft_sizing(
+        context, default_buy_value_in_quote_currency=Decimal("500")
+    )
     impact = compute_orderimpact(context, sizing)
     result = run_dry_run_safety_checks(context, sizing, impact)
-    assert result.status == "failed"
-    assert "account_mode_mismatch" in result.failures
+    assert "account_mode_mismatch" not in result.failures
+
+
+def test_dry_run_still_flags_missing_account_mode() -> None:
+    """Missing-mode (empty string) still fails dry-run — the connected
+    IBKR session must always report a mode."""
+
+    context = _context(
+        account_mode="", expected_account_mode="paper", market_freshness="fresh"
+    )
+    sizing = derive_action_draft_sizing(
+        context, default_buy_value_in_quote_currency=Decimal("500")
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "missing_account_mode" in result.failures
 
 
 def test_dry_run_flags_unsupported_exchange() -> None:

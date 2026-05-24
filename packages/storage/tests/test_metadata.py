@@ -64,6 +64,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "explanation_evidence_ledger",
         "daily_briefings",
         "briefing_alerts",
+        "scheduler_runs",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

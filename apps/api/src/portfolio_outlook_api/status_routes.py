@@ -23,11 +23,12 @@ from ai_trading_agent_storage import (
     SqlAlchemyMarketDataSnapshotRepository,
     SqlAlchemyPredictionDiaryRepository,
     SqlAlchemyResearchSourceArchiveRepository,
+    SqlAlchemySchedulerRunRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
 )
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Request
 from portfolio_outlook_domain.market_data_foundation import (
     MarketDataFetchStatus,
     MarketDataIdentity,
@@ -2965,3 +2966,120 @@ def read_market_data_snapshot_latest(ibkr_conid: str) -> LatestSnapshotResponse:
             blocker_reason="storage_connection_failed",
             evaluated_at=evaluated_at,
         )
+
+
+@router.get("/scheduler/jobs")
+def read_scheduler_jobs(request: Request) -> dict[str, object]:
+    """List scheduler jobs currently registered.
+
+    Returns an empty list when the scheduler is disabled. Each entry
+    carries the job name, cron expression and next-fire timestamp.
+    """
+
+    from portfolio_outlook_api.scheduler import list_jobs
+
+    scheduler = getattr(request.app.state, "scheduler", None)
+    jobs = list_jobs(scheduler)
+    return {
+        "status": "ok" if scheduler is not None else "disabled",
+        "status_nl": (
+            "Scheduler actief" if scheduler is not None else "Scheduler uitgeschakeld"
+        ),
+        "help_nl": (
+            "Stel `SCHEDULER_ENABLED=true` in om de in-process scheduler te starten."
+        ),
+        "scheduler_enabled": settings.scheduler_enabled,
+        "scheduler_timezone": settings.scheduler_timezone,
+        "scheduler_daily_briefing_cron": settings.scheduler_daily_briefing_cron,
+        "items": [
+            {
+                "job_id": j.job_id,
+                "job_name": j.job_name,
+                "cron_expression": j.cron_expression,
+                "next_run_at": j.next_run_at.isoformat() if j.next_run_at else None,
+            }
+            for j in jobs
+        ],
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+
+
+@router.get("/scheduler/runs/latest")
+def read_latest_scheduler_run(job_name: str | None = None) -> dict[str, object]:
+    """Return the most recent scheduler run (optionally filtered by job)."""
+
+    base: dict[str, object] = {
+        "item": None,
+        "help_nl": (
+            "Scheduler-runs zijn audit-rows; één per fire. Een succesvolle "
+            "run promoveert nooit naar een order."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemySchedulerRunRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.get_latest_scheduler_run(job_name=job_name)
+            if not result.found or result.record is None:
+                return base | {
+                    "status": "not_found",
+                    "status_nl": "Nog geen scheduler-run",
+                }
+            record = result.record
+            return base | {
+                "status": "ok",
+                "status_nl": "Laatste scheduler-run opgehaald",
+                "item": {
+                    "run_id": record.run_id,
+                    "job_name": record.job_name,
+                    "scheduled_at": record.scheduled_at.isoformat(),
+                    "started_at": record.started_at.isoformat(),
+                    "finished_at": (
+                        record.finished_at.isoformat() if record.finished_at else None
+                    ),
+                    "status": record.status,
+                    "error_text": record.error_text,
+                    "triggered_by": record.triggered_by,
+                },
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+@router.get("/ibkr/account/mode")
+def read_ibkr_account_mode() -> dict[str, object]:
+    """Report the IBKR account mode (paper / live) for the dashboard badge.
+
+    Per the §21.1 doctrine relock the account-mode is reported, not
+    gated. The detected mode comes from the configured
+    ``ibkr_sync_account_mode`` setting (which mirrors the connected
+    account); future slices will derive this from the IBKR session
+    response directly.
+    """
+
+    detected = (settings.ibkr_sync_account_mode or "").strip().lower() or "unknown"
+    display = "PAPER" if detected == "paper" else "LIVE" if detected == "live" else "UNKNOWN"
+    return {
+        "status": "ok",
+        "mode": detected,
+        "display_label": display,
+        "expected_environment": settings.ibkr_expected_environment,
+        "help_nl": (
+            "De modus wordt door het verbonden IBKR-account bepaald, niet "
+            "door een app-side gate. Het dashboard toont de modus voor "
+            "elke approval."
+        ),
+        "safe_for_orders": False,
+        "blocks_orders": True,
+    }

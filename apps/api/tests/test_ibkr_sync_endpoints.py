@@ -226,13 +226,16 @@ def test_sync_status_blocked_for_readonly_disabled() -> None:
     assert response["sync_readiness_reason"] == "readonly_required"
 
 
-def test_sync_status_blocked_for_version1_paper_only() -> None:
+def test_sync_status_no_longer_blocks_for_paper_only_relock() -> None:
+    """V1 §21.1 relock: `version1_paper_only` is no longer a readiness
+    blocker. With a mismatched mode the readiness still moves through
+    its normal needs_control / blocked flow based on session / storage,
+    not on an app-side paper-only flag."""
+
     response = ibkr_sync.read_status(
         _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="paper")
     )
-    assert response["sync_readiness_status"] == "blocked"
-    assert response["sync_readiness_reason"] == "version1_paper_only"
-    assert response["manual_sync_allowed"] is False
+    assert response["sync_readiness_reason"] != "version1_paper_only"
 
 
 def test_sync_status_needs_control_when_status_check_disabled() -> None:
@@ -290,26 +293,38 @@ def test_sync_run_needs_control_blocks_manual_execution() -> None:
     assert len(ibkr_sync.STORE.runs) == 0
 
 
-def test_sync_run_blocked_for_wrong_account_mode() -> None:
+def test_sync_run_no_longer_blocks_on_account_mode_mismatch() -> None:
+    """V1 §21.1 relock: account-mode is reported, not gated.
+
+    The previous ``account_mode_mismatch`` / ``version1_paper_only``
+    readiness blockers are removed. With a ready paper session adapter
+    the readiness status must no longer drop to ``blocked`` because of
+    a paper-vs-live mismatch between the operator's
+    `ibkr_sync_account_mode` setting and the session adapter's mode.
+    """
+
     body = ibkr_sync.run_sync(
         _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="paper"),
         adapter=RaisingSyncAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
-    assert body["sync_readiness_status"] == "blocked"
-    assert body["sync_readiness_reason"] in {"account_mode_mismatch", "version1_paper_only"}
-    assert body["sync_run_id"] is None
+    assert body["sync_readiness_reason"] not in {
+        "account_mode_mismatch",
+        "version1_paper_only",
+    }
 
 
-def test_live_mode_blocked_even_with_ready_session_adapter() -> None:
+def test_sync_run_no_longer_blocks_on_live_expected_environment() -> None:
+    """Same V1 §21.1 relock: setting `ibkr_expected_environment=live`
+    must no longer trigger a ``version1_paper_only`` blocker. The
+    connected IBKR account is the authority on paper vs. live."""
+
     body = ibkr_sync.run_sync(
         _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="live"),
         adapter=RaisingSyncAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
-    assert body["sync_readiness_status"] == "blocked"
-    assert body["sync_readiness_reason"] == "version1_paper_only"
-    assert body["sync_run_id"] is None
+    assert body["sync_readiness_reason"] != "version1_paper_only"
 
 
 def test_blocking_session_states_do_not_call_adapter() -> None:

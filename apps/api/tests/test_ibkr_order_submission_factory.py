@@ -73,22 +73,30 @@ def test_factory_returns_none_when_real_client_flag_off() -> None:
     )
 
 
-def test_factory_returns_none_when_account_mode_is_not_paper() -> None:
-    assert (
-        build_real_order_submission_client(
-            _ready_settings(ibkr_sync_account_mode="live"), app=_NoopApp()
-        )
-        is None
+def test_factory_no_longer_blocks_on_live_account_mode() -> None:
+    """V1 §21.1 relock: the factory no longer rejects live mode.
+
+    The connected IBKR account is the authority on paper vs. live, not
+    an app-side `ibkr_sync_account_mode` setting. The remaining gates
+    (enabled + real_client_enabled + host/port/client-id) are
+    unchanged.
+    """
+
+    client = build_real_order_submission_client(
+        _ready_settings(ibkr_sync_account_mode="live"), app=_NoopApp()
     )
+    assert client is not None
 
 
-def test_factory_returns_none_when_expected_environment_is_not_paper() -> None:
-    assert (
-        build_real_order_submission_client(
-            _ready_settings(ibkr_expected_environment="live"), app=_NoopApp()
-        )
-        is None
+def test_factory_no_longer_blocks_on_live_expected_environment() -> None:
+    """Same relock for `ibkr_expected_environment`: a `live` value is
+    informational; the factory still constructs the real client when
+    the other gates pass."""
+
+    client = build_real_order_submission_client(
+        _ready_settings(ibkr_expected_environment="live"), app=_NoopApp()
     )
+    assert client is not None
 
 
 def test_factory_returns_none_when_host_missing() -> None:

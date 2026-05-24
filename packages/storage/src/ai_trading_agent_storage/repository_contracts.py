@@ -2445,3 +2445,42 @@ class BriefingAlertRecord:
             raise ValueError(
                 "Briefing alert safety booleans must remain false in V1."
             )
+
+
+@dataclass(frozen=True)
+class SchedulerRunRecord:
+    """Audit row for one APScheduler job invocation.
+
+    Locked in `version-1-product-experience-locks.md §21.7`: APScheduler
+    runs in-process; every fire is captured here so the operator can
+    replay what triggered the daily chain. Safety booleans stay False —
+    a scheduled run never auto-promotes into an order; it just queues
+    the briefing for the user to read.
+    """
+
+    run_id: str
+    job_name: str
+    scheduled_at: datetime
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    error_text: str | None
+    triggered_by: str
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in ("run_id", "job_name", "status", "triggered_by"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.status not in {"running", "succeeded", "failed", "skipped"}:
+            raise ValueError(
+                f"status must be running/succeeded/failed/skipped, got {self.status!r}"
+            )
+        if self.triggered_by not in {"scheduler", "manual"}:
+            raise ValueError(
+                f"triggered_by must be scheduler/manual, got {self.triggered_by!r}"
+            )
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Scheduler-run safety booleans must remain false in V1."
+            )

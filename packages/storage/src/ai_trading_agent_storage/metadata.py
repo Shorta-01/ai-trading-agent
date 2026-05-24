@@ -1659,6 +1659,22 @@ briefing_alerts = Table(
 )
 
 
+scheduler_runs = Table(
+    "scheduler_runs",
+    metadata,
+    Column("run_id", Text, primary_key=True),
+    Column("job_name", Text, nullable=False),
+    Column("scheduled_at", DateTime(timezone=True), nullable=False),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("finished_at", DateTime(timezone=True), nullable=True),
+    Column("status", Text, nullable=False),
+    Column("error_text", Text, nullable=True),
+    Column("triggered_by", Text, nullable=False),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_decision_packages = Table(
     "asset_decision_packages",
     metadata,
