@@ -801,3 +801,145 @@ def test_asset_suggestion_record_rejects_safety_flags_true() -> None:
             blocking_reason=None,
             safe_for_orders=True,
         )
+
+
+def test_asset_decision_package_repository_persists_and_returns_latest() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetDecisionPackageRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetDecisionPackageRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetDecisionPackageRepository(conn, _report(True))
+
+        def _pkg(pkg_id: str, conid: str, hour: int) -> AssetDecisionPackageRecord:
+            return AssetDecisionPackageRecord(
+                decision_package_id=pkg_id,
+                content_hash=f"hash-{pkg_id}",
+                ibkr_conid=conid,
+                symbol="AAPL",
+                currency="USD",
+                risk_profile="Gebalanceerd",
+                generated_at=datetime(2025, 5, 24, hour, 0, tzinfo=UTC),
+                valid_until=datetime(2025, 6, 14, hour, 0, tzinfo=UTC),
+                position_snapshot_id="pos-1",
+                position_quantity=Decimal("10"),
+                position_average_cost=Decimal("150.0"),
+                cash_snapshot_id="cash-1",
+                cash_base_currency="USD",
+                cash_amount=Decimal("5000"),
+                market_snapshot_id="md-1",
+                market_last_price=Decimal("180"),
+                market_freshness_status="fresh",
+                market_provider_code="eodhd",
+                market_provider_as_of=datetime(2025, 5, 23, tzinfo=UTC),
+                fx_pair=None,
+                fx_rate=None,
+                fx_freshness_status=None,
+                forecast_id="forecast-1",
+                forecast_model_code="baseline_gbm",
+                forecast_model_version="v1.0.0",
+                forecast_horizon_days=21,
+                forecast_p10_price=Decimal("170"),
+                forecast_p50_price=Decimal("182"),
+                forecast_p90_price=Decimal("194"),
+                forecast_prob_gain=Decimal("0.6"),
+                forecast_prob_loss=Decimal("0.4"),
+                forecast_expected_return_pct=Decimal("1.1"),
+                forecast_expected_volatility_annual=Decimal("0.22"),
+                forecast_downside_risk_score=Decimal("5.5"),
+                forecast_confidence_score=Decimal("0.82"),
+                suggestion_id="suggestion-1",
+                suggestion_model_code="baseline_label_translator",
+                suggestion_action_label="Houden",
+                suggestion_action_label_nl="Houden",
+                suggestion_confidence_label="Hoog",
+                suggestion_confidence_label_nl="Hoog",
+                suggestion_status="ready",
+                has_position=True,
+                gate_outcomes_json=("market_data_fresh", "forecast_ready"),
+                evidence_links_json=None,
+                audit_links_json=("ibkr-sync-run:abc", "market-data-sync-run:def"),
+                rationale_nl="Test rationale.",
+                explanation_nl="Test explanation.",
+                status="ready",
+                blocking_reason=None,
+            )
+
+        repo.save_asset_decision_package(_pkg("dp-1", "265598", 9))
+        repo.save_asset_decision_package(_pkg("dp-2", "265598", 11))  # newer
+        repo.save_asset_decision_package(_pkg("dp-3", "272093", 9))
+
+        latest = repo.get_latest_asset_decision_package_by_conid("265598")
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.decision_package_id == "dp-2"
+        assert latest.record.gate_outcomes_json == ("market_data_fresh", "forecast_ready")
+        assert latest.record.audit_links_json == (
+            "ibkr-sync-run:abc",
+            "market-data-sync-run:def",
+        )
+
+        listed = repo.list_latest_asset_decision_packages_by_conids(("265598", "272093"))
+        assert {r.decision_package_id for r in listed.records} == {"dp-2", "dp-3"}
+
+
+def test_asset_decision_package_rejects_safety_flags_true() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetDecisionPackageRecord
+
+    with pytest.raises(ValueError):
+        AssetDecisionPackageRecord(
+            decision_package_id="dp",
+            content_hash="hash",
+            ibkr_conid="1",
+            symbol="X",
+            currency="USD",
+            risk_profile="Gebalanceerd",
+            generated_at=datetime.now(UTC),
+            valid_until=datetime.now(UTC),
+            position_snapshot_id=None,
+            position_quantity=None,
+            position_average_cost=None,
+            cash_snapshot_id=None,
+            cash_base_currency=None,
+            cash_amount=None,
+            market_snapshot_id=None,
+            market_last_price=None,
+            market_freshness_status=None,
+            market_provider_code=None,
+            market_provider_as_of=None,
+            fx_pair=None,
+            fx_rate=None,
+            fx_freshness_status=None,
+            forecast_id=None,
+            forecast_model_code=None,
+            forecast_model_version=None,
+            forecast_horizon_days=None,
+            forecast_p10_price=None,
+            forecast_p50_price=None,
+            forecast_p90_price=None,
+            forecast_prob_gain=None,
+            forecast_prob_loss=None,
+            forecast_expected_return_pct=None,
+            forecast_expected_volatility_annual=None,
+            forecast_downside_risk_score=None,
+            forecast_confidence_score=None,
+            suggestion_id=None,
+            suggestion_model_code=None,
+            suggestion_action_label="Houden",
+            suggestion_action_label_nl="Houden",
+            suggestion_confidence_label="Middel",
+            suggestion_confidence_label_nl="Middel",
+            suggestion_status="ready",
+            has_position=False,
+            gate_outcomes_json=None,
+            evidence_links_json=None,
+            audit_links_json=None,
+            rationale_nl="r",
+            explanation_nl="e",
+            status="ready",
+            blocking_reason=None,
+            safe_for_action_drafts=True,  # invalid
+        )

@@ -130,6 +130,8 @@ class Settings(BaseSettings):
     suggestions_sync_enabled: bool = False
     suggestions_risk_profile: str = "Gebalanceerd"
     suggestions_valid_minutes: int = 1440
+    decision_packages_sync_enabled: bool = False
+    decision_packages_valid_minutes: int = 1440
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

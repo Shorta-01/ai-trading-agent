@@ -437,6 +437,73 @@ export type LatestSuggestionsResponse = {
   blocks_orders?: boolean;
 };
 
+export type AssetDecisionPackageResponse = {
+  decision_package_id: string;
+  content_hash: string;
+  ibkr_conid: string;
+  symbol: string;
+  currency: string;
+  risk_profile: string;
+  generated_at: string;
+  valid_until: string;
+  position_snapshot_id: string | null;
+  position_quantity: string | null;
+  position_average_cost: string | null;
+  cash_snapshot_id: string | null;
+  cash_base_currency: string | null;
+  cash_amount: string | null;
+  market_snapshot_id: string | null;
+  market_last_price: string | null;
+  market_freshness_status: string | null;
+  market_provider_code: string | null;
+  market_provider_as_of: string | null;
+  fx_pair: string | null;
+  fx_rate: string | null;
+  fx_freshness_status: string | null;
+  forecast_id: string | null;
+  forecast_model_code: string | null;
+  forecast_model_version: string | null;
+  forecast_horizon_days: number | null;
+  forecast_p10_price: string | null;
+  forecast_p50_price: string | null;
+  forecast_p90_price: string | null;
+  forecast_prob_gain: string | null;
+  forecast_prob_loss: string | null;
+  forecast_expected_return_pct: string | null;
+  forecast_expected_volatility_annual: string | null;
+  forecast_downside_risk_score: string | null;
+  forecast_confidence_score: string | null;
+  suggestion_id: string | null;
+  suggestion_model_code: string | null;
+  suggestion_action_label: string;
+  suggestion_action_label_nl: string;
+  suggestion_confidence_label: string;
+  suggestion_confidence_label_nl: string;
+  suggestion_status: string;
+  has_position: boolean;
+  gate_outcomes: string[];
+  evidence_links: string[];
+  audit_links: string[];
+  rationale_nl: string;
+  explanation_nl: string;
+  status: string;
+  blocking_reason: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+  safe_for_broker_submission: boolean;
+};
+
+export type LatestDecisionPackagesResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl: string;
+  items: AssetDecisionPackageResponse[];
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+  safe_for_broker_submission?: boolean;
+  blocks_orders?: boolean;
+};
+
 export type FreshnessAuditResponse = {
   freshness_audit_id: string;
   request_log_id: string | null;
@@ -550,6 +617,9 @@ export const apiClient = {
   runForecastSync: () => postJson<{ status: string }>("/forecasts/compute"),
   getLatestSuggestions: () => getJson<LatestSuggestionsResponse>("/suggestions/latest"),
   runSuggestionsSync: () => postJson<{ status: string }>("/suggestions/compute"),
+  getLatestDecisionPackages: () =>
+    getJson<LatestDecisionPackagesResponse>("/decision-packages/latest"),
+  runDecisionPackagesSync: () => postJson<{ status: string }>("/decision-packages/compute"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

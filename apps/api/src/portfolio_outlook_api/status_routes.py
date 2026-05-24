@@ -6,6 +6,7 @@ from typing import Annotated
 
 from ai_trading_agent_storage import (
     IbkrSyncRunRecord,
+    SqlAlchemyAssetDecisionPackageRepository,
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetSuggestionRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
@@ -27,6 +28,10 @@ from portfolio_outlook_domain.market_data_foundation import (
 )
 
 from portfolio_outlook_api.config import Settings, settings
+from portfolio_outlook_api.decision_package_sync import (
+    serialize_decision_package_for_response,
+    sync_decision_packages,
+)
 from portfolio_outlook_api.forecast_sync import (
     serialize_forecast_for_response,
     sync_forecasts,
@@ -1321,6 +1326,290 @@ def read_latest_suggestions() -> dict[str, object]:
             "status": "storage_unavailable",
             "status_nl": "Opslag niet bereikbaar",
         }
+
+
+def _build_blocked_decision_package_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "risk_profile": settings.suggestions_risk_profile,
+        "package_total": 0,
+        "package_persisted": 0,
+        "package_failed": 0,
+        "package_skipped_missing_inputs": 0,
+        "failures": [],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.post("/decision-packages/compute")
+def run_decision_packages_sync() -> dict[str, object]:
+    """Bundle the latest evidence chain into one immutable Decision Package
+    per current suggestion. Packages are insert-only and hash-anchored.
+
+    Disabled-by-default. No action drafts, no orders, no broker submission.
+    """
+
+    if not settings.decision_packages_sync_enabled:
+        return _build_blocked_decision_package_response(
+            reason="decision_packages_sync_disabled",
+            status_nl="Decision Packages uitgeschakeld",
+            help_nl=(
+                "Stel `DECISION_PACKAGES_SYNC_ENABLED=true` in om Decision "
+                "Packages te activeren."
+            ),
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_decision_package_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Decision Packages vereisen schrijfbare opslag.",
+        )
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            forecast_repo = SqlAlchemyAssetForecastRepository(
+                checked.connection, checked.readiness
+            )
+            suggestion_repo = SqlAlchemyAssetSuggestionRepository(
+                checked.connection, checked.readiness
+            )
+            market_repo = SqlAlchemyMarketDataSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return _build_blocked_decision_package_response(
+                    reason="no_ibkr_sync_run",
+                    status_nl="Geen IBKR-sync gevonden",
+                    help_nl="Voer eerst een IBKR-sync uit.",
+                )
+            positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            cash_snapshots = list(
+                ibkr_repo.list_ibkr_account_cash_snapshots(latest_run.sync_run_id)
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return _build_blocked_decision_package_response(
+                    reason="no_positions",
+                    status_nl="Geen posities beschikbaar",
+                    help_nl="Voer eerst een IBKR-sync uit met posities.",
+                )
+            suggestion_records = list(
+                suggestion_repo.list_latest_asset_suggestions_by_conids(conids).records
+            )
+            if not suggestion_records:
+                return _build_blocked_decision_package_response(
+                    reason="no_suggestions",
+                    status_nl="Geen suggesties beschikbaar",
+                    help_nl="Voer eerst een suggesties-sync uit.",
+                )
+            forecast_ids = tuple(
+                s.forecast_id for s in suggestion_records if s.forecast_id
+            )
+            forecast_records = (
+                list(forecast_repo.list_latest_asset_forecasts_by_conids(conids).records)
+            )
+            forecasts_by_id = {f.forecast_id: f for f in forecast_records}
+            # Also key forecasts by conid so a suggestion missing forecast_id
+            # but pointing at the same conid still resolves.
+            forecasts_by_conid = {f.ibkr_conid: f for f in forecast_records}
+            market_records = list(
+                market_repo.list_latest_market_data_snapshots_by_conids(conids).records
+            )
+            market_by_conid = {m.ibkr_conid: m for m in market_records}
+            positions_by_conid = {p.conid: p for p in positions if p.conid}
+            cash_currencies = sorted({c.base_currency for c in cash_snapshots if c.base_currency})
+            base_currency = cash_currencies[0] if len(cash_currencies) == 1 else None
+            cash_by_currency = {c.base_currency: c for c in cash_snapshots}
+            required_pairs: list[str] = []
+            if base_currency:
+                position_currencies = {p.currency.upper() for p in positions if p.currency}
+                all_currencies = sorted(position_currencies | set(cash_currencies))
+                required_pairs = [
+                    f"{c}/{base_currency}" for c in all_currencies if c and c != base_currency
+                ]
+            fx_records = (
+                list(ibkr_repo.list_latest_fx_rate_snapshots_by_pairs(tuple(required_pairs)))
+                if required_pairs
+                else []
+            )
+            fx_by_pair = {f.pair: f for f in fx_records}
+
+            # Hydrate forecasts_by_id with the conid-keyed fallback so the
+            # orchestrator can look up forecast by id and still find data.
+            for record in forecast_records:
+                forecasts_by_id.setdefault(record.forecast_id, record)
+            _ = forecasts_by_conid, forecast_ids  # silenced unused for now
+
+            report = sync_decision_packages(
+                suggestions=suggestion_records,
+                forecasts_by_id=forecasts_by_id,
+                positions_by_conid=positions_by_conid,
+                cash_by_currency=cash_by_currency,
+                market_by_conid=market_by_conid,
+                fx_by_pair=fx_by_pair,
+                base_currency=base_currency,
+                risk_profile=settings.suggestions_risk_profile,
+                repo=package_repo,
+                valid_minutes=settings.decision_packages_valid_minutes,
+            )
+    except StorageConnectionError:
+        return _build_blocked_decision_package_response(
+            reason="storage_connection_failed",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="De opslag kon niet worden bereikt.",
+        )
+
+    return {
+        "status": "completed",
+        "status_nl": report.status_nl,
+        "help_nl": report.help_nl,
+        "risk_profile": report.risk_profile,
+        "requested_at": report.requested_at.isoformat(),
+        "completed_at": report.completed_at.isoformat(),
+        "package_total": report.package_total,
+        "package_persisted": report.package_persisted,
+        "package_failed": report.package_failed,
+        "package_skipped_missing_inputs": report.package_skipped_missing_inputs,
+        "failures": [dict(item) for item in report.failures],
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+
+@router.get("/decision-packages/latest")
+def read_latest_decision_packages() -> dict[str, object]:
+    """Return the latest Decision Package per current position."""
+
+    base = {
+        "items": [],
+        "help_nl": (
+            "Decision Packages zijn immutable, gehashte evidence-bundels die "
+            "elke suggestion ondersteunen. Geen action drafts of orders."
+        ),
+        "actions_allowed": False,
+        "order_submission_allowed": False,
+        "order_modification_allowed": False,
+        "order_cancellation_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return base | {
+                    "status": "no_ibkr_sync_run",
+                    "status_nl": "Geen IBKR-sync gevonden",
+                }
+            positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return base | {"status": "no_positions", "status_nl": "Geen posities"}
+            result = package_repo.list_latest_asset_decision_packages_by_conids(conids)
+            return base | {
+                "status": "ok",
+                "status_nl": (
+                    "Decision Packages beschikbaar"
+                    if result.records
+                    else "Nog geen Decision Packages"
+                ),
+                "items": [
+                    serialize_decision_package_for_response(r) for r in result.records
+                ],
+            }
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+        }
+
+
+@router.get("/decision-packages/{ibkr_conid}/latest")
+def read_latest_decision_package_for_conid(ibkr_conid: str) -> dict[str, object]:
+    """Return the latest Decision Package for one conid (per-row drilldown)."""
+
+    base: dict[str, object] = {
+        "item": None,
+        "help_nl": "Decision Package detail; immutable evidence-bundel.",
+        "actions_allowed": False,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+        "safe_for_broker_submission": False,
+        "blocks_orders": True,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            result = package_repo.get_latest_asset_decision_package_by_conid(ibkr_conid)
+            if not result.found or result.record is None:
+                return base | {
+                    "status": "not_found",
+                    "status_nl": "Geen Decision Package voor deze positie",
+                }
+            return base | {
+                "status": "ok",
+                "status_nl": "Decision Package beschikbaar",
+                "item": serialize_decision_package_for_response(result.record),
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
 
 
 @router.post(
