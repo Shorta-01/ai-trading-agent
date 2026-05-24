@@ -393,3 +393,35 @@ def test_broker_and_session_status_endpoints_both_available() -> None:
 
     assert broker_response.status_code == 200
     assert session_response.status_code == 200
+
+
+def test_ibkr_status_diagnostics_default_codes_and_nl_fields() -> None:
+    payload = build_ibkr_status_placeholder(Settings())
+
+    assert payload["session_adapter_status_nl"] == "Veilige standaardadapter actief"
+    assert payload["runtime_connection_allowed"] is False
+    assert payload["runtime_connection_blocked_reason"] == "ibkr_not_configured"
+    assert payload["manual_status_check_allowed"] is False
+    assert payload["session_diagnostics_ready"] is True
+
+
+def test_ibkr_status_no_secret_like_keys_in_response() -> None:
+    payload = build_ibkr_status_placeholder(Settings())
+    serialized = str(payload).lower()
+
+    assert "password" not in serialized
+    assert "token" not in serialized
+    assert "secret" not in serialized
+
+
+def test_ibkr_status_check_enabled_only_keeps_safe_default_adapter() -> None:
+    payload = build_ibkr_status_placeholder(
+        Settings(
+            ibkr_enabled=False,
+            ibkr_status_check_enabled=True,
+        )
+    )
+
+    assert payload["session_adapter_family"] == "default_safe"
+    assert payload["tws_readonly_adapter_enabled"] is False
+    assert payload["runtime_connection_allowed"] is False

@@ -125,10 +125,25 @@ def _default_adapter_selection_diagnostics() -> IbkrSessionAdapterSelectionDiagn
         session_adapter_reason="status_check_not_attempted",
         tws_readonly_adapter_enabled=False,
         tws_readonly_adapter_runtime_available=False,
+        tws_readonly_adapter_runtime_reason="default_safe_adapter",
+        tws_readonly_adapter_blocked_reasons=("default_safe_adapter",),
+        session_adapter_status_nl="Veilige standaardadapter actief",
+        session_adapter_help_nl="Alleen read-only statusdiagnostiek zonder netwerk.",
+        tws_readonly_adapter_next_step_nl="Expliciete instelling vereist.",
         tws_readonly_adapter_help_nl=(
             "TWS/Gateway adapter staat uit. Geen automatische verbinding."
         ),
     )
+
+
+def _runtime_diagnostics(settings: Settings, selected_family: str) -> tuple[bool, str, bool, str]:
+    if not settings.ibkr_enabled:
+        return (False, "ibkr_not_configured", False, "status_check_disabled")
+    if not settings.ibkr_tws_readonly_adapter_enabled:
+        return (False, "tws_adapter_disabled", False, "explicit_opt_in_required")
+    if selected_family != "tws_readonly":
+        return (False, "default_safe_adapter", False, "adapter_selected_but_blocked")
+    return (False, "network_runtime_not_implemented", False, "status_check_disabled")
 def build_ibkr_status_placeholder(
     runtime_settings: Settings,
     session_status_adapter: IbkrSessionStatusAdapter | None = None,
@@ -225,6 +240,9 @@ def build_ibkr_status_placeholder(
                 session_status_reason = final_session_status_reason
 
     status_nl, message_nl, next_step_nl, connection_help_nl = _status_content(connection_status)
+    runtime_connection_allowed, runtime_block_reason, manual_status_check_allowed, manual_reason = (
+        _runtime_diagnostics(runtime_settings, adapter_selection.session_adapter_family)
+    )
 
     return {
         "provider": BrokerProvider.IBKR.value,
@@ -249,13 +267,33 @@ def build_ibkr_status_placeholder(
         "session_adapter_source": adapter_selection.session_adapter_source,
         "session_adapter_enabled": adapter_selection.session_adapter_enabled,
         "session_adapter_reason": adapter_selection.session_adapter_reason,
+        "session_adapter_status_nl": adapter_selection.session_adapter_status_nl,
+        "session_adapter_help_nl": adapter_selection.session_adapter_help_nl,
         "tws_readonly_adapter_enabled": adapter_selection.tws_readonly_adapter_enabled,
         "tws_readonly_adapter_runtime_available": (
             adapter_selection.tws_readonly_adapter_runtime_available
         ),
+        "tws_readonly_adapter_runtime_reason": (
+            adapter_selection.tws_readonly_adapter_runtime_reason
+        ),
+        "tws_readonly_adapter_blocked_reasons": (
+            list(adapter_selection.tws_readonly_adapter_blocked_reasons)
+        ),
+        "tws_readonly_adapter_next_step_nl": (
+            adapter_selection.tws_readonly_adapter_next_step_nl
+        ),
         "tws_readonly_adapter_help_nl": (
             adapter_selection.tws_readonly_adapter_help_nl
         ),
+        "runtime_connection_allowed": runtime_connection_allowed,
+        "runtime_connection_allowed_nl": "Geen automatische verbinding",
+        "runtime_connection_blocked_reason": runtime_block_reason,
+        "manual_status_check_allowed": manual_status_check_allowed,
+        "manual_status_check_allowed_nl": "Handmatige statuscontrole nog geblokkeerd",
+        "session_diagnostics_ready": True,
+        "session_diagnostics_status_nl": "Alleen read-only statusdiagnostiek",
+        "runtime_connection_next_step_nl": "Paper-only blijft verplicht.",
+        "manual_status_check_reason": manual_reason,
         "sync_allowed": False,
         "actions_allowed": False,
         "order_submission_allowed": False,
