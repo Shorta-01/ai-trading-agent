@@ -46,6 +46,7 @@ from portfolio_outlook_api.action_draft_sync import (
 )
 from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.decision_package_sync import (
+    build_research_summary_by_symbol,
     serialize_decision_package_for_response,
     sync_decision_packages,
 )
@@ -1423,6 +1424,9 @@ def run_decision_packages_sync() -> dict[str, object]:
             package_repo = SqlAlchemyAssetDecisionPackageRepository(
                 checked.connection, checked.readiness
             )
+            research_repo = SqlAlchemyResearchSourceArchiveRepository(
+                checked.connection, checked.readiness
+            )
             latest_run = ibkr_repo.get_latest_ibkr_sync_run()
             if latest_run is None:
                 return _build_blocked_decision_package_response(
@@ -1488,6 +1492,12 @@ def run_decision_packages_sync() -> dict[str, object]:
                 forecasts_by_id.setdefault(record.forecast_id, record)
             _ = forecasts_by_conid, forecast_ids  # silenced unused for now
 
+            symbols = sorted({s.symbol for s in suggestion_records if s.symbol})
+            research_summary_by_symbol = build_research_summary_by_symbol(
+                symbols,
+                research_repo=research_repo,
+                now=datetime.now(UTC),
+            )
             report = sync_decision_packages(
                 suggestions=suggestion_records,
                 forecasts_by_id=forecasts_by_id,
@@ -1499,6 +1509,7 @@ def run_decision_packages_sync() -> dict[str, object]:
                 risk_profile=settings.suggestions_risk_profile,
                 repo=package_repo,
                 valid_minutes=settings.decision_packages_valid_minutes,
+                research_summary_by_symbol=research_summary_by_symbol,
             )
     except StorageConnectionError:
         return _build_blocked_decision_package_response(

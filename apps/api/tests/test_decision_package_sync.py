@@ -23,6 +23,7 @@ from ai_trading_agent_storage import (
 from portfolio_outlook_api.decision_package_sync import (
     _AssemblyContext,  # noqa: PLC2701  -- testing internal helper deliberately
     build_decision_package_record,
+    build_research_summary_by_symbol,
     serialize_decision_package_for_response,
     sync_decision_packages,
 )
@@ -430,3 +431,217 @@ def test_serializer_renders_decimals_as_strings_and_keeps_safety_flags_false() -
     assert rendered["safe_for_broker_submission"] is False
     assert isinstance(rendered["audit_links"], list)
     assert isinstance(rendered["gate_outcomes"], list)
+
+
+def test_empty_research_summary_is_persisted_when_no_research_provided() -> None:
+    repo = FakeRepo()
+    sync_decision_packages(
+        suggestions=[_suggestion()],
+        forecasts_by_id={"forecast_1": _forecast()},
+        positions_by_conid={"1": _position()},
+        cash_by_currency={"USD": _cash()},
+        market_by_conid={"1": _market()},
+        fx_by_pair={},
+        base_currency="USD",
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+    )
+    record = repo.saved[0]
+    assert record.research_evidence_count == 0
+    assert record.research_credibility_summary == "no_research"
+    assert record.research_freshness_status == "no_research"
+    assert record.research_blocking_reason is None
+    assert "Geen onderzoek" in (record.research_snippet_nl or "")
+
+
+def test_research_summary_by_symbol_is_threaded_through_to_record() -> None:
+    from datetime import timedelta
+
+    from portfolio_outlook_portfolio import ResearchEvidenceSummary
+
+    repo = FakeRepo()
+    research = ResearchEvidenceSummary(
+        research_evidence_count=2,
+        research_credibility_summary="high",
+        research_freshness_status="fresh",
+        research_blocking_reason=None,
+        research_snippet_nl="2 onderzoeksbron(nen) gekoppeld; hoge credibility, vers.",
+    )
+    sync_decision_packages(
+        suggestions=[_suggestion()],
+        forecasts_by_id={"forecast_1": _forecast()},
+        positions_by_conid={"1": _position()},
+        cash_by_currency={"USD": _cash()},
+        market_by_conid={"1": _market()},
+        fx_by_pair={},
+        base_currency="USD",
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+        research_summary_by_symbol={"AAPL": research},
+    )
+    record = repo.saved[0]
+    assert record.research_evidence_count == 2
+    assert record.research_credibility_summary == "high"
+    assert record.research_freshness_status == "fresh"
+    assert record.research_snippet_nl == research.research_snippet_nl
+    # Sanity check that timedelta import is used for completeness
+    assert isinstance(record.generated_at, datetime)
+    _ = timedelta(seconds=0)
+
+
+def test_research_blocking_reason_surfaces_in_record() -> None:
+    from portfolio_outlook_portfolio import ResearchEvidenceSummary
+
+    repo = FakeRepo()
+    research = ResearchEvidenceSummary(
+        research_evidence_count=1,
+        research_credibility_summary="high",
+        research_freshness_status="fresh",
+        research_blocking_reason="prompt_injection_high_risk",
+        research_snippet_nl="prompt-injection",
+    )
+    sync_decision_packages(
+        suggestions=[_suggestion()],
+        forecasts_by_id={"forecast_1": _forecast()},
+        positions_by_conid={"1": _position()},
+        cash_by_currency={"USD": _cash()},
+        market_by_conid={"1": _market()},
+        fx_by_pair={},
+        base_currency="USD",
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+        research_summary_by_symbol={"AAPL": research},
+    )
+    record = repo.saved[0]
+    assert record.research_blocking_reason == "prompt_injection_high_risk"
+
+
+def test_build_research_summary_by_symbol_aggregates_per_asset() -> None:
+    from datetime import timedelta
+
+    from ai_trading_agent_storage import (
+        ResearchSourceCredibilityAssessmentRecord,
+        ResearchSourcePromptInjectionScanRecord,
+        ResearchSourceRecord,
+    )
+
+    class _FakeResearchRepo:
+        def __init__(self, sources, credibility, scans):
+            self._sources = sources
+            self._credibility = credibility
+            self._scans = scans
+
+        def list_research_sources_for_asset(self, symbol):
+            return tuple(s for s in self._sources if s.asset_symbol == symbol)
+
+        def get_latest_source_credibility_assessment(self, library_source_id):
+            return self._credibility.get(library_source_id)
+
+        def get_latest_prompt_injection_scan(self, library_source_id):
+            return self._scans.get(library_source_id)
+
+    src_aapl = ResearchSourceRecord(
+        library_source_id="src-aapl",
+        source_kind="uploaded_file",
+        status="active",
+        classification_status="not_started",
+        extraction_status="not_started",
+        analysis_status="not_started",
+        asset_symbol="AAPL",
+        asset_name="Apple Inc.",
+        title="Q1 earnings",
+        document_type="earnings",
+        source_type="filing",
+        source_credibility_level="not_assessed",
+        prompt_injection_risk_level="not_assessed",
+        content_hash_sha256="hash",
+        archive_storage_uri="file://x",
+        raw_source_available=True,
+        created_at=_NOW - timedelta(days=2),
+        updated_at=_NOW - timedelta(days=2),
+        archived_at=None,
+        schema_version="1",
+        explanation_nl="test",
+    )
+    credibility = {
+        "src-aapl": ResearchSourceCredibilityAssessmentRecord(
+            assessment_id="ca-1",
+            library_source_id="src-aapl",
+            credibility_status="completed",
+            credibility_level="high",
+            source_category="filing",
+            assessed_at=_NOW - timedelta(days=1),
+            checked_at=_NOW - timedelta(days=1),
+            confidence_level="high",
+            credibility_signals_json=None,
+            limitation_notes_nl=None,
+            safe_to_use_as_evidence=True,
+            safe_to_use_for_suggestions=False,
+            blocks_suggestions=True,
+            explanation_nl="ok",
+        )
+    }
+    scans = {
+        "src-aapl": ResearchSourcePromptInjectionScanRecord(
+            scan_id="pi-1",
+            library_source_id="src-aapl",
+            scan_status="completed",
+            risk_level="low",
+            detected_signals_json=None,
+            safe_to_use_as_evidence=True,
+            safe_to_use_as_instruction=False,
+            blocks_suggestions=True,
+            scanned_at=_NOW - timedelta(days=1),
+            checked_at=_NOW - timedelta(days=1),
+            explanation_nl="ok",
+        )
+    }
+    repo = _FakeResearchRepo([src_aapl], credibility, scans)
+
+    summary_by_symbol = build_research_summary_by_symbol(
+        ["AAPL", "MSFT"],
+        research_repo=repo,
+        now=_NOW,
+    )
+    assert summary_by_symbol["AAPL"].research_evidence_count == 1
+    assert summary_by_symbol["AAPL"].research_credibility_summary == "high"
+    assert summary_by_symbol["AAPL"].research_freshness_status == "fresh"
+    assert summary_by_symbol["AAPL"].research_blocking_reason is None
+    # MSFT has no sources → no_research summary
+    assert summary_by_symbol["MSFT"].research_evidence_count == 0
+    assert summary_by_symbol["MSFT"].research_credibility_summary == "no_research"
+
+
+def test_serializer_includes_research_fields() -> None:
+    from portfolio_outlook_portfolio import ResearchEvidenceSummary
+
+    repo = FakeRepo()
+    research = ResearchEvidenceSummary(
+        research_evidence_count=3,
+        research_credibility_summary="mixed",
+        research_freshness_status="mixed",
+        research_blocking_reason=None,
+        research_snippet_nl="3 onderzoeksbron(nen)",
+    )
+    sync_decision_packages(
+        suggestions=[_suggestion()],
+        forecasts_by_id={"forecast_1": _forecast()},
+        positions_by_conid={"1": _position()},
+        cash_by_currency={"USD": _cash()},
+        market_by_conid={"1": _market()},
+        fx_by_pair={},
+        base_currency="USD",
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+        research_summary_by_symbol={"AAPL": research},
+    )
+    rendered = serialize_decision_package_for_response(repo.saved[0])
+    assert rendered["research_evidence_count"] == 3
+    assert rendered["research_credibility_summary"] == "mixed"
+    assert rendered["research_freshness_status"] == "mixed"
+    assert rendered["research_blocking_reason"] is None
+    assert rendered["research_snippet_nl"] == "3 onderzoeksbron(nen)"

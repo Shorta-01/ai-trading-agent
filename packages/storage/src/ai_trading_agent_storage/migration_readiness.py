@@ -326,6 +326,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Outcome labels zijn deterministisch; geen AI scoring."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0033_decision_package_research_evidence",
+        previous_revision_id="0032_prediction_diary_entries",
+        filename="0033_decision_package_research_evidence.py",
+        label_nl="Decision Package research evidence kolommen",
+        description_nl=(
+            "Voegt research evidence samenvatting toe aan asset_decision_packages: "
+            "count, credibility-summary, freshness-status, blocking_reason, en "
+            "Nederlandse snippet. Read-only context; research evidence licht "
+            "nooit een block op."
+        ),
+    ),
 )
 
 
