@@ -53,29 +53,38 @@ class IbapiManualReadonlyStatusClient:
         state = self._state
         lock = self._lock
 
-        class _ManualApp(ewrapper_type, eclient_type):  # type: ignore[misc]
-            # ibapi is untyped; subclassing is isolated to this factory boundary.
-            def __init__(self) -> None:
-                eclient_type.__init__(self, self)
+        def _manual_app_init(self: Any) -> None:
+            eclient_type.__init__(self, self)
 
-            def managedAccounts(self, accountsList: str) -> None:  # noqa: N802
-                accounts = tuple(
-                    part.strip() for part in accountsList.split(",") if part.strip()
-                )
-                with lock:
-                    state.managed_accounts = accounts
+        def _managed_accounts(self: Any, accountsList: str) -> None:  # noqa: N802
+            accounts = tuple(
+                part.strip() for part in accountsList.split(",") if part.strip()
+            )
+            with lock:
+                state.managed_accounts = accounts
 
-            def error(
-                self,
-                reqId: int,
-                errorCode: int,
-                errorString: str,
-                *args: object,
-            ) -> None:  # noqa: N803
-                if errorCode in {502, 504, 1100}:
-                    raise IbkrTwsReadonlyAdapterError("connection_failed")
+        def _error(
+            self: Any,
+            reqId: int,
+            errorCode: int,
+            errorString: str,
+            *args: object,
+        ) -> None:  # noqa: N803
+            if errorCode in {502, 504, 1100}:
+                raise IbkrTwsReadonlyAdapterError("connection_failed")
 
-        return cast(_ManualIbapiAppProtocol, _ManualApp())
+        manual_app_bases: tuple[type[Any], type[Any]] = (ewrapper_type, eclient_type)
+        manual_app_type = type(
+            "_ManualApp",
+            manual_app_bases,
+            {
+                "__init__": _manual_app_init,
+                "managedAccounts": _managed_accounts,
+                "error": _error,
+            },
+        )
+
+        return cast(_ManualIbapiAppProtocol, manual_app_type())
 
     def connect_readonly(self, timeout_seconds: int) -> None:
         try:
