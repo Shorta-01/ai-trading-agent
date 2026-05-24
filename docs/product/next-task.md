@@ -1,32 +1,27 @@
-# Task 171
+# Task 172
 
-Slice 16 — QVM (Quality + Value + Momentum) factor predictor. Third
-step of the V1 §21.4 ensemble lock.
+Slice 17 — Universe scan. Wires the daily scan that populates the
+`asset_fundamentals_snapshots` table for the QVM predictor (Slice 16)
+and surfaces ranked candidates in the daily briefing.
 
 Scope:
-- Extend the `EodhdClient` in `apps/api` with a `fetch_fundamentals(symbol)`
-  helper that pulls the JSON fundamentals endpoint (financial highlights,
-  earnings, balance sheet ratios) for one ticker. Stdlib `urllib`-only,
-  injectable HTTP fetcher (same pattern as the existing bar/quote calls).
-- Storage migration adding `asset_fundamentals_snapshots` table: one row
-  per (symbol, fetched_at) carrying ROIC, gross_margin, P/E, P/B,
-  EV/EBITDA, return_6m_pct, return_12m_pct, dividend_yield, sector,
-  raw_payload_hash; locked safety booleans hard-False.
-- New pure-Python `QvmFactorPredictor` in `packages/portfolio`
-  implementing the predictor protocol:
-  * Quality score = z-score of (ROIC + gross_margin) within the
-    snapshot universe
-  * Value score = z-score of (-P/E + -P/B + -EV/EBITDA), each clipped
-    to a sane range first
-  * Momentum score = z-score of (return_6m + return_12m)
-  * Composite QVM = average of the three; mapped to a horizon-return
-    projection (same conservative cap as Momentum: ±25 % annualised).
-- The cross-sectional z-scores require a *universe snapshot*; in this
-  slice the predictor accepts an injected `UniverseFundamentals`
-  fixture so it remains pure-Python. Slice 17 will wire the daily
-  scan that populates the universe.
-- Tests cover the QVM math against synthetic universes and the predictor
-  blocking when the symbol is absent from the universe snapshot.
+- New `universe_registry` module in `apps/api` listing the V1 locked
+  universe: Bel20, AEX, CAC40, DAX, STOXX 600, S&P 500, NASDAQ-100
+  (~5 000 tickers). Each ticker carries its EODHD symbol, sector and
+  the index it belongs to. Static Python tables — no dynamic load.
+- New `universe_scan_sync` orchestrator that, per ticker:
+  * fetches the latest bars via `EodhdClient.fetch_eod_bars`
+  * fetches fundamentals via `EodhdClient.fetch_fundamentals`
+  * persists an `AssetFundamentalsSnapshotRecord`
+  * computes a per-asset QVM score against the running universe snapshot
+- Storage migration `0039_universe_scan_runs` adds a small
+  `universe_scan_runs` table with one row per scan invocation
+  (started_at, finished_at, status, scanned_count, persisted_count,
+  failed_count, ranked_count, error_text). Safety booleans hard-False.
+- New route `POST /universe/scan/run` gated on
+  `universe_scan_sync_enabled` (default False) + writable storage +
+  EODHD configured. Returns a structured summary.
+- New route `GET /universe/scan/runs/latest` returns the most recent
+  audit row.
 
-No orchestrator change yet; the QVM predictor joins the ensemble once
-Slice 17 wires the universe scan into `forecast_sync`.
+Disabled-by-default; no broker action; safety booleans remain hard-False.

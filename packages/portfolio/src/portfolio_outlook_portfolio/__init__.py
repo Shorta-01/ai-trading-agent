@@ -258,6 +258,31 @@ from .predictor_protocol import (
 from .predictor_protocol import (
     STATUS_READY as PREDICTOR_STATUS_READY,
 )
+from .qvm_factor_predictor import (
+    BLOCKING_REASON_INSUFFICIENT_FACTORS as QVM_BLOCKING_REASON_INSUFFICIENT_FACTORS,
+)
+from .qvm_factor_predictor import (
+    BLOCKING_REASON_INSUFFICIENT_UNIVERSE as QVM_BLOCKING_REASON_INSUFFICIENT_UNIVERSE,
+)
+from .qvm_factor_predictor import (
+    BLOCKING_REASON_SYMBOL_NOT_IN_UNIVERSE as QVM_BLOCKING_REASON_SYMBOL_NOT_IN_UNIVERSE,
+)
+from .qvm_factor_predictor import (
+    MAX_ANNUAL_DRIFT_PCT as QVM_MAX_ANNUAL_DRIFT_PCT,
+)
+from .qvm_factor_predictor import (
+    MODEL_CODE as QVM_MODEL_CODE,
+)
+from .qvm_factor_predictor import (
+    MODEL_VERSION as QVM_MODEL_VERSION,
+)
+from .qvm_factor_predictor import (
+    QVM_MIN_BARS,
+    QVM_MIN_UNIVERSE_SIZE,
+    FundamentalsEntry,
+    QvmFactorPredictor,
+    UniverseFundamentals,
+)
 from .research_evidence_summary import (
     BLOCKING_REASON_CREDIBILITY_REJECTED,
     BLOCKING_REASON_PROMPT_INJECTION_HIGH_RISK,
@@ -583,5 +608,16 @@ __all__ = [
     "EnsembleContribution",
     "EnsembleResult",
     "compute_ensemble_forecast",
+    "QvmFactorPredictor",
+    "FundamentalsEntry",
+    "UniverseFundamentals",
+    "QVM_MODEL_CODE",
+    "QVM_MODEL_VERSION",
+    "QVM_MIN_BARS",
+    "QVM_MIN_UNIVERSE_SIZE",
+    "QVM_MAX_ANNUAL_DRIFT_PCT",
+    "QVM_BLOCKING_REASON_INSUFFICIENT_UNIVERSE",
+    "QVM_BLOCKING_REASON_SYMBOL_NOT_IN_UNIVERSE",
+    "QVM_BLOCKING_REASON_INSUFFICIENT_FACTORS",
 ]
 

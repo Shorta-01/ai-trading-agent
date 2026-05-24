@@ -219,3 +219,87 @@ def test_fetch_fx_rate_rejects_non_iso_codes() -> None:
 def test_client_rejects_empty_api_key() -> None:
     with pytest.raises(EodhdAuthError):
         EodhdClient(api_key="", http_fetcher=_fetcher_returning())
+
+
+# ---- fundamentals -----------------------------------------------------
+
+
+def test_fetch_fundamentals_parses_subset_of_payload() -> None:
+    payload = {
+        "General": {
+            "Code": "AAPL",
+            "Sector": "Technology",
+            "CurrencyCode": "USD",
+        },
+        "Highlights": {
+            "MarketCapitalization": 3000000000000,
+            "PERatio": 30.5,
+            "ProfitMargin": 0.25,
+            "DividendYield": 0.005,
+            "ReturnOnEquityTTM": 1.6,  # fraction form → 160 %
+        },
+        "Valuation": {
+            "TrailingPE": 30.5,
+            "PriceBookMRQ": 50.0,
+            "EnterpriseValueEbitda": 22.5,
+        },
+        "Technicals": {
+            "52WeekChange": 0.25,  # 25 %
+        },
+    }
+    captured: list[str] = []
+    client = EodhdClient(
+        api_key="test-key",
+        base_url="https://eodhd.example.com/api",
+        http_fetcher=_fetcher_returning(_ok(payload), capture=captured),
+    )
+    result = client.fetch_fundamentals("AAPL.US")
+    assert "fundamentals/AAPL.US" in captured[0]
+    assert result.eodhd_symbol == "AAPL.US"
+    assert result.sector == "Technology"
+    assert result.currency == "USD"
+    assert result.pe_ratio == Decimal("30.5")
+    assert result.pb_ratio == Decimal("50.0")
+    assert result.ev_ebitda == Decimal("22.5")
+    # ProfitMargin = 0.25 (fraction) → 25 %
+    assert result.gross_margin_pct == Decimal("25.00")
+    # ROE = 1.6 (already > 1.5 threshold) → kept as percentage
+    assert result.roic_pct == Decimal("1.6")
+    # Dividend yield 0.005 → 0.5 %
+    assert result.dividend_yield_pct == Decimal("0.500")
+    # 52WeekChange 0.25 → 25 %
+    assert result.return_12m_pct == Decimal("25.00")
+    assert result.raw_payload_hash
+
+
+def test_fetch_fundamentals_tolerates_missing_keys() -> None:
+    payload = {"General": {"Code": "MSFT"}}
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(_ok(payload)),
+    )
+    result = client.fetch_fundamentals("MSFT.US")
+    assert result.eodhd_symbol == "MSFT.US"
+    assert result.pe_ratio is None
+    assert result.pb_ratio is None
+    assert result.ev_ebitda is None
+    assert result.sector is None
+    assert result.raw_payload_hash
+
+
+def test_fetch_fundamentals_rejects_non_object_payload() -> None:
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(EodhdHttpResponse(status_code=200, body="[]")),
+    )
+    with pytest.raises(EodhdClientError):
+        client.fetch_fundamentals("AAPL.US")
+
+
+def test_fetch_fundamentals_rejects_empty_symbol() -> None:
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(),
+    )
+    with pytest.raises(EodhdClientError):
+        client.fetch_fundamentals("")

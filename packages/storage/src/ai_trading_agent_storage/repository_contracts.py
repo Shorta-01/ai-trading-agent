@@ -2448,6 +2448,57 @@ class BriefingAlertRecord:
 
 
 @dataclass(frozen=True)
+class AssetFundamentalsSnapshotRecord:
+    """One snapshot of factor-scoring fundamentals for one asset.
+
+    Locked in `version-1-product-experience-locks.md §21.4` as input to
+    the QVM (Quality + Value + Momentum) factor predictor. Every value
+    is informational; the safety booleans stay False — a fundamentals
+    row never promotes a draft or an order.
+
+    Numeric fields are nullable because EODHD's payloads are often
+    sparse; the QVM predictor blocks per-asset rather than silently
+    treating ``None`` as zero.
+    """
+
+    snapshot_id: str
+    ibkr_conid: str | None
+    eodhd_symbol: str
+    symbol: str
+    sector: str | None
+    currency: str | None
+    market_cap: Decimal | None
+    pe_ratio: Decimal | None
+    pb_ratio: Decimal | None
+    ev_ebitda: Decimal | None
+    roic_pct: Decimal | None
+    gross_margin_pct: Decimal | None
+    dividend_yield_pct: Decimal | None
+    return_6m_pct: Decimal | None
+    return_12m_pct: Decimal | None
+    raw_payload_hash: str
+    provider_code: str
+    fetched_at: datetime
+    stored_at: datetime
+    safe_for_orders: bool = False
+    safe_for_action_drafts: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "snapshot_id",
+            "eodhd_symbol",
+            "symbol",
+            "raw_payload_hash",
+            "provider_code",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.safe_for_orders or self.safe_for_action_drafts:
+            raise ValueError(
+                "Fundamentals-snapshot safety booleans must remain false in V1."
+            )
+
+
+@dataclass(frozen=True)
 class SchedulerRunRecord:
     """Audit row for one APScheduler job invocation.
 
