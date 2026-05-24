@@ -32,9 +32,11 @@ from portfolio_outlook_api.ibkr_contracts import search_ibkr_contracts, validate
 from portfolio_outlook_api.ibkr_ibapi_manual_status_client import (
     IbapiManualReadonlyStatusClient,
 )
+from portfolio_outlook_api.ibkr_ibapi_sync_client import real_sync_client_session
 from portfolio_outlook_api.ibkr_market_data import IbkrMarketDataAdapter, settings_from_runtime
 from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
 from portfolio_outlook_api.ibkr_sync import read_status, run_sync
+from portfolio_outlook_api.ibkr_sync_adapter_factory import build_real_sync_adapter
 from portfolio_outlook_api.ibkr_sync_read_model import (
     read_latest_ibkr_sync_run,
     serialize_cash_record,
@@ -363,7 +365,9 @@ def read_ibkr_sync_status() -> dict[str, object]:
 
 @router.post("/ibkr/sync/run")
 def start_ibkr_sync_run() -> dict[str, object]:
-    return run_sync(settings)
+    adapter = build_real_sync_adapter(settings)
+    with real_sync_client_session(adapter) as active_adapter:
+        return run_sync(settings, adapter=active_adapter)
 
 
 @router.get("/ibkr/sync/runs")

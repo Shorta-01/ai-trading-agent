@@ -535,3 +535,70 @@ def test_provider_adapter_failure_is_not_validation_failure() -> None:
     assert body["status"] == "provider_error"
     assert body["payload_validation_status"] == "not_attempted"
     assert body["payload_validation_errors"] == []
+
+
+def test_route_invokes_factory_and_passes_adapter_to_run_sync(monkeypatch) -> None:
+    """The route must call the factory, pass the resulting adapter to run_sync,
+    and call ``close()`` on it afterwards (even when readiness blocks the sync).
+    """
+
+    from portfolio_outlook_api import status_routes
+
+    factory_calls: list[bool] = []
+    close_calls: list[bool] = []
+    captured_adapter: list[object] = []
+
+    class _StubAdapter:
+        def sync_account_summary(self):  # pragma: no cover - never reached here
+            return []
+
+        def sync_positions(self):  # pragma: no cover
+            return []
+
+        def sync_open_orders(self):  # pragma: no cover
+            return []
+
+        def sync_executions(self):  # pragma: no cover
+            return []
+
+        def close(self) -> None:
+            close_calls.append(True)
+
+    def _spy_factory(settings, *, app=None):
+        factory_calls.append(True)
+        return _StubAdapter()
+
+    def _capture_run_sync(s, adapter=None, **_kwargs):
+        captured_adapter.append(adapter)
+        return {"status": "captured", "captured": True}
+
+    monkeypatch.setattr(status_routes, "build_real_sync_adapter", _spy_factory)
+    monkeypatch.setattr(status_routes, "run_sync", _capture_run_sync)
+
+    response = client.post("/ibkr/sync/run")
+    assert response.status_code == 200
+    assert factory_calls == [True]
+    assert len(captured_adapter) == 1
+    assert isinstance(captured_adapter[0], _StubAdapter)
+    # The context manager must call close() after run_sync returns.
+    assert close_calls == [True]
+
+
+def test_route_passes_none_when_factory_returns_none(monkeypatch) -> None:
+    """When the factory returns None (real-client disabled or misconfigured),
+    the route must still call run_sync, with ``adapter=None``."""
+
+    from portfolio_outlook_api import status_routes
+
+    captured_adapter: list[object] = []
+
+    monkeypatch.setattr(status_routes, "build_real_sync_adapter", lambda s, app=None: None)
+    monkeypatch.setattr(
+        status_routes,
+        "run_sync",
+        lambda s, adapter=None, **_k: captured_adapter.append(adapter) or {"status": "ok"},
+    )
+
+    response = client.post("/ibkr/sync/run")
+    assert response.status_code == 200
+    assert captured_adapter == [None]
