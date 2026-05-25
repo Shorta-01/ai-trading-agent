@@ -2751,3 +2751,58 @@ class PredictorBacktestRunRecord:
             raise ValueError(
                 "Predictor-backtest safety booleans must remain false in V1.1."
             )
+
+
+@dataclass(frozen=True)
+class PredictionDiaryPredictorContributionRecord:
+    """One row per (Prediction Diary entry × predictor) — the V1.1
+    Slice 26 feedback-loop surface.
+
+    Slice 26 wires the auto-weighted ensemble strategy on the
+    combiner by reading the rolling per-predictor Brier score
+    derived from these rows. Each row carries the predictor's
+    *issued* numbers + the realised market outcome at the diary's
+    locked 1-month horizon. Safety booleans hard-False; the row
+    never authorises an order.
+    """
+
+    contribution_id: str
+    diary_entry_id: str
+    model_code: str
+    model_version: str
+    predicted_return_pct: Decimal
+    predicted_prob_gain: Decimal
+    predicted_direction: str
+    realised_return_pct: Decimal | None
+    realised_direction: str | None
+    outcome_label: str | None
+    brier_score: Decimal | None
+    return_spread_pct: Decimal | None
+    explanation_nl: str | None
+    created_at: datetime
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "contribution_id",
+            "diary_entry_id",
+            "model_code",
+            "model_version",
+            "predicted_direction",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if not (
+            Decimal("0") <= self.predicted_prob_gain <= Decimal("1")
+        ):
+            raise ValueError(
+                "predicted_prob_gain must be in [0, 1]"
+            )
+        if self.brier_score is not None and self.brier_score < 0:
+            raise ValueError(
+                "brier_score must be non-negative when provided"
+            )
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Predictor-contribution safety booleans must remain false in V1.1."
+            )

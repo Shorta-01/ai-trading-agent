@@ -11,6 +11,7 @@ from ai_trading_agent_storage import (
     AssetActionDraftSubmissionRecord,
     IbkrSyncRunRecord,
     MarketDataBarRecord,
+    PredictorBacktestRunRecord,
     SchedulerRunRecord,
     SqlAlchemyAssetActionDraftEventRepository,
     SqlAlchemyAssetActionDraftRepository,
@@ -3433,6 +3434,102 @@ def read_latest_predictor_backtests(
             "status": "storage_unavailable",
             "status_nl": "Opslag niet bereikbaar",
         }
+
+
+@router.get("/predictor/leaderboard")
+def read_predictor_leaderboard(asset_symbol: str | None = None) -> dict[str, object]:
+    """V1.1 §22.5 — predictor leaderboard surface.
+
+    Reads the latest persisted backtest rows, aggregates them into a
+    per-predictor rolling Brier score (most recent per model_code,
+    optionally filtered by ``asset_symbol``), and computes the
+    inverse-Brier auto-weights the ensemble would use under
+    ``ensemble_weight_strategy="auto"``. Read-only — never authorises
+    an order.
+    """
+
+    from decimal import Decimal
+
+    from portfolio_outlook_portfolio.predictor_feedback import (
+        compute_inverse_brier_weights,
+    )
+
+    base: dict[str, object] = {
+        "items": [],
+        "auto_weights": {},
+        "weight_strategy": settings.ensemble_weight_strategy,
+        "help_nl": (
+            "Brier-score lager is beter. De auto-weights worden alleen "
+            "actief als `ENSEMBLE_WEIGHT_STRATEGY=auto`. Een groene rij "
+            "autoriseert geen order."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyPredictorBacktestRunRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.list_recent_backtest_runs(
+                asset_symbol=asset_symbol, limit=100
+            )
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+        }
+
+    # Keep the most-recent succeeded row per model_code with a Brier
+    # score. Skipped rows surface in the items list but don't feed the
+    # auto-weight history.
+    latest_brier: dict[str, Decimal] = {}
+    latest_records: dict[str, PredictorBacktestRunRecord] = {}
+    for record in result.records:
+        if record.model_code in latest_records:
+            continue
+        latest_records[record.model_code] = record
+        if record.status == "succeeded" and record.brier_score is not None:
+            latest_brier[record.model_code] = record.brier_score
+    auto_weights = compute_inverse_brier_weights(latest_brier)
+
+    items: list[dict[str, object]] = []
+    for code, record in latest_records.items():
+        items.append(
+            {
+                "model_code": code,
+                "model_version": record.model_version,
+                "asset_symbol": record.asset_symbol,
+                "status": record.status,
+                "brier_score": (
+                    str(record.brier_score) if record.brier_score is not None else None
+                ),
+                "hit_rate": (
+                    str(record.hit_rate) if record.hit_rate is not None else None
+                ),
+                "sharpe_ratio": (
+                    str(record.sharpe_ratio) if record.sharpe_ratio is not None else None
+                ),
+                "auto_weight": str(auto_weights.get(code, Decimal("0"))),
+                "explanation_nl": record.explanation_nl,
+            }
+        )
+    return base | {
+        "status": "ok",
+        "status_nl": "Leaderboard berekend",
+        "items": items,
+        "auto_weights": {code: str(w) for code, w in auto_weights.items()},
+    }
 
 
 def _build_blocked_universe_scan_response(

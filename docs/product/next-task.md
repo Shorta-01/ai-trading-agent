@@ -1,41 +1,47 @@
-# Task 181
+# Task 182
 
-Slice 26 — V1.1 feedback loop + auto-weighted ensemble. The
-slice that closes the predictor-quality feedback loop the Slice 22
-audit identified as V1.1's biggest single lever.
+Slice 27 — V1.1 GBM + Momentum rebuild. The first of two
+predictor-quality rebuild slices. Slice 26 (feedback loop) is now
+live; this slice replaces the audit-flagged weaknesses in two of
+the four deterministic predictors.
 
 Scope:
-- Extend the Prediction Diary to track per-predictor outcomes
-  (currently only the ensemble outcome is persisted). Storage
-  migration `0042_prediction_diary_per_predictor` adds a child
-  table `prediction_diary_predictor_contributions` keyed on
-  `(diary_entry_id, model_code)` with the per-predictor
-  outcome label + the predicted/realised return spread.
-- Helper `compute_per_predictor_outcomes(...)` in
-  `packages/portfolio` consumes the Slice 15 `EnsembleResult`
-  + the realised price series and emits one row per
-  contribution.
-- Helper `compute_inverse_brier_weights(history, *, clip=(0.05, 0.40))`
-  reads the persisted backtest rows from Slice 24 and produces a
-  `{model_code: Decimal}` weighting dict by inverse-Brier-score
-  normalised + clipped to the per-predictor band. Missing /
-  blocked-only history defaults to the equal-weight strategy.
-- Ensemble combiner gains a `weight_strategy: "equal_weight" | "auto"`
-  argument. `auto` runs `compute_inverse_brier_weights` against
-  a provided weight-history loader and falls back to equal-weight
-  on insufficient data — the chain never goes dark.
-- `forecast_sync` orchestrator threads the new strategy from a
-  setting `ensemble_weight_strategy` (default `equal_weight`).
-- New route `GET /predictor/leaderboard` returns the rolling
-  per-predictor Brier-score + the corresponding auto-weight.
-- Tests cover: per-predictor outcome computation correctness;
-  inverse-Brier weighting math (zero clip, max clip, all-equal
-  fallback); strategy switch on the combiner; route gating + Dutch
-  copy.
+- **GBM rebuild** (`baseline_forecast.py` + `gbm_predictor.py`):
+  - Cap the drift estimation window to the most recent 1 trading
+    year (252 bars) instead of using the entire history. The
+    rebuild keeps the full series for volatility estimation but
+    confines drift to recent regime.
+  - Add a regime-shift detector: if the rolling 60d drift differs
+    by more than 2σ from the long-window drift, down-weight the
+    long window's contribution (interpolated blend).
+  - Optional GARCH(1,1) volatility from `statsmodels` when the
+    series is long enough; falls back to the rolling-SD baseline
+    otherwise. Behind a new `gbm_garch_enabled` setting (default
+    False) so the morning chain stays stable until the rebuild
+    proves out via the Slice 25 backtest leaderboard.
+- **Momentum rebuild** (`momentum_predictor.py`):
+  - Horizon-scaled direction thresholds: `±X% × √(horizon/21)` so
+    a 5d horizon's "slight" bucket is much narrower than a 60d
+    horizon's.
+  - Skip-the-week variant: for short horizons (< 21 days) use the
+    11-1-week momentum (skip the last week instead of the last
+    month). Reduces the look-ahead bias that hurts short-horizon
+    accuracy.
+  - Volatility-adjusted composite score: divide the 12-1 momentum
+    by the long-window SD so the score is genuinely unitless.
+- New `gbm_regime_shift_threshold_pct` setting (default 5.0%
+  above which the regime-shift detector triggers).
+- Tests: regime-shift behaviour (no-shift vs shift series),
+  horizon-scaled thresholds (5d / 21d / 60d distinct
+  classifications), backwards-compat for the existing predictor
+  tests (which should still pass with the rebuild defaults).
+- The rebuilt predictors keep the same `PredictorProtocol`
+  shape; the Slice 25 backtester scores them automatically so
+  the leaderboard surfaces whether the rebuild actually improves
+  Brier-score.
 
-Manual approval gate stays. AI is still one vote in the ensemble;
-the auto-weight strategy may down-weight it but never silence it.
-Safety booleans hard-False on every persisted record.
+When Slice 27 ships, Slice 28 (Mean-Rev + QVM rebuild) is
+unblocked.
 
-When Slice 26 ships, the predictor refactor work (Slices 27 + 28)
-is unblocked.
+Manual approval gate stays; safety booleans hard-False on every
+persisted record.

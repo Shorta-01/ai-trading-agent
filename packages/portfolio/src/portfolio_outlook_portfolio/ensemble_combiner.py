@@ -24,7 +24,7 @@ predictor outputs + weight mapping; no AI, no randomness, no I/O.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Final
@@ -48,6 +48,14 @@ ENSEMBLE_MODEL_VERSION: Final[str] = "v1.0.0"
 # Direction thresholds (same as the individual predictors).
 THRESHOLD_STRONG_PCT: Final[float] = 10.0
 THRESHOLD_SLIGHT_PCT: Final[float] = 2.0
+
+
+# V1.1 §22.5 weight-strategy lock.
+WEIGHT_STRATEGY_EQUAL: Final[str] = "equal_weight"
+WEIGHT_STRATEGY_AUTO: Final[str] = "auto"
+ALLOWED_WEIGHT_STRATEGIES: Final[frozenset[str]] = frozenset(
+    {WEIGHT_STRATEGY_EQUAL, WEIGHT_STRATEGY_AUTO}
+)
 
 
 @dataclass(frozen=True)
@@ -160,6 +168,8 @@ def compute_ensemble_forecast(
     inputs: PredictorInputs,
     *,
     weights: dict[str, Decimal] | None = None,
+    weight_strategy: str = WEIGHT_STRATEGY_EQUAL,
+    brier_history: Mapping[str, Decimal | float | None] | None = None,
 ) -> EnsembleResult:
     """Run every predictor, drop blocked ones, combine the rest.
 
@@ -167,7 +177,24 @@ def compute_ensemble_forecast(
     :class:`PredictionDistribution` and the per-predictor contributions
     + the list of blocked model_codes (so the orchestrator can log
     them as "did not participate" without losing trace).
+
+    V1.1 §22.5 — ``weight_strategy``:
+
+    * ``"equal_weight"`` (default) keeps the V1 behaviour. Optional
+      ``weights`` override is still honoured.
+    * ``"auto"`` consumes ``brier_history`` (a
+      ``{model_code: rolling_brier}`` mapping) via
+      :func:`compute_inverse_brier_weights` to up-weight the
+      predictors with the lowest Brier score. The lower clip
+      (`0.05` per the locked band) prevents any predictor from
+      being silenced even after a long bad run.
     """
+
+    if weight_strategy not in ALLOWED_WEIGHT_STRATEGIES:
+        raise ValueError(
+            f"weight_strategy must be one of {sorted(ALLOWED_WEIGHT_STRATEGIES)}, "
+            f"got {weight_strategy!r}"
+        )
 
     if not predictors:
         return _blocked_ensemble(
@@ -198,7 +225,28 @@ def compute_ensemble_forecast(
     # to 1.0; non-positive weights default to 1.0 as well (a 0 weight
     # would effectively drop the predictor — use the dropped-predictor
     # path explicitly instead).
-    weights_map = weights or {}
+    weights_map: dict[str, Decimal] = dict(weights or {})
+
+    if weight_strategy == WEIGHT_STRATEGY_AUTO:
+        # Lazy import to avoid an import cycle between the combiner
+        # and the feedback module (which itself imports the combiner's
+        # value objects).
+        from .predictor_feedback import compute_inverse_brier_weights
+
+        ready_codes = [p.model_code for p in ready]
+        history_subset: dict[str, Decimal | float | None] = {}
+        if brier_history is not None:
+            for code in ready_codes:
+                if code in brier_history:
+                    history_subset[code] = brier_history[code]
+        auto_weights = compute_inverse_brier_weights(
+            history_subset, fallback_codes=ready_codes
+        )
+        # Auto-weighting takes precedence over any operator-supplied
+        # static weights for the codes it returns; codes outside its
+        # output keep the static value (or 1.0 default).
+        weights_map.update(auto_weights)
+
     raw_weights: list[Decimal] = []
     for pred in ready:
         w = weights_map.get(pred.model_code, Decimal("1.0"))
@@ -284,8 +332,11 @@ def compute_ensemble_forecast(
 
 
 __all__ = [
+    "ALLOWED_WEIGHT_STRATEGIES",
     "ENSEMBLE_MODEL_CODE",
     "ENSEMBLE_MODEL_VERSION",
+    "WEIGHT_STRATEGY_AUTO",
+    "WEIGHT_STRATEGY_EQUAL",
     "EnsembleContribution",
     "EnsembleResult",
     "compute_ensemble_forecast",

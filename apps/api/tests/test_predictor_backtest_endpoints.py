@@ -229,3 +229,62 @@ def test_latest_route_returns_leaderboard_when_storage_present(monkeypatch) -> N
     assert body["items"][0]["run_id"] == "bt-a"
     assert body["items"][1]["status"] == "skipped"
     assert body["safe_for_orders"] is False
+
+
+# ---- V1.1 Slice 26: GET /predictor/leaderboard --------------------------
+
+
+def test_leaderboard_returns_not_configured_without_storage() -> None:
+    r = client.get("/predictor/leaderboard")
+    body = r.json()
+    assert r.status_code == 200
+    assert body["status"] == "not_configured"
+    assert body["items"] == []
+    assert body["auto_weights"] == {}
+    assert body["safe_for_orders"] is False
+
+
+def test_leaderboard_aggregates_latest_per_model_and_computes_auto_weights(monkeypatch) -> None:
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "postgresql://fake"
+
+    # Three predictors with varying Brier — auto-weights should be
+    # ordered (gbm best → highest, momentum worst → lowest within clip).
+    gbm = _record(run_id="bt-gbm", model_code="baseline_gbm")
+    mom = _record(run_id="bt-mom", model_code="momentum_v1")
+    # Override brier_score for the spread.
+    from dataclasses import replace
+
+    gbm = replace(gbm, brier_score=Decimal("0.10"))
+    mom = replace(mom, brier_score=Decimal("0.40"))
+    mr = replace(
+        _record(run_id="bt-mr", model_code="mean_reversion_v1"),
+        brier_score=Decimal("0.25"),
+    )
+
+    _fake_writable_storage(monkeypatch, list_result=(gbm, mom, mr))
+
+    r = client.get("/predictor/leaderboard")
+    body = r.json()
+    assert body["status"] == "ok"
+    assert len(body["items"]) == 3
+    assert body["safe_for_orders"] is False
+    # Auto-weights surfaced for each model_code; sum to ~1.
+    weights = body["auto_weights"]
+    assert set(weights) == {"baseline_gbm", "momentum_v1", "mean_reversion_v1"}
+    total = sum(Decimal(w) for w in weights.values())
+    assert abs(total - Decimal("1")) <= Decimal("0.0001")
+    # gbm (best Brier) outweighs momentum (worst Brier).
+    assert Decimal(weights["baseline_gbm"]) > Decimal(weights["momentum_v1"])
+
+
+def test_leaderboard_filters_by_asset_symbol(monkeypatch) -> None:
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "postgresql://fake"
+
+    _fake_writable_storage(monkeypatch, list_result=(_record(run_id="bt-a"),))
+
+    r = client.get("/predictor/leaderboard?asset_symbol=AAPL")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "ok"

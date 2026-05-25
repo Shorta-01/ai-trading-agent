@@ -39,6 +39,7 @@ from ai_trading_agent_storage.metadata import (
     daily_briefings,
     decision_package_explanations,
     explanation_evidence_ledger,
+    prediction_diary_predictor_contributions,
     predictor_backtest_runs,
     scheduler_runs,
     universe_scan_runs,
@@ -85,6 +86,7 @@ from ai_trading_agent_storage.repository_contracts import (
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     PredictionDiaryEntryRecord,
+    PredictionDiaryPredictorContributionRecord,
     PredictorBacktestRunRecord,
     SchedulerRunRecord,
     UniverseScanRunRecord,
@@ -2863,6 +2865,58 @@ class SqlAlchemySchedulerRunRepository(_Base):
             records,
             scheduler_runs.name,
             f"{len(records)} scheduler-runs opgehaald.",
+        )
+
+
+class SqlAlchemyPredictionDiaryPredictorContributionRepository(_Base):
+    """V1.1 Slice 26: per-(diary_entry, predictor) outcome repository.
+
+    Writes one row per `(diary_entry_id, model_code)` so the auto-
+    weighted ensemble can read a rolling per-predictor Brier score.
+    """
+
+    def save_contribution(
+        self, record: PredictionDiaryPredictorContributionRecord
+    ) -> StorageWriteResult:
+        self._insert(
+            prediction_diary_predictor_contributions, asdict(record)
+        )
+        return StorageWriteResult(
+            True,
+            record.contribution_id,
+            prediction_diary_predictor_contributions.name,
+            True,
+            "Predictor-contributie opgeslagen.",
+        )
+
+    def list_recent_contributions(
+        self,
+        *,
+        model_code: str | None = None,
+        diary_entry_id: str | None = None,
+        limit: int = 200,
+    ) -> StorageListResult[PredictionDiaryPredictorContributionRecord]:
+        statement = select(prediction_diary_predictor_contributions)
+        if model_code is not None:
+            statement = statement.where(
+                prediction_diary_predictor_contributions.c.model_code == model_code
+            )
+        if diary_entry_id is not None:
+            statement = statement.where(
+                prediction_diary_predictor_contributions.c.diary_entry_id == diary_entry_id
+            )
+        statement = statement.order_by(
+            prediction_diary_predictor_contributions.c.created_at.desc()
+        ).limit(_bounded_limit(limit))
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            PredictionDiaryPredictorContributionRecord(**dict(row))
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            prediction_diary_predictor_contributions.name,
+            f"{len(records)} predictor-contributies opgehaald.",
         )
 
 

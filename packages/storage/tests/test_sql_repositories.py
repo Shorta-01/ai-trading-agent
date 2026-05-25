@@ -1954,6 +1954,113 @@ def test_predictor_backtest_run_repository_roundtrip() -> None:
         assert empty.records == ()
 
 
+def test_prediction_diary_predictor_contribution_repository_roundtrip() -> None:
+    """V1.1 Slice 26: per-(diary_entry, predictor) outcome row."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        PredictionDiaryPredictorContributionRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyPredictionDiaryPredictorContributionRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyPredictionDiaryPredictorContributionRepository(
+            conn, _report(True)
+        )
+        created = datetime(2026, 6, 1, 7, 0, tzinfo=UTC)
+
+        rec_a = PredictionDiaryPredictorContributionRecord(
+            contribution_id="c-1",
+            diary_entry_id="entry-1",
+            model_code="momentum_v1",
+            model_version="v1.0.0",
+            predicted_return_pct=Decimal("3.0"),
+            predicted_prob_gain=Decimal("0.62"),
+            predicted_direction="slight_up",
+            realised_return_pct=Decimal("4.5"),
+            realised_direction="slight_up",
+            outcome_label="correct",
+            brier_score=Decimal("0.144400"),
+            return_spread_pct=Decimal("-1.5"),
+            explanation_nl="momentum_v1 correct.",
+            created_at=created,
+        )
+        rec_b = PredictionDiaryPredictorContributionRecord(
+            contribution_id="c-2",
+            diary_entry_id="entry-1",
+            model_code="baseline_gbm",
+            model_version="v1.0.0",
+            predicted_return_pct=Decimal("1.0"),
+            predicted_prob_gain=Decimal("0.55"),
+            predicted_direction="flat",
+            realised_return_pct=Decimal("4.5"),
+            realised_direction="slight_up",
+            outcome_label="wrong",
+            brier_score=Decimal("0.202500"),
+            return_spread_pct=Decimal("-3.5"),
+            explanation_nl="baseline_gbm flat-bucket gemist.",
+            created_at=created,
+        )
+        repo.save_contribution(rec_a)
+        repo.save_contribution(rec_b)
+
+        all_rows = repo.list_recent_contributions()
+        assert len(all_rows.records) == 2
+
+        by_entry = repo.list_recent_contributions(diary_entry_id="entry-1")
+        assert len(by_entry.records) == 2
+
+        by_model = repo.list_recent_contributions(model_code="momentum_v1")
+        assert len(by_model.records) == 1
+        assert by_model.records[0].outcome_label == "correct"
+
+
+def test_prediction_diary_predictor_contribution_record_invariants() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        PredictionDiaryPredictorContributionRecord,
+    )
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base = dict(
+        contribution_id="c-1",
+        diary_entry_id="entry-1",
+        model_code="momentum_v1",
+        model_version="v1.0.0",
+        predicted_return_pct=Decimal("3.0"),
+        predicted_prob_gain=Decimal("0.62"),
+        predicted_direction="slight_up",
+        realised_return_pct=None,
+        realised_direction=None,
+        outcome_label=None,
+        brier_score=None,
+        return_spread_pct=None,
+        explanation_nl=None,
+        created_at=now,
+    )
+    # predicted_prob_gain bounded.
+    with pytest.raises(ValueError, match="predicted_prob_gain"):
+        PredictionDiaryPredictorContributionRecord(
+            **{**base, "predicted_prob_gain": Decimal("1.2")}
+        )
+    # brier non-negative.
+    with pytest.raises(ValueError, match="brier_score"):
+        PredictionDiaryPredictorContributionRecord(
+            **{**base, "brier_score": Decimal("-0.1")}
+        )
+    # Safety booleans hard-False.
+    with pytest.raises(ValueError, match="safety booleans"):
+        PredictionDiaryPredictorContributionRecord(
+            **{**base, "safe_for_action_drafts": True}
+        )
+    with pytest.raises(ValueError, match="safety booleans"):
+        PredictionDiaryPredictorContributionRecord(
+            **{**base, "safe_for_orders": True}
+        )
+
+
 def test_predictor_backtest_run_record_invariants() -> None:
     """Per-field invariants on PredictorBacktestRunRecord."""
 
