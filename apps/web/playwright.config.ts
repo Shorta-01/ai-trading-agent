@@ -4,28 +4,30 @@ import { defineConfig, devices } from "@playwright/test";
  * Task 126b: minimal Playwright smoke configuration.
  *
  * One browser (chromium) keeps CI fast. The dev server is started by
- * Playwright; the test mocks every API call via ``page.route()`` so
- * no live API is required.
+ * Playwright via ``next start`` against the production build that
+ * the CI ``npm run build`` step produced — much faster + more
+ * deterministic than ``next dev`` recompiling per request.
  */
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
-  retries: 0,
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: [["list"]],
-  timeout: 30_000,
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
   use: {
     baseURL: "http://127.0.0.1:3100",
     headless: true,
     trace: "off",
   },
   webServer: {
-    command: "npm run dev -- --port 3100",
+    command: "npm start -- -p 3100 -H 127.0.0.1",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
-    stdout: "ignore",
+    stdout: "pipe",
     stderr: "pipe",
-    timeout: 60_000,
+    timeout: 120_000,
   },
   projects: [
     {
