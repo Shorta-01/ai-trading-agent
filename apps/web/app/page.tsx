@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge";
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { EmptyState } from "@/components/EmptyState";
@@ -61,8 +62,9 @@ export default function HomePage() {
   const valuationStatus = getValuationDisplayStatus(valuationReadiness);
   return (
     <main className="page-wrap">
-      <section style={{ marginBottom: "0.75rem" }}>
+      <section style={{ marginBottom: "0.75rem", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <SchedulerStatusBadge />
+        <CalibrationCoverageBadge />
       </section>
       <section className="metrics-grid">
         <MetricCard

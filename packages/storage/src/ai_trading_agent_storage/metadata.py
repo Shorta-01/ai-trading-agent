@@ -2243,3 +2243,94 @@ Index(
     "ix_provider_call_audit_run_id",
     provider_call_audit.c.triggered_by_run_id,
 )
+
+
+# Task 130: probabilistic-forecast runtime tables.
+forecasts = Table(
+    "forecasts",
+    metadata,
+    Column("forecast_run_id", Text, primary_key=True),
+    Column("conid", Text, nullable=False),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("generated_by_scheduled_run_id", Text, nullable=False),
+    Column("horizon_trading_days", Integer, nullable=False),
+    Column("forecast_valid_until", DateTime(timezone=True), nullable=False),
+    Column("method", Text, nullable=False),
+    Column("history_window_days", Integer, nullable=False),
+    Column("history_closes_count", Integer, nullable=False),
+    Column("current_price_local", Numeric(precision=20, scale=8), nullable=False),
+    Column("currency_local", Text, nullable=False),
+    Column("p10_log_return", Numeric(precision=20, scale=10), nullable=False),
+    Column("p50_log_return", Numeric(precision=20, scale=10), nullable=False),
+    Column("p90_log_return", Numeric(precision=20, scale=10), nullable=False),
+    Column("prob_positive", Numeric(precision=8, scale=6), nullable=False),
+    Column("prob_loss_gt_5pct", Numeric(precision=8, scale=6), nullable=False),
+    Column(
+        "expected_volatility_annualized",
+        Numeric(precision=10, scale=8),
+        nullable=False,
+    ),
+    Column("confidence_level", Text, nullable=False),
+    Column("label", Text, nullable=False),
+    Column("block_reason", Text, nullable=True),
+    Column("expired_at", DateTime(timezone=True), nullable=True),
+    UniqueConstraint(
+        "conid",
+        "generated_at",
+        name="uq_forecasts_conid_generated_at",
+    ),
+    CheckConstraint(
+        "horizon_trading_days > 0",
+        name="ck_forecasts_horizon_positive",
+    ),
+    CheckConstraint(
+        "method IN ('historical_bootstrap_v1')",
+        name="ck_forecasts_method",
+    ),
+    CheckConstraint(
+        "prob_positive >= 0 AND prob_positive <= 1",
+        name="ck_forecasts_prob_positive_range",
+    ),
+    CheckConstraint(
+        "prob_loss_gt_5pct >= 0 AND prob_loss_gt_5pct <= 1",
+        name="ck_forecasts_prob_loss_range",
+    ),
+    CheckConstraint(
+        "confidence_level IN ('Laag', 'Gemiddeld', 'Hoog')",
+        name="ck_forecasts_confidence",
+    ),
+    CheckConstraint(
+        "label IN ('Kopen', 'Verminderen', 'Verkopen', 'Houden', "
+        "'Bekijken', 'Geblokkeerd')",
+        name="ck_forecasts_label",
+    ),
+)
+Index(
+    "ix_forecasts_conid_generated_at",
+    forecasts.c.conid,
+    forecasts.c.generated_at.desc(),
+)
+
+
+calibration_diary = Table(
+    "calibration_diary",
+    metadata,
+    Column("forecast_run_id", Text, primary_key=True),
+    Column("evaluated_at", DateTime(timezone=True), nullable=False),
+    Column(
+        "realized_log_return",
+        Numeric(precision=20, scale=10),
+        nullable=False,
+    ),
+    Column("hit_status", Text, nullable=False),
+    Column(
+        "realized_close_price",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    CheckConstraint(
+        "hit_status IN ('realized_within_p10_p90', 'realized_outside_band',"
+        " 'realized_above_p90', 'realized_below_p10')",
+        name="ck_calibration_diary_hit_status",
+    ),
+)

@@ -86,7 +86,7 @@ def _seed_db_for_unconfirmed_account(tmp_path) -> str:  # type: ignore[no-untype
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0048_market_data_eod_and_fx_runtime')"
+                "('0049_forecasts_and_calibration_diary')"
             )
         )
         wl_repo = SqlAlchemyWatchlistItemSeedRepository(conn, _report(True))

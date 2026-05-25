@@ -349,5 +349,16 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Configurable enable flag: `MARKET_DATA_FETCH_ENABLED` (default `false`). When off the orchestrator skips the market-data step entirely. `EODHD_API_KEY=None` is a valid configuration — `EodhdClient` returns a typed `NotConfiguredError` without touching the network.
 
 
+## Task 130 product locks (baseline historical-bootstrap forecast)
+- Pilot scope V1.1.0: forecasts run only for conids listed in `FORECAST_PILOT_CONIDS` (default `ASML.AS`). Expanding the pilot set is a config change, not a code change.
+- Forecast horizon: 20 trading days (~4 calendar weeks). Single horizon for V1.1.0; multi-horizon hierarchical forecasts are post-V1.1.
+- Method: historical bootstrap with 5-day block resampling, 10 000 resamples, 252-day history window. Outputs `p10` / `p50` / `p90` log-return + `prob_positive` + `prob_loss_gt_5pct` + `expected_volatility_annualized`. numpy float64 for the bootstrap math itself; Decimal at every money boundary (current_price, predicted price levels, FX conversion).
+- Deterministic label translator (Python only — no AI). Six locked Dutch labels: `Kopen` / `Verminderen` / `Verkopen` / `Houden` / `Bekijken` / `Geblokkeerd`. Rules from product brainstorm 2026-05-25 §Q4 locked verbatim. `Langzaam bijkopen` / `Vermijden` / `Cash houden` / `Geen actie` are out of scope for V1.1.0 — they need portfolio-aware logic.
+- Confidence categorical (`Laag` / `Gemiddeld` / `Hoog`) gederiveerd uit data-quality checks: history-completeness (≥252 = Hoog, 200–251 = Gemiddeld, else Laag), gaps in last 60 days, expected_volatility within historical range.
+- Forecast generated on `morning_briefing` 07:00 fires only. `pre_briefing` 06:00 fires run calibration. `hourly_delta` fires touch neither — forecasts don't change intraday for a 20-day horizon with EOD inputs.
+- Forecast is stored, not recomputed. Each forecast carries `forecast_run_id` + `forecast_valid_until` (= 20 trading days from generation). API + UI read the most-recent valid row; expired forecasts surface as `verlopen — wacht op volgende morgenrun`.
+- Calibration diary writes a row when a forecast expires. `hit_status` is locked to four values: `realized_within_p10_p90` / `realized_above_p90` / `realized_below_p10` / `realized_outside_band` (the last for the rare case where realized exactly equals p10 or p90). Append-only; UNIQUE on `forecast_run_id` so calibration is idempotent.
+
+
 ## Retired locks
 - **V1-paper-only enforcement** — Retired by Task 126 on 2026-05-25. The software now supports any IBKR account; account mode is detected (via two-tier prefix + behavioural check, persisted to `ibkr_connection_audit`) and displayed via the persistent `AccountModeBadge`, not enforced. The earlier paper-only assertion has been removed; mode is informational only. Older docs referencing the paper-only-V1 lock should be read as historical context.

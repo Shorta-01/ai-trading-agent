@@ -94,6 +94,28 @@ class _MarketDataRunnerProtocol(Protocol):
     ) -> dict[str, object]: ...
 
 
+class _ForecastingRunnerProtocol(Protocol):
+    """Task 130 adapter that runs the 20-day baseline forecast.
+
+    Called only on ``morning_briefing`` fires in ``normal`` mode.
+    Never raises — failures are folded into the returned dict.
+    """
+
+    def run(
+        self, *, ibkr_account_id: str, scheduled_run_id: str
+    ) -> dict[str, object]: ...
+
+
+class _CalibrationRunnerProtocol(Protocol):
+    """Task 130 adapter that runs the retrospective calibration step.
+
+    Called only on ``pre_briefing`` fires in ``normal`` mode.
+    Never raises.
+    """
+
+    def run(self) -> dict[str, object]: ...
+
+
 class _GatewayProtocol(Protocol):
     def is_connected(self) -> bool: ...
 
@@ -155,6 +177,8 @@ def run_orchestrator(
     confirmation_state: _ConfirmationStateProtocol | None = None,
     seed_runner: _SeedRunnerProtocol | None = None,
     market_data_runner: _MarketDataRunnerProtocol | None = None,
+    forecasting_runner: _ForecastingRunnerProtocol | None = None,
+    calibration_runner: _CalibrationRunnerProtocol | None = None,
 ) -> OrchestratorResult:
     """One scheduled-run cycle.
 
@@ -287,14 +311,48 @@ def run_orchestrator(
                 logger.exception("market_data_runner failed")
                 market_data_details = {"error": "market_data_runner_exception"}
 
+        # 7. Task 130 forecasting step (morning_briefing only).
+        forecast_details: dict[str, object] | None = None
+        if (
+            forecasting_runner is not None
+            and mode_detected == "normal"
+            and run_type == "morning_briefing"
+            and ibkr_account_id is not None
+        ):
+            try:
+                forecast_details = forecasting_runner.run(
+                    ibkr_account_id=ibkr_account_id, scheduled_run_id=run_id
+                )
+            except Exception:  # noqa: BLE001 — boundary
+                logger.exception("forecasting_runner failed")
+                forecast_details = {"error": "forecasting_runner_exception"}
+
+        # 8. Task 130 calibration step (pre_briefing only).
+        calibration_details: dict[str, object] | None = None
+        if (
+            calibration_runner is not None
+            and mode_detected == "normal"
+            and run_type == "pre_briefing"
+        ):
+            try:
+                calibration_details = calibration_runner.run()
+            except Exception:  # noqa: BLE001 — boundary
+                logger.exception("calibration_runner failed")
+                calibration_details = {"error": "calibration_runner_exception"}
+
         duration = _duration_ms(started, now_provider())
         error_details_json: str | None = None
+        audit_payload: dict[str, object] = {}
         if market_data_details is not None:
+            audit_payload["market_data"] = market_data_details
+        if forecast_details is not None:
+            audit_payload["forecast"] = forecast_details
+        if calibration_details is not None:
+            audit_payload["calibration"] = calibration_details
+        if audit_payload:
             import json as _json
 
-            error_details_json = _json.dumps(
-                {"market_data": market_data_details}
-            )
+            error_details_json = _json.dumps(audit_payload)
         _safe_append(
             audit_repo,
             ScheduledRunAuditEntry(

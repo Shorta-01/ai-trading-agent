@@ -29,6 +29,8 @@ from ai_trading_agent_storage.metadata import (
     ibkr_position_snapshots,
     ibkr_sync_runs,
     cold_start_seed_audit,
+    calibration_diary,
+    forecasts,
     fx_rates,
     market_data_eod_snapshots,
     provider_call_audit,
@@ -132,8 +134,10 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrOpenOrderSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
+    CalibrationDiaryEntry,
     ColdStartAlreadySeededError,
     ColdStartSeedAuditEntry,
+    ForecastEntry,
     FxRateRecord,
     MarketDataEodSnapshotEntry,
     ProviderCallAuditEntry,
@@ -4091,3 +4095,209 @@ class SqlAlchemyProviderCallAuditRepository(_Base):
             account_id=row["account_id"],
             triggered_by_run_id=row["triggered_by_run_id"],
         )
+
+
+class SqlAlchemyForecastRepository(_Base):
+    """Task 130: append-only probabilistic-forecast repository.
+
+    Locked CHECK constraints + UNIQUE on (conid, generated_at) at
+    the DB level enforce method/label/confidence + one-row-per-fire
+    semantics. ``mark_expired`` updates ``expired_at`` only (never
+    the forecast values themselves).
+    """
+
+    def append(self, record: ForecastEntry) -> StorageWriteResult:
+        self._insert(forecasts, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.forecast_run_id,
+            forecasts.name,
+            True,
+            "Forecast opgeslagen.",
+        )
+
+    def get_by_run_id(
+        self, forecast_run_id: str
+    ) -> ForecastEntry | None:
+        row = (
+            self._connection.execute(
+                select(forecasts).where(
+                    forecasts.c.forecast_run_id == forecast_run_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
+    def get_latest_valid_for_conid(
+        self,
+        *,
+        conid: str,
+        now: datetime,
+    ) -> ForecastEntry | None:
+        row = (
+            self._connection.execute(
+                select(forecasts)
+                .where(forecasts.c.conid == conid)
+                .where(forecasts.c.forecast_valid_until > now)
+                .order_by(forecasts.c.generated_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
+    def list_expired_unprocessed(
+        self, *, now: datetime, limit: int = 100
+    ) -> StorageListResult[ForecastEntry]:
+        rows = (
+            self._connection.execute(
+                select(forecasts)
+                .where(forecasts.c.forecast_valid_until <= now)
+                .where(forecasts.c.expired_at.is_(None))
+                .order_by(forecasts.c.forecast_valid_until.asc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(self._row_to_record(row) for row in rows)
+        return StorageListResult(
+            records,
+            forecasts.name,
+            f"{len(records)} verlopen forecasts opgehaald.",
+        )
+
+    def mark_expired(
+        self, *, forecast_run_id: str, expired_at: datetime
+    ) -> StorageWriteResult:
+        result = self._connection.execute(
+            forecasts.update()
+            .where(forecasts.c.forecast_run_id == forecast_run_id)
+            .values(expired_at=expired_at)
+        )
+        ok = bool(result.rowcount)
+        return StorageWriteResult(
+            ok,
+            forecast_run_id,
+            forecasts.name,
+            True,
+            "Forecast gemarkeerd als verlopen." if ok else "Forecast niet gevonden.",
+        )
+
+    @staticmethod
+    def _row_to_record(row: Any) -> ForecastEntry:
+        return ForecastEntry(
+            forecast_run_id=row["forecast_run_id"],
+            conid=row["conid"],
+            generated_at=row["generated_at"],
+            generated_by_scheduled_run_id=row["generated_by_scheduled_run_id"],
+            horizon_trading_days=row["horizon_trading_days"],
+            forecast_valid_until=row["forecast_valid_until"],
+            method=row["method"],
+            history_window_days=row["history_window_days"],
+            history_closes_count=row["history_closes_count"],
+            current_price_local=row["current_price_local"],
+            currency_local=row["currency_local"],
+            p10_log_return=row["p10_log_return"],
+            p50_log_return=row["p50_log_return"],
+            p90_log_return=row["p90_log_return"],
+            prob_positive=row["prob_positive"],
+            prob_loss_gt_5pct=row["prob_loss_gt_5pct"],
+            expected_volatility_annualized=row["expected_volatility_annualized"],
+            confidence_level=row["confidence_level"],
+            label=row["label"],
+            block_reason=row["block_reason"],
+            expired_at=row["expired_at"],
+        )
+
+
+class SqlAlchemyCalibrationDiaryRepository(_Base):
+    """Task 130: append-only calibration diary.
+
+    UNIQUE on ``forecast_run_id`` so the calibration step is
+    idempotent — re-running for the same forecast raises the DB
+    integrity error rather than double-counting.
+    """
+
+    def append(
+        self, record: CalibrationDiaryEntry
+    ) -> StorageWriteResult:
+        self._insert(calibration_diary, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.forecast_run_id,
+            calibration_diary.name,
+            True,
+            "Calibratie-dagboek rij opgeslagen.",
+        )
+
+    def list_recent(
+        self, *, limit: int = 20
+    ) -> StorageListResult[CalibrationDiaryEntry]:
+        rows = (
+            self._connection.execute(
+                select(calibration_diary)
+                .order_by(calibration_diary.c.evaluated_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            CalibrationDiaryEntry(
+                forecast_run_id=row["forecast_run_id"],
+                evaluated_at=row["evaluated_at"],
+                realized_log_return=row["realized_log_return"],
+                hit_status=row["hit_status"],
+                realized_close_price=row["realized_close_price"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            calibration_diary.name,
+            f"{len(records)} calibratie-rijen opgehaald.",
+        )
+
+    def coverage_stats(self, *, window_days: int = 90) -> dict[str, Any]:
+        """Rolling coverage over the past ``window_days`` evaluations.
+
+        Returns a small dict with the four locked summary stats the
+        ``/calibration/coverage`` route surfaces.
+        """
+
+        from datetime import timedelta as _td
+
+        cutoff_now = datetime.now(UTC)
+        cutoff = cutoff_now - _td(days=window_days)
+        rows = (
+            self._connection.execute(
+                select(calibration_diary)
+                .where(calibration_diary.c.evaluated_at >= cutoff)
+            )
+            .mappings()
+            .all()
+        )
+        evaluated = len(rows)
+        if evaluated == 0:
+            return {
+                "forecasts_evaluated": 0,
+                "hit_rate_within_band": None,
+                "p10_p90_coverage_percent": None,
+                "mean_realized_minus_p50": None,
+            }
+        within = sum(1 for row in rows if row["hit_status"] == "realized_within_p10_p90")
+        hit_rate = Decimal(within) / Decimal(evaluated)
+        return {
+            "forecasts_evaluated": evaluated,
+            "hit_rate_within_band": hit_rate,
+            "p10_p90_coverage_percent": hit_rate * Decimal("100"),
+            "mean_realized_minus_p50": None,
+        }
