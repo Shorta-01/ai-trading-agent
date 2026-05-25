@@ -280,3 +280,77 @@ Combiner is deterministisch: equal-weight at launch; evolves to inverse-variance
 - Prediction Diary as deterministic outcome tracker.
 - All `safe_for_*` booleans default-False on persisted records (the boundary that lifts them is the locked state-machine + manual approval, not a flag flip).
 
+
+## 22. V1.1 expansion lock — owner sign-off after V1 ship (post-Slice 22)
+
+After V1 shipped (Slices 1–22), the owner-driven scope discussion locked V1.1
+to a 12-slice queue. V1.1 is the **prediction-quality refactor** — the V1
+predictors stay running unchanged until each refactor slice lands, so the
+morning chain never goes dark mid-refactor.
+
+### 22.1. Heavy dependency lock — relaxed
+
+V1 forbade non-stdlib runtime deps inside `packages/portfolio`. V1.1 allows
+`numpy`, `pandas` and `statsmodels` inside `packages/portfolio` for the
+predictor refactor. The boundary is now:
+
+- `packages/portfolio` — numpy + pandas + statsmodels allowed (predictor math, backtesting, statistical models).
+- `packages/storage` — stdlib + sqlalchemy + alembic only (no math libs).
+- `apps/api` — same as before; predictors are imported by apps/api but pandas frames never escape `packages/portfolio`.
+- Decimal-only money math at the dataclass boundary stays — numpy/pandas math is internal to predictor implementations.
+
+### 22.2. AI budget lock — €20–€50/mo
+
+Real AI providers (Anthropic Claude for both explanation and TS prediction)
+ship in V1.1, but inside a tight monthly budget:
+
+- New env var `CLAUDE_AI_BUDGET_MONTHLY_EUR` (default `50`).
+- Per-day rate limit: max ~33 daily-morning-chain invocations (one per asset, scheduler-driven only).
+- No on-demand AI calls; the operator cannot trigger an extra prediction from the UI in V1.1.
+- Prompt caching mandatory (Anthropic's ephemeral cache breakpoints) — research shared system prompts ship cached once per day.
+- Default model: Claude Haiku for explanations + smaller-tier Claude for forecasts; the budget cap blocks calls once exceeded for the calendar month.
+
+### 22.3. Conditional order vocabulary lock — full IBKR set
+
+The V1 §21.3 vocabulary (`LMT, MKT, STP, STP_LMT, TRAIL, TRAIL_LMT, BRACKET`)
+extends to include `CONDITIONAL` orders **with the full IBKR condition set**:
+price + time + margin + volume + execution conditions. TIF extends from
+`DAY` only to `{DAY, GTC, OPG, IOC}`.
+
+### 22.4. Universe-set lock — operator-selectable
+
+V1's ~325-ticker locked universe extends to three operator-selectable sets:
+
+- `SP500` — S&P 500 only.
+- `EU600` — Stoxx Europe 600.
+- `ALL_5K` — full ~5 000-ticker EU + US universe.
+
+New env var `UNIVERSE_SET` (default `SP500`). Per-set EODHD-call caching;
+storage paging on `asset_fundamentals_snapshots`.
+
+### 22.5. Feedback loop + auto-weighted ensemble lock
+
+The Prediction Diary tracks per-predictor outcomes (not only ensemble). The
+ensemble combiner gains an opt-in auto-weighting strategy
+(`weight_strategy=equal_weight | auto`); `auto` weights each predictor by
+inverse-Brier-score over a rolling 90-day window, clipped to
+`[0.05, 0.40]` per predictor so no single predictor dominates.
+
+### 22.6. What stays unchanged (carries from V1)
+
+- Manual per-draft approval gate — no order auto-promotes from a prediction.
+- Decimal-only money math at every storage / API boundary.
+- Locked Dutch action-label set.
+- Decision Package + Prediction Diary doctrine.
+- `safe_for_*` booleans default-False on every persisted record.
+- AI is one vote in the ensemble; AI never originates a number that wasn't first validated against deterministic guards.
+- Paper/live decided by IBKR account, not an app-side flag.
+
+### 22.7. Out of V1.1 scope (post-V1.1 widening)
+
+- Multi-account portfolios.
+- Mobile app.
+- Real-time intraday predictor evaluation (V1.1 stays daily).
+- Briefing item source distinction (portfolio / watchlist / universe_scan_candidate).
+- Real money: V1.1 still ships paper-first; the live path needs a separate scope discussion before any real-money slice.
+

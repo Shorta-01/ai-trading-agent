@@ -7,9 +7,11 @@ order-authorisation surface, every persisted record keeps
 `safe_for_*=False`, and `GET /v1/release-readiness` reports whether
 the operator's environment is V1-ready.
 
-Post-V1 widening ideas live below the "completed slices" section but
-are **explicitly out of V1 scope** until a new scope discussion with
-the owner.
+**V1.1 is now in flight.** Slice 23 (V1.1 doctrine amendment)
+merged. The 12-slice V1.1 queue (Slices 23–34) lives in
+`version-1-1-backlog.md`; V1.1 doctrine lives in §22 of
+`version-1-product-experience-locks.md`. V1 predictors stay running
+through the entire V1.1 refactor — no morning-chain downtime.
 
 ## V1 expansion queue (Slices 13–22, locked via §21 in version-1-product-experience-locks.md)
 

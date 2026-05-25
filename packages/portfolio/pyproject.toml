@@ -5,6 +5,15 @@ description = "Paper accounting calculation helpers for Portfolio Outlook Manage
 requires-python = ">=3.12"
 dependencies = [
   "portfolio-outlook-domain",
+  # V1.1 §22.1 heavy-dep boundary relaxation. Activated by Slice 24
+  # (predictor refactor base); the predictors' internals switch to
+  # numpy/pandas for log-return + rolling-statistics math while the
+  # Decimal money boundary at the dataclass stays unchanged.
+  # statsmodels enables GARCH(1,1) volatility forecasting in the
+  # rebuilt GBM (Slice 27).
+  # "numpy>=2.0.0",
+  # "pandas>=2.2.0",
+  # "statsmodels>=0.14.0",
 ]
 
 [project.optional-dependencies]
