@@ -177,6 +177,11 @@ class Settings(BaseSettings):
     # morning chain running on the V1 predictors until Slice 26 wires
     # the auto-weight feedback loop.
     predictor_backtest_enabled: bool = False
+    # V1.1 Slice 26: ensemble weight strategy.
+    # `equal_weight` keeps V1 behaviour; `auto` reads the per-predictor
+    # rolling Brier-score history and inverse-Brier-weights it (clipped
+    # per-predictor to the locked band).
+    ensemble_weight_strategy: str = "equal_weight"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

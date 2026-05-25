@@ -437,6 +437,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "sharpe-ratio bij; safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0042_prediction_diary_per_predictor",
+        previous_revision_id="0041_predictor_backtest_runs",
+        filename="0042_prediction_diary_per_predictor.py",
+        label_nl="V1.1 prediction diary per-predictor contributies",
+        description_nl=(
+            "Maakt prediction_diary_predictor_contributions kindtabel: "
+            "één rij per (diary_entry_id, model_code) zodat de auto-"
+            "weighted ensemble-strategie (Slice 26) een rollende per-"
+            "predictor brier-score kan berekenen. Safety booleans "
+            "blijven False."
+        ),
+    ),
 )
 
 

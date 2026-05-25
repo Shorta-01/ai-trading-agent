@@ -1721,6 +1721,28 @@ predictor_backtest_runs = Table(
 )
 
 
+prediction_diary_predictor_contributions = Table(
+    "prediction_diary_predictor_contributions",
+    metadata,
+    Column("contribution_id", Text, primary_key=True),
+    Column("diary_entry_id", Text, nullable=False),
+    Column("model_code", Text, nullable=False),
+    Column("model_version", Text, nullable=False),
+    Column("predicted_return_pct", MONEY_NUMERIC, nullable=False),
+    Column("predicted_prob_gain", Numeric(10, 6), nullable=False),
+    Column("predicted_direction", Text, nullable=False),
+    Column("realised_return_pct", MONEY_NUMERIC, nullable=True),
+    Column("realised_direction", Text, nullable=True),
+    Column("outcome_label", Text, nullable=True),
+    Column("brier_score", Numeric(12, 6), nullable=True),
+    Column("return_spread_pct", MONEY_NUMERIC, nullable=True),
+    Column("explanation_nl", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_fundamentals_snapshots = Table(
     "asset_fundamentals_snapshots",
     metadata,
