@@ -39,6 +39,7 @@ from ai_trading_agent_storage.metadata import (
     daily_briefings,
     decision_package_explanations,
     explanation_evidence_ledger,
+    action_draft_order_conditions,
     claude_ai_budget_usage,
     prediction_diary_predictor_contributions,
     predictor_backtest_runs,
@@ -86,6 +87,7 @@ from ai_trading_agent_storage.repository_contracts import (
     DailyBriefingRecord,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
+    ActionDraftOrderConditionRecord,
     ClaudeAiBudgetUsageRecord,
     PredictionDiaryEntryRecord,
     PredictionDiaryPredictorContributionRecord,
@@ -2867,6 +2869,61 @@ class SqlAlchemySchedulerRunRepository(_Base):
             records,
             scheduler_runs.name,
             f"{len(records)} scheduler-runs opgehaald.",
+        )
+
+
+class SqlAlchemyActionDraftOrderConditionRepository(_Base):
+    """V1.1 Slice 32: per-draft order-condition repository.
+
+    Single child table keyed on ``(draft_id, condition_index)``;
+    callers persist one condition per row and read them back in
+    ``condition_index`` order so the conjunction chain is stable.
+    """
+
+    def save_condition(
+        self, record: ActionDraftOrderConditionRecord
+    ) -> StorageWriteResult:
+        self._insert(action_draft_order_conditions, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.condition_id,
+            action_draft_order_conditions.name,
+            True,
+            "Action-draft order-conditie opgeslagen.",
+        )
+
+    def list_conditions_for_draft(
+        self, draft_id: str
+    ) -> StorageListResult[ActionDraftOrderConditionRecord]:
+        statement = (
+            select(action_draft_order_conditions)
+            .where(action_draft_order_conditions.c.draft_id == draft_id)
+            .order_by(action_draft_order_conditions.c.condition_index.asc())
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            ActionDraftOrderConditionRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            action_draft_order_conditions.name,
+            f"{len(records)} order-condities opgehaald.",
+        )
+
+    def delete_conditions_for_draft(
+        self, draft_id: str
+    ) -> StorageWriteResult:
+        self._connection.execute(
+            action_draft_order_conditions.delete().where(
+                action_draft_order_conditions.c.draft_id == draft_id
+            )
+        )
+        return StorageWriteResult(
+            True,
+            draft_id,
+            action_draft_order_conditions.name,
+            True,
+            "Order-condities verwijderd.",
         )
 
 

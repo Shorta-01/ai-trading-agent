@@ -112,6 +112,24 @@ class DraftSourceContext:
 
 
 @dataclass(frozen=True)
+class DraftConditionCheck:
+    """One activation-condition check for a CONDITIONAL action draft.
+
+    Mirrors the shape of ``ActionDraftOrderConditionRecord`` but stays
+    pure-Python so the dry-run can operate without a storage round-
+    trip. ``condition_kind`` is one of
+    ``{"price", "time", "margin", "volume", "execution"}``.
+    """
+
+    condition_kind: str
+    comparator: str
+    trigger_price: Decimal | None = None
+    trigger_at_utc: object | None = None  # datetime | None at use site
+    margin_percent: Decimal | None = None
+    trigger_volume: int | None = None
+
+
+@dataclass(frozen=True)
 class DraftSizing:
     """Outcome of sizing logic. ``status`` is ``ready`` only when the math
     produced a positive whole-share quantity (and the price fields the
@@ -133,6 +151,20 @@ class DraftSizing:
     trail_percent: Decimal | None = None
     bracket_take_profit_limit_price: Decimal | None = None
     bracket_stop_loss_price: Decimal | None = None
+    # V1.1 §22.3 CONDITIONAL parent base type. Required when
+    # ``order_type == "CONDITIONAL"``.
+    conditional_parent_order_type: str | None = None
+    # V1.1 §22.3 conditions list — the dry-run iterates this and emits
+    # stable per-kind failure codes. Default empty so non-conditional
+    # callers stay unchanged.
+    conditions: tuple[DraftConditionCheck, ...] = ()
+    # V1.1 §22.3 time-in-force. Default DAY keeps V1 behaviour.
+    tif: str = "DAY"
+    # V1.1 §22.3 — whether the IBKR account is paper (so GTC may have
+    # different fill semantics than a live account). The dry-run uses
+    # this to surface a `tif_gtc_requires_real_account` warning when
+    # the operator wants GTC on a paper account.
+    paper_mode: bool = True
 
 
 @dataclass(frozen=True)
@@ -508,10 +540,73 @@ def run_dry_run_safety_checks(
     # Per-order-type extras (§21.3 vocabulary).
     _append_per_order_type_failures(sizing, failures)
 
+    # V1.1 §22.3 TIF + conditional extras.
+    _append_v1_1_tif_and_conditional_failures(sizing, failures)
+
     return DryRunResult(
         status="passed" if not failures else "failed",
         failures=tuple(failures),
     )
+
+
+_LOCKED_TIF_SET: frozenset[str] = frozenset({"DAY", "GTC", "OPG", "IOC"})
+_LOCKED_CONDITIONAL_PARENT_TYPES: frozenset[str] = frozenset(
+    {"LMT", "MKT", "STP", "STP_LMT"}
+)
+_LOCKED_CONDITION_KINDS: frozenset[str] = frozenset(
+    {"price", "time", "margin", "volume", "execution"}
+)
+
+
+def _append_v1_1_tif_and_conditional_failures(
+    sizing: DraftSizing,
+    failures: list[str],
+) -> None:
+    """V1.1 §22.3 — extra dry-run gates for the new TIF set and
+    CONDITIONAL order type.
+
+    Stable failure codes:
+
+    * ``tif_unsupported`` — sizing.tif outside the §22.3 lock
+    * ``tif_gtc_requires_real_account`` — GTC chosen on paper mode
+    * ``conditional_missing_parent_order_type``
+    * ``conditional_unknown_parent_order_type``
+    * ``conditional_no_conditions_listed``
+    * ``conditional_unknown_condition_kind``
+    * ``conditional_price_missing_trigger``
+    * ``conditional_time_missing_trigger``
+    * ``conditional_margin_invalid_percent``
+    """
+
+    if sizing.tif not in _LOCKED_TIF_SET:
+        failures.append("tif_unsupported")
+    elif sizing.tif == "GTC" and sizing.paper_mode:
+        failures.append("tif_gtc_requires_real_account")
+
+    if sizing.order_type != "CONDITIONAL":
+        return
+    parent = sizing.conditional_parent_order_type
+    if not parent:
+        failures.append("conditional_missing_parent_order_type")
+    elif parent not in _LOCKED_CONDITIONAL_PARENT_TYPES:
+        failures.append("conditional_unknown_parent_order_type")
+    if not sizing.conditions:
+        failures.append("conditional_no_conditions_listed")
+        return
+    for cond in sizing.conditions:
+        if cond.condition_kind not in _LOCKED_CONDITION_KINDS:
+            failures.append("conditional_unknown_condition_kind")
+            continue
+        if cond.condition_kind == "price":
+            if cond.trigger_price is None or cond.trigger_price <= 0:
+                failures.append("conditional_price_missing_trigger")
+        elif cond.condition_kind == "time":
+            if cond.trigger_at_utc is None:
+                failures.append("conditional_time_missing_trigger")
+        elif cond.condition_kind == "margin":
+            pct = cond.margin_percent
+            if pct is None or pct < 0 or pct > Decimal("100"):
+                failures.append("conditional_margin_invalid_percent")
 
 
 def _append_per_order_type_failures(

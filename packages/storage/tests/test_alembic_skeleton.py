@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_forty_three_revision_files_exist_with_expected_names() -> None:
+def test_exactly_forty_four_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -79,6 +79,7 @@ def test_exactly_forty_three_revision_files_exist_with_expected_names() -> None:
         "0041_predictor_backtest_runs.py",
         "0042_prediction_diary_per_predictor.py",
         "0043_claude_ai_budget_usage.py",
+        "0044_action_draft_conditional_orders.py",
     ]
 
 

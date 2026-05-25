@@ -463,6 +463,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "kosten in EUR bij; safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0044_action_draft_conditional_orders",
+        previous_revision_id="0043_claude_ai_budget_usage",
+        filename="0044_action_draft_conditional_orders.py",
+        label_nl="V1.1 action-draft conditional-order condities",
+        description_nl=(
+            "Maakt action_draft_order_conditions kindtabel: één rij per "
+            "(draft_id, condition_index) zodat CONDITIONAL action-drafts "
+            "(§22.3) hun price/time/margin/volume/execution conditions "
+            "kunnen opslaan. Safety booleans blijven False."
+        ),
+    ),
 )
 
 
