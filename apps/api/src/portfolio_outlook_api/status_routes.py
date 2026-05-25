@@ -3150,7 +3150,7 @@ def run_morning_chain_manually() -> dict[str, object]:
                 result = run_morning_chain(legs=legs)
             except MorningChainFailed as exc:
                 audit_error_text = str(exc)
-                result = None  # type: ignore[assignment]
+                result = None
 
             finished_at = datetime.now(UTC)
             if result is not None and result.status == "succeeded":
