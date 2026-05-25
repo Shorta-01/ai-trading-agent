@@ -336,5 +336,18 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Orchestrator behaviour: the `mode_detected` set widens to include `awaiting_watchlist_confirmation`. The sequence is `cold_start` (only on the very first run, when nothing has been seeded yet) → `awaiting_watchlist_confirmation` (after seed, before user confirms) → `normal` (after confirmation). The advice-generation surface stays inactive until the orchestrator emits `mode_detected="normal"`.
 
 
+## Task 129 product locks (EOD market-data runtime)
+- Provider: EODHD All World plan (~€20/mo). Single-provider for V1; no multi-provider failover. Failed fetches log + the run completes.
+- Fetch scope per scheduled run: union of (confirmed watchlist items) + (current IBKR positions) for the configured account. Identity keyed by `ibkr_conid` via the AssetListing storage from Tasks 93/94.
+- Fetch happens on `pre_briefing` (06:00 Brussels) + `morning_briefing` (07:00 Brussels) runs only. Hourly delta runs do NOT re-fetch — EOD prices don't change intraday by definition.
+- Stored fields per snapshot: `ibkr_conid`, `as_of_date`, `as_of_close_ts`, `ingested_ts`, `open_local`, `high_local`, `low_local`, `close_local`, `adj_close_local`, `volume`, `currency_local`, `provider`, `provider_response_hash`. All money values Decimal with ≥6 decimal places preserved end-to-end.
+- EUR conversion is a display-time concern. Snapshots store local-currency only. A parallel `fx_rates` table keyed on `(base_currency, quote_currency, as_of_date, provider)` holds the daily rate. The API does the join at response time; the storage layer never co-mingles local + EUR.
+- Freshness SLA computed at display time, not stored: fresh = ≤ 1 trading day old, stale = ≤ 3 trading days, otherwise `unavailable`. UI surfaces `Vers` / `Verouderd` / `Niet beschikbaar` Dutch microcopy; never zero-fill.
+- No fake data, no silent overwrites. If a snapshot for `(ibkr_conid, as_of_date, provider)` exists, the next fetch is a no-op. If a fetch fails, the existing row stays and the freshness check downgrades the display state.
+- Rate-limit + retry: EODHD client honours a configurable per-second rate limit (default 10 r/s, well under the 20 r/s EODHD limit). One retry on 5xx with 2s backoff. No retry on 4xx. Every call (success or fail) writes one `provider_call_audit` row.
+- Per-account scoping: fetches are scoped to assets in *this user's* watchlist + portfolio. The system never fetches market data for unrelated assets.
+- Configurable enable flag: `MARKET_DATA_FETCH_ENABLED` (default `false`). When off the orchestrator skips the market-data step entirely. `EODHD_API_KEY=None` is a valid configuration — `EodhdClient` returns a typed `NotConfiguredError` without touching the network.
+
+
 ## Retired locks
 - **V1-paper-only enforcement** — Retired by Task 126 on 2026-05-25. The software now supports any IBKR account; account mode is detected (via two-tier prefix + behavioural check, persisted to `ibkr_connection_audit`) and displayed via the persistent `AccountModeBadge`, not enforced. The earlier paper-only assertion has been removed; mode is informational only. Older docs referencing the paper-only-V1 lock should be read as historical context.

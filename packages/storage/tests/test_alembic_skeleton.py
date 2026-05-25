@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_forty_seven_revision_files_exist_with_expected_names() -> None:
+def test_exactly_forty_eight_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -83,6 +83,7 @@ def test_exactly_forty_seven_revision_files_exist_with_expected_names() -> None:
         "0045_ibkr_account_id_and_mode_tagging.py",
         "0046_scheduled_run_audit_and_scheduler_state.py",
         "0047_cold_start_and_watchlist_confirmation.py",
+        "0048_market_data_eod_and_fx_runtime.py",
     ]
 
 

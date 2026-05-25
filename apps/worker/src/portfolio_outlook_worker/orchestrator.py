@@ -81,6 +81,19 @@ class _SeedRunnerProtocol(Protocol):
     def seed(self, ibkr_account_id: str) -> bool: ...
 
 
+class _MarketDataRunnerProtocol(Protocol):
+    """Task 129 adapter that runs the EOD market-data fetch.
+
+    Called only on ``normal`` fires that are also ``pre_briefing``
+    or ``morning_briefing``. Returns a dict folded into the
+    audit row's ``details_json``. Never raises.
+    """
+
+    def run(
+        self, *, ibkr_account_id: str, run_type: str
+    ) -> dict[str, object]: ...
+
+
 class _GatewayProtocol(Protocol):
     def is_connected(self) -> bool: ...
 
@@ -141,6 +154,7 @@ def run_orchestrator(
     next_scheduled_at: datetime | None = None,
     confirmation_state: _ConfirmationStateProtocol | None = None,
     seed_runner: _SeedRunnerProtocol | None = None,
+    market_data_runner: _MarketDataRunnerProtocol | None = None,
 ) -> OrchestratorResult:
     """One scheduled-run cycle.
 
@@ -253,7 +267,34 @@ def run_orchestrator(
             if state == "unconfirmed":
                 mode_detected = "awaiting_watchlist_confirmation"
 
+        # 6. Task 129 market-data fetch.
+        # Only on normal fires that are also pre_briefing or
+        # morning_briefing. Hourly delta fires never re-fetch — EOD
+        # prices don't change intraday. The runner returns a small
+        # dict folded into the audit row.
+        market_data_details: dict[str, object] | None = None
+        if (
+            market_data_runner is not None
+            and mode_detected == "normal"
+            and run_type in ("pre_briefing", "morning_briefing")
+            and ibkr_account_id is not None
+        ):
+            try:
+                market_data_details = market_data_runner.run(
+                    ibkr_account_id=ibkr_account_id, run_type=run_type
+                )
+            except Exception:  # noqa: BLE001 — boundary
+                logger.exception("market_data_runner failed")
+                market_data_details = {"error": "market_data_runner_exception"}
+
         duration = _duration_ms(started, now_provider())
+        error_details_json: str | None = None
+        if market_data_details is not None:
+            import json as _json
+
+            error_details_json = _json.dumps(
+                {"market_data": market_data_details}
+            )
         _safe_append(
             audit_repo,
             ScheduledRunAuditEntry(
@@ -264,7 +305,7 @@ def run_orchestrator(
                 mode_detected=mode_detected,
                 duration_ms=duration,
                 outcome="completed",
-                error_details_json=None,
+                error_details_json=error_details_json,
                 next_scheduled_at=next_scheduled_at,
             ),
         )

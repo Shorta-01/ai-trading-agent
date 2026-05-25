@@ -37,6 +37,21 @@ class IbkrSettings(BaseModel):
     account_id: str | None = None
 
 
+class EodhdSettings(BaseModel):
+    """Task 129 EODHD provider configuration.
+
+    ``api_key=None`` is a valid configuration — the client returns
+    :class:`EodhdNotConfiguredError` without touching the network.
+    ``MARKET_DATA_FETCH_ENABLED`` keeps the orchestrator's
+    market-data step inert until the operator opts in.
+    """
+
+    api_key: str | None = None
+    base_url: str = "https://eodhd.com/api"
+    rate_limit_per_second: int = 10
+    fetch_enabled: bool = False
+
+
 class SchedulerSettings(BaseModel):
     """Task 127 APScheduler configuration.
 
@@ -58,6 +73,7 @@ class Settings(BaseSettings):
     storage: StorageSettings = StorageSettings()
     ibkr: IbkrSettings = IbkrSettings()
     scheduler: SchedulerSettings = SchedulerSettings()
+    eodhd: EodhdSettings = EodhdSettings()
 
     model_config = SettingsConfigDict(
         env_prefix="WORKER_",

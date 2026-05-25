@@ -29,6 +29,9 @@ from ai_trading_agent_storage.metadata import (
     ibkr_position_snapshots,
     ibkr_sync_runs,
     cold_start_seed_audit,
+    fx_rates,
+    market_data_eod_snapshots,
+    provider_call_audit,
     scheduled_run_audit,
     scheduler_state,
     watchlist_confirmation_audit,
@@ -131,6 +134,9 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrSyncRunRecord,
     ColdStartAlreadySeededError,
     ColdStartSeedAuditEntry,
+    FxRateRecord,
+    MarketDataEodSnapshotEntry,
+    ProviderCallAuditEntry,
     ScheduledRunAuditEntry,
     SchedulerStateEntry,
     WatchlistConfirmationAuditEntry,
@@ -3801,3 +3807,287 @@ class SqlAlchemyWatchlistItemSeedRepository(_Base):
             .values(status="archived", updated_at=datetime.now(UTC))
         )
         return bool(result.rowcount)
+
+
+class SqlAlchemyMarketDataEodSnapshotRepository(_Base):
+    """Task 129: append-only EOD snapshot repository.
+
+    Idempotency is enforced via the ``UNIQUE (ibkr_conid,
+    as_of_date, provider)`` constraint at the DB level — a second
+    ``append`` for the same triple raises an integrity error. The
+    market-data step checks ``get_for_date`` first and skips the
+    fetch when a row already exists.
+    """
+
+    def append(
+        self, record: MarketDataEodSnapshotEntry
+    ) -> StorageWriteResult:
+        self._insert(market_data_eod_snapshots, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.snapshot_id,
+            market_data_eod_snapshots.name,
+            True,
+            "EOD market-data snapshot opgeslagen.",
+        )
+
+    def get_for_date(
+        self,
+        *,
+        ibkr_conid: str,
+        as_of_date: Any,
+        provider: str = "eodhd",
+    ) -> MarketDataEodSnapshotEntry | None:
+        row = (
+            self._connection.execute(
+                select(market_data_eod_snapshots)
+                .where(market_data_eod_snapshots.c.ibkr_conid == ibkr_conid)
+                .where(market_data_eod_snapshots.c.as_of_date == as_of_date)
+                .where(market_data_eod_snapshots.c.provider == provider)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
+    def get_latest_by_conid(
+        self,
+        *,
+        ibkr_conid: str,
+        provider: str = "eodhd",
+    ) -> MarketDataEodSnapshotEntry | None:
+        row = (
+            self._connection.execute(
+                select(market_data_eod_snapshots)
+                .where(market_data_eod_snapshots.c.ibkr_conid == ibkr_conid)
+                .where(market_data_eod_snapshots.c.provider == provider)
+                .order_by(market_data_eod_snapshots.c.as_of_date.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
+    def list_latest_per_conid(
+        self,
+        *,
+        ibkr_conids: tuple[str, ...],
+        provider: str = "eodhd",
+    ) -> StorageListResult[MarketDataEodSnapshotEntry]:
+        if not ibkr_conids:
+            return StorageListResult(
+                tuple(),
+                market_data_eod_snapshots.name,
+                "0 EOD snapshots opgehaald.",
+            )
+        records: list[MarketDataEodSnapshotEntry] = []
+        for conid in ibkr_conids:
+            row = self.get_latest_by_conid(
+                ibkr_conid=conid, provider=provider
+            )
+            if row is not None:
+                records.append(row)
+        return StorageListResult(
+            tuple(records),
+            market_data_eod_snapshots.name,
+            f"{len(records)} EOD snapshots opgehaald.",
+        )
+
+    @staticmethod
+    def _row_to_record(row: Any) -> MarketDataEodSnapshotEntry:
+        return MarketDataEodSnapshotEntry(
+            snapshot_id=row["snapshot_id"],
+            ibkr_conid=row["ibkr_conid"],
+            symbol=row["symbol"],
+            exchange=row["exchange"],
+            currency_local=row["currency_local"],
+            as_of_date=row["as_of_date"],
+            as_of_close_ts=row["as_of_close_ts"],
+            ingested_ts=row["ingested_ts"],
+            open_local=row["open_local"],
+            high_local=row["high_local"],
+            low_local=row["low_local"],
+            close_local=row["close_local"],
+            adj_close_local=row["adj_close_local"],
+            volume=row["volume"],
+            provider=row["provider"],
+            provider_response_hash=row["provider_response_hash"],
+        )
+
+
+class SqlAlchemyFxRateRepository(_Base):
+    """Task 129: per-day FX rate repository (PK = base+quote+date+provider)."""
+
+    def upsert(self, record: FxRateRecord) -> StorageWriteResult:
+        existing = self._connection.execute(
+            select(fx_rates).where(
+                fx_rates.c.base_currency == record.base_currency,
+                fx_rates.c.quote_currency == record.quote_currency,
+                fx_rates.c.as_of_date == record.as_of_date,
+                fx_rates.c.provider == record.provider,
+            )
+        ).first()
+        payload = asdict(record)
+        if existing is None:
+            self._insert(fx_rates, payload)
+            return StorageWriteResult(
+                True,
+                f"{record.base_currency}->{record.quote_currency}"
+                f"@{record.as_of_date}",
+                fx_rates.name,
+                True,
+                "FX-rate rij ingevoegd.",
+            )
+        self._connection.execute(
+            fx_rates.update()
+            .where(fx_rates.c.base_currency == record.base_currency)
+            .where(fx_rates.c.quote_currency == record.quote_currency)
+            .where(fx_rates.c.as_of_date == record.as_of_date)
+            .where(fx_rates.c.provider == record.provider)
+            .values(rate=record.rate, ingested_ts=record.ingested_ts)
+        )
+        return StorageWriteResult(
+            True,
+            f"{record.base_currency}->{record.quote_currency}"
+            f"@{record.as_of_date}",
+            fx_rates.name,
+            True,
+            "FX-rate rij bijgewerkt.",
+        )
+
+    def get_rate(
+        self,
+        *,
+        base_currency: str,
+        quote_currency: str,
+        as_of_date: Any,
+        provider: str = "eodhd",
+    ) -> FxRateRecord | None:
+        row = (
+            self._connection.execute(
+                select(fx_rates)
+                .where(fx_rates.c.base_currency == base_currency)
+                .where(fx_rates.c.quote_currency == quote_currency)
+                .where(fx_rates.c.as_of_date == as_of_date)
+                .where(fx_rates.c.provider == provider)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return FxRateRecord(
+            base_currency=row["base_currency"],
+            quote_currency=row["quote_currency"],
+            as_of_date=row["as_of_date"],
+            rate=row["rate"],
+            ingested_ts=row["ingested_ts"],
+            provider=row["provider"],
+        )
+
+    def get_latest(
+        self,
+        *,
+        base_currency: str,
+        quote_currency: str,
+        provider: str = "eodhd",
+    ) -> FxRateRecord | None:
+        row = (
+            self._connection.execute(
+                select(fx_rates)
+                .where(fx_rates.c.base_currency == base_currency)
+                .where(fx_rates.c.quote_currency == quote_currency)
+                .where(fx_rates.c.provider == provider)
+                .order_by(fx_rates.c.as_of_date.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return FxRateRecord(
+            base_currency=row["base_currency"],
+            quote_currency=row["quote_currency"],
+            as_of_date=row["as_of_date"],
+            rate=row["rate"],
+            ingested_ts=row["ingested_ts"],
+            provider=row["provider"],
+        )
+
+
+class SqlAlchemyProviderCallAuditRepository(_Base):
+    """Task 129: append-only audit for every provider HTTP call."""
+
+    def append(
+        self, record: ProviderCallAuditEntry
+    ) -> StorageWriteResult:
+        self._insert(provider_call_audit, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.audit_id,
+            provider_call_audit.name,
+            True,
+            "Provider-call audit-rij opgeslagen.",
+        )
+
+    def list_recent(
+        self, *, limit: int = 20
+    ) -> StorageListResult[ProviderCallAuditEntry]:
+        rows = (
+            self._connection.execute(
+                select(provider_call_audit)
+                .order_by(provider_call_audit.c.called_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(self._row_to_record(row) for row in rows)
+        return StorageListResult(
+            records,
+            provider_call_audit.name,
+            f"{len(records)} provider-call audit-rijen opgehaald.",
+        )
+
+    def list_for_run(
+        self, *, run_id: str, limit: int = 50
+    ) -> StorageListResult[ProviderCallAuditEntry]:
+        rows = (
+            self._connection.execute(
+                select(provider_call_audit)
+                .where(provider_call_audit.c.triggered_by_run_id == run_id)
+                .order_by(provider_call_audit.c.called_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(self._row_to_record(row) for row in rows)
+        return StorageListResult(
+            records,
+            provider_call_audit.name,
+            f"{len(records)} provider-call audit-rijen voor run.",
+        )
+
+    @staticmethod
+    def _row_to_record(row: Any) -> ProviderCallAuditEntry:
+        return ProviderCallAuditEntry(
+            audit_id=row["audit_id"],
+            called_at=row["called_at"],
+            provider=row["provider"],
+            endpoint=row["endpoint"],
+            request_params_json=row["request_params_json"],
+            response_status=row["response_status"],
+            response_size_bytes=row["response_size_bytes"],
+            duration_ms=row["duration_ms"],
+            error_class=row["error_class"],
+            error_details_json=row["error_details_json"],
+            account_id=row["account_id"],
+            triggered_by_run_id=row["triggered_by_run_id"],
+        )

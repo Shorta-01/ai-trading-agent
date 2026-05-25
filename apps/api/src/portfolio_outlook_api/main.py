@@ -21,6 +21,9 @@ from portfolio_outlook_api.health import HealthResponse, get_health_response
 from portfolio_outlook_api.ibkr_connection_routes import (
     router as ibkr_connection_router,
 )
+from portfolio_outlook_api.market_data_runtime_routes import (
+    router as market_data_runtime_router,
+)
 from portfolio_outlook_api.request_audit import router as request_audit_router
 from portfolio_outlook_api.research_sources import router as research_sources_router
 from portfolio_outlook_api.scheduler import build_scheduler, install_default_jobs
@@ -104,3 +107,4 @@ app.include_router(request_audit_router)
 app.include_router(ibkr_connection_router)
 app.include_router(scheduler_v127_router)
 app.include_router(watchlist_confirmation_router)
+app.include_router(market_data_runtime_router)

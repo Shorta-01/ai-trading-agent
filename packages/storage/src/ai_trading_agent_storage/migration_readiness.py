@@ -514,6 +514,22 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0048_market_data_eod_and_fx_runtime",
+        previous_revision_id="0047_cold_start_and_watchlist_confirmation",
+        filename="0048_market_data_eod_and_fx_runtime.py",
+        label_nl="Task 129 EOD market-data + FX + provider audit",
+        description_nl=(
+            "Maakt market_data_eod_snapshots (UNIQUE op (ibkr_conid, "
+            "as_of_date, provider) voor fetch-idempotency), fx_rates "
+            "(composite PK), en provider_call_audit (append-only). "
+            "Het bestaande market_data_snapshots envelope-pad voor "
+            "readiness (Tasks 85-92) blijft ongewijzigd. EUR-conversie "
+            "gebeurt op display-tijd via de FX-join in de API; "
+            "snapshots bewaren alleen local-currency. Safety booleans "
+            "blijven False."
+        ),
+    ),
 )
 
 
