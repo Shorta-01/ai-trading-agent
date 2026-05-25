@@ -2,20 +2,21 @@
 
 Task 126: when ``WORKER_IBKR__ENABLED=true`` and storage is reachable,
 the worker opens a long-lived TWS session via :class:`IbkrGateway`
-on startup. The audit-row writes happen synchronously inside
-``gateway.connect(...)`` so a successful boot leaves a
-``connect_success`` row in ``ibkr_connection_audit`` for the API to
-read.
+on startup.
 
-This file intentionally stays minimal — the sync loop that pulls
-positions/cash on a schedule lands in Task 126b alongside the API
-route rewrite. 126a only proves the connection + audit pipeline.
+Task 127: when ``WORKER_SCHEDULER__ENABLED=true``, the worker also
+starts the :class:`PortfolioScheduler` (locked 06:00 + hourly
+07:00-21:00 Europe/Brussels schedule). Both subsystems gate on the
+storage layer being reachable; with storage off the worker still
+boots, just without persistence-backed audit rows.
 """
 
 from __future__ import annotations
 
 import logging
+import signal
 from contextlib import suppress
+from typing import Any
 
 from ai_trading_agent_storage import (
     SqlAlchemyIbkrConnectionAuditRepository,
@@ -26,9 +27,13 @@ from ai_trading_agent_storage import (
 
 from portfolio_outlook_worker.config import settings
 from portfolio_outlook_worker.ibkr_gateway import IbkrGateway
+from portfolio_outlook_worker.scheduler import PortfolioScheduler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+_active_scheduler: PortfolioScheduler | None = None
 
 
 def _try_connect_ibkr() -> None:
@@ -93,14 +98,49 @@ def _try_connect_ibkr() -> None:
         )
 
 
+def _start_scheduler() -> None:
+    global _active_scheduler
+
+    if not settings.scheduler.enabled:
+        logger.info("Scheduler is uitgeschakeld.")
+        return
+    gateway = IbkrGateway()
+    scheduler = PortfolioScheduler(
+        gateway=gateway,
+        storage_settings=settings.storage,
+        ibkr_settings=settings.ibkr,
+        scheduler_settings=settings.scheduler,
+    )
+    try:
+        scheduler.start()
+    except Exception:  # noqa: BLE001 — boundary
+        logger.exception("Scheduler kon niet starten.")
+        return
+    _active_scheduler = scheduler
+
+    def _shutdown(signum: int, _frame: Any) -> None:
+        logger.info("Signal %s ontvangen; scheduler wordt afgesloten.", signum)
+        if _active_scheduler is not None:
+            with suppress(Exception):
+                _active_scheduler.stop()
+
+    with suppress(ValueError):
+        signal.signal(signal.SIGTERM, _shutdown)
+    with suppress(ValueError):
+        signal.signal(signal.SIGINT, _shutdown)
+
+
 def start_worker() -> None:
     logger.info(
-        "Worker gestart (env=%s, paper_only_mode=%s, ibkr_enabled=%s).",
+        "Worker gestart (env=%s, paper_only_mode=%s, ibkr_enabled=%s, "
+        "scheduler_enabled=%s).",
         settings.environment,
         settings.paper_only_mode,
         settings.ibkr.enabled,
+        settings.scheduler.enabled,
     )
     _try_connect_ibkr()
+    _start_scheduler()
 
 
 if __name__ == "__main__":

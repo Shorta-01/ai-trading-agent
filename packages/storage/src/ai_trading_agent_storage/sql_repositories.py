@@ -28,6 +28,8 @@ from ai_trading_agent_storage.metadata import (
     ibkr_open_order_snapshots,
     ibkr_position_snapshots,
     ibkr_sync_runs,
+    scheduled_run_audit,
+    scheduler_state,
     fx_rate_snapshots,
     asset_action_draft_events,
     asset_action_draft_submissions,
@@ -123,6 +125,8 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrOpenOrderSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
+    ScheduledRunAuditEntry,
+    SchedulerStateEntry,
     FxRateSnapshotRecord,
     MarketDataBarRecord,
     RepositoryHealthStatus,
@@ -3331,4 +3335,155 @@ class SqlAlchemyIbkrConnectionAuditRepository(_Base):
             records,
             ibkr_connection_audit.name,
             f"{len(records)} IBKR connection-audit rijen opgehaald.",
+        )
+
+
+class SqlAlchemyScheduledRunAuditRepository(_Base):
+    """Task 127: append-only scheduler-run audit repository.
+
+    Task 127 product lock §5: rows are append-only — no update or
+    delete methods. Each scheduled run writes one row capturing the
+    detected mode + outcome. Safety booleans hard-False on every
+    insert.
+    """
+
+    def append(
+        self, record: ScheduledRunAuditEntry
+    ) -> StorageWriteResult:
+        payload = asdict(record)
+        self._insert(scheduled_run_audit, payload)
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            scheduled_run_audit.name,
+            True,
+            "Scheduled-run audit-rij opgeslagen.",
+        )
+
+    def list_recent(
+        self,
+        *,
+        limit: int = 20,
+    ) -> StorageListResult[ScheduledRunAuditEntry]:
+        statement = (
+            select(scheduled_run_audit)
+            .order_by(scheduled_run_audit.c.run_at.desc())
+            .limit(_bounded_limit(limit))
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            ScheduledRunAuditEntry(
+                run_id=row["run_id"],
+                run_at=row["run_at"],
+                run_type=row["run_type"],
+                ibkr_account_id=row["ibkr_account_id"],
+                mode_detected=row["mode_detected"],
+                duration_ms=row["duration_ms"],
+                outcome=row["outcome"],
+                error_details_json=row["error_details_json"],
+                next_scheduled_at=row["next_scheduled_at"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            scheduled_run_audit.name,
+            f"{len(records)} scheduled-run audit-rijen opgehaald.",
+        )
+
+    def list_by_run_type(
+        self,
+        *,
+        run_type: str,
+        limit: int = 20,
+    ) -> StorageListResult[ScheduledRunAuditEntry]:
+        statement = (
+            select(scheduled_run_audit)
+            .where(scheduled_run_audit.c.run_type == run_type)
+            .order_by(scheduled_run_audit.c.run_at.desc())
+            .limit(_bounded_limit(limit))
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            ScheduledRunAuditEntry(
+                run_id=row["run_id"],
+                run_at=row["run_at"],
+                run_type=row["run_type"],
+                ibkr_account_id=row["ibkr_account_id"],
+                mode_detected=row["mode_detected"],
+                duration_ms=row["duration_ms"],
+                outcome=row["outcome"],
+                error_details_json=row["error_details_json"],
+                next_scheduled_at=row["next_scheduled_at"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            scheduled_run_audit.name,
+            f"{len(records)} scheduled-run audit-rijen opgehaald.",
+        )
+
+
+class SqlAlchemySchedulerStateRepository(_Base):
+    """Task 127: per-worker scheduler heartbeat + next-fire surface.
+
+    Single row per worker process; the scheduler updates its row
+    every 60 seconds. ``upsert`` replaces or inserts atomically.
+    The API reads these rows to compute ``/scheduler/status``.
+    """
+
+    def upsert(self, record: SchedulerStateEntry) -> StorageWriteResult:
+        existing = self._connection.execute(
+            select(scheduler_state).where(
+                scheduler_state.c.worker_id == record.worker_id
+            )
+        ).first()
+        payload = asdict(record)
+        if existing is None:
+            self._insert(scheduler_state, payload)
+            return StorageWriteResult(
+                True,
+                record.worker_id,
+                scheduler_state.name,
+                True,
+                "Scheduler-state rij ingevoegd.",
+            )
+        self._connection.execute(
+            scheduler_state.update()
+            .where(scheduler_state.c.worker_id == record.worker_id)
+            .values(**payload)
+        )
+        return StorageWriteResult(
+            True,
+            record.worker_id,
+            scheduler_state.name,
+            True,
+            "Scheduler-state rij bijgewerkt.",
+        )
+
+    def list_all(self) -> StorageListResult[SchedulerStateEntry]:
+        rows = (
+            self._connection.execute(
+                select(scheduler_state).order_by(
+                    scheduler_state.c.last_heartbeat_at.desc()
+                )
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            SchedulerStateEntry(
+                worker_id=row["worker_id"],
+                started_at=row["started_at"],
+                last_heartbeat_at=row["last_heartbeat_at"],
+                next_pre_briefing_at=row["next_pre_briefing_at"],
+                next_hourly_at=row["next_hourly_at"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            scheduler_state.name,
+            f"{len(records)} scheduler-state rijen opgehaald.",
         )

@@ -6,6 +6,7 @@ import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
+import { SchedulerStatusBadge } from "@/components/SchedulerStatusBadge";
 import { StatusCard } from "@/components/StatusCard";
 import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { UiStatus } from "@/components/StatusBadge";
@@ -60,6 +61,9 @@ export default function HomePage() {
   const valuationStatus = getValuationDisplayStatus(valuationReadiness);
   return (
     <main className="page-wrap">
+      <section style={{ marginBottom: "0.75rem" }}>
+        <SchedulerStatusBadge />
+      </section>
       <section className="metrics-grid">
         <MetricCard
           title="Totale portefeuillewaarde"

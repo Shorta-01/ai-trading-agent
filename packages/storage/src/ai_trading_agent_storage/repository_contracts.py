@@ -358,6 +358,79 @@ class IbkrConnectionAuditRecord:
             )
 
 
+# Task 127: scheduler audit + state surface.
+_LOCKED_SCHEDULED_RUN_TYPES = frozenset(
+    {"pre_briefing", "morning_briefing", "hourly_delta"}
+)
+_LOCKED_SCHEDULED_MODE_DETECTED = frozenset(
+    {"cold_start", "normal", "disconnected", "skipped_locked", "skipped_disabled"}
+)
+_LOCKED_SCHEDULED_OUTCOMES = frozenset({"completed", "error"})
+
+
+@dataclass(frozen=True)
+class ScheduledRunAuditEntry:
+    """One row per APScheduler fire.
+
+    Task 127 product lock §5: every scheduled run writes an
+    append-only audit row capturing what mode the orchestrator
+    detected, how long it took, and whether it completed cleanly.
+    Used by the API to surface scheduler status to the dashboard.
+    Safety booleans hard-False; an audit row never authorises an
+    order.
+    """
+
+    run_id: str
+    run_at: datetime
+    run_type: str
+    ibkr_account_id: str | None
+    mode_detected: str
+    duration_ms: int | None
+    outcome: str
+    error_details_json: str | None
+    next_scheduled_at: datetime | None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.run_id, "run_id")
+        if self.run_type not in _LOCKED_SCHEDULED_RUN_TYPES:
+            raise ValueError(
+                f"run_type {self.run_type!r} is not in the locked set "
+                f"{sorted(_LOCKED_SCHEDULED_RUN_TYPES)}"
+            )
+        if self.mode_detected not in _LOCKED_SCHEDULED_MODE_DETECTED:
+            raise ValueError(
+                f"mode_detected {self.mode_detected!r} is not in the locked set "
+                f"{sorted(_LOCKED_SCHEDULED_MODE_DETECTED)}"
+            )
+        if self.outcome not in _LOCKED_SCHEDULED_OUTCOMES:
+            raise ValueError(
+                f"outcome {self.outcome!r} is not in the locked set "
+                f"{sorted(_LOCKED_SCHEDULED_OUTCOMES)}"
+            )
+        if self.duration_ms is not None and self.duration_ms < 0:
+            raise ValueError("duration_ms must be non-negative")
+
+
+@dataclass(frozen=True)
+class SchedulerStateEntry:
+    """One row per running worker process.
+
+    The scheduler heartbeats this row every 60 seconds with the
+    next scheduled fire times for the two cron jobs (pre-briefing
+    + hourly). The API reads it to expose the dashboard badge's
+    "Volgende run om HH:MM" text.
+    """
+
+    worker_id: str
+    started_at: datetime
+    last_heartbeat_at: datetime
+    next_pre_briefing_at: datetime | None
+    next_hourly_at: datetime | None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.worker_id, "worker_id")
+
+
 @dataclass(frozen=True)
 class FxRateSnapshotRecord:
     snapshot_id: str

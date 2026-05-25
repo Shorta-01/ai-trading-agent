@@ -2033,3 +2033,59 @@ asset_forecasts = Table(
     Column("safe_for_suggestions", Boolean, nullable=False, server_default="0"),
     Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
 )
+
+
+# Task 127: append-only audit row per APScheduler fire.
+scheduled_run_audit = Table(
+    "scheduled_run_audit",
+    metadata,
+    Column("run_id", Text, primary_key=True),
+    Column("run_at", DateTime(timezone=True), nullable=False),
+    Column("run_type", Text, nullable=False),
+    Column("ibkr_account_id", Text, nullable=True),
+    Column("mode_detected", Text, nullable=False),
+    Column("duration_ms", Integer, nullable=True),
+    Column("outcome", Text, nullable=False),
+    Column("error_details_json", JSON, nullable=True),
+    Column("next_scheduled_at", DateTime(timezone=True), nullable=True),
+    Column(
+        "safe_for_action_drafts",
+        Boolean,
+        nullable=False,
+        server_default=sa_false(),
+    ),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
+    CheckConstraint(
+        "run_type IN ('pre_briefing','morning_briefing','hourly_delta')",
+        name="ck_scheduled_run_audit_run_type",
+    ),
+    CheckConstraint(
+        "mode_detected IN ('cold_start','normal','disconnected',"
+        "'skipped_locked','skipped_disabled')",
+        name="ck_scheduled_run_audit_mode_detected",
+    ),
+    CheckConstraint(
+        "outcome IN ('completed','error')",
+        name="ck_scheduled_run_audit_outcome",
+    ),
+)
+Index(
+    "ix_scheduled_run_audit_run_at",
+    scheduled_run_audit.c.run_at.desc(),
+)
+Index(
+    "ix_scheduled_run_audit_run_type",
+    scheduled_run_audit.c.run_type,
+)
+
+
+# Task 127: per-worker scheduler state, heartbeat + next-fire times.
+scheduler_state = Table(
+    "scheduler_state",
+    metadata,
+    Column("worker_id", Text, primary_key=True),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("last_heartbeat_at", DateTime(timezone=True), nullable=False),
+    Column("next_pre_briefing_at", DateTime(timezone=True), nullable=True),
+    Column("next_hourly_at", DateTime(timezone=True), nullable=True),
+)

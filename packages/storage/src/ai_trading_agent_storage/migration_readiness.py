@@ -487,6 +487,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "mode-check audit-rijen. Safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0046_scheduled_run_audit_and_scheduler_state",
+        previous_revision_id="0045_ibkr_account_id_and_mode_tagging",
+        filename="0046_scheduled_run_audit_and_scheduler_state.py",
+        label_nl="Task 127 APScheduler audit + per-worker state",
+        description_nl=(
+            "Maakt scheduled_run_audit (append-only) + scheduler_state "
+            "(één rij per worker) tabellen zodat de APScheduler skeleton "
+            "elke fire kan auditen en de API de volgende fire-tijden kan "
+            "tonen op het dashboard. Locked CHECK-constraints op run_type "
+            "/ mode_detected / outcome per §5. Safety booleans blijven False."
+        ),
+    ),
 )
 
 

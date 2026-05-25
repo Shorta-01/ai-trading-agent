@@ -316,5 +316,15 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Belgian tax module (TOB + dividend roerende voorheffing) draait alleen in live-modus. In paper-modus blijft de TOB-rekenpad inactief; berekeningen zijn pure-Python en gebeuren in `packages/portfolio/belgian_tax`. Geen extra modus-gating in routes; de tax-module zelf bepaalt of er een TOB-rij wordt aangemaakt op basis van de configured account-mode.
 
 
+## Task 127 product locks (APScheduler runtime foundation)
+- Scheduler choice: APScheduler 3.x met SQLAlchemy job store backed by Postgres. Leeft in het worker-proces; geen aparte service. Tests gebruiken `MemoryJobStore`.
+- Locked schedule: 06:00 pre-briefing + every hour minute 0 from 07:00 through 21:00 Europe/Brussels (16 dagelijkse runs in totaal). Weekenden en feestdagen worden meegevuurd; de orchestrator beslist wat te doen, de scheduler vuurt alleen.
+- Eén orchestrator-functie per fire. Single-flight via Postgres `pg_advisory_lock`: een 14:00 run die nog loopt wanneer 15:00 vuurt → de 15:00 fire krijgt een `mode_detected=skipped_locked` audit-rij en exit.
+- Cold-start detectie: lege portfolio-snapshots ÉN lege watchlist voor de geconfigureerde `ibkr_account_id` = `cold_start`; anders `normal`. Deterministisch tegen durable storage; geen heuristiek.
+- Audit-rij per run in `scheduled_run_audit` met `{run_id, run_at, run_type, ibkr_account_id, mode_detected, duration_ms, outcome, error_details_json, next_scheduled_at}`. Append-only — geen update of delete.
+- `SCHEDULER_ENABLED` env-var (default `false`) bepaalt of de scheduler start. Bij `false` draait de worker normaal verder maar zonder geplande runs (Task 120 disabled-by-default discipline).
+- Alle gepland werk respecteert `IBKR_ENABLED` + `IbkrGateway.is_connected()`. Disconnected gateway → audit-rij `mode_detected=disconnected` en clean exit; geen error. De scheduler vuurt nooit IBKR-netwerkverkeer buiten de gateway om.
+
+
 ## Retired locks
 - **V1-paper-only enforcement** — Retired by Task 126 on 2026-05-25. The software now supports any IBKR account; account mode is detected (via two-tier prefix + behavioural check, persisted to `ibkr_connection_audit`) and displayed via the persistent `AccountModeBadge`, not enforced. The earlier paper-only assertion has been removed; mode is informational only. Older docs referencing the paper-only-V1 lock should be read as historical context.
