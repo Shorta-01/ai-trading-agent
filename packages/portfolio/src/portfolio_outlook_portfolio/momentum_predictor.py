@@ -74,6 +74,18 @@ LOOKBACK_6M: Final[int] = 6 * TRADING_DAYS_PER_MONTH
 # momentum reading.
 MAX_ANNUAL_DRIFT_PCT: Final[float] = 25.0
 
+# V1.1 Slice 27 rebuild — direction-threshold constants kept at
+# module scope so the horizon-scaled path can reference them cleanly.
+DIRECTION_THRESHOLD_STRONG_PCT: Final[float] = 10.0
+DIRECTION_THRESHOLD_SLIGHT_PCT: Final[float] = 2.0
+DIRECTION_THRESHOLD_BASELINE_HORIZON: Final[int] = 21  # 1 trading month
+
+# Skip-the-week variant — 11 weeks of momentum (12-1 weeks) for the
+# short-horizon path. 5 trading days per week × 11 weeks = 55 bars.
+LOOKBACK_WEEK: Final[int] = 5
+LOOKBACK_11_WEEKS: Final[int] = 11 * LOOKBACK_WEEK
+SHORT_HORIZON_CUTOFF_DAYS: Final[int] = 21  # below this we switch to skip-the-week
+
 
 def _decimal(value: float, places: int = 6) -> Decimal:
     quant = Decimal(10) ** -places
@@ -119,15 +131,67 @@ def _stdev(values: Sequence[float], mean_value: float) -> float:
 
 
 def _direction_label(expected_return_pct: float) -> str:
-    if expected_return_pct >= 10.0:
+    if expected_return_pct >= DIRECTION_THRESHOLD_STRONG_PCT:
         return DIRECTION_STRONG_UP
-    if expected_return_pct >= 2.0:
+    if expected_return_pct >= DIRECTION_THRESHOLD_SLIGHT_PCT:
         return DIRECTION_SLIGHT_UP
-    if expected_return_pct > -2.0:
+    if expected_return_pct > -DIRECTION_THRESHOLD_SLIGHT_PCT:
         return DIRECTION_FLAT
-    if expected_return_pct > -10.0:
+    if expected_return_pct > -DIRECTION_THRESHOLD_STRONG_PCT:
         return DIRECTION_SLIGHT_DOWN
     return DIRECTION_STRONG_DOWN
+
+
+def _direction_label_for_horizon(
+    expected_return_pct: float, *, horizon_trading_days: int
+) -> str:
+    """V1.1 Slice 27 — horizon-scaled direction thresholds.
+
+    The locked ±2% / ±10% thresholds are calibrated for the 21-day
+    (1-month) horizon. For other horizons we scale by
+    ``√(horizon / 21)`` so a 5-day "slight" bucket is narrower than
+    a 60-day one. Matches the GBM convention where expected return
+    scales with the square root of time under low-drift conditions.
+    """
+
+    if horizon_trading_days == DIRECTION_THRESHOLD_BASELINE_HORIZON:
+        return _direction_label(expected_return_pct)
+    scale = math.sqrt(horizon_trading_days / DIRECTION_THRESHOLD_BASELINE_HORIZON)
+    strong = DIRECTION_THRESHOLD_STRONG_PCT * scale
+    slight = DIRECTION_THRESHOLD_SLIGHT_PCT * scale
+    if expected_return_pct >= strong:
+        return DIRECTION_STRONG_UP
+    if expected_return_pct >= slight:
+        return DIRECTION_SLIGHT_UP
+    if expected_return_pct > -slight:
+        return DIRECTION_FLAT
+    if expected_return_pct > -strong:
+        return DIRECTION_SLIGHT_DOWN
+    return DIRECTION_STRONG_DOWN
+
+
+def _compute_skip_the_week_momentum(prices: Sequence[float]) -> float | None:
+    """V1.1 Slice 27 — 11-week momentum that skips the most-recent
+    week instead of the most-recent month.
+
+    The skip-1-month convention is calibrated for monthly horizons.
+    For shorter horizons (< 21 days) the most-recent-month skip
+    discards too much signal; switching to a 1-week skip retains the
+    short-term lookback while still avoiding the immediate
+    mean-reversion noise of the last few days.
+    """
+
+    if len(prices) <= LOOKBACK_11_WEEKS + LOOKBACK_WEEK:
+        return None
+    end_index = len(prices) - 1 - LOOKBACK_WEEK
+    start_index = end_index - LOOKBACK_11_WEEKS
+    if start_index < 0:
+        return None
+    start_price = prices[start_index]
+    end_price = prices[end_index]
+    if start_price <= 0 or end_price <= 0:
+        return None
+    return math.log(end_price / start_price)
 
 
 def _blocked(
@@ -236,7 +300,20 @@ def _confidence_from_sample(n: int) -> float:
 
 
 class MomentumPredictor:
-    """Deterministic 12-1 + time-series momentum predictor."""
+    """Deterministic 12-1 + time-series momentum predictor.
+
+    V1.1 Slice 27 adds two opt-in rebuild knobs locked by §22.5.
+    Defaults preserve V1 behaviour exactly; the Slice 25 backtest +
+    Slice 26 leaderboard surface whether enabling them actually
+    improves the Brier-score on real bars.
+
+    * ``horizon_scaled_thresholds`` scales the locked ±2% / ±10%
+      direction thresholds by ``√(horizon / 21)`` so a 5-day
+      "slight" bucket is much narrower than a 60-day one.
+    * ``skip_week_short_horizon`` swaps the skip-1-month 12-1
+      momentum for an 11-week skip-1-week variant when the
+      requested horizon is shorter than 21 days.
+    """
 
     def __init__(
         self,
@@ -244,10 +321,14 @@ class MomentumPredictor:
         minimum_bars_required: int = MOMENTUM_MIN_BARS,
         max_annual_drift_pct: float = MAX_ANNUAL_DRIFT_PCT,
         trading_days_per_year: int = DEFAULT_TRADING_DAYS_PER_YEAR,
+        horizon_scaled_thresholds: bool = False,
+        skip_week_short_horizon: bool = False,
     ) -> None:
         self._minimum_bars_required = minimum_bars_required
         self._max_annual_drift_pct = max_annual_drift_pct
         self._trading_days_per_year = trading_days_per_year
+        self._horizon_scaled_thresholds = horizon_scaled_thresholds
+        self._skip_week_short_horizon = skip_week_short_horizon
 
     @property
     def model_code(self) -> str:
@@ -285,7 +366,14 @@ class MomentumPredictor:
             )
 
         prices = _bar_closes(inputs.historical_bars)
-        twelve_one = _compute_12_1_momentum(prices)
+        use_skip_week = (
+            self._skip_week_short_horizon
+            and horizon < SHORT_HORIZON_CUTOFF_DAYS
+        )
+        if use_skip_week:
+            twelve_one = _compute_skip_the_week_momentum(prices)
+        else:
+            twelve_one = _compute_12_1_momentum(prices)
         tsm = _compute_time_series_momentum(prices)
         score = _composite_score(twelve_one, tsm)
 
@@ -327,7 +415,12 @@ class MomentumPredictor:
         prob_gain = 1.0 - _normal_cdf(z_for_zero)
         prob_loss = 1.0 - prob_gain
         expected_return_pct = (math.exp(p50_log) - 1.0) * 100.0
-        direction = _direction_label(expected_return_pct)
+        if self._horizon_scaled_thresholds:
+            direction = _direction_label_for_horizon(
+                expected_return_pct, horizon_trading_days=horizon
+            )
+        else:
+            direction = _direction_label(expected_return_pct)
         confidence = _confidence_from_sample(len(inputs.historical_bars))
 
         explanation = (

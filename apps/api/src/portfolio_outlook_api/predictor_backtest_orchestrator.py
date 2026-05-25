@@ -101,6 +101,8 @@ def _bars_from_records(
 
 def _build_predictor_or_skip(
     model_code: str,
+    *,
+    settings: object | None = None,
 ) -> tuple[PredictorProtocol | None, str | None]:
     """Return ``(predictor, None)`` for the supported model codes,
     ``(None, blocker)`` for the deferred ones, and raise
@@ -108,12 +110,44 @@ def _build_predictor_or_skip(
 
     The QVM and AI TS predictors stay skipped at this layer; Slices
     28 + 30 will wire them in.
+
+    V1.1 Slice 27 — when ``settings`` is supplied the GBM + Momentum
+    predictors honour the operator's rebuild knobs
+    (`gbm_drift_window_days`, `gbm_regime_shift_enabled`,
+    `gbm_regime_shift_threshold_pct`, `gbm_garch_enabled`,
+    `momentum_horizon_scaled_thresholds`,
+    `momentum_skip_week_short_horizon`). The defaults preserve V1
+    behaviour exactly when ``settings`` is ``None``.
     """
 
     if model_code == "baseline_gbm":
-        return GbmPredictor(), None
+        gbm_kwargs: dict[str, object] = {}
+        if settings is not None:
+            gbm_kwargs["drift_window_days"] = getattr(
+                settings, "gbm_drift_window_days", None
+            )
+            gbm_kwargs["regime_shift_enabled"] = bool(
+                getattr(settings, "gbm_regime_shift_enabled", False)
+            )
+            threshold = getattr(
+                settings, "gbm_regime_shift_threshold_pct", None
+            )
+            if threshold is not None:
+                gbm_kwargs["regime_shift_threshold_pct"] = float(threshold)
+            gbm_kwargs["garch_enabled"] = bool(
+                getattr(settings, "gbm_garch_enabled", False)
+            )
+        return GbmPredictor(**gbm_kwargs), None  # type: ignore[arg-type]
     if model_code == "momentum_v1":
-        return MomentumPredictor(), None
+        momentum_kwargs: dict[str, object] = {}
+        if settings is not None:
+            momentum_kwargs["horizon_scaled_thresholds"] = bool(
+                getattr(settings, "momentum_horizon_scaled_thresholds", False)
+            )
+            momentum_kwargs["skip_week_short_horizon"] = bool(
+                getattr(settings, "momentum_skip_week_short_horizon", False)
+            )
+        return MomentumPredictor(**momentum_kwargs), None  # type: ignore[arg-type]
     if model_code == "mean_reversion_v1":
         return MeanReversionPredictor(), None
     if model_code == "qvm_factor_v1":
@@ -165,6 +199,7 @@ def run_backtest_for_symbol(
     asset_metadata: dict[str, str] | None = None,
     bar_history_limit: int = 1500,
     run_id_factory: Callable[[], str] = new_backtest_run_id,
+    settings: object | None = None,
 ) -> BacktestOrchestratorResult:
     """End-to-end backtest for one (model_code, asset_symbol) pair.
 
@@ -172,13 +207,16 @@ def run_backtest_for_symbol(
     terminal status (``succeeded`` / ``skipped`` / ``failed``).
     Failure paths never raise — the caller always gets a
     ``BacktestOrchestratorResult``.
+
+    V1.1 Slice 27 — when ``settings`` is supplied the GBM + Momentum
+    predictors honour the operator's rebuild knobs.
     """
 
     started_at = datetime.now(UTC)
     run_id = run_id_factory()
 
     try:
-        predictor, blocker = _build_predictor_or_skip(model_code)
+        predictor, blocker = _build_predictor_or_skip(model_code, settings=settings)
     except ValueError as exc:
         finished_at = datetime.now(UTC)
         record = _skipped_record(

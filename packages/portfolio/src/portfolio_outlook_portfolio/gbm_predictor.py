@@ -8,6 +8,7 @@ ensemble combiner can treat GBM as one predictor among five.
 from __future__ import annotations
 
 from .baseline_forecast import (
+    DEFAULT_REGIME_SHIFT_THRESHOLD_PCT,
     MINIMUM_BARS_REQUIRED,
     compute_baseline_forecast,
 )
@@ -55,14 +56,28 @@ def _map_direction(label: str) -> str:
 
 
 class GbmPredictor:
-    """Lognormal-GBM predictor exposed via :class:`PredictorProtocol`."""
+    """Lognormal-GBM predictor exposed via :class:`PredictorProtocol`.
+
+    V1.1 Slice 27 adds three opt-in rebuild knobs locked by §22.5.
+    Defaults preserve V1 behaviour exactly; the Slice 25 backtest +
+    Slice 26 leaderboard surface whether enabling them actually
+    improves the Brier-score on real bars.
+    """
 
     def __init__(
         self,
         *,
         minimum_bars_required: int = MINIMUM_BARS_REQUIRED,
+        drift_window_days: int | None = None,
+        regime_shift_enabled: bool = False,
+        regime_shift_threshold_pct: float = DEFAULT_REGIME_SHIFT_THRESHOLD_PCT,
+        garch_enabled: bool = False,
     ) -> None:
         self._minimum_bars_required = minimum_bars_required
+        self._drift_window_days = drift_window_days
+        self._regime_shift_enabled = regime_shift_enabled
+        self._regime_shift_threshold_pct = regime_shift_threshold_pct
+        self._garch_enabled = garch_enabled
 
     @property
     def model_code(self) -> str:
@@ -78,6 +93,10 @@ class GbmPredictor:
             current_price=inputs.current_price,
             horizon_trading_days=inputs.horizon_trading_days,
             minimum_bars_required=self._minimum_bars_required,
+            drift_window_days=self._drift_window_days,
+            regime_shift_enabled=self._regime_shift_enabled,
+            regime_shift_threshold_pct=self._regime_shift_threshold_pct,
+            garch_enabled=self._garch_enabled,
         )
         is_ready = forecast.status == "ready"
         return PredictionDistribution(
