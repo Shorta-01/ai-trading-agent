@@ -25,6 +25,7 @@ from .predictor_protocol import (
     DIRECTION_STRONG_UP,
     STATUS_BLOCKED,
     STATUS_READY,
+    BacktestWindowScore,
     PredictionDistribution,
     PredictorInputs,
 )
@@ -95,6 +96,19 @@ class GbmPredictor:
             status=STATUS_READY if is_ready else STATUS_BLOCKED,
             blocking_reason=None if is_ready else forecast.blocking_reason,
             explanation_nl=forecast.explanation_nl,
+        )
+
+    def backtest_window_score(
+        self, inputs: PredictorInputs, *, window_days: int
+    ) -> BacktestWindowScore:
+        """V1.1 §22.5: walk-forward backtest helper. Hands off to the
+        shared :func:`backtest_window_score_for_predictor` so every
+        predictor scores against the same harness."""
+
+        from .predictor_backtester import backtest_window_score_for_predictor
+
+        return backtest_window_score_for_predictor(
+            self, inputs, window_days=window_days
         )
 
 
