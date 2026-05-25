@@ -149,8 +149,18 @@ def _build_predictor_or_skip(
             )
         return MomentumPredictor(**momentum_kwargs), None  # type: ignore[arg-type]
     if model_code == "mean_reversion_v1":
-        return MeanReversionPredictor(), None
+        mean_rev_kwargs: dict[str, object] = {}
+        if settings is not None:
+            mean_rev_kwargs["hurst_asymmetric_target"] = bool(
+                getattr(settings, "mean_reversion_hurst_asymmetric_target", False)
+            )
+        return MeanReversionPredictor(**mean_rev_kwargs), None  # type: ignore[arg-type]
     if model_code == "qvm_factor_v1":
+        # QVM still skipped — its walk-forward universe support
+        # ships alongside Slice 28's QVM rebuild but the universe
+        # snapshot per fold needs the EODHD universe-scan slice.
+        # The rebuild knobs are honoured here so the morning chain
+        # path (Slice 31+) can construct the rebuilt predictor.
         return None, SKIPPED_QVM_REASON
     if model_code == "ai_ts_v1":
         return None, SKIPPED_AI_TS_REASON

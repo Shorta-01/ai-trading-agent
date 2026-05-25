@@ -193,6 +193,15 @@ class Settings(BaseSettings):
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False
+    # V1.1 Slice 28 Mean-Rev rebuild knob.
+    mean_reversion_hurst_asymmetric_target: bool = False
+    # V1.1 Slice 28 QVM rebuild knobs. `qvm_min_universe_size`
+    # defaults to the §22.5 30-entry floor; operators with smaller
+    # universes can drop it for testing, but the leaderboard surface
+    # will surface it as a skipped/blocked row by default.
+    qvm_min_universe_size: int = 30
+    qvm_sector_neutral_zscore: bool = False
+    qvm_soft_clip_composite: bool = False
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings
