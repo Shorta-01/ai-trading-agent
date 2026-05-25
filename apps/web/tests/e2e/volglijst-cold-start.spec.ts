@@ -135,26 +135,27 @@ test.describe("Volglijst — Task 128 cold-start flow", () => {
   test("BEVESTIG flips to confirmed and switches to the normal view", async ({
     page,
   }) => {
-    // First poll returns unconfirmed; after confirm, the page reloads
-    // state and the second poll returns confirmed.
-    let stateCallCount = 0;
+    // The Volglijst page + the global ColdStartBanner BOTH poll
+    // /watchlist/confirmation-state, so a counter-based mock races.
+    // Use a flag the confirm endpoint flips so every poll after the
+    // confirm sees "confirmed".
+    let confirmed = false;
     await page.route(
       "**/watchlist/confirmation-state",
       async (route) => {
-        stateCallCount += 1;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify(
-            stateCallCount === 1
-              ? UNCONFIRMED
-              : {
+            confirmed
+              ? {
                   account_id: "DU1234567",
                   state: "confirmed",
                   banner_text: null,
                   safe_for_action_drafts: false,
                   safe_for_orders: false,
-                },
+                }
+              : UNCONFIRMED,
           ),
         });
       },
@@ -163,29 +164,42 @@ test.describe("Volglijst — Task 128 cold-start flow", () => {
       "**/watchlist/cold-start-items",
       fulfillJson(STARTER_ITEMS),
     );
-    await page.route(
-      "**/watchlist/confirm",
-      fulfillJson({
-        state: "confirmed",
-        confirmed_at: "2026-05-25T07:00:00+00:00",
-        row_count: 3,
-        safe_for_action_drafts: false,
-        safe_for_orders: false,
-      }),
-    );
+    await page.route("**/watchlist/confirm", async (route) => {
+      confirmed = true;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          state: "confirmed",
+          confirmed_at: "2026-05-25T07:00:00+00:00",
+          row_count: 3,
+          safe_for_action_drafts: false,
+          safe_for_orders: false,
+        }),
+      });
+    });
 
     await page.goto("/volglijst");
     await expect(
       page.getByTestId("volglijst-cold-start-flow"),
     ).toBeVisible();
+    // Wait until the starter rows have loaded so the confirm button
+    // is enabled (canSubmit gates on items.length > 0).
+    await expect(
+      page.getByTestId("cold-start-row-SXR8"),
+    ).toBeVisible();
 
     await page.getByTestId("cold-start-phrase-input").fill("BEVESTIG");
+    await expect(
+      page.getByTestId("cold-start-confirm-button"),
+    ).toBeEnabled();
     await page.getByTestId("cold-start-confirm-button").click();
 
-    // After the second state fetch returns confirmed, the flow
-    // component unmounts and the normal Volglijst takes over.
+    // After the confirm endpoint flips the flag and the page reloads
+    // state via the onConfirmed callback, the flow component
+    // unmounts and the normal Volglijst takes over.
     await expect(
       page.getByTestId("volglijst-cold-start-flow"),
-    ).toHaveCount(0, { timeout: 5_000 });
+    ).toHaveCount(0, { timeout: 10_000 });
   });
 });
