@@ -28,7 +28,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 from uuid import uuid4
 
 from ai_trading_agent_storage import IbkrConnectionAuditRecord
@@ -51,34 +51,28 @@ class _AuditRepoProtocol(Protocol):
 
 
 class IbClientProtocol(Protocol):
-    """Subset of ``ib_insync.IB`` we depend on.
+    """Structural subset of ``ib_insync.IB`` we depend on.
 
-    Declared as a Protocol so tests can inject a fake without
-    importing ``ib_insync`` at module load time (the real SDK is
-    heavy and we want the gateway loadable in test contexts that
-    don't ship it).
+    Method signatures are intentionally permissive (``*args`` /
+    ``**kwargs``, ``Any`` returns) so this Protocol accepts both the
+    real ``ib_insync.IB`` (which uses ``float`` timeouts + extra
+    kwargs + typed return collections) and the lightweight test
+    fakes that don't depend on the SDK at import time.
     """
 
-    def connect(
-        self,
-        host: str,
-        port: int,
-        clientId: int,
-        readonly: bool = ...,
-        timeout: int = ...,
-    ) -> object: ...
+    def connect(self, *args: Any, **kwargs: Any) -> Any: ...
 
-    def disconnect(self) -> object: ...
+    def disconnect(self) -> Any: ...
 
     def isConnected(self) -> bool: ...
 
     def managedAccounts(self) -> list[str]: ...
 
-    def reqContractDetails(self, contract: object) -> list[object]: ...
+    def reqContractDetails(self, contract: Any) -> list[Any]: ...
 
-    def accountSummary(self, account: str = "") -> list[object]: ...
+    def accountSummary(self, account: str = "") -> list[Any]: ...
 
-    def positions(self, account: str = "") -> list[object]: ...
+    def positions(self, account: str = "") -> list[Any]: ...
 
 
 @dataclass(frozen=True)
@@ -537,12 +531,15 @@ class IbkrGateway:
 def _default_ib_factory() -> IbClientProtocol:
     """Production factory: lazily import ``ib_insync`` to keep the
     module loadable in environments where the SDK isn't installed.
+
+    The real ``IB`` class is cast to the structural Protocol — its
+    concrete signatures (``float`` timeouts, named extras) are wider
+    than what the gateway uses, so the cast is sound.
     """
 
     from ib_insync import IB
 
-    client: IbClientProtocol = IB()
-    return client
+    return cast(IbClientProtocol, IB())  # type: ignore[no-untyped-call]
 
 
 def _int_or_none(value: object) -> int | None:
