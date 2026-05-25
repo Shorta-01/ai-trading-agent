@@ -294,6 +294,91 @@ def test_override_conids_bypass_universe_resolver() -> None:
         assert result.per_conid[0].conid == "OVERRIDE-A"
 
 
+def test_persistence_failures_are_NOT_counted_as_succeeded() -> None:
+    """Regression: PR #410 review (P1) — `succeeded` previously incremented on
+    label alone, so an asset whose forecast computed cleanly but whose
+    ``forecast_repo.append`` raised was reported as a success even though
+    the row was never persisted. Make the audit row surface the failure.
+    """
+
+    class _AppendFailsRepo:
+        """Tiny seam: every append raises, but `_report` thinks writes OK."""
+
+        def __init__(
+            self, real_repo: SqlAlchemyForecastRepository
+        ) -> None:
+            self._real = real_repo
+            self.append_calls = 0
+
+        def append(self, record):  # type: ignore[no-untyped-def]  # noqa: ANN001
+            self.append_calls += 1
+            raise RuntimeError("simulated DB unavailable")
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        real_repo = SqlAlchemyForecastRepository(conn, _report(True))
+        failing_repo = _AppendFailsRepo(real_repo)
+        closes_map = {
+            "X": _make_history(count=252, latest_date=_NOW.date()),
+        }
+        result = run_forecasting_step(
+            ibkr_account_id="DU1234567",
+            watchlist_provider=_StubWatchlist(("X",)),
+            position_provider=_StubPositions(),
+            close_provider=_StubCloseProvider(closes_by_conid=closes_map),
+            forecast_repo=failing_repo,  # type: ignore[arg-type]
+            scheduled_run_id="srun-1",
+            now_provider=lambda: _NOW,
+            rng_seed=42,
+            num_resamples=200,
+        )
+        assert result.total_attempted == 1
+        # Audit must NOT report this as a success.
+        assert result.succeeded == 0
+        # Audit must NOT report this as a block (block row also failed).
+        assert result.total_blocked == 0
+        # Persistence failure is visibly counted.
+        assert result.persistence_failures == 1
+        # Audit dict reflects the same.
+        audit = result.as_audit_dict()
+        assert audit["succeeded"] == 0
+        assert audit["persistence_failures"] == 1
+
+
+def test_persistence_failure_on_block_row_is_NOT_counted_as_blocked() -> None:
+    """Parallel regression: when the block-row append fails the audit
+    must report a persistence_failure, not a phantom block. Without this,
+    `total_blocked` overstates how many block rows actually landed.
+    """
+
+    class _AppendFailsRepo:
+        def append(self, record):  # type: ignore[no-untyped-def]  # noqa: ANN001
+            raise RuntimeError("simulated DB unavailable")
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        # Asset has insufficient history → goes down the block path.
+        closes_map = {
+            "X": _make_history(count=100, latest_date=_NOW.date()),
+        }
+        result = run_forecasting_step(
+            ibkr_account_id="DU1234567",
+            watchlist_provider=_StubWatchlist(("X",)),
+            position_provider=_StubPositions(),
+            close_provider=_StubCloseProvider(closes_by_conid=closes_map),
+            forecast_repo=_AppendFailsRepo(),  # type: ignore[arg-type]
+            scheduled_run_id="srun-1",
+            now_provider=lambda: _NOW,
+            rng_seed=42,
+            num_resamples=200,
+        )
+        assert result.succeeded == 0
+        assert result.total_blocked == 0
+        assert result.persistence_failures == 1
+
+
 def test_audit_dict_shape_for_orchestrator_folding() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     with engine.connect() as conn:
@@ -319,4 +404,5 @@ def test_audit_dict_shape_for_orchestrator_folding() -> None:
         assert audit["succeeded"] == 1
         assert audit["total_blocked"] == 1
         assert audit["blocked_by_reason"] == {"insufficient_history": 1}
+        assert audit["persistence_failures"] == 0
         assert "wall_clock_ms" in audit
