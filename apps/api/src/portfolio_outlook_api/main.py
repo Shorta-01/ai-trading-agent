@@ -29,6 +29,9 @@ from portfolio_outlook_api.scheduler_routes import (
 )
 from portfolio_outlook_api.status_routes import router as status_router
 from portfolio_outlook_api.watchlist import router as watchlist_router
+from portfolio_outlook_api.watchlist_confirmation_routes import (
+    router as watchlist_confirmation_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +103,4 @@ app.include_router(watchlist_router)
 app.include_router(request_audit_router)
 app.include_router(ibkr_connection_router)
 app.include_router(scheduler_v127_router)
+app.include_router(watchlist_confirmation_router)

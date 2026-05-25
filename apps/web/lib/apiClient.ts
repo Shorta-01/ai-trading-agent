@@ -712,6 +712,37 @@ export type IbkrCashLatestResponse = {
   safe_for_orders: boolean;
 };
 
+export type WatchlistConfirmationStateResponse = {
+  account_id: string | null;
+  state: "unconfirmed" | "confirmed" | "no_account_configured";
+  banner_text: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type WatchlistConfirmResponse = {
+  state: "confirmed";
+  confirmed_at: string;
+  row_count: number;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type ColdStartWatchlistItem = {
+  watchlist_item_id: string;
+  symbol: string;
+  name: string | null;
+  exchange: string | null;
+  currency: string | null;
+  security_type: string | null;
+};
+
+export type ColdStartWatchlistResponse = {
+  items: ColdStartWatchlistItem[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
 export type SchedulerV127StatusResponse = {
   enabled: boolean;
   last_run_at: string | null;
@@ -894,12 +925,19 @@ async function postFormData<T>(path: string, formData: FormData): Promise<ApiRes
   }
 }
 
-async function requestJson<T>(path: string, method: "GET" | "POST", body?: object): Promise<ApiResult<T>> {
+async function requestJson<T>(
+  path: string,
+  method: "GET" | "POST" | "DELETE" | "PUT" | "PATCH",
+  body?: object,
+): Promise<ApiResult<T>> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
+      body:
+        method === "POST" || method === "PUT" || method === "PATCH"
+          ? JSON.stringify(body ?? {})
+          : undefined,
       cache: method === "GET" ? "no-store" : undefined,
     });
     const payload = (await response.json().catch(() => ({}))) as { detail?: string } & T;
@@ -960,6 +998,23 @@ export const apiClient = {
     getJson<IbkrPositionsLatestResponse>("/ibkr/sync/positions/latest"),
   getIbkrSyncCashLatest: () =>
     getJson<IbkrCashLatestResponse>("/ibkr/sync/cash/latest"),
+  getWatchlistConfirmationState: () =>
+    getJson<WatchlistConfirmationStateResponse>(
+      "/watchlist/confirmation-state",
+    ),
+  getColdStartWatchlistItems: () =>
+    getJson<ColdStartWatchlistResponse>("/watchlist/cold-start-items"),
+  confirmWatchlist: (phrase: string) =>
+    requestJson<WatchlistConfirmResponse>(
+      "/watchlist/confirm",
+      "POST",
+      { confirmation_phrase: phrase },
+    ),
+  deleteColdStartWatchlistItem: (watchlistItemId: string) =>
+    requestJson<{ archived: boolean }>(
+      `/watchlist/cold-start-items/${encodeURIComponent(watchlistItemId)}`,
+      "DELETE",
+    ),
   getSchedulerV127Status: () =>
     getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),
   getSchedulerV127Runs: (limit = 20) =>

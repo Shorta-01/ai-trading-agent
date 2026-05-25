@@ -49,9 +49,36 @@ logger = logging.getLogger(__name__)
 
 RunType = Literal["pre_briefing", "morning_briefing", "hourly_delta"]
 ModeDetected = Literal[
-    "cold_start", "normal", "disconnected", "skipped_locked", "skipped_disabled"
+    "cold_start",
+    "normal",
+    "disconnected",
+    "skipped_locked",
+    "skipped_disabled",
+    # Task 128: between the cold-start seed and the user's BEVESTIG.
+    "awaiting_watchlist_confirmation",
 ]
 Outcome = Literal["completed", "error"]
+
+
+class _ConfirmationStateProtocol(Protocol):
+    """Task 128 adapter exposing the watchlist confirmation state.
+
+    Returns ``None`` when no row exists for the account yet (i.e.
+    the cold-start seed hasn't run).
+    """
+
+    def get_state(self, ibkr_account_id: str) -> str | None: ...
+
+
+class _SeedRunnerProtocol(Protocol):
+    """Task 128 adapter that triggers the cold-start seed.
+
+    Idempotent — the implementation is responsible for the
+    one-time-per-account guarantee (the storage layer enforces it
+    via ``UNIQUE`` on ``ibkr_account_id``).
+    """
+
+    def seed(self, ibkr_account_id: str) -> bool: ...
 
 
 class _GatewayProtocol(Protocol):
@@ -112,6 +139,8 @@ def run_orchestrator(
     now_provider: Callable[[], datetime] = lambda: datetime.now(UTC),
     brussels_hour_provider: Callable[[], int] | None = None,
     next_scheduled_at: datetime | None = None,
+    confirmation_state: _ConfirmationStateProtocol | None = None,
+    seed_runner: _SeedRunnerProtocol | None = None,
 ) -> OrchestratorResult:
     """One scheduled-run cycle.
 
@@ -180,7 +209,7 @@ def run_orchestrator(
                 duration_ms=duration,
             )
 
-        # 4. Cold-start detection.
+        # 4. Cold-start detection (Tasks 127 + 128).
         if ibkr_account_id is None:
             mode_detected = "cold_start"
         else:
@@ -194,6 +223,35 @@ def run_orchestrator(
                 mode_detected = "cold_start"
             else:
                 mode_detected = "normal"
+
+        # 5. Task 128 onboarding gate.
+        # First fire that detects cold_start: trigger the starter
+        # seed (idempotent via storage-side UNIQUE constraint).
+        if mode_detected == "cold_start" and ibkr_account_id is not None:
+            if seed_runner is not None:
+                try:
+                    seed_runner.seed(ibkr_account_id)
+                except Exception:  # noqa: BLE001 — boundary
+                    logger.exception(
+                        "starter watchlist seed failed for %s",
+                        ibkr_account_id,
+                    )
+
+        # After the seed (or when state already exists), check
+        # confirmation state. If unconfirmed, override the audit
+        # row to ``awaiting_watchlist_confirmation`` per Task 128
+        # product lock §3. On the very first fire that just
+        # triggered the seed, the original ``cold_start`` label
+        # stays — that's the documented sequence:
+        # ``cold_start → awaiting_watchlist_confirmation → normal``.
+        if (
+            confirmation_state is not None
+            and ibkr_account_id is not None
+            and mode_detected != "cold_start"
+        ):
+            state = confirmation_state.get_state(ibkr_account_id)
+            if state == "unconfirmed":
+                mode_detected = "awaiting_watchlist_confirmation"
 
         duration = _duration_ms(started, now_provider())
         _safe_append(

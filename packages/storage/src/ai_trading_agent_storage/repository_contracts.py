@@ -363,7 +363,16 @@ _LOCKED_SCHEDULED_RUN_TYPES = frozenset(
     {"pre_briefing", "morning_briefing", "hourly_delta"}
 )
 _LOCKED_SCHEDULED_MODE_DETECTED = frozenset(
-    {"cold_start", "normal", "disconnected", "skipped_locked", "skipped_disabled"}
+    {
+        "cold_start",
+        "normal",
+        "disconnected",
+        "skipped_locked",
+        "skipped_disabled",
+        # Task 128: awaiting user confirmation of the starter
+        # watchlist seed before normal advice runs resume.
+        "awaiting_watchlist_confirmation",
+    }
 )
 _LOCKED_SCHEDULED_OUTCOMES = frozenset({"completed", "error"})
 
@@ -3123,3 +3132,141 @@ class ClaudeAiBudgetUsageRecord:
             raise ValueError(
                 "Claude AI budget-usage safety booleans must remain false in V1.1."
             )
+
+
+# Task 128: cold-start onboarding records.
+_LOCKED_WATCHLIST_CONFIRMATION_STATES = frozenset({"unconfirmed", "confirmed"})
+_LOCKED_WATCHLIST_AUDIT_FROM_STATES = frozenset(
+    {"absent", "unconfirmed", "confirmed"}
+)
+_LOCKED_WATCHLIST_AUDIT_TO_STATES = frozenset({"unconfirmed", "confirmed"})
+_LOCKED_WATCHLIST_AUDIT_ACTORS = frozenset({"system", "user"})
+
+
+@dataclass(frozen=True)
+class ColdStartSeedAuditEntry:
+    """One row per starter-watchlist seed event.
+
+    Task 128 product lock §1: the seed runs at most once per
+    ``ibkr_account_id``. The database enforces this via ``UNIQUE`` on
+    ``ibkr_account_id``; the repository surfaces ``AlreadySeeded`` if
+    a caller tries to seed twice.
+    """
+
+    seeded_at: datetime
+    ibkr_account_id: str
+    seeded_count: int
+    failed_conids_json: str
+    seed_version: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        _require_non_empty(self.seed_version, "seed_version")
+        if self.seeded_count < 0:
+            raise ValueError("seeded_count must be non-negative")
+
+
+@dataclass(frozen=True)
+class WatchlistConfirmationStateRecord:
+    """One row per account; tracks unconfirmed → confirmed flips."""
+
+    ibkr_account_id: str
+    state: str
+    last_updated_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        if self.state not in _LOCKED_WATCHLIST_CONFIRMATION_STATES:
+            raise ValueError(
+                f"state {self.state!r} is not in the locked set "
+                f"{sorted(_LOCKED_WATCHLIST_CONFIRMATION_STATES)}"
+            )
+
+
+@dataclass(frozen=True)
+class WatchlistConfirmationAuditEntry:
+    """Append-only row per state transition.
+
+    ``actor='system'`` for the seed (``absent → unconfirmed``);
+    ``actor='user'`` for the BEVESTIG confirmation
+    (``unconfirmed → confirmed``).
+    """
+
+    event_at: datetime
+    ibkr_account_id: str
+    from_state: str
+    to_state: str
+    actor: str
+    row_count_at_event: int
+    details_json: str | None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        if self.from_state not in _LOCKED_WATCHLIST_AUDIT_FROM_STATES:
+            raise ValueError(
+                f"from_state {self.from_state!r} not in "
+                f"{sorted(_LOCKED_WATCHLIST_AUDIT_FROM_STATES)}"
+            )
+        if self.to_state not in _LOCKED_WATCHLIST_AUDIT_TO_STATES:
+            raise ValueError(
+                f"to_state {self.to_state!r} not in "
+                f"{sorted(_LOCKED_WATCHLIST_AUDIT_TO_STATES)}"
+            )
+        if self.actor not in _LOCKED_WATCHLIST_AUDIT_ACTORS:
+            raise ValueError(
+                f"actor {self.actor!r} not in "
+                f"{sorted(_LOCKED_WATCHLIST_AUDIT_ACTORS)}"
+            )
+        if self.row_count_at_event < 0:
+            raise ValueError("row_count_at_event must be non-negative")
+
+
+@dataclass(frozen=True)
+class WatchlistItemSeedRecord:
+    """Subset of the locked ``watchlist_items`` columns the Task 128
+    seed function writes.
+
+    The legacy ``apps/api/.../watchlist.py`` STORE-backed routes are
+    untouched (their cleanup is its own task). This record is the
+    only durable path Task 128 uses — for the seed write + the
+    cold-start UI's read.
+    """
+
+    watchlist_item_id: str
+    ibkr_account_id: str
+    asset_id: str | None
+    symbol: str
+    name: str | None
+    exchange: str | None
+    currency: str | None
+    security_type: str | None
+    status: str
+    source: str
+    is_starter_seed: bool
+    seed_version: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.watchlist_item_id, "watchlist_item_id")
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        _require_non_empty(self.symbol, "symbol")
+        if self.status not in ("active", "archived"):
+            raise ValueError(
+                f"status {self.status!r} must be one of {'active', 'archived'}"
+            )
+        if self.source not in ("manual", "cold_start_seed"):
+            raise ValueError(
+                f"source {self.source!r} must be one of "
+                f"{'manual', 'cold_start_seed'}"
+            )
+
+
+class ColdStartAlreadySeededError(RuntimeError):
+    """Raised when the seed is invoked twice for the same account.
+
+    Task 128 product lock §1: the cold-start seed is one-time only
+    per ``ibkr_account_id``. The repository catches the unique-
+    constraint violation and translates it into this typed error so
+    the worker can return cleanly without leaking SQLAlchemy types.
+    """

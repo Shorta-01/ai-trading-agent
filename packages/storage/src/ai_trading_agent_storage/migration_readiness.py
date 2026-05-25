@@ -500,6 +500,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "/ mode_detected / outcome per §5. Safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0047_cold_start_and_watchlist_confirmation",
+        previous_revision_id="0046_scheduled_run_audit_and_scheduler_state",
+        filename="0047_cold_start_and_watchlist_confirmation.py",
+        label_nl="Task 128 cold-start seed + Volglijst confirmation",
+        description_nl=(
+            "Verbreedt mode_detected met awaiting_watchlist_confirmation; "
+            "verbreedt watchlist_items.source met cold_start_seed; voegt "
+            "is_starter_seed / seed_version / ibkr_account_id toe aan "
+            "watchlist_items; maakt cold_start_seed_audit + "
+            "watchlist_confirmation_state + watchlist_confirmation_audit. "
+            "Safety booleans blijven False."
+        ),
+    ),
 )
 
 

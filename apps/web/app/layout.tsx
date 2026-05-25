@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AccountModeBadge } from "@/components/AccountModeBadge";
+import { ColdStartBanner } from "@/components/ColdStartBanner";
 import { SystemEventsIndicator } from "@/components/SystemEventsIndicator";
 
 import "./globals.css";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <SystemEventsIndicator />
               </div>
             </header>
+            <ColdStartBanner />
             {children}
           </div>
         </div>

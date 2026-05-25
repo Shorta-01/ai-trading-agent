@@ -28,8 +28,12 @@ from ai_trading_agent_storage.metadata import (
     ibkr_open_order_snapshots,
     ibkr_position_snapshots,
     ibkr_sync_runs,
+    cold_start_seed_audit,
     scheduled_run_audit,
     scheduler_state,
+    watchlist_confirmation_audit,
+    watchlist_confirmation_state,
+    watchlist_items,
     fx_rate_snapshots,
     asset_action_draft_events,
     asset_action_draft_submissions,
@@ -125,8 +129,13 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrOpenOrderSnapshotRecord,
     IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
+    ColdStartAlreadySeededError,
+    ColdStartSeedAuditEntry,
     ScheduledRunAuditEntry,
     SchedulerStateEntry,
+    WatchlistConfirmationAuditEntry,
+    WatchlistConfirmationStateRecord,
+    WatchlistItemSeedRecord,
     FxRateSnapshotRecord,
     MarketDataBarRecord,
     RepositoryHealthStatus,
@@ -3487,3 +3496,308 @@ class SqlAlchemySchedulerStateRepository(_Base):
             scheduler_state.name,
             f"{len(records)} scheduler-state rijen opgehaald.",
         )
+
+
+class SqlAlchemyColdStartSeedAuditRepository(_Base):
+    """Task 128: per-account cold-start seed audit (one-time enforced).
+
+    Inserts raise :class:`ColdStartAlreadySeededError` if a row for the
+    same ``ibkr_account_id`` already exists (the unique primary-key
+    constraint at the DB level + an explicit pre-check inside the
+    repository give the seed function a clean idempotency signal).
+    """
+
+    def append(
+        self, record: ColdStartSeedAuditEntry
+    ) -> StorageWriteResult:
+        existing = self._connection.execute(
+            select(cold_start_seed_audit).where(
+                cold_start_seed_audit.c.ibkr_account_id
+                == record.ibkr_account_id
+            )
+        ).first()
+        if existing is not None:
+            raise ColdStartAlreadySeededError(
+                f"Account {record.ibkr_account_id} is already seeded."
+            )
+        payload = asdict(record)
+        self._insert(cold_start_seed_audit, payload)
+        return StorageWriteResult(
+            True,
+            record.ibkr_account_id,
+            cold_start_seed_audit.name,
+            True,
+            "Cold-start seed-audit rij opgeslagen.",
+        )
+
+    def find_by_account_id(
+        self, ibkr_account_id: str
+    ) -> ColdStartSeedAuditEntry | None:
+        row = self._connection.execute(
+            select(cold_start_seed_audit).where(
+                cold_start_seed_audit.c.ibkr_account_id == ibkr_account_id
+            )
+        ).mappings().first()
+        if row is None:
+            return None
+        return ColdStartSeedAuditEntry(
+            seeded_at=row["seeded_at"],
+            ibkr_account_id=row["ibkr_account_id"],
+            seeded_count=row["seeded_count"],
+            failed_conids_json=row["failed_conids_json"] or "[]",
+            seed_version=row["seed_version"],
+        )
+
+    def list_recent(
+        self, *, limit: int = 20
+    ) -> StorageListResult[ColdStartSeedAuditEntry]:
+        rows = (
+            self._connection.execute(
+                select(cold_start_seed_audit)
+                .order_by(cold_start_seed_audit.c.seeded_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            ColdStartSeedAuditEntry(
+                seeded_at=row["seeded_at"],
+                ibkr_account_id=row["ibkr_account_id"],
+                seeded_count=row["seeded_count"],
+                failed_conids_json=row["failed_conids_json"] or "[]",
+                seed_version=row["seed_version"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            cold_start_seed_audit.name,
+            f"{len(records)} cold-start seed-audit rijen opgehaald.",
+        )
+
+
+class SqlAlchemyWatchlistConfirmationStateRepository(_Base):
+    """Task 128: per-account ``unconfirmed`` / ``confirmed`` state."""
+
+    def upsert(
+        self, record: WatchlistConfirmationStateRecord
+    ) -> StorageWriteResult:
+        existing = self._connection.execute(
+            select(watchlist_confirmation_state).where(
+                watchlist_confirmation_state.c.ibkr_account_id
+                == record.ibkr_account_id
+            )
+        ).first()
+        payload = asdict(record)
+        if existing is None:
+            self._insert(watchlist_confirmation_state, payload)
+            return StorageWriteResult(
+                True,
+                record.ibkr_account_id,
+                watchlist_confirmation_state.name,
+                True,
+                "Watchlist confirmation-state ingevoegd.",
+            )
+        self._connection.execute(
+            watchlist_confirmation_state.update()
+            .where(
+                watchlist_confirmation_state.c.ibkr_account_id
+                == record.ibkr_account_id
+            )
+            .values(**payload)
+        )
+        return StorageWriteResult(
+            True,
+            record.ibkr_account_id,
+            watchlist_confirmation_state.name,
+            True,
+            "Watchlist confirmation-state bijgewerkt.",
+        )
+
+    def get_by_account_id(
+        self, ibkr_account_id: str
+    ) -> WatchlistConfirmationStateRecord | None:
+        row = self._connection.execute(
+            select(watchlist_confirmation_state).where(
+                watchlist_confirmation_state.c.ibkr_account_id
+                == ibkr_account_id
+            )
+        ).mappings().first()
+        if row is None:
+            return None
+        return WatchlistConfirmationStateRecord(
+            ibkr_account_id=row["ibkr_account_id"],
+            state=row["state"],
+            last_updated_at=row["last_updated_at"],
+        )
+
+    def list_all(
+        self,
+    ) -> StorageListResult[WatchlistConfirmationStateRecord]:
+        rows = (
+            self._connection.execute(
+                select(watchlist_confirmation_state).order_by(
+                    watchlist_confirmation_state.c.last_updated_at.desc()
+                )
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            WatchlistConfirmationStateRecord(
+                ibkr_account_id=row["ibkr_account_id"],
+                state=row["state"],
+                last_updated_at=row["last_updated_at"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            watchlist_confirmation_state.name,
+            f"{len(records)} watchlist confirmation-state rijen opgehaald.",
+        )
+
+
+class SqlAlchemyWatchlistConfirmationAuditRepository(_Base):
+    """Task 128: append-only state-transition audit trail."""
+
+    def append(
+        self, record: WatchlistConfirmationAuditEntry
+    ) -> StorageWriteResult:
+        from uuid import uuid4
+
+        payload = asdict(record)
+        audit_id = f"wca_{uuid4().hex}"
+        payload["audit_id"] = audit_id
+        self._insert(watchlist_confirmation_audit, payload)
+        return StorageWriteResult(
+            True,
+            audit_id,
+            watchlist_confirmation_audit.name,
+            True,
+            "Watchlist confirmation-audit rij opgeslagen.",
+        )
+
+    def list_by_account_id(
+        self,
+        *,
+        ibkr_account_id: str,
+        limit: int = 50,
+    ) -> StorageListResult[WatchlistConfirmationAuditEntry]:
+        rows = (
+            self._connection.execute(
+                select(watchlist_confirmation_audit)
+                .where(
+                    watchlist_confirmation_audit.c.ibkr_account_id
+                    == ibkr_account_id
+                )
+                .order_by(watchlist_confirmation_audit.c.event_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            WatchlistConfirmationAuditEntry(
+                event_at=row["event_at"],
+                ibkr_account_id=row["ibkr_account_id"],
+                from_state=row["from_state"],
+                to_state=row["to_state"],
+                actor=row["actor"],
+                row_count_at_event=row["row_count_at_event"],
+                details_json=row["details_json"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            watchlist_confirmation_audit.name,
+            f"{len(records)} watchlist confirmation-audit rijen opgehaald.",
+        )
+
+
+class SqlAlchemyWatchlistItemSeedRepository(_Base):
+    """Task 128: thin write/read repo for the cold-start seed path.
+
+    Touches a subset of the ``watchlist_items`` columns — the legacy
+    STORE-backed API routes in ``apps/api/.../watchlist.py`` are not
+    aware of these rows and don't need to be (the cold-start UI
+    reads them via a dedicated endpoint).
+    """
+
+    def append(
+        self, record: WatchlistItemSeedRecord
+    ) -> StorageWriteResult:
+        payload = asdict(record)
+        self._insert(watchlist_items, payload)
+        return StorageWriteResult(
+            True,
+            record.watchlist_item_id,
+            watchlist_items.name,
+            True,
+            "Watchlist-item (cold-start seed) opgeslagen.",
+        )
+
+    def count_active_for_account(self, ibkr_account_id: str) -> int:
+        from sqlalchemy import func as sqla_func
+
+        result = self._connection.execute(
+            select(sqla_func.count())
+            .select_from(watchlist_items)
+            .where(watchlist_items.c.ibkr_account_id == ibkr_account_id)
+            .where(watchlist_items.c.status == "active")
+        ).scalar()
+        return int(result or 0)
+
+    def list_starter_seed_for_account(
+        self, ibkr_account_id: str
+    ) -> StorageListResult[WatchlistItemSeedRecord]:
+        rows = (
+            self._connection.execute(
+                select(watchlist_items)
+                .where(watchlist_items.c.ibkr_account_id == ibkr_account_id)
+                .where(watchlist_items.c.is_starter_seed.is_(True))
+                .where(watchlist_items.c.status == "active")
+                .order_by(watchlist_items.c.symbol.asc())
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            WatchlistItemSeedRecord(
+                watchlist_item_id=row["watchlist_item_id"],
+                ibkr_account_id=row["ibkr_account_id"],
+                asset_id=row["asset_id"],
+                symbol=row["symbol"],
+                name=row["name"],
+                exchange=row["exchange"],
+                currency=row["currency"],
+                security_type=row["security_type"],
+                status=row["status"],
+                source=row["source"],
+                is_starter_seed=bool(row["is_starter_seed"]),
+                seed_version=row["seed_version"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            watchlist_items.name,
+            f"{len(records)} cold-start watchlist-items opgehaald.",
+        )
+
+    def archive_by_id(
+        self, *, watchlist_item_id: str, ibkr_account_id: str
+    ) -> bool:
+        from datetime import UTC, datetime
+
+        result = self._connection.execute(
+            watchlist_items.update()
+            .where(watchlist_items.c.watchlist_item_id == watchlist_item_id)
+            .where(watchlist_items.c.ibkr_account_id == ibkr_account_id)
+            .values(status="archived", updated_at=datetime.now(UTC))
+        )
+        return bool(result.rowcount)
