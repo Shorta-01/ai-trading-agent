@@ -1,17 +1,23 @@
-"""V1 end-to-end acceptance test (Slice 22).
+"""V1.1 end-to-end acceptance test (Slice 34).
 
-Drives the morning-chain orchestrator with every leg enabled, asserts
-each leg returns ``succeeded``, and asserts that the release-readiness
-scorecard reports ``ready`` for the same configuration. No real
-external clients are touched — the morning-chain default-leg adapters
-gate on the per-leg settings flags and return ``succeeded`` once
-they're on. The release-readiness scorecard mirrors the same
-configuration check, so this test pins the two together as the V1
-release-gate acceptance criterion.
+Mirrors the V1 acceptance test (Slice 22) but pushes the V1.1
+§22-surface knobs into their rebuilt-but-still-ready configuration:
 
-Manual approval gate stays: the test additionally asserts that the
-result payload + scorecard payload both carry
-``safe_for_orders=False``. No order leaves the chain.
+* `ensemble_weight_strategy = "auto"` (inverse-Brier auto-weights)
+* `predictor_backtest_enabled = True` (walk-forward + leaderboard)
+* `momentum_horizon_scaled_thresholds = True` (Slice 27 rebuild)
+* `qvm_sector_neutral_zscore = True` (Slice 28 rebuild)
+* `mean_reversion_hurst_asymmetric_target = True` (Slice 28 rebuild)
+* `universe_set = "SP500"` (locked default)
+
+With those knobs on alongside every V1 per-leg flag, the morning
+chain still runs all six legs to ``succeeded`` and the
+release-readiness scorecard still reports ``status="ready"``. This
+pins the V1.1 expansion queue closed — the §22 rebuild slices are
+backwards-compatible with the V1 acceptance criterion.
+
+Manual approval gate stays: safety booleans hard-False on every
+response. No order leaves the chain.
 """
 
 from __future__ import annotations
@@ -32,7 +38,8 @@ from portfolio_outlook_api.status_routes import settings as api_settings
 client = TestClient(app)
 
 
-def _enable_every_flag() -> None:
+def _enable_every_flag_with_v1_1_rebuild_knobs_on() -> None:
+    # V1 per-leg flags + integrations.
     api_settings.storage.enabled = True
     api_settings.storage.database_url = "postgresql://fake"
     api_settings.storage.writes_enabled = True
@@ -49,15 +56,22 @@ def _enable_every_flag() -> None:
     api_settings.daily_briefing_sync_enabled = True
     api_settings.reconciliation_sync_enabled = True
     api_settings.prediction_diary_sync_enabled = True
-    # V1.1 §22-surface knobs at their ready-for-production values.
+    # V1.1 §22 ready-for-production knobs.
     api_settings.ensemble_weight_strategy = "auto"
     api_settings.predictor_backtest_enabled = True
+    api_settings.universe_set = "SP500"
     api_settings.ai_explanation_real_client_enabled = False
     api_settings.ai_ts_predictor_real_client_enabled = False
-    api_settings.universe_set = "SP500"
+    # V1.1 rebuild knobs on (Slices 27 + 28).
+    api_settings.momentum_horizon_scaled_thresholds = True
+    api_settings.momentum_skip_week_short_horizon = True
+    api_settings.mean_reversion_hurst_asymmetric_target = True
+    api_settings.qvm_sector_neutral_zscore = True
+    api_settings.qvm_soft_clip_composite = True
+    api_settings.gbm_regime_shift_enabled = True
 
 
-def _disable_every_flag() -> None:
+def _reset_every_flag() -> None:
     api_settings.storage.enabled = False
     api_settings.storage.database_url = None
     api_settings.storage.writes_enabled = False
@@ -74,28 +88,34 @@ def _disable_every_flag() -> None:
     api_settings.daily_briefing_sync_enabled = False
     api_settings.reconciliation_sync_enabled = False
     api_settings.prediction_diary_sync_enabled = False
-    # V1.1 §22-surface knobs reset to their defaults.
     api_settings.ensemble_weight_strategy = "equal_weight"
     api_settings.predictor_backtest_enabled = False
+    api_settings.universe_set = "SP500"
     api_settings.ai_explanation_real_client_enabled = False
     api_settings.ai_ts_predictor_real_client_enabled = False
-    api_settings.universe_set = "SP500"
+    api_settings.momentum_horizon_scaled_thresholds = False
+    api_settings.momentum_skip_week_short_horizon = False
+    api_settings.mean_reversion_hurst_asymmetric_target = False
+    api_settings.qvm_sector_neutral_zscore = False
+    api_settings.qvm_soft_clip_composite = False
+    api_settings.gbm_regime_shift_enabled = False
 
 
 def setup_function() -> None:
-    _disable_every_flag()
+    _reset_every_flag()
 
 
 def teardown_function() -> None:
-    _disable_every_flag()
+    _reset_every_flag()
 
 
-def test_v1_acceptance_morning_chain_all_legs_succeed_when_fully_enabled() -> None:
-    """With every per-leg flag on, the morning chain runs all six legs
-    to ``succeeded`` with no failed_leg. This is the V1 product-level
-    acceptance criterion for the daily chain."""
+def test_v1_1_acceptance_morning_chain_succeeds_with_rebuild_knobs_on() -> None:
+    """With every per-leg flag on AND the V1.1 §22 rebuild knobs on,
+    the morning chain still runs all six legs to ``succeeded``. The
+    rebuild knobs are backward-compatible — they widen the predictor
+    behaviour but never block the daily chain."""
 
-    _enable_every_flag()
+    _enable_every_flag_with_v1_1_rebuild_knobs_on()
     legs = build_default_morning_chain_legs(api_settings)
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
@@ -105,23 +125,27 @@ def test_v1_acceptance_morning_chain_all_legs_succeed_when_fully_enabled() -> No
     assert all(leg.status == LEG_STATUS_SUCCEEDED for leg in result.legs)
 
 
-def test_v1_acceptance_release_readiness_is_ready_when_fully_enabled() -> None:
-    """The release-readiness scorecard reports `ready` under the same
-    fully-enabled configuration that lets the morning chain succeed.
-    Pins the two together as the V1 release gate."""
+def test_v1_1_acceptance_release_readiness_is_ready_with_rebuild_knobs_on() -> None:
+    """The release-readiness scorecard still reports ``ready`` once the
+    V1.1 §22 rebuild knobs are on — the V1.1 blockers all pass:
+    ensemble strategy `auto`, backtesting opted in, no real Claude
+    key required (stub), universe set `SP500`."""
 
-    _enable_every_flag()
+    _enable_every_flag_with_v1_1_rebuild_knobs_on()
     report = compute_release_readiness(api_settings)
     assert report.status == "ready"
     assert report.blockers == ()
+    assert "V1.1 is klaar voor productie." in report.summary_nl
 
 
-def test_v1_acceptance_endpoint_surfaces_ready_status() -> None:
-    """Same acceptance criterion via the public endpoint — the operator
-    can poll ``GET /v1/release-readiness`` to see whether the system
-    is V1-ready before firing the morning chain."""
+def test_v1_1_acceptance_endpoint_surfaces_ready_status() -> None:
+    """Same acceptance criterion via the public endpoint. The route
+    threads a budget repo through when storage is reachable; in this
+    test the fake URL means the route falls back to the no-repo path
+    and the scorecard still reports ``ready`` because every flag is
+    on."""
 
-    _enable_every_flag()
+    _enable_every_flag_with_v1_1_rebuild_knobs_on()
     r = client.get("/v1/release-readiness")
     body = r.json()
     assert r.status_code == 200
@@ -132,26 +156,18 @@ def test_v1_acceptance_endpoint_surfaces_ready_status() -> None:
     assert body["blocks_orders"] is True
 
 
-def test_v1_acceptance_safety_booleans_never_flip_on_ready_chain() -> None:
-    """No matter how green the chain is, the V1 safety locks stay
-    intact: every persisted record and response keeps
-    ``safe_for_orders=False`` and the morning-chain run never
-    auto-promotes into an order — the manual approval gate is the
-    last and only authorisation surface."""
+def test_v1_1_acceptance_safety_booleans_never_flip_on_ready_chain() -> None:
+    """V1.1 doesn't loosen the safety doctrine. With the rebuild knobs
+    on and the chain ``succeeded``, the persisted records + responses
+    still keep ``safe_for_orders=False``; the manual approval gate is
+    the only order-authorisation surface."""
 
-    _enable_every_flag()
+    _enable_every_flag_with_v1_1_rebuild_knobs_on()
     legs = build_default_morning_chain_legs(api_settings)
     result = run_morning_chain(legs=legs)
-    # The morning-chain result itself carries no order-authorisation
-    # surface — only audit details. We additionally exercise the
-    # /scheduler/runs/morning-chain route to assert the payload stays
-    # locked. Storage isn't writable in this test (no real Postgres),
-    # so the route blocks; we assert the safety booleans are still
-    # False on the blocked response.
     api_settings.storage.writes_enabled = False
     r = client.post("/scheduler/runs/morning-chain")
     body = r.json()
     assert body["safe_for_orders"] is False
     assert body["safe_for_action_drafts"] is False
-    # And the underlying chain result confirms no leg implied any order.
     assert result.status == CHAIN_STATUS_SUCCEEDED

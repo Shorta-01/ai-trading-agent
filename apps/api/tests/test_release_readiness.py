@@ -1,13 +1,19 @@
-"""Tests for the V1 release-readiness scorecard (Slice 22)."""
+"""Tests for the V1 + V1.1 release-readiness scorecard (Slices 22, 34)."""
 
 from __future__ import annotations
 
+from decimal import Decimal
 from types import SimpleNamespace
+
+from ai_trading_agent_storage import ClaudeAiBudgetUsageRecord
 
 from portfolio_outlook_api.release_readiness import (
     BLOCKER_ACTION_DRAFTS_SYNC_DISABLED,
+    BLOCKER_CLAUDE_AI_API_KEY_MISSING_WHEN_REAL_CLIENT_ENABLED,
+    BLOCKER_CLAUDE_AI_BUDGET_EXCEEDED,
     BLOCKER_DAILY_BRIEFING_SYNC_DISABLED,
     BLOCKER_DECISION_PACKAGES_SYNC_DISABLED,
+    BLOCKER_ENSEMBLE_WEIGHT_STRATEGY_INVALID,
     BLOCKER_EODHD_API_KEY_MISSING,
     BLOCKER_EODHD_NOT_CONFIGURED,
     BLOCKER_FORECAST_SYNC_DISABLED,
@@ -15,16 +21,35 @@ from portfolio_outlook_api.release_readiness import (
     BLOCKER_IBKR_SYNC_NOT_ENABLED,
     BLOCKER_MARKET_DATA_SYNC_DISABLED,
     BLOCKER_PREDICTION_DIARY_SYNC_DISABLED,
+    BLOCKER_PREDICTOR_BACKTEST_DISABLED,
     BLOCKER_RECONCILIATION_SYNC_DISABLED,
     BLOCKER_SCHEDULER_DISABLED,
     BLOCKER_STORAGE_NOT_CONFIGURED,
     BLOCKER_STORAGE_NOT_WRITABLE,
     BLOCKER_SUGGESTIONS_SYNC_DISABLED,
+    BLOCKER_UNIVERSE_SET_UNKNOWN,
     STATUS_BLOCKED,
     STATUS_READY,
     compute_release_readiness,
     serialize_release_readiness,
 )
+
+
+class _FakeBudgetRepo:
+    """Minimal stand-in for SqlAlchemyClaudeAiBudgetUsageRepository.
+
+    Only ``monthly_total_eur`` is exercised by the readiness path;
+    ``save_usage`` is declared to match the protocol but never called.
+    """
+
+    def __init__(self, total_eur: Decimal) -> None:
+        self._total = total_eur
+
+    def monthly_total_eur(self, budget_month: str) -> Decimal:
+        return self._total
+
+    def save_usage(self, record: ClaudeAiBudgetUsageRecord) -> object:
+        raise AssertionError("readiness check must never call save_usage")
 
 
 def _settings(
@@ -43,6 +68,13 @@ def _settings(
     daily_briefing_sync_enabled: bool = False,
     reconciliation_sync_enabled: bool = False,
     prediction_diary_sync_enabled: bool = False,
+    ensemble_weight_strategy: str = "equal_weight",
+    predictor_backtest_enabled: bool = False,
+    ai_explanation_real_client_enabled: bool = False,
+    ai_ts_predictor_real_client_enabled: bool = False,
+    claude_ai_api_key: str | None = None,
+    universe_set: str = "SP500",
+    claude_ai_budget_monthly_eur: Decimal = Decimal("50"),
 ) -> SimpleNamespace:
     if storage is None:
         storage = SimpleNamespace(
@@ -65,6 +97,13 @@ def _settings(
         daily_briefing_sync_enabled=daily_briefing_sync_enabled,
         reconciliation_sync_enabled=reconciliation_sync_enabled,
         prediction_diary_sync_enabled=prediction_diary_sync_enabled,
+        ensemble_weight_strategy=ensemble_weight_strategy,
+        predictor_backtest_enabled=predictor_backtest_enabled,
+        ai_explanation_real_client_enabled=ai_explanation_real_client_enabled,
+        ai_ts_predictor_real_client_enabled=ai_ts_predictor_real_client_enabled,
+        claude_ai_api_key=claude_ai_api_key,
+        universe_set=universe_set,
+        claude_ai_budget_monthly_eur=claude_ai_budget_monthly_eur,
     )
 
 
@@ -88,6 +127,12 @@ def _all_ready_settings() -> SimpleNamespace:
         daily_briefing_sync_enabled=True,
         reconciliation_sync_enabled=True,
         prediction_diary_sync_enabled=True,
+        ensemble_weight_strategy="auto",
+        predictor_backtest_enabled=True,
+        ai_explanation_real_client_enabled=False,
+        ai_ts_predictor_real_client_enabled=False,
+        claude_ai_api_key=None,
+        universe_set="SP500",
     )
 
 
@@ -97,7 +142,10 @@ def _all_ready_settings() -> SimpleNamespace:
 def test_default_settings_yields_every_blocker() -> None:
     report = compute_release_readiness(_settings())
     assert report.status == STATUS_BLOCKED
-    # Every check must fail when settings are at their default off state.
+    # Every V1 check must fail when settings are at their default off
+    # state. The V1.1 §22-surface checks pass with their locked
+    # defaults (`equal_weight`, `SP500`, real-client off) except for
+    # backtesting, which must be opted into.
     assert set(report.blockers) == {
         BLOCKER_STORAGE_NOT_CONFIGURED,
         BLOCKER_STORAGE_NOT_WRITABLE,
@@ -114,8 +162,8 @@ def test_default_settings_yields_every_blocker() -> None:
         BLOCKER_DAILY_BRIEFING_SYNC_DISABLED,
         BLOCKER_RECONCILIATION_SYNC_DISABLED,
         BLOCKER_PREDICTION_DIARY_SYNC_DISABLED,
+        BLOCKER_PREDICTOR_BACKTEST_DISABLED,
     }
-    assert all(not c.passed for c in report.checks)
 
 
 def test_all_flags_on_yields_ready_with_no_blockers() -> None:
@@ -216,3 +264,117 @@ def test_serialize_blocked_report_lists_every_blocker() -> None:
     assert len(payload["blockers"]) >= 10
     # Safety booleans never flip even when the scorecard is fully blocked.
     assert payload["safe_for_orders"] is False
+
+
+# ---- V1.1 §22 surface checks (Slice 34) -------------------------------
+
+
+def test_v1_1_invalid_ensemble_weight_strategy_blocks() -> None:
+    settings = _all_ready_settings()
+    settings.ensemble_weight_strategy = "softmax"
+    report = compute_release_readiness(settings)
+    assert report.status == STATUS_BLOCKED
+    assert BLOCKER_ENSEMBLE_WEIGHT_STRATEGY_INVALID in report.blockers
+
+
+def test_v1_1_ensemble_weight_strategy_equal_weight_passes() -> None:
+    settings = _all_ready_settings()
+    settings.ensemble_weight_strategy = "equal_weight"
+    report = compute_release_readiness(settings)
+    assert BLOCKER_ENSEMBLE_WEIGHT_STRATEGY_INVALID not in report.blockers
+
+
+def test_v1_1_predictor_backtest_disabled_blocks_ready() -> None:
+    settings = _all_ready_settings()
+    settings.predictor_backtest_enabled = False
+    report = compute_release_readiness(settings)
+    assert report.status == STATUS_BLOCKED
+    assert BLOCKER_PREDICTOR_BACKTEST_DISABLED in report.blockers
+
+
+def test_v1_1_claude_key_missing_blocks_when_explanation_real_client_on() -> None:
+    settings = _all_ready_settings()
+    settings.ai_explanation_real_client_enabled = True
+    settings.claude_ai_api_key = None
+    report = compute_release_readiness(settings)
+    assert report.status == STATUS_BLOCKED
+    assert (
+        BLOCKER_CLAUDE_AI_API_KEY_MISSING_WHEN_REAL_CLIENT_ENABLED
+        in report.blockers
+    )
+
+
+def test_v1_1_claude_key_missing_blocks_when_ts_real_client_on() -> None:
+    settings = _all_ready_settings()
+    settings.ai_ts_predictor_real_client_enabled = True
+    settings.claude_ai_api_key = None
+    report = compute_release_readiness(settings)
+    assert report.status == STATUS_BLOCKED
+    assert (
+        BLOCKER_CLAUDE_AI_API_KEY_MISSING_WHEN_REAL_CLIENT_ENABLED
+        in report.blockers
+    )
+
+
+def test_v1_1_claude_key_check_passes_when_real_client_off() -> None:
+    settings = _all_ready_settings()
+    settings.ai_explanation_real_client_enabled = False
+    settings.ai_ts_predictor_real_client_enabled = False
+    settings.claude_ai_api_key = None
+    report = compute_release_readiness(settings)
+    assert (
+        BLOCKER_CLAUDE_AI_API_KEY_MISSING_WHEN_REAL_CLIENT_ENABLED
+        not in report.blockers
+    )
+
+
+def test_v1_1_unknown_universe_set_blocks() -> None:
+    settings = _all_ready_settings()
+    settings.universe_set = "RUSSELL3000"
+    report = compute_release_readiness(settings)
+    assert report.status == STATUS_BLOCKED
+    assert BLOCKER_UNIVERSE_SET_UNKNOWN in report.blockers
+
+
+def test_v1_1_locked_universe_sets_all_pass() -> None:
+    for locked in ("SP500", "EU600", "ALL_5K"):
+        settings = _all_ready_settings()
+        settings.universe_set = locked
+        report = compute_release_readiness(settings)
+        assert BLOCKER_UNIVERSE_SET_UNKNOWN not in report.blockers
+
+
+def test_v1_1_budget_gate_skipped_when_no_repo_threaded() -> None:
+    # `budget_repo=None` is the V1 backward-compat path. The gate must
+    # be absent from the checks entirely (no blocker, no passed check).
+    settings = _all_ready_settings()
+    report = compute_release_readiness(settings, budget_repo=None)
+    codes = [c.code for c in report.checks]
+    assert BLOCKER_CLAUDE_AI_BUDGET_EXCEEDED not in codes
+
+
+def test_v1_1_budget_gate_passes_when_total_under_cap() -> None:
+    settings = _all_ready_settings()
+    settings.claude_ai_budget_monthly_eur = Decimal("50")
+    repo = _FakeBudgetRepo(Decimal("3.25"))
+    report = compute_release_readiness(settings, budget_repo=repo)
+    assert report.status == STATUS_READY
+    assert BLOCKER_CLAUDE_AI_BUDGET_EXCEEDED not in report.blockers
+
+
+def test_v1_1_budget_gate_blocks_when_total_at_or_above_cap() -> None:
+    settings = _all_ready_settings()
+    settings.claude_ai_budget_monthly_eur = Decimal("50")
+    repo = _FakeBudgetRepo(Decimal("50.01"))
+    report = compute_release_readiness(settings, budget_repo=repo)
+    assert report.status == STATUS_BLOCKED
+    assert BLOCKER_CLAUDE_AI_BUDGET_EXCEEDED in report.blockers
+
+
+def test_v1_1_full_ready_scorecard_has_no_blockers_with_budget_repo() -> None:
+    settings = _all_ready_settings()
+    repo = _FakeBudgetRepo(Decimal("0.50"))
+    report = compute_release_readiness(settings, budget_repo=repo)
+    assert report.status == STATUS_READY
+    assert report.blockers == ()
+    assert "V1.1 is klaar voor productie." in report.summary_nl

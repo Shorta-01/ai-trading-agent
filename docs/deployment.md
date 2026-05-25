@@ -115,3 +115,83 @@ Slice 22 sluit de V1 expansion queue af. Post-V1 widening-ideeën
 Chronos / Lag-Llama clients, conditional orders, GTC/OPG TIF, multi-
 account portfolios, een mobiele app) blijven gedocumenteerd in
 `version-1-backlog.md` maar zijn expliciet **buiten V1-scope**.
+
+## V1.1 release readiness (Task 189 / Slice 34)
+
+Met V1.1 voegt het `GET /v1/release-readiness` endpoint vijf nieuwe
+blocker-codes toe aan dezelfde Dutch scorecard, gericht op het §22
+oppervlak (rebuild-knoppen, Anthropic Claude-budget, universe-set).
+De morning chain, het V1.1 acceptatietest en de readiness-check delen
+dezelfde set vlaggen — een groene scorecard betekent dat zowel de V1
+basis als de V1.1 §22 herbouw klaar zit voor productie.
+
+### Nieuwe blocker-codes
+
+- `ensemble_weight_strategy_invalid` — `ENSEMBLE_WEIGHT_STRATEGY`
+  moet `equal_weight` (V1-gedrag) of `auto` (inverse-Brier weging)
+  zijn.
+- `predictor_backtest_disabled` — zet `PREDICTOR_BACKTEST_ENABLED=true`
+  zodat de morning chain backtest-rijen kan persisteren voor de
+  leaderboard + auto-weights.
+- `claude_ai_api_key_missing_when_real_client_enabled` — de real
+  Anthropic-client (uitleg of TS-predictor) is aan maar
+  `CLAUDE_AI_API_KEY` ontbreekt. Stel de sleutel in of zet de
+  real-client toggle uit (de stub blijft werken).
+- `claude_ai_budget_exceeded` — live check tegen het
+  `claude_ai_budget_usage` audit-tabel. Geactiveerd zodra opslag
+  bereikbaar is; de cap is `CLAUDE_AI_BUDGET_MONTHLY_EUR` (default
+  €50). Wanneer de cap bereikt is vallen beide Anthropic-providers
+  terug op de stub.
+- `universe_set_unknown` — `UNIVERSE_SET` moet in de locked set
+  `{SP500, EU600, ALL_5K}` zitten.
+
+### Extra env-variabelen voor V1.1
+
+V1.1 §22-rebuild knoppen (default-waarden zijn V1-gedrag):
+
+- `ENSEMBLE_WEIGHT_STRATEGY=auto` (default `equal_weight`).
+- `PREDICTOR_BACKTEST_ENABLED=true` (default `false`).
+- `UNIVERSE_SET=SP500|EU600|ALL_5K` (default `SP500`).
+- `UNIVERSE_SCAN_CACHE_TTL_HOURS=24` (Slice 31, per-set EODHD cache).
+
+V1.1 §22.2 Anthropic Claude (vereist alleen wanneer de real-client
+toggles aan staan):
+
+- `CLAUDE_AI_BUDGET_MONTHLY_EUR=50` (default €50; gedeeld tussen
+  uitleg + TS predictor).
+- `CLAUDE_AI_API_KEY=<sleutel>` (env-only; geen committed default).
+- `CLAUDE_AI_EXPLANATION_MODEL=claude-haiku-4-5-20251001` (default).
+- `AI_EXPLANATION_REAL_CLIENT_ENABLED=true|false`.
+- `AI_TS_PREDICTOR_REAL_CLIENT_ENABLED=true|false`.
+- `AI_TS_PREDICTOR_DAILY_ONLY=true` (default — real TS-call alleen
+  vanuit de scheduler).
+
+V1.1 §22.3 TIF + conditional orders (Slice 32) — gedrag is altijd
+actief; geen extra env-vars. De order_type/TIF sets zitten in de code
+gelockt: `LOCKED_ORDER_TYPES ⊇ {CONDITIONAL}`, `LOCKED_TIF_SET =
+{DAY, GTC, OPG, IOC}`.
+
+### V1.1 acceptatietest
+
+`apps/api/tests/test_v1_1_acceptance.py` drijft de morning chain met
+elke per-leg vlag aan + V1.1 rebuild-knoppen aan
+(`ensemble_weight_strategy=auto`, `predictor_backtest_enabled=true`,
+`momentum_horizon_scaled_thresholds=true`,
+`qvm_sector_neutral_zscore=true`,
+`mean_reversion_hurst_asymmetric_target=true`,
+`gbm_regime_shift_enabled=true`) en verifieert dat:
+
+1. De morning chain alle zes legs naar `succeeded` loopt.
+2. De readiness scorecard `status="ready"` met `blockers=[]`
+   rapporteert.
+3. De manual approval-gate intact blijft (`safe_for_orders=false`,
+   `safe_for_action_drafts=false` op elk response).
+
+### V1.1 scope-lock
+
+Slice 34 sluit de V1.1 expansion queue (Slices 23-34) af. Post-V1.1
+widening-ideeën (volledige ~5 000-ticker EODHD bulk-list, real
+TimesFM/Chronos/Lag-Llama clients, ibapi `Order.conditions`
+submission-extensie, Next.js UX-panels op de Slice 33 routes,
+multi-account portfolios, mobiele app) blijven gedocumenteerd in
+`version-1-1-backlog.md` maar zijn expliciet **buiten V1.1-scope**.
