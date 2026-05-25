@@ -441,3 +441,164 @@ def test_kopen_falls_back_when_cash_missing() -> None:
     )
     # Cash missing → Kelly skipped → legacy default-buy-value (500/100 = 5).
     assert sizing.quantity == Decimal("5")
+
+
+# ---- Per-order-type dry-run (Slice 20 / §21.3 vocabulary) -----------------
+
+
+def _ready_sizing(**overrides: object):  # type: ignore[no-untyped-def]
+    from portfolio_outlook_portfolio.action_draft_safety import DraftSizing
+
+    fields: dict[str, object] = dict(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="LMT",
+    )
+    fields.update(overrides)
+    return DraftSizing(**fields)  # type: ignore[arg-type]
+
+
+def test_dry_run_unsupported_order_type_is_reported() -> None:
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = _ready_sizing(order_type="MOC")
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "unsupported_order_type" in result.failures
+
+
+def test_dry_run_mkt_buy_passes_without_extras() -> None:
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    # MKT has no limit_price requirement; we set it to 0 to demonstrate.
+    sizing = _ready_sizing(order_type="MKT", limit_price=Decimal("0"))
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    # The cash-vs-order check uses limit_price=0 so order_value=0 → no cash
+    # failure. The dry-run should pass for the MKT path.
+    assert "invalid_limit_price" not in result.failures
+    assert result.status == "passed"
+
+
+def test_dry_run_stp_requires_stop_price() -> None:
+    context = _context(action_label="Verminderen", held_quantity="50", market_price="100")
+    sizing = _ready_sizing(
+        action_side="SELL", order_type="STP", stop_price=None
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "stp_missing_stop_price" in result.failures
+
+
+def test_dry_run_stp_lmt_requires_stop_and_limit() -> None:
+    context = _context(action_label="Verminderen", held_quantity="50", market_price="100")
+    sizing = _ready_sizing(
+        action_side="SELL",
+        order_type="STP_LMT",
+        stop_price=None,  # missing
+        limit_price=Decimal("100"),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "stp_lmt_missing_stop_or_limit" in result.failures
+
+
+def test_dry_run_trail_requires_one_of_amount_or_percent() -> None:
+    context = _context(action_label="Verminderen", held_quantity="50", market_price="100")
+    sizing = _ready_sizing(
+        action_side="SELL",
+        order_type="TRAIL",
+        trail_amount=None,
+        trail_percent=None,
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "trail_missing_trail_value" in result.failures
+
+
+def test_dry_run_trail_rejects_both_amount_and_percent() -> None:
+    context = _context(action_label="Verminderen", held_quantity="50", market_price="100")
+    sizing = _ready_sizing(
+        action_side="SELL",
+        order_type="TRAIL",
+        trail_amount=Decimal("1"),
+        trail_percent=Decimal("1"),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "trail_amount_and_percent_set" in result.failures
+
+
+def test_dry_run_trail_lmt_requires_limit_price() -> None:
+    context = _context(action_label="Verminderen", held_quantity="50", market_price="100")
+    sizing = _ready_sizing(
+        action_side="SELL",
+        order_type="TRAIL_LMT",
+        trail_amount=Decimal("1"),
+        limit_price=Decimal("0"),  # missing
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "trail_lmt_missing_limit_price" in result.failures
+    assert "invalid_limit_price" in result.failures
+
+
+def test_dry_run_bracket_buy_needs_tp_above_and_sl_below_limit() -> None:
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = _ready_sizing(
+        action_side="BUY",
+        order_type="BRACKET",
+        limit_price=Decimal("100"),
+        bracket_take_profit_limit_price=Decimal("95"),  # below limit
+        bracket_stop_loss_price=Decimal("105"),  # above limit
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "bracket_take_profit_below_limit" in result.failures
+    assert "bracket_stop_loss_above_limit" in result.failures
+
+
+def test_dry_run_bracket_sell_requires_inverted_ordering() -> None:
+    context = _context(action_label="Verkopen", held_quantity="20", market_price="100")
+    sizing = _ready_sizing(
+        action_side="SELL",
+        order_type="BRACKET",
+        limit_price=Decimal("100"),
+        # SELL bracket needs tp < limit < sl; this one is wrong.
+        bracket_take_profit_limit_price=Decimal("110"),
+        bracket_stop_loss_price=Decimal("90"),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "bracket_inverted_for_sell" in result.failures
+
+
+def test_dry_run_bracket_missing_tp_and_sl() -> None:
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = _ready_sizing(
+        action_side="BUY",
+        order_type="BRACKET",
+        limit_price=Decimal("100"),
+        bracket_take_profit_limit_price=None,
+        bracket_stop_loss_price=None,
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "bracket_missing_take_profit" in result.failures
+    assert "bracket_missing_stop_loss" in result.failures
+
+
+def test_dry_run_bracket_buy_passes_when_ordering_is_correct() -> None:
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = _ready_sizing(
+        action_side="BUY",
+        order_type="BRACKET",
+        limit_price=Decimal("100"),
+        bracket_take_profit_limit_price=Decimal("110"),
+        bracket_stop_loss_price=Decimal("90"),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert result.status == "passed"
+    assert result.failures == ()

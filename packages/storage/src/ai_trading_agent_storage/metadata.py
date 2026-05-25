@@ -1475,6 +1475,11 @@ asset_action_drafts = Table(
     Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
     Column("estimated_belgian_tob", MONEY_NUMERIC, nullable=True),
     Column("belgian_tob_security_class", Text, nullable=True),
+    Column("stop_price", MONEY_NUMERIC, nullable=True),
+    Column("trail_amount", MONEY_NUMERIC, nullable=True),
+    Column("trail_percent", MONEY_NUMERIC, nullable=True),
+    Column("bracket_take_profit_limit_price", MONEY_NUMERIC, nullable=True),
+    Column("bracket_stop_loss_price", MONEY_NUMERIC, nullable=True),
 )
 
 
