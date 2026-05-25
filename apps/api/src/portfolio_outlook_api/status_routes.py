@@ -3357,6 +3357,7 @@ def run_predictor_backtest_route(
                 window_days=window_days,
                 horizon_trading_days=horizon,
                 step_days=step_days,
+                settings=settings,
             )
     except StorageConnectionError:
         return _build_blocked_backtest_response(

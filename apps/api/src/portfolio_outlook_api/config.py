@@ -182,6 +182,17 @@ class Settings(BaseSettings):
     # rolling Brier-score history and inverse-Brier-weights it (clipped
     # per-predictor to the locked band).
     ensemble_weight_strategy: str = "equal_weight"
+    # V1.1 Slice 27 GBM rebuild knobs. Defaults preserve V1 behaviour
+    # exactly; the operator opts into the rebuild via env var and the
+    # Slice 26 leaderboard surfaces whether the rebuild actually
+    # improves Brier-score on real bars.
+    gbm_drift_window_days: int | None = None
+    gbm_regime_shift_enabled: bool = False
+    gbm_regime_shift_threshold_pct: Decimal = Decimal("5.0")
+    gbm_garch_enabled: bool = False  # reserved; raises NotImplementedError if set True
+    # V1.1 Slice 27 Momentum rebuild knobs.
+    momentum_horizon_scaled_thresholds: bool = False
+    momentum_skip_week_short_horizon: bool = False
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings

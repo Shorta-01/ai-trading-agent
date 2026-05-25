@@ -1,47 +1,51 @@
-# Task 182
+# Task 183
 
-Slice 27 — V1.1 GBM + Momentum rebuild. The first of two
-predictor-quality rebuild slices. Slice 26 (feedback loop) is now
-live; this slice replaces the audit-flagged weaknesses in two of
-the four deterministic predictors.
+Slice 28 — V1.1 Mean-Rev + QVM rebuild. The second half of the
+predictor-quality rebuild work. The Slice 22 audit flagged
+specific issues:
+
+* **Mean-Rev**: target is the 20-day SMA regardless of regime;
+  trending assets will get a wrong "reversion that never
+  happens" prediction. The Hurst-confidence multiplier dampens
+  this only partially.
+* **QVM**: minimum universe size of 5 is too small for stable
+  cross-sectional z-scores (industry practice ≥ 30); the
+  composite is hard-clipped at ±2 rather than soft-mapped; no
+  sector-neutralization (a tech stock vs. a utility compared
+  on the same value distribution).
 
 Scope:
-- **GBM rebuild** (`baseline_forecast.py` + `gbm_predictor.py`):
-  - Cap the drift estimation window to the most recent 1 trading
-    year (252 bars) instead of using the entire history. The
-    rebuild keeps the full series for volatility estimation but
-    confines drift to recent regime.
-  - Add a regime-shift detector: if the rolling 60d drift differs
-    by more than 2σ from the long-window drift, down-weight the
-    long window's contribution (interpolated blend).
-  - Optional GARCH(1,1) volatility from `statsmodels` when the
-    series is long enough; falls back to the rolling-SD baseline
-    otherwise. Behind a new `gbm_garch_enabled` setting (default
-    False) so the morning chain stays stable until the rebuild
-    proves out via the Slice 25 backtest leaderboard.
-- **Momentum rebuild** (`momentum_predictor.py`):
-  - Horizon-scaled direction thresholds: `±X% × √(horizon/21)` so
-    a 5d horizon's "slight" bucket is much narrower than a 60d
-    horizon's.
-  - Skip-the-week variant: for short horizons (< 21 days) use the
-    11-1-week momentum (skip the last week instead of the last
-    month). Reduces the look-ahead bias that hurts short-horizon
-    accuracy.
-  - Volatility-adjusted composite score: divide the 12-1 momentum
-    by the long-window SD so the score is genuinely unitless.
-- New `gbm_regime_shift_threshold_pct` setting (default 5.0%
-  above which the regime-shift detector triggers).
-- Tests: regime-shift behaviour (no-shift vs shift series),
-  horizon-scaled thresholds (5d / 21d / 60d distinct
-  classifications), backwards-compat for the existing predictor
-  tests (which should still pass with the rebuild defaults).
-- The rebuilt predictors keep the same `PredictorProtocol`
-  shape; the Slice 25 backtester scores them automatically so
-  the leaderboard surfaces whether the rebuild actually improves
-  Brier-score.
+- **Mean-Rev rebuild** (`mean_reversion_predictor.py`):
+  - Hurst-asymmetric target: when ``H > 0.55`` the projected price
+    blends toward an extrapolated trend continuation (less
+    reversion); when ``H < 0.45`` it stays pulled toward the SMA
+    (full reversion). The blend is a linear interpolation
+    parameterised on ``H``.
+  - Behind a new `mean_reversion_hurst_asymmetric_target` constructor
+    knob defaulting to False so V1 behaviour is preserved.
+- **QVM rebuild** (`qvm_factor_predictor.py`):
+  - Raise the minimum-universe floor from 5 to 30 (still
+    configurable). Universe < 30 returns
+    ``insufficient_universe``.
+  - Sector-neutral z-scoring: subtract the sector mean from each
+    factor component before z-scoring against the
+    sector-de-meaned distribution. Falls back to global z-score
+    when sector data is missing.
+  - Soft-tanh mapping of the composite z-score onto [-1, +1]
+    instead of the hard ±2 clip; behind a new
+    `qvm_soft_clip_composite` knob.
+- New settings: `mean_reversion_hurst_asymmetric_target` (default
+  False), `qvm_min_universe_size` (default 30, configurable),
+  `qvm_sector_neutral_zscore` (default False), `qvm_soft_clip_composite`
+  (default False).
+- Tests: Hurst-asymmetric target behaviour on trending vs
+  mean-reverting series; QVM universe-size floor with the new
+  default; sector-neutral z-scoring with synthetic two-sector
+  universe; soft-tanh mapping vs hard-clip mapping.
 
-When Slice 27 ships, Slice 28 (Mean-Rev + QVM rebuild) is
+When Slice 28 ships, Slice 29 (real AI explanation provider) is
 unblocked.
 
 Manual approval gate stays; safety booleans hard-False on every
-persisted record.
+persisted record. The defaults preserve V1 behaviour so existing
+tests stay green.

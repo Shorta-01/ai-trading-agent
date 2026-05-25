@@ -37,6 +37,23 @@ MINIMUM_BARS_REQUIRED: Final[int] = 60
 MODEL_CODE: Final[str] = "baseline_gbm"
 MODEL_VERSION: Final[str] = "v1.0.0"
 
+# V1.1 Slice 27 rebuild constants.
+#
+# The Slice 22 audit identified that V1 GBM averages drift over the
+# entire bar window — a 1-year history straddling a regime change
+# gives a drift that fits neither half. The rebuild adds two opt-in
+# behaviours kept off by default until the Slice 25 backtest +
+# Slice 26 auto-weighting confirm the lift on real data:
+#
+# * ``drift_window_days`` caps the drift-estimation window (sigma
+#   still uses the full series).
+# * ``regime_shift_enabled`` blends the long-window drift with the
+#   recent 60-day drift when the two diverge by more than
+#   ``regime_shift_threshold_pct``.
+DEFAULT_DRIFT_WINDOW_DAYS_V1_1: Final[int] = 252
+DEFAULT_REGIME_SHIFT_SHORT_WINDOW: Final[int] = 60
+DEFAULT_REGIME_SHIFT_THRESHOLD_PCT: Final[float] = 5.0
+
 # Standard-normal quantiles used for p10/p50/p90 — stable constants so the
 # math doesn't need an inverse-erf implementation.
 Z_10: Final[float] = -1.2815515655446004
@@ -225,6 +242,47 @@ def _blocked_forecast(
     )
 
 
+def _annualised_drift_with_regime_blend(
+    returns: list[float],
+    *,
+    short_window: int,
+    threshold_pct: float,
+    trading_days_per_year: int,
+) -> tuple[float, str]:
+    """Blend the long-window drift with a short-window drift when the
+    two diverge by more than ``threshold_pct`` annualised.
+
+    Returns ``(annualised_drift, explanation_clause)``. When the
+    series is shorter than ``short_window`` or the divergence is
+    below the threshold, returns the long-window drift unchanged.
+
+    The blend is a simple 50/50 mean of the two windows when the
+    regime-shift trigger fires. The 50/50 weight is the conservative
+    middle-ground that responds to recent regime changes without
+    over-fitting a noisy 60-day window.
+    """
+
+    long_mu_daily = _sample_mean(returns)
+    long_annual = long_mu_daily * trading_days_per_year
+    if len(returns) <= short_window:
+        return long_annual, ""
+    recent = returns[-short_window:]
+    short_mu_daily = _sample_mean(recent)
+    short_annual = short_mu_daily * trading_days_per_year
+    divergence_pct = abs(short_annual - long_annual) * 100.0
+    if divergence_pct < threshold_pct:
+        return long_annual, (
+            f" Regime-shift detector inactief (divergentie "
+            f"{divergence_pct:.2f}% < drempel {threshold_pct:.2f}%)."
+        )
+    blended = 0.5 * (long_annual + short_annual)
+    return blended, (
+        f" Regime-shift blend actief: 60d drift "
+        f"{short_annual * 100:.2f}%/jaar vs lang {long_annual * 100:.2f}%/jaar; "
+        f"50/50 blend → {blended * 100:.2f}%/jaar."
+    )
+
+
 def compute_baseline_forecast(
     *,
     bars: Sequence[HistoricalBar],
@@ -232,6 +290,10 @@ def compute_baseline_forecast(
     horizon_trading_days: int = DEFAULT_HORIZON_TRADING_DAYS,
     trading_days_per_year: int = DEFAULT_TRADING_DAYS_PER_YEAR,
     minimum_bars_required: int = MINIMUM_BARS_REQUIRED,
+    drift_window_days: int | None = None,
+    regime_shift_enabled: bool = False,
+    regime_shift_threshold_pct: float = DEFAULT_REGIME_SHIFT_THRESHOLD_PCT,
+    garch_enabled: bool = False,
 ) -> BaselineForecast:
     """Compute a baseline GBM forecast or return a blocked result.
 
@@ -283,8 +345,23 @@ def compute_baseline_forecast(
             explanation_nl="Historische bar bevat ongeldige prijs.",
         )
 
-    mu_daily = _sample_mean(returns)
-    sigma_daily = _sample_stdev(returns, mu_daily)
+    # V1.1 §22.5: GARCH(1,1) volatility wiring is intentionally
+    # deferred — the setting is declared so the operator surface is
+    # stable from Slice 27 onward, but the real GARCH path lands
+    # alongside Slice 28's QVM rebuild once Slice 25 backtests have
+    # measured the existing baseline.
+    if garch_enabled:
+        raise NotImplementedError(
+            "garch_enabled volatility is reserved for a follow-up slice; "
+            "the setting is declared from Slice 27 but the implementation "
+            "lands later."
+        )
+
+    # V1.1 Slice 27 rebuild: drift estimation can be confined to the
+    # most recent ``drift_window_days`` bars. Volatility (sigma)
+    # always uses the full series so the distribution width keeps the
+    # benefit of the longer sample.
+    sigma_daily = _sample_stdev(returns, _sample_mean(returns))
     if sigma_daily <= 0.0:
         return _blocked_forecast(
             current_price=current_price,
@@ -297,9 +374,27 @@ def compute_baseline_forecast(
             ),
         )
 
+    drift_returns = returns
+    drift_clause = ""
+    if drift_window_days is not None and len(returns) > drift_window_days:
+        drift_returns = returns[-drift_window_days:]
+        drift_clause = (
+            f" Drift-window: laatste {drift_window_days} bars (V1.1 §22.5)."
+        )
+
+    if regime_shift_enabled:
+        mu_annual, regime_clause = _annualised_drift_with_regime_blend(
+            drift_returns,
+            short_window=DEFAULT_REGIME_SHIFT_SHORT_WINDOW,
+            threshold_pct=regime_shift_threshold_pct,
+            trading_days_per_year=trading_days_per_year,
+        )
+        drift_clause += regime_clause
+    else:
+        mu_annual = _sample_mean(drift_returns) * trading_days_per_year
+
     horizon_years = horizon_trading_days / float(trading_days_per_year)
     sigma_annual = sigma_daily * math.sqrt(trading_days_per_year)
-    mu_annual = mu_daily * trading_days_per_year
 
     s0 = float(current_price)
     drift_log = (mu_annual - 0.5 * sigma_annual**2) * horizon_years
@@ -331,7 +426,7 @@ def compute_baseline_forecast(
         f"Baseline GBM op {len(returns)} dagrendementen: drift "
         f"{mu_annual * 100:.2f}%/jaar, volatiliteit "
         f"{sigma_annual * 100:.2f}%/jaar; horizon {horizon_trading_days} "
-        f"handelsdagen. Geen suggesties of orders gegenereerd."
+        f"handelsdagen.{drift_clause} Geen suggesties of orders gegenereerd."
     )
 
     return BaselineForecast(
