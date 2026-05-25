@@ -1954,6 +1954,112 @@ def test_predictor_backtest_run_repository_roundtrip() -> None:
         assert empty.records == ()
 
 
+def test_claude_ai_budget_usage_repository_roundtrip() -> None:
+    """V1.1 Slice 29: Claude AI budget-usage audit roundtrip + total."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        ClaudeAiBudgetUsageRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyClaudeAiBudgetUsageRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyClaudeAiBudgetUsageRepository(conn, _report(True))
+        now = datetime(2026, 6, 1, 7, 0, tzinfo=UTC)
+
+        repo.save_usage(
+            ClaudeAiBudgetUsageRecord(
+                usage_id="clbu-1",
+                budget_month="2026-06",
+                provider_code="anthropic_claude",
+                model_name="claude-haiku-4-5-20251001",
+                called_at=now,
+                input_units=1000,
+                cached_input_units=500,
+                output_units=200,
+                cost_eur=Decimal("0.001640"),
+                call_kind="explanation",
+                explanation_nl="test call 1",
+            )
+        )
+        repo.save_usage(
+            ClaudeAiBudgetUsageRecord(
+                usage_id="clbu-2",
+                budget_month="2026-06",
+                provider_code="anthropic_claude",
+                model_name="claude-haiku-4-5-20251001",
+                called_at=now,
+                input_units=2000,
+                cached_input_units=0,
+                output_units=400,
+                cost_eur=Decimal("0.003200"),
+                call_kind="explanation",
+                explanation_nl="test call 2",
+            )
+        )
+        # Another month — should not be summed in.
+        repo.save_usage(
+            ClaudeAiBudgetUsageRecord(
+                usage_id="clbu-3",
+                budget_month="2026-05",
+                provider_code="anthropic_claude",
+                model_name="claude-haiku-4-5-20251001",
+                called_at=now,
+                input_units=1000,
+                cached_input_units=0,
+                output_units=200,
+                cost_eur=Decimal("99.000000"),
+                call_kind="explanation",
+            )
+        )
+
+        june_total = repo.monthly_total_eur("2026-06")
+        assert june_total == Decimal("0.004840")
+
+        rows = repo.list_recent_usage(budget_month="2026-06")
+        assert len(rows.records) == 2
+        assert all(r.budget_month == "2026-06" for r in rows.records)
+
+
+def test_claude_ai_budget_usage_record_invariants() -> None:
+    from ai_trading_agent_storage.repository_contracts import (
+        ClaudeAiBudgetUsageRecord,
+    )
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base = dict(
+        usage_id="clbu-1",
+        budget_month="2026-06",
+        provider_code="anthropic_claude",
+        model_name="claude-haiku-4-5-20251001",
+        called_at=now,
+        input_units=100,
+        cached_input_units=50,
+        output_units=20,
+        cost_eur=Decimal("0.001"),
+        call_kind="explanation",
+        explanation_nl=None,
+    )
+    # call_kind enforced.
+    with pytest.raises(ValueError, match="call_kind"):
+        ClaudeAiBudgetUsageRecord(**{**base, "call_kind": "bogus"})
+    # budget_month must be YYYY-MM.
+    with pytest.raises(ValueError, match="budget_month"):
+        ClaudeAiBudgetUsageRecord(**{**base, "budget_month": "2026-6"})
+    # Non-negative unit counts.
+    with pytest.raises(ValueError, match="input_units"):
+        ClaudeAiBudgetUsageRecord(**{**base, "input_units": -1})
+    # Non-negative cost.
+    with pytest.raises(ValueError, match="cost_eur"):
+        ClaudeAiBudgetUsageRecord(**{**base, "cost_eur": Decimal("-0.01")})
+    # Safety booleans hard-False.
+    with pytest.raises(ValueError, match="safety booleans"):
+        ClaudeAiBudgetUsageRecord(**{**base, "safe_for_action_drafts": True})
+
+
 def test_prediction_diary_predictor_contribution_repository_roundtrip() -> None:
     """V1.1 Slice 26: per-(diary_entry, predictor) outcome row."""
 

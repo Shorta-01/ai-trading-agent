@@ -13,6 +13,11 @@ dependencies = [
   "uvicorn>=0.30.0",
   "ibapi==9.81.1.post1",
   "apscheduler>=3.10.4",
+  # V1.1 Slice 29 — real Anthropic Claude explanation provider.
+  # The factory still gates on `ai_explanation_real_client_enabled`
+  # + the API key + a budget_repo so the dep stays inert in stub-
+  # only deployments.
+  "anthropic>=0.40.0",
 ]
 
 [project.optional-dependencies]

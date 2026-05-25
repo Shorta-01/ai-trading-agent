@@ -1743,6 +1743,25 @@ prediction_diary_predictor_contributions = Table(
 )
 
 
+claude_ai_budget_usage = Table(
+    "claude_ai_budget_usage",
+    metadata,
+    Column("usage_id", Text, primary_key=True),
+    Column("budget_month", Text, nullable=False),
+    Column("provider_code", Text, nullable=False),
+    Column("model_name", Text, nullable=False),
+    Column("called_at", DateTime(timezone=True), nullable=False),
+    Column("input_units", Integer, nullable=False),
+    Column("cached_input_units", Integer, nullable=False),
+    Column("output_units", Integer, nullable=False),
+    Column("cost_eur", Numeric(12, 6), nullable=False),
+    Column("call_kind", Text, nullable=False),
+    Column("explanation_nl", Text, nullable=True),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_fundamentals_snapshots = Table(
     "asset_fundamentals_snapshots",
     metadata,

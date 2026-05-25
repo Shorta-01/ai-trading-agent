@@ -169,6 +169,13 @@ class Settings(BaseSettings):
     # predictor); declared here so the env-var surface is documented from
     # Slice 23 onward. Default 50 EUR locked by §22.2.
     claude_ai_budget_monthly_eur: Decimal = Decimal("50")
+    # V1.1 Slice 29: model + API key for the real Anthropic Claude
+    # explanation provider. The key has no committed default; it must
+    # come from the env. Claude Haiku 4.5 is the cheapest tier
+    # suitable for the paraphrase task.
+    claude_ai_explanation_model: str = "claude-haiku-4-5-20251001"
+    claude_ai_api_key: str | None = None
+    claude_ai_explanation_max_output_chars: int = 2000
     # V1.1 §22.4: operator-selectable universe set. Wired by Slice 31;
     # default `SP500` keeps V1 behaviour (the locked registry is a
     # subset of S&P 500 + the EU + Bel/AEX cross-listings).
