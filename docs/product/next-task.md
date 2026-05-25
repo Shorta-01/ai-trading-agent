@@ -1,40 +1,35 @@
-# Task 174
+# Task 175
 
-Slice 19 — Fractional Kelly + risk-parity sizing. Locked in
-`version-1-product-experience-locks.md §21.5`. Replaces the current
-fixed-buy-value sizing in `action_draft_safety.derive_action_draft_sizing(...)`
-with Kelly math driven by the ensemble's distribution.
+Slice 20 — Full IBKR order vocabulary. Extends action drafts to the
+full set of IBKR order types locked in
+`version-1-product-experience-locks.md §21.3`.
 
 Scope:
-- New pure-Python `kelly_sizing` module in `packages/portfolio`:
-  * `compute_fractional_kelly_fraction(*, prob_gain, expected_return_pct,
-    downside_loss_pct, kelly_fraction=0.5)` returns the Kelly-recommended
-    fraction of investable capital for one asset (always clipped to
-    [0, 1]). Negative expected return → 0. Half-Kelly default.
-  * `apply_risk_parity_caps(*, fraction, position_count,
-    sector_exposure_pct, per_asset_cap_pct=5.0,
-    per_sector_cap_pct=30.0)` clips an individual Kelly fraction so
-    no single position exceeds 5% of the portfolio and no sector
-    exceeds 30%.
-- Extend `DraftSourceContext` with `prob_gain`, `expected_return_pct`,
-  `downside_loss_pct`, `current_sector_exposure_pct`, and
-  `current_portfolio_position_count` so the sizing function has
-  enough to apply Kelly + risk-parity caps.
-- Replace `derive_action_draft_sizing(...)` BUY math from
-  ``floor(default_buy_value / market_price)`` to
-  ``floor(kelly_fraction × usable_cash / market_price)``. Existing
-  `Langzaam bijkopen` / `Verminderen` / `Verkopen` paths keep their
-  current top-up/reduce semantics — Kelly only changes the BUY path.
-- Wire the ensemble's `PredictionDistribution` (p50, prob_gain,
-  expected_return_pct) into the `decision_package_sync` so the
-  Decision Package carries the Kelly-derived sizing context. The
-  Decision Package gains five new audit fields: `kelly_fraction`,
-  `kelly_fraction_capped`, `kelly_per_asset_cap_hit`,
-  `kelly_per_sector_cap_hit`, `kelly_explanation_nl`.
-- Migration `0040_decision_package_kelly_fields` adds those fields to
-  `asset_decision_packages` (nullable).
-- Tests cover the Kelly math (every edge case), the risk-parity cap
-  application, the sizing replacement on the BUY path, and the
-  Decision Package serialisation surface.
+- Storage migration `0040_action_draft_order_vocabulary` extends
+  `asset_action_drafts` with:
+  * `order_type` constraint widened from "LMT only" to the locked
+    set `{LMT, MKT, STP, STP_LMT, TRAIL, TRAIL_LMT, BRACKET}`
+  * new columns: `stop_price`, `trail_amount`, `trail_percent`,
+    `bracket_take_profit_limit_price`, `bracket_stop_loss_price`
+    (all nullable Decimal)
+- Extend `AssetActionDraftRecord` with the new fields + per-type
+  invariants in `__post_init__`:
+  * LMT requires `limit_price`; STP requires `stop_price`; STP_LMT
+    requires both; TRAIL requires `trail_amount` XOR
+    `trail_percent`; TRAIL_LMT same + `limit_price`; BRACKET
+    requires `limit_price` + `bracket_take_profit_limit_price` +
+    `bracket_stop_loss_price`; MKT requires none.
+- Extend `action_draft_safety.run_dry_run_safety_checks(...)` with
+  per-order-type validation. Failures use stable codes
+  (`stp_missing_stop_price`, `trail_amount_and_percent_set`, etc.).
+- Real submission client (`IbapiOrderSubmissionClient`) gains a
+  mapping from the locked order-type set to ibapi's `Order` flags
+  (`orderType="MKT|LMT|STP|STP LMT|TRAIL|TRAIL LIMIT"`, auxPrice,
+  trailingPercent, etc.). For BRACKET: emit the parent + take-profit
+  + stop-loss as a 3-order group.
+- Approval orchestrator + state machine unchanged — the per-draft
+  user approval gate stays.
+- Tests cover record invariants per type, dry-run failure codes, and
+  the submission client's mapping for each order type.
 
-No new routes; no broker action; safety booleans hard-False.
+No new routes; no UI change in this slice; manual approval gate stays.

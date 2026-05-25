@@ -196,6 +196,17 @@ from .gbm_predictor import (
     GBM_MODEL_VERSION,
     GbmPredictor,
 )
+from .kelly_sizing import (
+    DEFAULT_KELLY_FRACTION,
+    DEFAULT_PER_ASSET_CAP_PCT,
+    DEFAULT_PER_SECTOR_CAP_PCT,
+    KellyInputs,
+    KellyResult,
+    RiskParityInputs,
+    apply_risk_parity_caps,
+    compute_fractional_kelly_fraction,
+    size_buy_with_kelly,
+)
 from .ledger_services import (
     build_paper_transaction,
     create_cash_entry_for_transaction,
@@ -659,5 +670,14 @@ __all__ = [
     "AI_TS_BLOCKING_REASON_INVALID_QUANTILES",
     "AI_TS_BLOCKING_REASON_INVALID_PROB_GAIN",
     "AI_TS_BLOCKING_REASON_INVALID_CONFIDENCE",
+    "KellyInputs",
+    "KellyResult",
+    "RiskParityInputs",
+    "DEFAULT_KELLY_FRACTION",
+    "DEFAULT_PER_ASSET_CAP_PCT",
+    "DEFAULT_PER_SECTOR_CAP_PCT",
+    "compute_fractional_kelly_fraction",
+    "apply_risk_parity_caps",
+    "size_buy_with_kelly",
 ]
 

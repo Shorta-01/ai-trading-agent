@@ -97,6 +97,14 @@ class DraftSourceContext:
     fx_freshness_status: str | None
     total_portfolio_value: Decimal | None
     base_currency: str | None
+    # Kelly-sizing context (Slice 19). Optional — when any of these is
+    # ``None`` the BUY path falls back to the legacy
+    # default-buy-value sizing rather than guessing.
+    ensemble_prob_gain: Decimal | None = None
+    ensemble_expected_return_pct: Decimal | None = None
+    ensemble_downside_loss_pct: Decimal | None = None
+    current_sector_exposure_pct: Decimal | None = None
+    current_portfolio_position_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -155,6 +163,87 @@ def _percentage(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
 
 
+def _resolve_kopen_capital(
+    context: DraftSourceContext,
+    *,
+    default_buy_value: Decimal,
+) -> Decimal:
+    """Decide how much capital to spend on a ``Kopen`` draft.
+
+    Fractional Kelly + risk-parity caps (§21.5) when the ensemble's
+    `prob_gain` / `expected_return` / `downside_loss` are available
+    *and* the operator has both usable cash and a known portfolio
+    value. Falls back to the legacy default-buy-value when the
+    ensemble inputs are missing.
+    """
+
+    prob_gain = context.ensemble_prob_gain
+    expected_return = context.ensemble_expected_return_pct
+    downside_loss = context.ensemble_downside_loss_pct
+    portfolio_value = context.total_portfolio_value
+    cash_amount = context.cash_amount
+    if (
+        prob_gain is None
+        or expected_return is None
+        or downside_loss is None
+        or portfolio_value is None
+        or portfolio_value <= 0
+        or cash_amount is None
+        or cash_amount <= 0
+    ):
+        return default_buy_value
+
+    raw_fraction = _kelly_fraction(
+        prob_gain=prob_gain,
+        expected_return_pct=expected_return,
+        downside_loss_pct=downside_loss,
+    )
+    capped = _kelly_apply_caps(
+        fraction=raw_fraction,
+        sector_exposure_pct=context.current_sector_exposure_pct,
+    )
+    if capped <= 0:
+        return Decimal("0")
+    # Per-asset position size is a fraction of portfolio value, but the
+    # cash needed to BUY is capped by available cash to avoid taking
+    # the position negative on the cash side.
+    target_capital = (capped * portfolio_value)
+    return min(target_capital, cash_amount)
+
+
+def _kelly_fraction(
+    *,
+    prob_gain: Decimal,
+    expected_return_pct: Decimal,
+    downside_loss_pct: Decimal,
+) -> Decimal:
+    """Local shim around `kelly_sizing.compute_fractional_kelly_fraction`
+    that defaults to half-Kelly (the V1 §21.5 lock)."""
+
+    from .kelly_sizing import compute_fractional_kelly_fraction
+
+    return compute_fractional_kelly_fraction(
+        prob_gain=prob_gain,
+        expected_return_pct=expected_return_pct,
+        downside_loss_pct=downside_loss_pct,
+    )
+
+
+def _kelly_apply_caps(
+    *,
+    fraction: Decimal,
+    sector_exposure_pct: Decimal | None,
+) -> Decimal:
+    """Local shim that returns only the final (capped) fraction."""
+
+    from .kelly_sizing import apply_risk_parity_caps
+
+    return apply_risk_parity_caps(
+        fraction=fraction,
+        current_sector_exposure_pct=sector_exposure_pct,
+    ).fraction
+
+
 def derive_action_draft_sizing(
     context: DraftSourceContext,
     *,
@@ -195,7 +284,14 @@ def derive_action_draft_sizing(
     limit_price = _money(market_price)
 
     if label == "Kopen":
-        capital = default_buy_value_in_quote_currency
+        # §21.5 fractional Kelly + risk-parity caps replace the
+        # fixed-buy-value sizing **when the ensemble distribution is
+        # available**. Without an ensemble we keep the legacy
+        # default-buy-value behaviour rather than guess.
+        capital = _resolve_kopen_capital(
+            context,
+            default_buy_value=default_buy_value_in_quote_currency,
+        )
         quantity = _whole_shares(capital / limit_price)
         if quantity <= 0:
             return DraftSizing(
