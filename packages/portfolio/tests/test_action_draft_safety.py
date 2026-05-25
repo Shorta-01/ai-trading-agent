@@ -326,3 +326,118 @@ def test_dry_run_short_circuits_on_blocked_sizing() -> None:
     result = run_dry_run_safety_checks(context, sizing, impact)
     assert result.status == "failed"
     assert result.failures == ("not_actionable_label",)
+
+
+# ---- Kelly BUY path (Slice 19) ----------------------------------------
+
+
+def _kelly_context(
+    *,
+    market_price: str = "100.00",
+    cash: str = "100000",
+    total_portfolio_value: str = "100000",
+    prob_gain: str | None = "0.6",
+    expected_return_pct: str | None = "10",
+    downside_loss_pct: str | None = "5",
+    current_sector_exposure_pct: str | None = None,
+) -> DraftSourceContext:
+    return DraftSourceContext(
+        decision_package_id="dp-1",
+        decision_package_content_hash="hash-1",
+        ibkr_conid="265598",
+        symbol="AAPL",
+        currency="USD",
+        exchange="SMART",
+        primary_exchange="NASDAQ",
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_label="Kopen",
+        action_label_nl="Kopen",
+        rationale_nl="test",
+        current_position_quantity=Decimal("0"),
+        current_position_average_cost=None,
+        current_market_last_price=Decimal(market_price),
+        current_market_freshness_status="fresh",
+        cash_amount=Decimal(cash),
+        cash_currency="USD",
+        fx_required=False,
+        fx_freshness_status=None,
+        total_portfolio_value=Decimal(total_portfolio_value),
+        base_currency="USD",
+        ensemble_prob_gain=Decimal(prob_gain) if prob_gain is not None else None,
+        ensemble_expected_return_pct=(
+            Decimal(expected_return_pct) if expected_return_pct is not None else None
+        ),
+        ensemble_downside_loss_pct=(
+            Decimal(downside_loss_pct) if downside_loss_pct is not None else None
+        ),
+        current_sector_exposure_pct=(
+            Decimal(current_sector_exposure_pct)
+            if current_sector_exposure_pct is not None
+            else None
+        ),
+        current_portfolio_position_count=None,
+    )
+
+
+def test_kopen_uses_kelly_when_ensemble_inputs_present() -> None:
+    sizing = derive_action_draft_sizing(_kelly_context())
+    # p=0.6, b=10%, L=5% → Kelly raw = 7.0 → capped at 1.0 (per_asset_cap)
+    # then per_asset_cap brings it to 0.05 → 0.05 × 100,000 = 5,000
+    # → 5,000 / 100 = 50 shares.
+    assert sizing.action_side == "BUY"
+    assert sizing.quantity == Decimal("50")
+
+
+def test_kopen_falls_back_to_default_when_ensemble_missing() -> None:
+    sizing = derive_action_draft_sizing(
+        _kelly_context(prob_gain=None),
+        default_buy_value_in_quote_currency=Decimal("1000"),
+    )
+    # 1000 / 100 = 10 shares (legacy default-buy-value path).
+    assert sizing.quantity == Decimal("10")
+
+
+def test_kopen_kelly_is_zero_on_negative_ev() -> None:
+    sizing = derive_action_draft_sizing(
+        _kelly_context(prob_gain="0.30", expected_return_pct="3", downside_loss_pct="10"),
+    )
+    # Negative EV → fraction 0 → 0 shares → blocked.
+    assert sizing.status == "blocked"
+    assert sizing.blocking_reason == "buy_value_too_small_for_one_share"
+    assert sizing.quantity == Decimal("0")
+
+
+def test_kopen_kelly_capped_when_cash_smaller_than_kelly_target() -> None:
+    # Portfolio = 100,000 but cash only 2,000 → 0.05 × 100k = 5,000
+    # > 2,000 cash; so capital = min(5000, 2000) = 2000 → 2000/100 = 20 shares.
+    sizing = derive_action_draft_sizing(
+        _kelly_context(cash="2000"),
+    )
+    assert sizing.quantity == Decimal("20")
+
+
+def test_kopen_sector_cap_reduces_quantity() -> None:
+    # Sector already at 28% → only 2% sector headroom; per-asset cap 5%.
+    sizing = derive_action_draft_sizing(
+        _kelly_context(current_sector_exposure_pct="28"),
+    )
+    # 0.02 × 100,000 = 2,000 / 100 = 20 shares.
+    assert sizing.quantity == Decimal("20")
+
+
+def test_kopen_falls_back_when_portfolio_value_missing() -> None:
+    sizing = derive_action_draft_sizing(
+        _kelly_context(total_portfolio_value="0"),
+        default_buy_value_in_quote_currency=Decimal("1000"),
+    )
+    assert sizing.quantity == Decimal("10")  # legacy default-buy-value
+
+
+def test_kopen_falls_back_when_cash_missing() -> None:
+    sizing = derive_action_draft_sizing(
+        _kelly_context(cash="0"),
+        default_buy_value_in_quote_currency=Decimal("500"),
+    )
+    # Cash missing → Kelly skipped → legacy default-buy-value (500/100 = 5).
+    assert sizing.quantity == Decimal("5")
