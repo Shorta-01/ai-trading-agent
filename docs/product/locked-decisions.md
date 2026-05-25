@@ -301,3 +301,15 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Geen automatische brokeractie.
 - Geen stille submit/modify/cancel.
 - Toekomstige brokeractie vereist validatie, dry-run, finale confirmatie en audit trail.
+
+
+## Task 126 product locks
+- De software ondersteunt één geconfigureerd IBKR-account tegelijk. Account-modus (Paper of Live) is wat IBKR rapporteert voor dat account; de software dwingt geen paper-only af. De gebruiker kiest het account in Instellingen.
+- Account-modus detectie is twee-traps en audit-gelogd. Primaire detectie: account-ID prefix (`DU*` en `DF*` → Paper, anders → Live). Gedragsgebaseerde cross-check bij connect: probeer een paper-incompatibele operatie; het resultaat moet overeenkomen met de prefix-modus of de verbinding weigert met een Nederlandse foutmelding. Beide checks schrijven audit-rijen in `ibkr_connection_audit`.
+- Account-modus is overal zichtbaar via een persistente kleur-gecodeerde indicator. Neutrale kleur voor Paper, amber/warme kleur voor Live. Indicator verschijnt in de bovenstrook van elk scherm. Bij app-start flitst de strip de modus-kleur gedurende ~500ms.
+- Dutch wording in de rest van de UI is modus-neutraal. Geen "paper-order" vs "ECHTE order" tekst in de action flow. De indicator is de dragende cue.
+- Elke databaserij draagt `ibkr_account_id`. Het wisselen van het geconfigureerde account filtert het dashboard maar bewaart alle historie. (126a: kolom nullable + index; 126b: NOT NULL constraint na rewire van persistence-pad.)
+- Per-submission mode verification (`account_mode_at_event`) is gereserveerd voor de action-draft submission slice. Schema-veld is aanwezig vanaf 126a; gebruik wordt geactiveerd zodra de submission flow draait.
+- Geen module-level mutable stores in productie-paden. Bij niet-beschikbare opslag geeft het systeem fail-closed (HTTP 503 + Nederlandse foutmelding), nooit een in-memory dict fallback.
+- De TWS API sessie is langlevend en callback-gebaseerd; eigenaarschap zit in `apps/worker` (niet in een FastAPI request handler). De API leest de worker-state via durable storage; geen IBKR-netwerkaanroepen vanuit HTTP-route handlers.
+- `ib_insync` is alleen toegestaan in `apps/worker/src/portfolio_outlook_worker/ibkr_gateway.py`. De API + packages blijven op `ibapi`-via-facade. Storage-laag levert `psycopg[binary]>=3.2` als runtime driver voor productie (SQLite-gebaseerde tests blijven ongewijzigd).

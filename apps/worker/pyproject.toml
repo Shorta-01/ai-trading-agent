@@ -8,6 +8,13 @@ dependencies = [
   "pydantic>=2.9.0",
   "pydantic-settings>=2.6.0",
   "sqlalchemy>=2.0.0",
+  # Task 126: long-lived IBKR TWS API session via ib_insync. The
+  # worker is the only owner of the TWS callback loop; the API
+  # never talks to IBKR directly (it reads worker-persisted state
+  # via the storage layer).
+  "ib_insync>=0.9.86",
+  # Task 126: Postgres driver for production runtime.
+  "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]
@@ -32,3 +39,7 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 mypy_path = "src:../../packages/storage/src"
+
+[[tool.mypy.overrides]]
+module = ["ib_insync", "ib_insync.*"]
+ignore_missing_imports = true
