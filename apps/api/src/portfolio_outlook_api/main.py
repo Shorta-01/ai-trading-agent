@@ -18,6 +18,9 @@ from portfolio_outlook_api.asset_listings import router as asset_listings_router
 from portfolio_outlook_api.asset_master import router as asset_master_router
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.health import HealthResponse, get_health_response
+from portfolio_outlook_api.ibkr_connection_routes import (
+    router as ibkr_connection_router,
+)
 from portfolio_outlook_api.request_audit import router as request_audit_router
 from portfolio_outlook_api.research_sources import router as research_sources_router
 from portfolio_outlook_api.scheduler import build_scheduler, install_default_jobs
@@ -92,3 +95,4 @@ app.include_router(asset_master_router)
 app.include_router(asset_listings_router)
 app.include_router(watchlist_router)
 app.include_router(request_audit_router)
+app.include_router(ibkr_connection_router)

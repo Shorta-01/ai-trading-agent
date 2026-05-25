@@ -313,3 +313,8 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Geen module-level mutable stores in productie-paden. Bij niet-beschikbare opslag geeft het systeem fail-closed (HTTP 503 + Nederlandse foutmelding), nooit een in-memory dict fallback.
 - De TWS API sessie is langlevend en callback-gebaseerd; eigenaarschap zit in `apps/worker` (niet in een FastAPI request handler). De API leest de worker-state via durable storage; geen IBKR-netwerkaanroepen vanuit HTTP-route handlers.
 - `ib_insync` is alleen toegestaan in `apps/worker/src/portfolio_outlook_worker/ibkr_gateway.py`. De API + packages blijven op `ibapi`-via-facade. Storage-laag levert `psycopg[binary]>=3.2` als runtime driver voor productie (SQLite-gebaseerde tests blijven ongewijzigd).
+- Belgian tax module (TOB + dividend roerende voorheffing) draait alleen in live-modus. In paper-modus blijft de TOB-rekenpad inactief; berekeningen zijn pure-Python en gebeuren in `packages/portfolio/belgian_tax`. Geen extra modus-gating in routes; de tax-module zelf bepaalt of er een TOB-rij wordt aangemaakt op basis van de configured account-mode.
+
+
+## Retired locks
+- **V1-paper-only enforcement** — Retired by Task 126 on 2026-05-25. The software now supports any IBKR account; account mode is detected (via two-tier prefix + behavioural check, persisted to `ibkr_connection_audit`) and displayed via the persistent `AccountModeBadge`, not enforced. The earlier paper-only assertion has been removed; mode is informational only. Older docs referencing the paper-only-V1 lock should be read as historical context.
