@@ -1,46 +1,47 @@
-# Task 186
+# Task 187
 
-Slice 31 — V1.1 universe scan expansion + operator-selectable
-universe set. Lifts the locked universe registry from the V1
-hand-curated ~325 set to three operator-selectable sets per the
-§22.4 lock.
+Slice 32 — V1.1 conditional orders + GTC/OPG/IOC TIF. Extends the
+V1 §21.3 order vocabulary with the full IBKR conditional set per
+the §22.3 lock.
 
 Scope:
-- Extend `universe_registry` in `apps/api` with two new
-  registries:
-  - **`EU600`** — Stoxx Europe 600 constituents
-    (Bel20 + AEX + CAC40 + DAX40 + IBEX35 + FTSE MIB + Stoxx
-    Nordic 30 + Swiss SLI + UK FTSE 100 mid-caps);
-    estimated ~600 EODHD symbols deduplicated.
-  - **`ALL_5K`** — S&P 500 + S&P 400 mid-cap + S&P 600 small-
-    cap + Russell 1000 ex-S&P + NASDAQ-100 + Stoxx 600 + Bel20
-    + AEX + CAC40 + DAX40 + UK FTSE 100. Roughly ~5 000
-    tickers after de-duplication.
-- `UniverseEntry` gains an optional `country_code` field so the
-  Stoxx 600 path can carry country tags; `locked_universe(set_code)`
-  returns the deduped set for the operator's selected code.
-- `apps/api/config.py` setting `universe_set` (already declared in
-  Slice 23 with default `SP500`) is now consumed by
-  `universe_scan_sync.scan_universe(...)`.
-- **Per-set EODHD caching**: each universe set has its own
-  `asset_fundamentals_snapshots` cache layer — the scan walks the
-  set and only re-fetches an entry when the cached snapshot is
-  older than the universe-scan cache TTL (new setting,
-  default 24h). Reduces EODHD call volume from N calls/day to
-  ~N/N_TTL — material for the 5K set.
-- Storage paging on `list_latest_universe_snapshots(...)` so the
-  briefing surface doesn't load the full 5K rows when only the
-  top-N candidates are needed; new `limit` + `min_factor_count`
-  parameters.
-- Operator-facing read route: `GET /universe/registry?set=SP500`
-  returns the deduplicated registry for the requested set so the
-  Slice 33 UX upgrade can render a chooser.
-- Tests cover: deduplication across overlapping indices; each
-  universe-set returns a sane minimum size; `scan_universe(...)`
-  honours `universe_set`; paging boundary; cache TTL skip.
+- Extend `LOCKED_ORDER_TYPES` with `CONDITIONAL`. The
+  conditional order carries a parent base type (LMT / MKT /
+  STP / STP_LMT) plus a list of activation conditions.
+- Extend the locked TIF set from `DAY`-only to
+  `{DAY, GTC, OPG, IOC}`.
+- New `OrderCondition` dataclass family — one variant per IBKR
+  condition kind:
+  - `PriceCondition(symbol, conid, exchange, operator, trigger_price)`
+  - `TimeCondition(operator, trigger_at_utc)`
+  - `MarginCondition(operator, percent)`
+  - `VolumeCondition(symbol, conid, operator, volume)`
+  - `ExecutionCondition(symbol, sec_type, exchange)`
+- Storage migration `0044_action_draft_conditional_orders`
+  adds a child table `action_draft_order_conditions` keyed on
+  `(draft_id, condition_index)` with the union of fields needed
+  to reconstruct any one of the five condition kinds.
+- `AssetActionDraftRecord.tif` constraint widens to
+  `{DAY, GTC, OPG, IOC}`; `__post_init__` rejects anything
+  outside the set. Existing rows stay at `DAY`.
+- Dry-run safety codes for the new vocabulary:
+  - `conditional_missing_parent_order_type`
+  - `conditional_no_conditions_listed`
+  - `conditional_unknown_condition_kind`
+  - `conditional_price_missing_trigger`
+  - `conditional_time_missing_trigger`
+  - `conditional_margin_invalid_percent`
+  - `tif_gtc_requires_real_account` (paper accounts may not
+    honour GTC the same way)
+- IBKR submission client extends `OrderSubmissionInputs` with
+  optional `conditions: list[OrderCondition]` and `tif`; the
+  `build_contract_and_orders(...)` helper maps each condition
+  kind to ibapi's `Order.conditions` API.
+- Tests cover: dataclass invariants per condition kind, dry-run
+  safety codes, ibapi conditions wiring per kind, TIF widening
+  on the record, backwards-compat for existing LMT/DAY orders.
 
 Manual approval gate stays; safety booleans hard-False on every
 persisted record.
 
-When Slice 31 ships, Slice 32 (conditional orders + GTC/OPG/IOC)
-is unblocked.
+When Slice 32 ships, Slice 33 (UX upgrade) is unblocked.

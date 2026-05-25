@@ -2262,6 +2262,17 @@ def test_asset_fundamentals_snapshot_repository_roundtrip() -> None:
         universe = repo.list_latest_universe_snapshots()
         assert {r.symbol for r in universe.records} == {"AAPL", "MSFT"}
 
+        # V1.1 Slice 31: ``min_factor_count`` filter. Each test row
+        # has all 6 scored columns populated, so a filter of 6 keeps
+        # them; a filter of 7 (impossible) keeps none.
+        all_factors = repo.list_latest_universe_snapshots(min_factor_count=6)
+        assert len(all_factors.records) == 2
+        none_pass = repo.list_latest_universe_snapshots(min_factor_count=7)
+        assert len(none_pass.records) == 0
+        # ``limit`` paging surface — capping to 1 returns only one row.
+        single = repo.list_latest_universe_snapshots(limit=1)
+        assert len(single.records) == 1
+
 
 def test_asset_fundamentals_snapshot_rejects_safety_flags_true() -> None:
     from ai_trading_agent_storage.repository_contracts import (

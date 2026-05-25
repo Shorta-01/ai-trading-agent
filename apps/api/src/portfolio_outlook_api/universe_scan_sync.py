@@ -81,6 +81,10 @@ class _SnapshotRepoProtocol(Protocol):
         self, record: AssetFundamentalsSnapshotRecord
     ) -> object: ...
 
+    def get_latest_snapshot_for_symbol(
+        self, eodhd_symbol: str
+    ) -> object: ...
+
 
 class _ScanRunRepoProtocol(Protocol):
     def save_run(self, record: UniverseScanRunRecord) -> object: ...
@@ -176,6 +180,8 @@ def scan_universe(
     history_lookback_days: int,
     triggered_by: str = "manual",
     universe: Sequence[UniverseEntry] | None = None,
+    universe_set: str | None = None,
+    cache_ttl_hours: int = 0,
     now: datetime | None = None,
 ) -> UniverseScanReport:
     """Run one universe scan.
@@ -184,14 +190,33 @@ def scan_universe(
     is written as ``running`` first, then updated to
     ``succeeded`` / ``failed`` on completion so the audit chain shows
     in-progress state.
+
+    V1.1 §22.4: when ``universe_set`` is supplied it selects the
+    operator-locked set (``SP500`` / ``EU600`` / ``ALL_5K``); when
+    ``universe`` is supplied explicitly it overrides the set; when
+    neither is supplied the default ``SP500`` set is used.
+
+    V1.1 §22.4 cache TTL: when ``cache_ttl_hours > 0`` the scan
+    skips any symbol whose latest persisted snapshot is younger
+    than the TTL — keeps EODHD call volume sane on the ALL_5K set.
     """
 
     requested_at = datetime.now(UTC)
     actual_now = now or requested_at
-    target_universe = tuple(universe) if universe is not None else locked_universe()
+    if universe is not None:
+        target_universe = tuple(universe)
+    elif universe_set is not None:
+        target_universe = locked_universe(universe_set)
+    else:
+        target_universe = locked_universe()
     universe_size = len(target_universe)
     batch = target_universe[: max(0, max_tickers)]
     run_id = f"usr_{uuid4().hex}"
+    cache_cutoff = (
+        actual_now - timedelta(hours=cache_ttl_hours)
+        if cache_ttl_hours > 0
+        else None
+    )
 
     initial = UniverseScanRunRecord(
         run_id=run_id,
@@ -219,6 +244,22 @@ def scan_universe(
     to_date = actual_now.date()
 
     for entry in batch:
+        # V1.1 §22.4 cache-TTL skip: if the persisted snapshot is
+        # younger than the TTL, reuse it and avoid the EODHD call.
+        if cache_cutoff is not None:
+            try:
+                cached = snapshot_repo.get_latest_snapshot_for_symbol(
+                    entry.eodhd_symbol
+                )
+            except Exception:  # noqa: BLE001 — cache lookup is opportunistic
+                cached = None
+            cached_record = getattr(cached, "record", None)
+            if cached_record is not None:
+                fetched_at = getattr(cached_record, "fetched_at", None)
+                if fetched_at is not None and fetched_at >= cache_cutoff:
+                    persisted.append(cached_record)
+                    continue
+
         try:
             fundamentals = client.fetch_fundamentals(entry.eodhd_symbol)
         except EodhdClientError as exc:

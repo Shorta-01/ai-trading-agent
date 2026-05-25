@@ -3080,9 +3080,21 @@ class SqlAlchemyAssetFundamentalsSnapshotRepository(_Base):
         )
 
     def list_latest_universe_snapshots(
-        self, *, limit: int = 5000
+        self,
+        *,
+        limit: int = 5000,
+        min_factor_count: int = 0,
     ) -> StorageListResult[AssetFundamentalsSnapshotRecord]:
-        """Return the most-recent snapshot per symbol, up to ``limit`` rows."""
+        """Return the most-recent snapshot per symbol, up to ``limit`` rows.
+
+        V1.1 §22.4 paging surface: ``limit`` caps the row count so the
+        briefing panel can request the top-N candidates without loading
+        the full ALL_5K universe. ``min_factor_count`` filters to rows
+        with at least N non-null QVM factor columns (out of the 6
+        scored columns: pe_ratio, pb_ratio, ev_ebitda, roic_pct,
+        gross_margin_pct, return_12m_pct) — useful for ranking when
+        the operator wants stable cross-section z-scores.
+        """
 
         # Two-step: rank by fetched_at within (eodhd_symbol), keep the
         # first per symbol. SQLite + Postgres both support the
@@ -3110,6 +3122,23 @@ class SqlAlchemyAssetFundamentalsSnapshotRepository(_Base):
         records = tuple(
             AssetFundamentalsSnapshotRecord(**dict(row)) for row in rows
         )
+        if min_factor_count > 0:
+            scored_columns = (
+                "pe_ratio",
+                "pb_ratio",
+                "ev_ebitda",
+                "roic_pct",
+                "gross_margin_pct",
+                "return_12m_pct",
+            )
+            records = tuple(
+                r
+                for r in records
+                if sum(
+                    1 for col in scored_columns if getattr(r, col, None) is not None
+                )
+                >= min_factor_count
+            )
         return StorageListResult(
             records,
             asset_fundamentals_snapshots.name,

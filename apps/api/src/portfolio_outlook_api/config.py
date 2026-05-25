@@ -186,6 +186,11 @@ class Settings(BaseSettings):
     # default `SP500` keeps V1 behaviour (the locked registry is a
     # subset of S&P 500 + the EU + Bel/AEX cross-listings).
     universe_set: str = "SP500"
+    # V1.1 Slice 31: per-set EODHD-call cache TTL. When > 0 the
+    # universe scan skips symbols whose latest persisted snapshot is
+    # younger than the TTL — keeps EODHD call volume sane on
+    # ``ALL_5K``. 0 disables caching (every fire fetches fresh).
+    universe_scan_cache_ttl_hours: int = 24
     # V1.1 Slice 24 + 25: backtesting opt-in. Default False keeps the
     # morning chain running on the V1 predictors until Slice 26 wires
     # the auto-weight feedback loop.

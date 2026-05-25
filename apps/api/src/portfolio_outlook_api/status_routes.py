@@ -3609,6 +3609,8 @@ def run_universe_scan() -> dict[str, object]:
                 max_tickers=settings.universe_scan_max_tickers_per_run,
                 history_lookback_days=settings.universe_scan_history_lookback_days,
                 triggered_by="manual",
+                universe_set=settings.universe_set,
+                cache_ttl_hours=settings.universe_scan_cache_ttl_hours,
             )
     except StorageConnectionError:
         return _build_blocked_universe_scan_response(
@@ -3634,6 +3636,64 @@ def run_universe_scan() -> dict[str, object]:
         "safe_for_action_drafts": False,
         "safe_for_orders": False,
         "blocks_orders": True,
+    }
+
+
+@router.get("/universe/registry")
+def read_universe_registry(set_code: str | None = None) -> dict[str, object]:
+    """V1.1 §22.4 — return the deduplicated locked registry for a set.
+
+    Reads ``set_code`` from the query string; falls back to the
+    operator's configured ``universe_set`` setting when omitted. Read-
+    only; never authorises an order.
+    """
+
+    from portfolio_outlook_api.universe_registry import (
+        DEFAULT_UNIVERSE_SET,
+        LOCKED_UNIVERSE_SETS,
+        locked_universe,
+    )
+
+    requested = (set_code or settings.universe_set or DEFAULT_UNIVERSE_SET).strip()
+    if requested not in LOCKED_UNIVERSE_SETS:
+        return {
+            "status": "blocked",
+            "status_nl": "Onbekende universe-set",
+            "help_nl": (
+                f"`set_code` moet één van {sorted(LOCKED_UNIVERSE_SETS)} zijn; "
+                f"`{requested}` is niet gedeclareerd in V1.1 §22.4."
+            ),
+            "set_code": requested,
+            "configured_set": settings.universe_set,
+            "items": [],
+            "safe_for_action_drafts": False,
+            "safe_for_orders": False,
+        }
+    entries = locked_universe(requested)
+    return {
+        "status": "ok",
+        "status_nl": "Universe-registry opgehaald",
+        "help_nl": (
+            "Read-only registry-overzicht voor het gekozen set-code. "
+            "De morning chain itereert over deze symbolen tijdens de "
+            "universe-scan."
+        ),
+        "set_code": requested,
+        "configured_set": settings.universe_set,
+        "available_sets": sorted(LOCKED_UNIVERSE_SETS),
+        "entry_count": len(entries),
+        "items": [
+            {
+                "symbol": e.symbol,
+                "eodhd_symbol": e.eodhd_symbol,
+                "index_code": e.index_code,
+                "sector": e.sector,
+                "country_code": e.country_code,
+            }
+            for e in entries
+        ],
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
     }
 
 
