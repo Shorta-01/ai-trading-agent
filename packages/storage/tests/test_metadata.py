@@ -82,6 +82,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "provider_call_audit",
         "forecasts",
         "calibration_diary",
+        "decision_packages",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

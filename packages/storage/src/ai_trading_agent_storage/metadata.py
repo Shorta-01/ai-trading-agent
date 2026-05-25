@@ -2334,3 +2334,159 @@ calibration_diary = Table(
         name="ck_calibration_diary_hit_status",
     ),
 )
+
+
+# Task 132: Decision Package — immutable audit-traceable container that
+# wraps a single forecast for a single (account, conid) at a single moment
+# in time, with every piece of context needed to make the suggested
+# action either approvable or refutable. Composed only when the forecast
+# label is NOT 'Geblokkeerd'. Append-only; hash-chained per (account,
+# conid). Safety booleans are hard-False via CHECK constraint — they only
+# flip when the Action Center and approval workflows ship in future
+# tasks with their own product locks.
+decision_packages = Table(
+    "decision_packages",
+    metadata,
+    Column("decision_package_id", Text, primary_key=True),
+    Column("forecast_run_id", Text, nullable=False),
+    Column("composed_at", DateTime(timezone=True), nullable=False),
+    Column("valid_until", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=False),
+    Column("conid", Text, nullable=False),
+    # Asset identity snapshot — frozen at composition time so the
+    # Decision Package stays valid even if the listing is later
+    # updated/archived.
+    Column("symbol", Text, nullable=False),
+    Column("exchange", Text, nullable=True),
+    Column("currency_local", Text, nullable=False),
+    Column("asset_class", Text, nullable=True),
+    # Holding context snapshot.
+    Column("user_holds_position", Boolean, nullable=False),
+    Column("held_quantity", Numeric(precision=20, scale=8), nullable=True),
+    Column(
+        "held_avg_cost_local",
+        Numeric(precision=20, scale=8),
+        nullable=True,
+    ),
+    # Current valuation snapshot.
+    Column(
+        "current_price_local",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    Column(
+        "current_price_eur", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column(
+        "as_of_market_data_ts",
+        DateTime(timezone=True),
+        nullable=False,
+    ),
+    # Market-data freshness.
+    Column("freshness_state", Text, nullable=False),
+    Column("data_age_trading_days", Integer, nullable=False),
+    # Forecast snapshot — copy of the forecast at composition time.
+    Column("forecast_method", Text, nullable=False),
+    Column(
+        "p10_log_return", Numeric(precision=20, scale=10), nullable=False
+    ),
+    Column(
+        "p50_log_return", Numeric(precision=20, scale=10), nullable=False
+    ),
+    Column(
+        "p90_log_return", Numeric(precision=20, scale=10), nullable=False
+    ),
+    Column(
+        "p10_price_eur", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column(
+        "p50_price_eur", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column(
+        "p90_price_eur", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column("prob_positive", Numeric(precision=8, scale=6), nullable=False),
+    Column(
+        "prob_loss_gt_5pct", Numeric(precision=8, scale=6), nullable=False
+    ),
+    Column(
+        "expected_volatility_annualized",
+        Numeric(precision=10, scale=8),
+        nullable=False,
+    ),
+    Column("forecast_confidence_level", Text, nullable=False),
+    Column("suggested_action_label", Text, nullable=False),
+    Column("block_reason", Text, nullable=True),
+    # Gate outcomes + evidence references + Dutch explanation.
+    Column("gate_outcomes_json", JSON, nullable=False),
+    Column("evidence_references_json", JSON, nullable=False),
+    Column("deterministic_dutch_explanation", Text, nullable=False),
+    # Per-asset hash chain.
+    Column("audit_trail_hash", Text, nullable=False),
+    Column("previous_package_hash", Text, nullable=True),
+    # Hard-False safety booleans (Task 132 product lock §1).
+    Column(
+        "safe_for_action_drafts",
+        Boolean,
+        nullable=False,
+        server_default="false",
+    ),
+    Column(
+        "safe_for_orders",
+        Boolean,
+        nullable=False,
+        server_default="false",
+    ),
+    CheckConstraint(
+        "freshness_state IN ('fresh', 'stale', 'unavailable')",
+        name="ck_decision_packages_freshness_state",
+    ),
+    CheckConstraint(
+        "forecast_method IN ('historical_bootstrap_v1')",
+        name="ck_decision_packages_forecast_method",
+    ),
+    CheckConstraint(
+        "forecast_confidence_level IN ('Laag', 'Gemiddeld', 'Hoog')",
+        name="ck_decision_packages_forecast_confidence_level",
+    ),
+    # 'Geblokkeerd' is explicitly excluded — see Task 132 product lock §2.
+    CheckConstraint(
+        "suggested_action_label IN ('Kopen', 'Verminderen', 'Verkopen', "
+        "'Houden', 'Bekijken')",
+        name="ck_decision_packages_suggested_action_label",
+    ),
+    CheckConstraint(
+        "prob_positive >= 0 AND prob_positive <= 1",
+        name="ck_decision_packages_prob_positive_range",
+    ),
+    CheckConstraint(
+        "prob_loss_gt_5pct >= 0 AND prob_loss_gt_5pct <= 1",
+        name="ck_decision_packages_prob_loss_range",
+    ),
+    CheckConstraint(
+        "data_age_trading_days >= 0",
+        name="ck_decision_packages_data_age_nonneg",
+    ),
+    CheckConstraint(
+        "safe_for_action_drafts = FALSE",
+        name="ck_decision_packages_safe_action_drafts_false",
+    ),
+    CheckConstraint(
+        "safe_for_orders = FALSE",
+        name="ck_decision_packages_safe_orders_false",
+    ),
+)
+Index(
+    "ix_decision_packages_account_conid_composed",
+    decision_packages.c.ibkr_account_id,
+    decision_packages.c.conid,
+    decision_packages.c.composed_at.desc(),
+)
+Index(
+    "ix_decision_packages_forecast_run_id",
+    decision_packages.c.forecast_run_id,
+)
+Index(
+    "ix_decision_packages_audit_hash",
+    decision_packages.c.audit_trail_hash,
+)

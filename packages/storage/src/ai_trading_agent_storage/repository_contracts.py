@@ -3530,5 +3530,177 @@ class CalibrationDiaryEntry:
             raise ValueError("realized_close_price must be non-negative")
 
 
+# Task 132: Decision Package locked enums + records.
+_LOCKED_FRESHNESS_STATES = frozenset({"fresh", "stale", "unavailable"})
+# Same six labels as the forecast, except 'Geblokkeerd' which gets no
+# Decision Package — see Task 132 product lock §2.
+_LOCKED_DECISION_PACKAGE_LABELS = frozenset(
+    {"Kopen", "Verminderen", "Verkopen", "Houden", "Bekijken"}
+)
+
+
+@dataclass(frozen=True)
+class GateOutcome:
+    """One row in the Decision Package's ``gate_outcomes`` list.
+
+    Each gate the composer evaluates produces one of these. ``reason_nl``
+    is the Dutch sentence the UI surfaces when ``passed=False``; it's
+    empty (``""``) when the gate passes — see Task 132 product lock §1.
+    """
+
+    gate_name: str
+    passed: bool
+    reason_nl: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.gate_name, "gate_name")
+        if not self.passed and not self.reason_nl:
+            raise ValueError(
+                "reason_nl is required when a gate fails"
+            )
+
+
+@dataclass(frozen=True)
+class EvidenceReference:
+    """One row in the Decision Package's ``evidence_references`` list.
+
+    Records the source the composer used as evidence for the package.
+    For V1.1.0 ``source_type`` ∈ {``market_data_snapshot``, ``fx_rate``,
+    ``ibkr_position_snapshot``}. External evidence (news, filings) is
+    explicitly out of scope per the Task 132 brief.
+    """
+
+    source_id: str
+    source_type: str
+    claim_summary: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.source_id, "source_id")
+        _require_non_empty(self.source_type, "source_type")
+        _require_non_empty(self.claim_summary, "claim_summary")
+
+
+@dataclass(frozen=True)
+class DecisionPackageEntry:
+    """Immutable Decision Package — Task 132 product lock §1 + §4.
+
+    Composed only when the underlying forecast label is NOT
+    ``Geblokkeerd`` (validated in ``__post_init__``). Append-only at the
+    storage layer; the repository has no ``update`` or ``delete``. Hash
+    chained per (ibkr_account_id, conid) via ``previous_package_hash``.
+
+    Safety booleans are hard-False at the dataclass level too, mirroring
+    the DB CHECK constraint — defense in depth so a misconfigured caller
+    can't slip a True past the repo. They only flip in future tasks
+    when the Action Center + approval workflow ship.
+    """
+
+    decision_package_id: str
+    forecast_run_id: str
+    composed_at: datetime
+    valid_until: datetime
+    ibkr_account_id: str
+    conid: str
+    symbol: str
+    exchange: str | None
+    currency_local: str
+    asset_class: str | None
+    user_holds_position: bool
+    held_quantity: Decimal | None
+    held_avg_cost_local: Decimal | None
+    current_price_local: Decimal
+    current_price_eur: Decimal
+    as_of_market_data_ts: datetime
+    freshness_state: str
+    data_age_trading_days: int
+    forecast_method: str
+    p10_log_return: Decimal
+    p50_log_return: Decimal
+    p90_log_return: Decimal
+    p10_price_eur: Decimal
+    p50_price_eur: Decimal
+    p90_price_eur: Decimal
+    prob_positive: Decimal
+    prob_loss_gt_5pct: Decimal
+    expected_volatility_annualized: Decimal
+    forecast_confidence_level: str
+    suggested_action_label: str
+    block_reason: str | None
+    gate_outcomes: tuple[GateOutcome, ...]
+    evidence_references: tuple[EvidenceReference, ...]
+    deterministic_dutch_explanation: str
+    audit_trail_hash: str
+    previous_package_hash: str | None
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        _require_non_empty(
+            self.decision_package_id, "decision_package_id"
+        )
+        _require_non_empty(self.forecast_run_id, "forecast_run_id")
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        _require_non_empty(self.conid, "conid")
+        _require_non_empty(self.symbol, "symbol")
+        _require_non_empty(self.currency_local, "currency_local")
+        _require_non_empty(
+            self.deterministic_dutch_explanation,
+            "deterministic_dutch_explanation",
+        )
+        _require_non_empty(self.audit_trail_hash, "audit_trail_hash")
+        if self.freshness_state not in _LOCKED_FRESHNESS_STATES:
+            raise ValueError(
+                f"freshness_state {self.freshness_state!r} not in "
+                f"{sorted(_LOCKED_FRESHNESS_STATES)}"
+            )
+        if self.forecast_method not in _LOCKED_FORECAST_METHODS:
+            raise ValueError(
+                f"forecast_method {self.forecast_method!r} not in "
+                f"{sorted(_LOCKED_FORECAST_METHODS)}"
+            )
+        if self.forecast_confidence_level not in _LOCKED_FORECAST_CONFIDENCE:
+            raise ValueError(
+                f"forecast_confidence_level "
+                f"{self.forecast_confidence_level!r} not in "
+                f"{sorted(_LOCKED_FORECAST_CONFIDENCE)}"
+            )
+        if self.suggested_action_label not in _LOCKED_DECISION_PACKAGE_LABELS:
+            raise ValueError(
+                f"suggested_action_label {self.suggested_action_label!r} "
+                f"not in {sorted(_LOCKED_DECISION_PACKAGE_LABELS)} "
+                "(Geblokkeerd forecasts get no Decision Package)"
+            )
+        if self.current_price_local < 0:
+            raise ValueError("current_price_local must be non-negative")
+        if self.current_price_eur < 0:
+            raise ValueError("current_price_eur must be non-negative")
+        if not (Decimal("0") <= self.prob_positive <= Decimal("1")):
+            raise ValueError("prob_positive must be in [0, 1]")
+        if not (Decimal("0") <= self.prob_loss_gt_5pct <= Decimal("1")):
+            raise ValueError("prob_loss_gt_5pct must be in [0, 1]")
+        if self.expected_volatility_annualized < 0:
+            raise ValueError(
+                "expected_volatility_annualized must be non-negative"
+            )
+        if self.data_age_trading_days < 0:
+            raise ValueError("data_age_trading_days must be non-negative")
+        if self.safe_for_action_drafts:
+            raise ValueError(
+                "safe_for_action_drafts must be False until the "
+                "Action Center workflow ships (Task 132 product lock §1)"
+            )
+        if self.safe_for_orders:
+            raise ValueError(
+                "safe_for_orders must be False until the order-submission "
+                "workflow ships (Task 132 product lock §1)"
+            )
+        if self.user_holds_position:
+            if self.held_quantity is None or self.held_quantity <= 0:
+                raise ValueError(
+                    "held_quantity must be positive when "
+                    "user_holds_position is True"
+                )
+
+
 class BootstrapInsufficientHistoryError(RuntimeError):
     """Raised when the bootstrap input doesn't have ≥200 daily closes."""
