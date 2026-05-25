@@ -1,0 +1,5 @@
+# Task 126b: Vitest + Playwright artefacts.
+test-results/
+playwright-report/
+.next/
+node_modules/

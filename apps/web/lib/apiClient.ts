@@ -643,6 +643,75 @@ export type IbkrAccountModeResponse = {
   blocks_orders: boolean;
 };
 
+export type IbkrConnectionStatusResponse = {
+  connected: boolean;
+  account_id: string | null;
+  account_mode: "paper" | "live" | "unknown";
+  verified_at: string | null;
+  error: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type IbkrConnectionAuditEntry = {
+  id: string;
+  event_at: string;
+  ibkr_account_id: string | null;
+  event_type: string;
+  account_mode_detected: string | null;
+  details_json: string | null;
+  connection_id: string | null;
+};
+
+export type IbkrConnectionAuditResponse = {
+  items: IbkrConnectionAuditEntry[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type IbkrPositionLatestRow = {
+  ibkr_account_id: string | null;
+  conid: string | null;
+  symbol: string;
+  exchange: string | null;
+  primary_exchange: string | null;
+  currency: string;
+  security_type: string;
+  quantity: string | null;
+  avg_cost: string | null;
+  market_price: string | null;
+  market_value: string | null;
+  unrealized_pnl: string | null;
+  as_of: string | null;
+};
+
+export type IbkrPositionsLatestResponse = {
+  items: IbkrPositionLatestRow[];
+  sync_run_id: string | null;
+  as_of: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type IbkrCashLatestRow = {
+  ibkr_account_id: string | null;
+  currency: string;
+  cash: string | null;
+  available_funds: string | null;
+  buying_power: string | null;
+  net_liquidation_value: string | null;
+  total_cash_value: string | null;
+  as_of: string | null;
+};
+
+export type IbkrCashLatestResponse = {
+  items: IbkrCashLatestRow[];
+  sync_run_id: string | null;
+  as_of: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
 export type DailyBriefingRunResponse = {
   status: string;
   status_nl?: string;
@@ -852,6 +921,16 @@ export const apiClient = {
   getLatestSchedulerRun: () =>
     getJson<LatestSchedulerRunResponse>("/scheduler/runs/latest"),
   getIbkrAccountMode: () => getJson<IbkrAccountModeResponse>("/ibkr/account/mode"),
+  getIbkrConnectionStatus: () =>
+    getJson<IbkrConnectionStatusResponse>("/ibkr/connection/status"),
+  getIbkrConnectionAudit: (limit = 20) =>
+    getJson<IbkrConnectionAuditResponse>(
+      `/ibkr/connection/audit?limit=${limit}`,
+    ),
+  getIbkrSyncPositionsLatest: () =>
+    getJson<IbkrPositionsLatestResponse>("/ibkr/sync/positions/latest"),
+  getIbkrSyncCashLatest: () =>
+    getJson<IbkrCashLatestResponse>("/ibkr/sync/cash/latest"),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),
