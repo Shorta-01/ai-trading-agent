@@ -20,6 +20,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyAssetForecastRepository,
     SqlAlchemyAssetFundamentalsSnapshotRepository,
     SqlAlchemyAssetSuggestionRepository,
+    SqlAlchemyClaudeAiBudgetUsageRepository,
     SqlAlchemyDailyBriefingRepository,
     SqlAlchemyDecisionPackageExplanationRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
@@ -3435,6 +3436,244 @@ def read_latest_predictor_backtests(
             "status": "storage_unavailable",
             "status_nl": "Opslag niet bereikbaar",
         }
+
+
+@router.get("/predictor/backtest/history")
+def read_predictor_backtest_history(
+    model_code: str | None = None,
+    asset_symbol: str | None = None,
+    limit: int = 20,
+) -> dict[str, object]:
+    """V1.1 Slice 33 — trend feed for the backtest-history panel.
+
+    Returns the most-recent ``limit`` backtest rows, optionally
+    filtered by ``model_code`` and/or ``asset_symbol`` so the
+    operator can chart how a predictor's Brier-score moved after
+    they flipped a rebuild knob.
+    """
+
+    from portfolio_outlook_api.predictor_backtest_orchestrator import (
+        serialize_backtest_run_record,
+    )
+
+    base: dict[str, object] = {
+        "items": [],
+        "help_nl": (
+            "Backtest-historie per predictor + asset. Lager Brier-score "
+            "is beter; een hoge sharpe-ratio of stijgende hit-rate na een "
+            "rebuild-knop suggereert dat de wijziging werkt."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyPredictorBacktestRunRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.list_recent_backtest_runs(
+                model_code=model_code,
+                asset_symbol=asset_symbol,
+                limit=max(1, min(int(limit), 100)),
+            )
+            return base | {
+                "status": "ok",
+                "status_nl": "Backtest-historie opgehaald",
+                "items": [
+                    serialize_backtest_run_record(record)
+                    for record in result.records
+                ],
+            }
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+        }
+
+
+@router.get("/claude/budget/status")
+def read_claude_budget_status() -> dict[str, object]:
+    """V1.1 §22.2 + Slice 33 — operator-facing Claude budget surface.
+
+    Returns the running month total + remaining headroom + the
+    locked cap so the UX card can warn before the next morning
+    chain blows past it. Read-only; never authorises an order.
+    """
+
+    from portfolio_outlook_api.claude_ai_budget import monthly_budget_status
+
+    base: dict[str, object] = {
+        "monthly_cap_eur": str(settings.claude_ai_budget_monthly_eur),
+        "help_nl": (
+            "Het Anthropic-budget is gedeeld tussen de uitleg-provider "
+            "en de TS-forecast provider. Eens de cap bereikt is, vallen "
+            "beide providers terug op de stub."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+            "budget_month": None,
+            "monthly_total_eur": None,
+            "remaining_eur": None,
+            "exceeded": False,
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyClaudeAiBudgetUsageRepository(
+                checked.connection, checked.readiness
+            )
+            status = monthly_budget_status(
+                repo=repo,
+                monthly_cap_eur=settings.claude_ai_budget_monthly_eur,
+            )
+            return base | {
+                "status": "ok",
+                "status_nl": "Budget-status opgehaald",
+                "budget_month": status.budget_month,
+                "monthly_total_eur": str(status.monthly_total_eur),
+                "remaining_eur": str(status.remaining_eur),
+                "exceeded": status.exceeded,
+            }
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+            "budget_month": None,
+            "monthly_total_eur": None,
+            "remaining_eur": None,
+            "exceeded": False,
+        }
+
+
+@router.get("/decision-packages/{ibkr_conid}/diff")
+def read_decision_package_diff(ibkr_conid: str) -> dict[str, object]:
+    """V1.1 Slice 33 — diff the most-recent two Decision Packages
+    for a conid so the operator can see what changed between
+    morning runs (`prob_gain`, action label, research evidence
+    items, content hash).
+    """
+
+    base: dict[str, object] = {
+        "help_nl": (
+            "Vergelijkt de twee meest recente Decision Packages voor "
+            "een conid. Een veranderde content-hash zonder veranderde "
+            "samenvatting wijst op research-evidence updates."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+            "newer": None,
+            "older": None,
+            "changes": [],
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            # Pull the latest two for this conid via the existing
+            # list-by-conids helper.
+            list_result = repo.list_latest_asset_decision_packages_by_conids(
+                (ibkr_conid,)
+            )
+            latest_records = sorted(
+                list_result.records,
+                key=lambda r: r.generated_at,
+                reverse=True,
+            )
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+            "newer": None,
+            "older": None,
+            "changes": [],
+        }
+
+    if not latest_records:
+        return base | {
+            "status": "not_found",
+            "status_nl": "Geen Decision Package voor dit conid",
+            "newer": None,
+            "older": None,
+            "changes": [],
+        }
+    newer = latest_records[0]
+    older = latest_records[1] if len(latest_records) > 1 else None
+
+    def _serialize(record: object) -> dict[str, object]:
+        generated_at_obj = getattr(record, "generated_at", None)
+        return {
+            "decision_package_id": getattr(record, "decision_package_id", None),
+            "generated_at": (
+                generated_at_obj.isoformat() if generated_at_obj is not None else None
+            ),
+            "status": getattr(record, "status", None),
+            "content_hash": getattr(record, "content_hash", None),
+            "ensemble_prob_gain": str(getattr(record, "ensemble_prob_gain", None))
+            if getattr(record, "ensemble_prob_gain", None) is not None
+            else None,
+            "ensemble_direction": getattr(record, "ensemble_direction", None),
+        }
+
+    changes: list[dict[str, str]] = []
+    if older is not None:
+        for attr in (
+            "content_hash",
+            "status",
+            "ensemble_prob_gain",
+            "ensemble_direction",
+        ):
+            newer_value = getattr(newer, attr, None)
+            older_value = getattr(older, attr, None)
+            if newer_value != older_value:
+                changes.append(
+                    {
+                        "field": attr,
+                        "older": "" if older_value is None else str(older_value),
+                        "newer": "" if newer_value is None else str(newer_value),
+                    }
+                )
+
+    return base | {
+        "status": "ok" if older is not None else "only_one_package",
+        "status_nl": (
+            "Diff berekend"
+            if older is not None
+            else "Slechts één Decision Package — niets om te vergelijken"
+        ),
+        "newer": _serialize(newer),
+        "older": _serialize(older) if older is not None else None,
+        "changes": changes,
+    }
 
 
 @router.get("/predictor/leaderboard")
