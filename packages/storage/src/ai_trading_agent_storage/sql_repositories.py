@@ -39,6 +39,7 @@ from ai_trading_agent_storage.metadata import (
     daily_briefings,
     decision_package_explanations,
     explanation_evidence_ledger,
+    predictor_backtest_runs,
     scheduler_runs,
     universe_scan_runs,
     market_data_bars,
@@ -84,6 +85,7 @@ from ai_trading_agent_storage.repository_contracts import (
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     PredictionDiaryEntryRecord,
+    PredictorBacktestRunRecord,
     SchedulerRunRecord,
     UniverseScanRunRecord,
     AssetForecastRecord,
@@ -2861,6 +2863,73 @@ class SqlAlchemySchedulerRunRepository(_Base):
             records,
             scheduler_runs.name,
             f"{len(records)} scheduler-runs opgehaald.",
+        )
+
+
+class SqlAlchemyPredictorBacktestRunRepository(_Base):
+    """V1.1 Slice 24: predictor backtest audit repository.
+
+    Slice 25 (backtesting framework) wires the harness that writes
+    rows; Slice 26 (feedback loop) aggregates rolling Brier scores
+    for the auto-weighted ensemble strategy.
+    """
+
+    def save_backtest_run(
+        self, record: PredictorBacktestRunRecord
+    ) -> StorageWriteResult:
+        self._insert(predictor_backtest_runs, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            predictor_backtest_runs.name,
+            True,
+            "Predictor-backtest opgeslagen.",
+        )
+
+    def update_backtest_run(
+        self, record: PredictorBacktestRunRecord
+    ) -> StorageWriteResult:
+        self._connection.execute(
+            predictor_backtest_runs.delete().where(
+                predictor_backtest_runs.c.run_id == record.run_id
+            )
+        )
+        self._insert(predictor_backtest_runs, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            predictor_backtest_runs.name,
+            True,
+            "Predictor-backtest bijgewerkt.",
+        )
+
+    def list_recent_backtest_runs(
+        self,
+        *,
+        model_code: str | None = None,
+        asset_symbol: str | None = None,
+        limit: int = 100,
+    ) -> StorageListResult[PredictorBacktestRunRecord]:
+        statement = select(predictor_backtest_runs)
+        if model_code is not None:
+            statement = statement.where(
+                predictor_backtest_runs.c.model_code == model_code
+            )
+        if asset_symbol is not None:
+            statement = statement.where(
+                predictor_backtest_runs.c.asset_symbol == asset_symbol
+            )
+        statement = statement.order_by(
+            predictor_backtest_runs.c.started_at.desc()
+        ).limit(_bounded_limit(limit))
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            PredictorBacktestRunRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            predictor_backtest_runs.name,
+            f"{len(records)} predictor-backtest runs opgehaald.",
         )
 
 

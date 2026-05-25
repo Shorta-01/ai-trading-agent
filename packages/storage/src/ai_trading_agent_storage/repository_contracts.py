@@ -2693,3 +2693,61 @@ class SchedulerRunRecord:
             raise ValueError(
                 "Scheduler-run safety booleans must remain false in V1."
             )
+
+
+@dataclass(frozen=True)
+class PredictorBacktestRunRecord:
+    """Audit row for one predictor backtest invocation.
+
+    Locked in `version-1-product-experience-locks.md §22` (V1.1
+    expansion). Slice 24 (predictor refactor base) creates the row
+    schema; Slice 25 (backtesting framework) writes rows; Slice 26
+    (feedback loop + auto-weighting) aggregates the rolling Brier
+    score for the ensemble combiner. Safety booleans stay False —
+    a backtest result never authorises an order.
+    """
+
+    run_id: str
+    model_code: str
+    model_version: str
+    asset_symbol: str
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    window_days: int
+    bars_used: int
+    brier_score: Decimal | None
+    hit_rate: Decimal | None
+    sharpe_ratio: Decimal | None
+    blocking_reason: str | None
+    explanation_nl: str | None
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "run_id",
+            "model_code",
+            "model_version",
+            "asset_symbol",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.status not in {"running", "succeeded", "failed", "skipped"}:
+            raise ValueError(
+                f"status must be running/succeeded/failed/skipped, got {self.status!r}"
+            )
+        if self.window_days <= 0:
+            raise ValueError("window_days must be positive")
+        if self.bars_used < 0:
+            raise ValueError("bars_used must be non-negative")
+        if self.hit_rate is not None and not (
+            Decimal("0") <= self.hit_rate <= Decimal("1")
+        ):
+            raise ValueError("hit_rate must be in [0, 1] when provided")
+        if self.brier_score is not None and self.brier_score < 0:
+            raise ValueError("brier_score must be non-negative when provided")
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Predictor-backtest safety booleans must remain false in V1.1."
+            )

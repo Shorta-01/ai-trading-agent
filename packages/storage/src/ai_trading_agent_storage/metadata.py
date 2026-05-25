@@ -1699,6 +1699,28 @@ universe_scan_runs = Table(
 )
 
 
+predictor_backtest_runs = Table(
+    "predictor_backtest_runs",
+    metadata,
+    Column("run_id", Text, primary_key=True),
+    Column("model_code", Text, nullable=False),
+    Column("model_version", Text, nullable=False),
+    Column("asset_symbol", Text, nullable=False),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("finished_at", DateTime(timezone=True), nullable=True),
+    Column("status", Text, nullable=False),
+    Column("window_days", Integer, nullable=False),
+    Column("bars_used", Integer, nullable=False),
+    Column("brier_score", Numeric(12, 6), nullable=True),
+    Column("hit_rate", Numeric(8, 6), nullable=True),
+    Column("sharpe_ratio", Numeric(12, 6), nullable=True),
+    Column("blocking_reason", Text, nullable=True),
+    Column("explanation_nl", Text, nullable=True),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
 asset_fundamentals_snapshots = Table(
     "asset_fundamentals_snapshots",
     metadata,

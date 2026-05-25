@@ -125,6 +125,57 @@ class PredictorProtocol(Protocol):
     def predict(self, inputs: PredictorInputs) -> PredictionDistribution: ...
 
 
+@dataclass(frozen=True)
+class BacktestWindowScore:
+    """One predictor's score over a single backtest window.
+
+    Slice 25 (backtesting framework) fills these from a pandas-based
+    walk-forward harness; Slice 26 (feedback loop) aggregates them
+    into the inverse-Brier-weighting strategy on the ensemble
+    combiner. Score fields are ``None`` when the window had too
+    little data for the corresponding metric.
+    """
+
+    model_code: str
+    model_version: str
+    window_days: int
+    bars_used: int
+    brier_score: float | None
+    hit_rate: float | None
+    sharpe_ratio: float | None
+    explanation_nl: str = ""
+
+
+class PredictorResearchProtocol(Protocol):
+    """V1.1 extension. Optional research methods every predictor MAY
+    implement. The morning-chain combiner uses only the
+    :class:`PredictorProtocol` interface; the research methods are
+    consumed by the backtesting framework (Slice 25) and the
+    feedback loop (Slice 26).
+
+    Predictors that don't implement the research methods stay as
+    plain :class:`PredictorProtocol`; the backtester reports
+    ``research_protocol_not_implemented`` for those rows so the
+    operator can tell at a glance which predictors carry walk-forward
+    backtest support.
+    """
+
+    @property
+    def model_code(self) -> str: ...
+
+    @property
+    def model_version(self) -> str: ...
+
+    def predict(self, inputs: PredictorInputs) -> PredictionDistribution: ...
+
+    def backtest_window_score(
+        self,
+        inputs: PredictorInputs,
+        *,
+        window_days: int,
+    ) -> BacktestWindowScore: ...
+
+
 __all__ = [
     "DIRECTION_STRONG_UP",
     "DIRECTION_SLIGHT_UP",
@@ -137,7 +188,9 @@ __all__ = [
     "BLOCKING_REASON_INSUFFICIENT_HISTORY",
     "BLOCKING_REASON_INVALID_HORIZON",
     "BLOCKING_REASON_FLAT_HISTORY",
+    "BacktestWindowScore",
     "PredictorInputs",
     "PredictionDistribution",
     "PredictorProtocol",
+    "PredictorResearchProtocol",
 ]

@@ -1884,6 +1884,122 @@ def test_scheduler_run_record_invariants() -> None:
         SchedulerRunRecord(**{**base, "safe_for_orders": True})
 
 
+def test_predictor_backtest_run_repository_roundtrip() -> None:
+    """V1.1 Slice 24: persist + read-back the predictor backtest audit row."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        PredictorBacktestRunRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyPredictorBacktestRunRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyPredictorBacktestRunRepository(conn, _report(True))
+        started = datetime(2026, 6, 1, 6, 30, tzinfo=UTC)
+        finished = datetime(2026, 6, 1, 6, 31, tzinfo=UTC)
+
+        running = PredictorBacktestRunRecord(
+            run_id="bt-1",
+            model_code="momentum_v1",
+            model_version="v1.0.0",
+            asset_symbol="AAPL",
+            started_at=started,
+            finished_at=None,
+            status="running",
+            window_days=90,
+            bars_used=0,
+            brier_score=None,
+            hit_rate=None,
+            sharpe_ratio=None,
+            blocking_reason=None,
+            explanation_nl=None,
+        )
+        repo.save_backtest_run(running)
+
+        succeeded = PredictorBacktestRunRecord(
+            run_id="bt-1",
+            model_code="momentum_v1",
+            model_version="v1.0.0",
+            asset_symbol="AAPL",
+            started_at=started,
+            finished_at=finished,
+            status="succeeded",
+            window_days=90,
+            bars_used=120,
+            brier_score=Decimal("0.187200"),
+            hit_rate=Decimal("0.563000"),
+            sharpe_ratio=Decimal("1.230000"),
+            blocking_reason=None,
+            explanation_nl="Walk-forward 90d/Momentum v1 → Brier 0.19.",
+        )
+        repo.update_backtest_run(succeeded)
+
+        rows = repo.list_recent_backtest_runs()
+        assert len(rows.records) == 1
+        row = rows.records[0]
+        assert row.run_id == "bt-1"
+        assert row.status == "succeeded"
+        assert row.brier_score == Decimal("0.187200")
+        assert row.hit_rate == Decimal("0.563000")
+
+        # Filter by model_code + asset_symbol.
+        filtered = repo.list_recent_backtest_runs(
+            model_code="momentum_v1", asset_symbol="AAPL"
+        )
+        assert len(filtered.records) == 1
+        empty = repo.list_recent_backtest_runs(model_code="missing_v1")
+        assert empty.records == ()
+
+
+def test_predictor_backtest_run_record_invariants() -> None:
+    """Per-field invariants on PredictorBacktestRunRecord."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        PredictorBacktestRunRecord,
+    )
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base = dict(
+        run_id="bt-1",
+        model_code="m",
+        model_version="v",
+        asset_symbol="AAPL",
+        started_at=now,
+        finished_at=None,
+        status="running",
+        window_days=90,
+        bars_used=0,
+        brier_score=None,
+        hit_rate=None,
+        sharpe_ratio=None,
+        blocking_reason=None,
+        explanation_nl=None,
+    )
+    # Status enforced.
+    with pytest.raises(ValueError, match="status must"):
+        PredictorBacktestRunRecord(**{**base, "status": "bogus"})
+    # Positive window_days enforced.
+    with pytest.raises(ValueError, match="window_days"):
+        PredictorBacktestRunRecord(**{**base, "window_days": 0})
+    # Non-negative bars_used.
+    with pytest.raises(ValueError, match="bars_used"):
+        PredictorBacktestRunRecord(**{**base, "bars_used": -1})
+    # Hit rate bounded.
+    with pytest.raises(ValueError, match="hit_rate"):
+        PredictorBacktestRunRecord(**{**base, "hit_rate": Decimal("1.5")})
+    # Brier non-negative.
+    with pytest.raises(ValueError, match="brier_score"):
+        PredictorBacktestRunRecord(**{**base, "brier_score": Decimal("-0.1")})
+    # Safety booleans hard-False enforced.
+    with pytest.raises(ValueError, match="safety booleans"):
+        PredictorBacktestRunRecord(**{**base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError, match="safety booleans"):
+        PredictorBacktestRunRecord(**{**base, "safe_for_orders": True})
+
+
 def test_asset_fundamentals_snapshot_repository_roundtrip() -> None:
     from ai_trading_agent_storage.repository_contracts import (
         AssetFundamentalsSnapshotRecord,
