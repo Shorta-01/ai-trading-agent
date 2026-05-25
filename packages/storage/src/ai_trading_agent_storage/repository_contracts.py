@@ -2448,6 +2448,58 @@ class BriefingAlertRecord:
 
 
 @dataclass(frozen=True)
+class UniverseScanRunRecord:
+    """Audit row for one daily universe-scan invocation.
+
+    Locked in `version-1-product-experience-locks.md §21.6` as the
+    provenance row that proves which subset of the ~5 000-ticker
+    universe was actually scanned today, how many fundamentals were
+    persisted, and how many candidates ranked through to the briefing.
+    Safety booleans stay False — a scan never promotes anything by
+    itself.
+    """
+
+    run_id: str
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    triggered_by: str
+    scanned_count: int
+    persisted_count: int
+    failed_count: int
+    ranked_count: int
+    universe_size: int
+    error_text: str | None
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in ("run_id", "status", "triggered_by"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.status not in {"running", "succeeded", "failed", "skipped"}:
+            raise ValueError(
+                f"status must be running/succeeded/failed/skipped, got {self.status!r}"
+            )
+        if self.triggered_by not in {"scheduler", "manual"}:
+            raise ValueError(
+                f"triggered_by must be scheduler/manual, got {self.triggered_by!r}"
+            )
+        for count_name in (
+            "scanned_count",
+            "persisted_count",
+            "failed_count",
+            "ranked_count",
+            "universe_size",
+        ):
+            if getattr(self, count_name) < 0:
+                raise ValueError(f"{count_name} must be non-negative.")
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Universe-scan run safety booleans must remain false in V1."
+            )
+
+
+@dataclass(frozen=True)
 class AssetFundamentalsSnapshotRecord:
     """One snapshot of factor-scoring fundamentals for one asset.
 

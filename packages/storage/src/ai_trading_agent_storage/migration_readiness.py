@@ -400,6 +400,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "een predictor, niet voor een order."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0039_universe_scan_runs",
+        previous_revision_id="0038_asset_fundamentals_snapshots",
+        filename="0039_universe_scan_runs.py",
+        label_nl="Universe scan runs audit",
+        description_nl=(
+            "Voegt universe_scan_runs toe: één rij per dag-scan over de "
+            "vastgelegde universe (Bel20, AEX, CAC40, DAX, S&P/NASDAQ). "
+            "Counters voor scanned/persisted/failed/ranked; safety booleans "
+            "blijven False."
+        ),
+    ),
 )
 
 

@@ -1963,3 +1963,85 @@ def test_asset_fundamentals_snapshot_rejects_safety_flags_true() -> None:
         AssetFundamentalsSnapshotRecord(**{**base, "safe_for_orders": True})
     with pytest.raises(ValueError):
         AssetFundamentalsSnapshotRecord(**{**base, "safe_for_action_drafts": True})
+
+
+def test_universe_scan_run_repository_save_update_and_list() -> None:
+    from ai_trading_agent_storage.repository_contracts import UniverseScanRunRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyUniverseScanRunRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyUniverseScanRunRepository(conn, _report(True))
+        now = datetime(2026, 6, 3, 6, 30, tzinfo=UTC)
+
+        running = UniverseScanRunRecord(
+            run_id="usr-1",
+            started_at=now,
+            finished_at=None,
+            status="running",
+            triggered_by="manual",
+            scanned_count=0,
+            persisted_count=0,
+            failed_count=0,
+            ranked_count=0,
+            universe_size=325,
+            error_text=None,
+        )
+        repo.save_run(running)
+
+        succeeded = UniverseScanRunRecord(
+            run_id="usr-1",
+            started_at=now,
+            finished_at=now + timedelta(seconds=42),
+            status="succeeded",
+            triggered_by="manual",
+            scanned_count=325,
+            persisted_count=320,
+            failed_count=5,
+            ranked_count=200,
+            universe_size=325,
+            error_text=None,
+        )
+        repo.update_run(succeeded)
+
+        latest = repo.get_latest_run()
+        assert latest.found is True
+        assert latest.record is not None
+        assert latest.record.status == "succeeded"
+        assert latest.record.scanned_count == 325
+        assert latest.record.persisted_count == 320
+
+        listed = repo.list_runs()
+        assert len(listed.records) == 1
+
+
+def test_universe_scan_run_record_invariants() -> None:
+    from ai_trading_agent_storage.repository_contracts import UniverseScanRunRecord
+
+    now = datetime(2026, 6, 3, tzinfo=UTC)
+    base = dict(
+        run_id="r",
+        started_at=now,
+        finished_at=None,
+        status="running",
+        triggered_by="manual",
+        scanned_count=0,
+        persisted_count=0,
+        failed_count=0,
+        ranked_count=0,
+        universe_size=10,
+        error_text=None,
+    )
+    with pytest.raises(ValueError, match="status must"):
+        UniverseScanRunRecord(**{**base, "status": "bogus"})
+    with pytest.raises(ValueError, match="triggered_by"):
+        UniverseScanRunRecord(**{**base, "triggered_by": "cron"})
+    with pytest.raises(ValueError, match="non-negative"):
+        UniverseScanRunRecord(**{**base, "scanned_count": -1})
+    with pytest.raises(ValueError):
+        UniverseScanRunRecord(**{**base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError):
+        UniverseScanRunRecord(**{**base, "safe_for_orders": True})

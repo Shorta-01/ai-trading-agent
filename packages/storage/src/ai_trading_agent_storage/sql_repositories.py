@@ -40,6 +40,7 @@ from ai_trading_agent_storage.metadata import (
     decision_package_explanations,
     explanation_evidence_ledger,
     scheduler_runs,
+    universe_scan_runs,
     market_data_bars,
     market_data_snapshots,
     prediction_diary_entries,
@@ -84,6 +85,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ExplanationEvidenceLedgerRecord,
     PredictionDiaryEntryRecord,
     SchedulerRunRecord,
+    UniverseScanRunRecord,
     AssetForecastRecord,
     AssetIdentifierAliasRecord,
     AssetListingRecord,
@@ -2934,4 +2936,73 @@ class SqlAlchemyAssetFundamentalsSnapshotRepository(_Base):
             records,
             asset_fundamentals_snapshots.name,
             f"{len(records)} fundamentals snapshots in latest universe.",
+        )
+
+
+class SqlAlchemyUniverseScanRunRepository(_Base):
+    def save_run(self, record: UniverseScanRunRecord) -> StorageWriteResult:
+        self._insert(universe_scan_runs, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            universe_scan_runs.name,
+            True,
+            "Universe-scan run opgeslagen.",
+        )
+
+    def update_run(self, record: UniverseScanRunRecord) -> StorageWriteResult:
+        self._connection.execute(
+            universe_scan_runs.delete().where(
+                universe_scan_runs.c.run_id == record.run_id
+            )
+        )
+        self._insert(universe_scan_runs, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.run_id,
+            universe_scan_runs.name,
+            True,
+            "Universe-scan run bijgewerkt.",
+        )
+
+    def get_latest_run(
+        self,
+    ) -> StorageReadResult[UniverseScanRunRecord]:
+        statement = (
+            select(universe_scan_runs)
+            .order_by(universe_scan_runs.c.started_at.desc())
+            .limit(1)
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                universe_scan_runs.name,
+                "Nog geen universe-scan run.",
+            )
+        return StorageReadResult(
+            True,
+            UniverseScanRunRecord(**dict(row)),
+            universe_scan_runs.name,
+            "Universe-scan run opgehaald.",
+        )
+
+    def list_runs(
+        self, *, limit: int = 50
+    ) -> StorageListResult[UniverseScanRunRecord]:
+        rows = (
+            self._connection.execute(
+                select(universe_scan_runs)
+                .order_by(universe_scan_runs.c.started_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(UniverseScanRunRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            universe_scan_runs.name,
+            f"{len(records)} universe-scan runs opgehaald.",
         )
