@@ -15,6 +15,11 @@ dependencies = [
   "ib_insync>=0.9.86",
   # Task 126: Postgres driver for production runtime.
   "psycopg[binary]>=3.2",
+  # Task 127: APScheduler skeleton for the locked 06:00 + hourly
+  # 07:00-21:00 Europe/Brussels schedule.
+  "apscheduler>=3.10.4",
+  # Task 127: ``Europe/Brussels`` zoneinfo on slim Docker images.
+  "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
@@ -42,4 +47,8 @@ mypy_path = "src:../../packages/storage/src"
 
 [[tool.mypy.overrides]]
 module = ["ib_insync", "ib_insync.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["apscheduler", "apscheduler.*"]
 ignore_missing_imports = true

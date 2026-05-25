@@ -712,6 +712,35 @@ export type IbkrCashLatestResponse = {
   safe_for_orders: boolean;
 };
 
+export type SchedulerV127StatusResponse = {
+  enabled: boolean;
+  last_run_at: string | null;
+  last_run_type: string | null;
+  last_mode_detected: string | null;
+  last_outcome: string | null;
+  next_runs: string[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type ScheduledRunAuditRow = {
+  run_id: string;
+  run_at: string;
+  run_type: string;
+  ibkr_account_id: string | null;
+  mode_detected: string;
+  duration_ms: number | null;
+  outcome: string;
+  error_details_json: string | null;
+  next_scheduled_at: string | null;
+};
+
+export type SchedulerV127RunsResponse = {
+  items: ScheduledRunAuditRow[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
 export type DailyBriefingRunResponse = {
   status: string;
   status_nl?: string;
@@ -931,6 +960,12 @@ export const apiClient = {
     getJson<IbkrPositionsLatestResponse>("/ibkr/sync/positions/latest"),
   getIbkrSyncCashLatest: () =>
     getJson<IbkrCashLatestResponse>("/ibkr/sync/cash/latest"),
+  getSchedulerV127Status: () =>
+    getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),
+  getSchedulerV127Runs: (limit = 20) =>
+    getJson<SchedulerV127RunsResponse>(
+      `/scheduler/v127/runs?limit=${limit}`,
+    ),
   getRequestAuditRequestLogs: () => getJson<RequestLogListResponse>("/audit/request-logs"),
   getRequestAuditRequestLog: (requestLogId: string) =>
     getJson<RequestLogResponse>(`/audit/request-logs/${encodeURIComponent(requestLogId)}`),

@@ -37,12 +37,27 @@ class IbkrSettings(BaseModel):
     account_id: str | None = None
 
 
+class SchedulerSettings(BaseModel):
+    """Task 127 APScheduler configuration.
+
+    Defaults preserve the Task 120 disabled-by-default lock — the
+    worker process does not start any cron jobs until
+    ``SCHEDULER_ENABLED=true``. Timezone is locked to Europe/Brussels
+    per the §22.2 morning-chain doctrine.
+    """
+
+    enabled: bool = False
+    timezone: str = "Europe/Brussels"
+    heartbeat_interval_seconds: int = 60
+
+
 class Settings(BaseSettings):
     service_name: str = "Portfolio Outlook Manager Worker"
     environment: str = "development"
     paper_only_mode: bool = True
     storage: StorageSettings = StorageSettings()
     ibkr: IbkrSettings = IbkrSettings()
+    scheduler: SchedulerSettings = SchedulerSettings()
 
     model_config = SettingsConfigDict(
         env_prefix="WORKER_",
