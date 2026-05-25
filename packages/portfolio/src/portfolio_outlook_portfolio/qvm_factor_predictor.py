@@ -63,6 +63,12 @@ QVM_MIN_BARS: Final[int] = 130
 # Minimum universe size for a meaningful z-score. Below this we report
 # the symbol as ``insufficient_universe`` rather than guess.
 QVM_MIN_UNIVERSE_SIZE: Final[int] = 5
+# V1.1 Slice 28 lifts the minimum-universe floor to 30 for stable
+# cross-sectional z-scores (industry practice). The dataclass default
+# stays at the V1 floor so existing tests + the operator's small-
+# universe sanity checks keep working; the apps/api setting
+# `qvm_min_universe_size` (default 30) carries the §22.5 lock.
+QVM_MIN_UNIVERSE_SIZE_V1_1: Final[int] = 30
 
 # Conservative cap on the projected annualised drift implied by the
 # composite score, mirroring the Momentum predictor.
@@ -218,6 +224,68 @@ def _factor_score_for_symbol(
     return _zscore(target_value, universe_values)
 
 
+def _sector_neutral_factor_score_for_symbol(
+    *,
+    entries: Sequence[FundamentalsEntry],
+    target_symbol: str,
+    component_getter: _ComponentGetter,
+) -> float | None:
+    """V1.1 Slice 28 — sector-neutral z-score.
+
+    Subtract each entry's sector-mean from its raw factor value
+    before z-scoring against the sector-de-meaned distribution. An
+    entry with no sector falls back to the global mean. Mirrors the
+    AQR / Asness factor-construction convention: tech stocks are
+    only compared against other tech stocks on value, not against
+    the whole universe.
+    """
+
+    # First pass: collect raw factor values + sector tags.
+    raw_values: list[tuple[float, str | None, str]] = []
+    for entry in entries:
+        value = _entry_factor_value(entry, component_getter)
+        if value is None:
+            continue
+        raw_values.append((value, entry.sector, entry.symbol))
+    if not raw_values:
+        return None
+    # Sector means.
+    by_sector: dict[str, list[float]] = {}
+    for value, sector, _ in raw_values:
+        if sector:
+            by_sector.setdefault(sector, []).append(value)
+    sector_mean = {
+        sector: statistics.fmean(values) for sector, values in by_sector.items()
+    }
+    global_mean = statistics.fmean([v for v, _, _ in raw_values])
+
+    de_meaned: list[float] = []
+    target_value: float | None = None
+    for value, sector, symbol in raw_values:
+        mean = sector_mean.get(sector or "", global_mean)
+        adjusted = value - mean
+        de_meaned.append(adjusted)
+        if symbol == target_symbol:
+            target_value = adjusted
+    if target_value is None:
+        return None
+    return _zscore(target_value, de_meaned)
+
+
+def _soft_clip_tanh(value: float) -> float:
+    """V1.1 Slice 28 — soft tanh-like clip for the QVM composite.
+
+    Maps the composite z-score onto [-1, +1] via the hyperbolic
+    tangent, which is asymptotically bounded by ±1 and stays smooth
+    where the V1 hard ±2 clip introduces a kink. Standard composite
+    z-scores are in [-3, +3]; tanh keeps them strictly inside (-1,
+    +1) with minimal information loss at the modest values that
+    matter most.
+    """
+
+    return math.tanh(value / 2.0)
+
+
 def _direction_label(expected_return_pct: float) -> str:
     if expected_return_pct >= 10.0:
         return DIRECTION_STRONG_UP
@@ -302,12 +370,18 @@ class QvmFactorPredictor:
         minimum_bars_required: int = QVM_MIN_BARS,
         max_annual_drift_pct: float = MAX_ANNUAL_DRIFT_PCT,
         trading_days_per_year: int = DEFAULT_TRADING_DAYS_PER_YEAR,
+        minimum_universe_size: int = QVM_MIN_UNIVERSE_SIZE,
+        sector_neutral_zscore: bool = False,
+        soft_clip_composite: bool = False,
     ) -> None:
         self._universe = universe
         self._target_symbol = target_symbol
         self._minimum_bars_required = minimum_bars_required
         self._max_annual_drift_pct = max_annual_drift_pct
         self._trading_days_per_year = trading_days_per_year
+        self._minimum_universe_size = minimum_universe_size
+        self._sector_neutral_zscore = sector_neutral_zscore
+        self._soft_clip_composite = soft_clip_composite
 
     @property
     def model_code(self) -> str:
@@ -344,13 +418,13 @@ class QvmFactorPredictor:
                 ),
             )
         entries = self._universe.entries
-        if len(entries) < QVM_MIN_UNIVERSE_SIZE:
+        if len(entries) < self._minimum_universe_size:
             return _blocked(
                 horizon_trading_days=horizon,
                 current_price=inputs.current_price,
                 reason=BLOCKING_REASON_INSUFFICIENT_UNIVERSE,
                 explanation_nl=(
-                    f"QVM-universe heeft minder dan {QVM_MIN_UNIVERSE_SIZE} "
+                    f"QVM-universe heeft minder dan {self._minimum_universe_size} "
                     f"entries; {len(entries)} ontvangen."
                 ),
             )
@@ -365,17 +439,22 @@ class QvmFactorPredictor:
                 ),
             )
 
-        quality_z = _factor_score_for_symbol(
+        scorer = (
+            _sector_neutral_factor_score_for_symbol
+            if self._sector_neutral_zscore
+            else _factor_score_for_symbol
+        )
+        quality_z = scorer(
             entries=entries,
             target_symbol=self._target_symbol,
             component_getter=_quality_components,
         )
-        value_z = _factor_score_for_symbol(
+        value_z = scorer(
             entries=entries,
             target_symbol=self._target_symbol,
             component_getter=_value_components,
         )
-        momentum_z = _factor_score_for_symbol(
+        momentum_z = scorer(
             entries=entries,
             target_symbol=self._target_symbol,
             component_getter=_momentum_components,
@@ -393,8 +472,12 @@ class QvmFactorPredictor:
             )
 
         composite_z = statistics.fmean(factor_scores)
-        # Map z-score onto [-1, +1] using a soft tanh-like clip at ±2.
-        composite_clipped = max(-1.0, min(1.0, composite_z / 2.0))
+        # V1 default: hard ±2 clip → linear map onto [-1, +1].
+        # V1.1 Slice 28 soft-tanh: maps onto (-1, +1) via tanh, no kink.
+        if self._soft_clip_composite:
+            composite_clipped = _soft_clip_tanh(composite_z)
+        else:
+            composite_clipped = max(-1.0, min(1.0, composite_z / 2.0))
 
         annual_drift_pct = self._max_annual_drift_pct * composite_clipped
         annual_drift_log = (

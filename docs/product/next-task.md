@@ -1,51 +1,45 @@
-# Task 183
+# Task 184
 
-Slice 28 — V1.1 Mean-Rev + QVM rebuild. The second half of the
-predictor-quality rebuild work. The Slice 22 audit flagged
-specific issues:
-
-* **Mean-Rev**: target is the 20-day SMA regardless of regime;
-  trending assets will get a wrong "reversion that never
-  happens" prediction. The Hurst-confidence multiplier dampens
-  this only partially.
-* **QVM**: minimum universe size of 5 is too small for stable
-  cross-sectional z-scores (industry practice ≥ 30); the
-  composite is hard-clipped at ±2 rather than soft-mapped; no
-  sector-neutralization (a tech stock vs. a utility compared
-  on the same value distribution).
+Slice 29 — V1.1 real AI explanation provider. Replaces the
+existing Slice 10 stub Anthropic Claude explanation provider with
+a real HTTP client honouring the §22.2 monthly budget cap.
 
 Scope:
-- **Mean-Rev rebuild** (`mean_reversion_predictor.py`):
-  - Hurst-asymmetric target: when ``H > 0.55`` the projected price
-    blends toward an extrapolated trend continuation (less
-    reversion); when ``H < 0.45`` it stays pulled toward the SMA
-    (full reversion). The blend is a linear interpolation
-    parameterised on ``H``.
-  - Behind a new `mean_reversion_hurst_asymmetric_target` constructor
-    knob defaulting to False so V1 behaviour is preserved.
-- **QVM rebuild** (`qvm_factor_predictor.py`):
-  - Raise the minimum-universe floor from 5 to 30 (still
-    configurable). Universe < 30 returns
-    ``insufficient_universe``.
-  - Sector-neutral z-scoring: subtract the sector mean from each
-    factor component before z-scoring against the
-    sector-de-meaned distribution. Falls back to global z-score
-    when sector data is missing.
-  - Soft-tanh mapping of the composite z-score onto [-1, +1]
-    instead of the hard ±2 clip; behind a new
-    `qvm_soft_clip_composite` knob.
-- New settings: `mean_reversion_hurst_asymmetric_target` (default
-  False), `qvm_min_universe_size` (default 30, configurable),
-  `qvm_sector_neutral_zscore` (default False), `qvm_soft_clip_composite`
-  (default False).
-- Tests: Hurst-asymmetric target behaviour on trending vs
-  mean-reverting series; QVM universe-size floor with the new
-  default; sector-neutral z-scoring with synthetic two-sector
-  universe; soft-tanh mapping vs hard-clip mapping.
+- New `apps/api` module `anthropic_explanation_provider.py`
+  wrapping the official `anthropic` SDK. Implements the existing
+  Slice 10 `ExplanationProviderProtocol`. Uses Claude Haiku by
+  default (cheapest tier suitable for paraphrase tasks).
+- **Mandatory prompt caching**: the locked Dutch system prompt +
+  the deterministic legal disclaimer use Anthropic ephemeral
+  cache breakpoints so the per-call cost stays at the cache-hit
+  rate. The Research Desk evidence summaries are also cached
+  per-day so the morning chain pays the full input cost once.
+- **Budget enforcement**: a new
+  `apps/api/src/portfolio_outlook_api/claude_ai_budget.py` module
+  tracks per-month total token cost in a tiny audit table
+  `claude_ai_budget_usage` (storage migration `0043`). The
+  provider checks the running total before each call; once the
+  total exceeds `CLAUDE_AI_BUDGET_MONTHLY_EUR` the provider
+  raises `ClaudeAiBudgetExceededError` and the orchestrator falls
+  back to the stub. The audit row persists usage per
+  (day, provider_code, input_tokens, output_tokens) so the
+  operator can see exactly when the budget runs out.
+- New settings: `claude_ai_explanation_model` (default
+  `claude-haiku-4-5-20251001`), `claude_ai_api_key` (env-only;
+  no committed default).
+- Factory `build_explanation_provider(settings)` returns the real
+  client when `claude_ai_explanation_real_client_enabled=true`
+  AND the API key is set, otherwise the stub (V1 behaviour).
+- Hallucinated-number guard stays from Slice 10 — the real
+  client's output still goes through the same validation pass;
+  any number not in the source Decision Package fails.
+- Tests cover: budget cap blocks the real call when the running
+  total exceeds the threshold; cache-breakpoint markers in the
+  prompt; factory gates (key missing / flag off / both set);
+  hallucinated-number guard still fires on the real response.
 
-When Slice 28 ships, Slice 29 (real AI explanation provider) is
+Manual approval gate stays; safety booleans hard-False; AI never
+originates a number.
+
+When Slice 29 ships, Slice 30 (real AI TS predictor) is
 unblocked.
-
-Manual approval gate stays; safety booleans hard-False on every
-persisted record. The defaults preserve V1 behaviour so existing
-tests stay green.

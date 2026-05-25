@@ -269,6 +269,65 @@ def _blocked(
     )
 
 
+def _hurst_asymmetric_target_price(
+    *,
+    current_price: float,
+    sma: float,
+    pull: float,
+    hurst: float | None,
+    prices: Sequence[float],
+) -> tuple[float, str]:
+    """V1.1 Slice 28 — Hurst-asymmetric target price.
+
+    The V1 path always pulls the projected price toward the 20-day
+    SMA. For a strongly-trending asset (`H > 0.55`) the SMA is a
+    lagging anchor; "predicting reversion that never happens" was
+    the audit-flagged failure mode. This helper blends the
+    SMA-target with an extrapolated trend continuation when the
+    series is trending, and stays fully reversion-focused when the
+    series is genuinely mean-reverting.
+
+    The blend uses a linear interpolation:
+
+    * ``H ≤ 0.45`` → full SMA pull (V1 behaviour).
+    * ``H ≥ 0.55`` → full trend extrapolation (no reversion).
+    * In between → linearly blended.
+
+    Trend extrapolation: a simple 20-day return continuation.
+    Returns ``(target_price, explanation_clause)``.
+    """
+
+    if hurst is None or len(prices) < 21:
+        # Without a Hurst estimate or enough trend history, fall back
+        # to V1 behaviour.
+        return current_price + pull * (sma - current_price), ""
+    if hurst <= 0.45:
+        return current_price + pull * (sma - current_price), (
+            f" Hurst-asymmetric: H={hurst:.2f} (mean-reverting regime); "
+            "volledige SMA-pull behouden."
+        )
+    # Trend extrapolation: project the same 20-day return forward.
+    twenty_back = prices[-21]
+    if twenty_back <= 0:
+        return current_price + pull * (sma - current_price), ""
+    twenty_day_return = current_price / twenty_back - 1.0
+    trend_target = current_price * (1.0 + twenty_day_return)
+    if hurst >= 0.55:
+        return trend_target, (
+            f" Hurst-asymmetric: H={hurst:.2f} (trending regime); "
+            "SMA-pull vervangen door trend-extrapolatie."
+        )
+    # Linear blend on H ∈ (0.45, 0.55).
+    weight_trend = (hurst - 0.45) / 0.10
+    weight_reversion = 1.0 - weight_trend
+    sma_target = current_price + pull * (sma - current_price)
+    blended = weight_reversion * sma_target + weight_trend * trend_target
+    return blended, (
+        f" Hurst-asymmetric: H={hurst:.2f} (overgang); blend "
+        f"{weight_reversion:.2f} SMA + {weight_trend:.2f} trend."
+    )
+
+
 def _confidence_from_sample(n: int, hurst_confidence: float) -> float:
     """Baseline confidence at 0.4 with HURST_WINDOW bars; asymptotes to
     0.8 at one trading year. Multiplied by the Hurst confidence so a
@@ -287,16 +346,28 @@ def _confidence_from_sample(n: int, hurst_confidence: float) -> float:
 
 
 class MeanReversionPredictor:
-    """RSI + Bollinger + Hurst mean-reversion predictor."""
+    """RSI + Bollinger + Hurst mean-reversion predictor.
+
+    V1.1 Slice 28 adds one opt-in rebuild knob locked by §22.5.
+    Default preserves V1 behaviour exactly.
+
+    * ``hurst_asymmetric_target=True`` blends the projected target
+      with an extrapolated trend continuation when ``H > 0.55``
+      (trending regime); when ``H < 0.45`` it stays pulled toward
+      the SMA (full reversion). The blend uses a linear
+      interpolation parameterised on ``H``.
+    """
 
     def __init__(
         self,
         *,
         minimum_bars_required: int = MEAN_REVERSION_MIN_BARS,
         trading_days_per_year: int = DEFAULT_TRADING_DAYS_PER_YEAR,
+        hurst_asymmetric_target: bool = False,
     ) -> None:
         self._minimum_bars_required = minimum_bars_required
         self._trading_days_per_year = trading_days_per_year
+        self._hurst_asymmetric_target = hurst_asymmetric_target
 
     @property
     def model_code(self) -> str:
@@ -366,9 +437,21 @@ class MeanReversionPredictor:
         )
         pull = base_strength * hurst_confidence
 
-        # Pull the projected price toward the 20-day SMA.
+        # Pull the projected price toward the 20-day SMA (V1 default)
+        # or blend with a trend extrapolation when the new
+        # `hurst_asymmetric_target` knob is on (V1.1 Slice 28).
         current = float(inputs.current_price)
-        target_price = current + pull * (sma - current)
+        asymmetric_clause = ""
+        if self._hurst_asymmetric_target:
+            target_price, asymmetric_clause = _hurst_asymmetric_target_price(
+                current_price=current,
+                sma=sma,
+                pull=pull,
+                hurst=hurst,
+                prices=prices,
+            )
+        else:
+            target_price = current + pull * (sma - current)
         expected_return_pct = (target_price - current) / current * 100.0
 
         # Distribution width: trailing 6-month-equivalent volatility on
@@ -408,7 +491,7 @@ class MeanReversionPredictor:
             f"Mean-reversion: RSI={rsi_text}, Bollinger z={z:.2f}, "
             f"Hurst={hurst_text}, pull={pull:.2f} → verwachte rendement over "
             f"{horizon} dagen = {expected_return_pct:.2f}% "
-            f"(target SMA={sma:.2f})."
+            f"(target SMA={sma:.2f}).{asymmetric_clause}"
         )
 
         return PredictionDistribution(
