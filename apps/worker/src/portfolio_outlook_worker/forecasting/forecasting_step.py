@@ -90,13 +90,21 @@ class _PerConidResult:
 
 @dataclass(frozen=True)
 class ForecastingStepResult:
-    """Task 131: summary the orchestrator folds into scheduled_run_audit."""
+    """Task 131: summary the orchestrator folds into scheduled_run_audit.
+
+    ``succeeded`` and ``blocked_by_reason`` count only **persisted** rows
+    (``forecast_run_id is not None``). When ``forecast_repo.append``
+    raises, the corresponding asset lands in ``persistence_failures``
+    so the audit row makes the failure visible rather than reporting
+    a false success.
+    """
 
     total_attempted: int
     succeeded: int
     blocked_by_reason: dict[str, int] = field(default_factory=dict)
     per_conid: tuple[_PerConidResult, ...] = field(default_factory=tuple)
     wall_clock_ms: int = 0
+    persistence_failures: int = 0
 
     @property
     def total_blocked(self) -> int:
@@ -108,6 +116,7 @@ class ForecastingStepResult:
             "succeeded": self.succeeded,
             "total_blocked": self.total_blocked,
             "blocked_by_reason": dict(self.blocked_by_reason),
+            "persistence_failures": self.persistence_failures,
             "wall_clock_ms": self.wall_clock_ms,
         }
 
@@ -141,6 +150,7 @@ def run_forecasting_step(
     per_conid: list[_PerConidResult] = []
     succeeded = 0
     blocked_by_reason: dict[str, int] = {}
+    persistence_failures = 0
     now = now_provider()
 
     for context in universe:
@@ -157,7 +167,14 @@ def run_forecasting_step(
             rng_seed=rng_seed,
         )
         per_conid.append(result)
-        if result.label == "Geblokkeerd" and result.block_reason is not None:
+        # ``forecast_run_id is None`` is the deterministic signal that
+        # the row was NOT persisted (set only after a successful
+        # ``forecast_repo.append``). Count those toward
+        # ``persistence_failures`` so the audit makes the failure
+        # visible rather than reporting a false success/block.
+        if result.forecast_run_id is None:
+            persistence_failures += 1
+        elif result.label == "Geblokkeerd" and result.block_reason is not None:
             blocked_by_reason[result.block_reason] = (
                 blocked_by_reason.get(result.block_reason, 0) + 1
             )
@@ -171,6 +188,7 @@ def run_forecasting_step(
         blocked_by_reason=blocked_by_reason,
         per_conid=tuple(per_conid),
         wall_clock_ms=wall_ms,
+        persistence_failures=persistence_failures,
     )
 
 
