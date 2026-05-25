@@ -3406,6 +3406,27 @@ _LOCKED_HIT_STATUSES = frozenset(
         "realized_below_p10",
     }
 )
+# Task 131 product lock §5: specific block reasons. The Task 130
+# reasons (data_stale, insufficient_history, implausible_volatility,
+# data_unavailable) are kept for backwards compatibility with rows
+# already in the diary; Task 131 adds the more specific
+# `stale_market_data`, `missing_asset_listing`, `computation_error`,
+# `excessive_volatility`. The UI maps each to a Dutch microcopy.
+_LOCKED_FORECAST_BLOCK_REASONS = frozenset(
+    {
+        # Task 130 (kept for backwards compat with historical rows).
+        "data_stale",
+        "insufficient_history",
+        "implausible_volatility",
+        "data_unavailable",
+        "not_held_for_sell_label",
+        # Task 131 (newly added, more specific).
+        "stale_market_data",
+        "missing_asset_listing",
+        "computation_error",
+        "excessive_volatility",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -3472,6 +3493,14 @@ class ForecastEntry:
         if self.label == "Geblokkeerd" and not self.block_reason:
             raise ValueError(
                 "block_reason is required when label is Geblokkeerd"
+            )
+        if (
+            self.block_reason is not None
+            and self.block_reason not in _LOCKED_FORECAST_BLOCK_REASONS
+        ):
+            raise ValueError(
+                f"block_reason {self.block_reason!r} not in "
+                f"{sorted(_LOCKED_FORECAST_BLOCK_REASONS)}"
             )
 
 

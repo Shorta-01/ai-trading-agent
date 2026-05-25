@@ -349,6 +349,16 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Configurable enable flag: `MARKET_DATA_FETCH_ENABLED` (default `false`). When off the orchestrator skips the market-data step entirely. `EODHD_API_KEY=None` is a valid configuration — `EodhdClient` returns a typed `NotConfiguredError` without touching the network.
 
 
+## Task 131 product locks (multi-asset forecasting)
+- Forecast scope per `morning_briefing` run = the union of (confirmed-watchlist items for the account) and (current IBKR position snapshots with quantity > 0). Deduplicated by conid. `FORECAST_PILOT_CONIDS` is retired as a hard config; `FORECAST_OVERRIDE_CONIDS` is the new test-override env var that bypasses the universe resolver entirely.
+- Per-asset failures never crash the run. Each asset gets either a successful `ForecastEntry` or a `Geblokkeerd` row carrying one of the locked block_reasons. The orchestrator's run completes regardless.
+- Locked block_reasons for V1.1.0: `insufficient_history` (<200 of last 252 trading days), `stale_market_data` (latest snapshot >3 calendar days old), `missing_asset_listing` (close provider returned no data for the conid), `computation_error` (bootstrap raised unexpectedly), `excessive_volatility` (annualized vol >100%, indicates data-quality issue). The Task 130 reasons (`data_stale`, `implausible_volatility`, `data_unavailable`, `not_held_for_sell_label`) are kept as accepted values for backwards compatibility with already-persisted rows.
+- No new label semantics. Task 130's six Dutch labels (`Kopen`/`Verminderen`/`Verkopen`/`Houden`/`Bekijken`/`Geblokkeerd`) remain the only allowed outcomes. The four out-of-scope labels (`Langzaam bijkopen` / `Vermijden` / `Cash houden` / `Geen actie`) stay out of scope.
+- Insufficient-history gate locked at ≥200 of the last 252 trading days. Below that floor we block with `insufficient_history` rather than emit a low-confidence forecast on short history. Quant-industry standard for single-name probabilistic forecasts; the block-bootstrap with `block_size=5` degrades sharply below ~150 observations. Shorter-history forecasting requires CQR or Bayesian shrinkage and is a future task.
+- Dashboard summary widget: `/forecast/day-summary` returns `{label_counts, total_forecasts, total_blocked, block_reasons}`; the `ForecastDaySummaryWidget` renders compact pills per non-zero label, clicking a pill routes to `/volglijst?filter=<label>`. Informational only — gates nothing; `safe_for_*` stays False.
+- Performance budget: a single `morning_briefing` run with up to 15 assets must complete in <60s wall-clock time. The performance test runs 15 real bootstraps and asserts the bound; on failure the bug is the regression, not the budget.
+
+
 ## Task 130 product locks (baseline historical-bootstrap forecast)
 - Pilot scope V1.1.0: forecasts run only for conids listed in `FORECAST_PILOT_CONIDS` (default `ASML.AS`). Expanding the pilot set is a config change, not a code change.
 - Forecast horizon: 20 trading days (~4 calendar weeks). Single horizon for V1.1.0; multi-horizon hierarchical forecasts are post-V1.1.

@@ -789,6 +789,12 @@ export type ForecastLabel =
 
 export type ForecastConfidenceLevel = "Laag" | "Gemiddeld" | "Hoog";
 
+export type PerAssetCoverage = {
+  forecasts_evaluated: number;
+  hit_rate_within_band: string | null;
+  sufficient_history: boolean;
+};
+
 export type ForecastLatestResponse = {
   conid: string;
   generated_at: string;
@@ -812,6 +818,18 @@ export type ForecastLatestResponse = {
   confidence_level: ForecastConfidenceLevel;
   label: ForecastLabel;
   block_reason: string | null;
+  per_asset_coverage: PerAssetCoverage;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type ForecastDaySummaryResponse = {
+  account_id: string | null;
+  as_of_date: string;
+  total_forecasts: number;
+  total_blocked: number;
+  label_counts: Partial<Record<ForecastLabel, number>>;
+  block_reasons: Record<string, number>;
   safe_for_action_drafts: boolean;
   safe_for_orders: boolean;
 };
@@ -1157,6 +1175,15 @@ export const apiClient = {
     getJson<CalibrationCoverageResponse>(
       `/calibration/coverage?window_days=${windowDays}`,
     ),
+  getForecastDaySummary: (params?: { accountId?: string; asOfDate?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.accountId) search.set("account_id", params.accountId);
+    if (params?.asOfDate) search.set("as_of_date", params.asOfDate);
+    const qs = search.toString();
+    return getJson<ForecastDaySummaryResponse>(
+      qs ? `/forecast/day-summary?${qs}` : "/forecast/day-summary",
+    );
+  },
   getSchedulerV127Status: () =>
     getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),
   getSchedulerV127Runs: (limit = 20) =>

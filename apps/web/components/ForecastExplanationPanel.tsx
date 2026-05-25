@@ -218,6 +218,14 @@ export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
             <dd data-testid="forecast-field-valid-until" style={{ margin: 0 }}>
               {fmtDate(data.forecast_valid_until)}
             </dd>
+
+            <dt style={{ fontWeight: 600 }}>Kalibratie (laatste 90 dagen)</dt>
+            <dd data-testid="forecast-field-per-asset-coverage" style={{ margin: 0 }}>
+              {data.per_asset_coverage.sufficient_history &&
+              data.per_asset_coverage.hit_rate_within_band !== null
+                ? `${(Number(data.per_asset_coverage.hit_rate_within_band) * 100).toFixed(0)}% binnen p10–p90 band (${data.per_asset_coverage.forecasts_evaluated} evaluaties)`
+                : "Onvoldoende historiek voor kalibratie."}
+            </dd>
           </dl>
         )}
 
