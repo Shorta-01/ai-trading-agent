@@ -1,20 +1,24 @@
-"""Real ``ibapi`` order-submission client (paper-only LMT/DAY/whole-share).
+"""Real ``ibapi`` order-submission client (paper-only, §21.3 vocabulary).
 
 This is the *only* point in V1 where the application places a real order
 against IBKR. The client is disabled-by-default and is constructed by the
 factory only when every gate passes (paper mode, real-client flag, host/
 port/client-id, account mode match).
 
-For V1 Slice 7 the client implements just the placeOrder hand-off:
+Order vocabulary (§21.3 lock):
 
-* connect → wait for ``nextValidId``
-* build typed ``Contract`` (STK/ETF, ``primary_exchange``, currency)
-* build typed ``Order`` (action, ``LMT`` + ``totalQuantity`` + ``lmtPrice`` +
-  ``DAY`` tif, ``transmit=True``, no leverage, no short, no fractional)
-* ``placeOrder(order_id, contract, order)``
-* wait briefly for ``openOrder`` / ``orderStatus`` callback so we can record
-  ``permId``
-* disconnect
+* ``LMT``  — limit order (lmtPrice)
+* ``MKT``  — market order
+* ``STP``  — stop order (auxPrice)
+* ``STP_LMT`` — stop-limit order (auxPrice + lmtPrice)
+* ``TRAIL`` — trailing stop (auxPrice OR trailingPercent)
+* ``TRAIL_LMT`` — trailing stop limit (trail + lmtPrice)
+* ``BRACKET`` — parent LMT + take-profit LMT child + stop-loss STP child
+
+For non-BRACKET types the client emits one ``placeOrder`` call. For
+BRACKET it emits three calls (parent + two children) with the parent
+receiving the next-valid order id and children parent-linked. The result
+records the parent's ``order_id`` / ``perm_id``.
 
 Reconciliation of fills/cancellations happens later via the existing IBKR
 sync runtime — not here.
@@ -38,10 +42,19 @@ logger = logging.getLogger(__name__)
 
 CONNECTION_ERROR_CODES = frozenset({502, 504, 1100, 1101, 1102, 1300, 2110})
 
+LOCKED_ORDER_TYPES = frozenset(
+    {"LMT", "MKT", "STP", "STP_LMT", "TRAIL", "TRAIL_LMT", "BRACKET"}
+)
+
 
 @dataclass(frozen=True)
 class OrderSubmissionInputs:
-    """Strongly-typed inputs the submission client needs."""
+    """Strongly-typed inputs the submission client needs.
+
+    ``order_type`` defaults to ``LMT`` so existing callers that only emit
+    plain limit orders stay unchanged. The other price fields are only
+    consumed when the chosen ``order_type`` requires them.
+    """
 
     symbol: str
     primary_exchange: str
@@ -50,6 +63,12 @@ class OrderSubmissionInputs:
     action_side: str  # "BUY" or "SELL"
     quantity: Decimal
     limit_price: Decimal
+    order_type: str = "LMT"
+    stop_price: Decimal | None = None
+    trail_amount: Decimal | None = None
+    trail_percent: Decimal | None = None
+    bracket_take_profit_limit_price: Decimal | None = None
+    bracket_stop_loss_price: Decimal | None = None
 
 
 @dataclass
@@ -173,54 +192,183 @@ def build_submission_callbacks(
     }
 
 
-def build_contract_and_order(inputs: OrderSubmissionInputs) -> tuple[Any, Any]:
-    """Build typed ``ibapi`` Contract + Order objects for a paper LMT/DAY order.
-
-    Validates the locked V1 scope:
-
-    * ``action_side`` must be BUY or SELL
-    * ``security_type`` must be ``STK``
-    * ``quantity`` must be a positive whole share
-    * ``limit_price`` must be positive
-
-    The function is the *only* module that imports ``ibapi.contract`` and
-    ``ibapi.order``; the rest of the codebase stays dependency-isolated.
-    """
-
+def _validate_common_inputs(inputs: OrderSubmissionInputs) -> None:
     if inputs.action_side not in {"BUY", "SELL"}:
         raise ValueError(f"action_side must be BUY or SELL, got {inputs.action_side!r}")
     if inputs.security_type != "STK":
         raise ValueError("V1 only supports STK security_type")
     if inputs.quantity <= 0 or inputs.quantity != inputs.quantity.to_integral_value():
         raise ValueError("quantity must be a positive whole share")
-    if inputs.limit_price <= 0:
-        raise ValueError("limit_price must be positive")
+    if inputs.order_type not in LOCKED_ORDER_TYPES:
+        raise ValueError(
+            f"order_type {inputs.order_type!r} is outside the V1 §21.3 lock"
+        )
 
+
+def _load_ibapi_classes() -> tuple[type[Any], type[Any]]:
     load_ibapi_preflight_modules()
     contract_module = importlib.import_module("ibapi.contract")
     order_module = importlib.import_module("ibapi.order")
     contract_cls = cast(type[Any], cast(Any, contract_module).Contract)
     order_cls = cast(type[Any], cast(Any, order_module).Order)
+    return contract_cls, order_cls
 
+
+def _build_contract(contract_cls: type[Any], inputs: OrderSubmissionInputs) -> Any:
     contract = contract_cls()
     contract.symbol = inputs.symbol
     contract.secType = "STK"
     contract.exchange = "SMART"
     contract.primaryExchange = inputs.primary_exchange
     contract.currency = inputs.currency
+    return contract
 
+
+def _new_order(
+    order_cls: type[Any],
+    *,
+    action: str,
+    quantity: Decimal,
+    transmit: bool,
+) -> Any:
     order = order_cls()
-    order.action = inputs.action_side
-    order.orderType = "LMT"
-    order.totalQuantity = inputs.quantity
-    order.lmtPrice = inputs.limit_price
+    order.action = action
+    order.totalQuantity = quantity
     order.tif = "DAY"
-    order.transmit = True
-    return contract, order
+    order.transmit = transmit
+    return order
+
+
+def _opposite_side(action_side: str) -> str:
+    return "SELL" if action_side == "BUY" else "BUY"
+
+
+def build_contract_and_orders(
+    inputs: OrderSubmissionInputs,
+) -> tuple[Any, list[Any]]:
+    """Build typed ``ibapi`` Contract + ordered list of ``Order`` objects.
+
+    Returns one order for the non-BRACKET vocabulary and three orders
+    (parent, take-profit child, stop-loss child) for BRACKET. The
+    children carry ``parentId=0`` here; the submission flow patches in
+    the real parent ``order_id`` before each ``placeOrder`` call.
+
+    Per-order-type validation mirrors the dry-run safety codes (§21.3).
+    """
+
+    _validate_common_inputs(inputs)
+    contract_cls, order_cls = _load_ibapi_classes()
+    contract = _build_contract(contract_cls, inputs)
+    orders = _build_orders_for_type(order_cls, inputs)
+    return contract, orders
+
+
+def build_contract_and_order(inputs: OrderSubmissionInputs) -> tuple[Any, Any]:
+    """Single-order builder kept for backward compatibility.
+
+    For BRACKET use :func:`build_contract_and_orders` since BRACKET emits
+    three orders that must be submitted together.
+    """
+
+    contract, orders = build_contract_and_orders(inputs)
+    if len(orders) != 1:
+        raise ValueError(
+            "BRACKET produces multiple orders; use build_contract_and_orders instead"
+        )
+    return contract, orders[0]
+
+
+def _build_orders_for_type(
+    order_cls: type[Any], inputs: OrderSubmissionInputs
+) -> list[Any]:
+    order_type = inputs.order_type
+    action = inputs.action_side
+    quantity = inputs.quantity
+
+    if order_type == "LMT":
+        if inputs.limit_price <= 0:
+            raise ValueError("limit_price must be positive for LMT")
+        order = _new_order(order_cls, action=action, quantity=quantity, transmit=True)
+        order.orderType = "LMT"
+        order.lmtPrice = inputs.limit_price
+        return [order]
+
+    if order_type == "MKT":
+        order = _new_order(order_cls, action=action, quantity=quantity, transmit=True)
+        order.orderType = "MKT"
+        return [order]
+
+    if order_type == "STP":
+        if inputs.stop_price is None or inputs.stop_price <= 0:
+            raise ValueError("stop_price must be positive for STP")
+        order = _new_order(order_cls, action=action, quantity=quantity, transmit=True)
+        order.orderType = "STP"
+        order.auxPrice = inputs.stop_price
+        return [order]
+
+    if order_type == "STP_LMT":
+        if inputs.stop_price is None or inputs.stop_price <= 0:
+            raise ValueError("stop_price must be positive for STP_LMT")
+        if inputs.limit_price <= 0:
+            raise ValueError("limit_price must be positive for STP_LMT")
+        order = _new_order(order_cls, action=action, quantity=quantity, transmit=True)
+        order.orderType = "STP LMT"
+        order.auxPrice = inputs.stop_price
+        order.lmtPrice = inputs.limit_price
+        return [order]
+
+    if order_type in {"TRAIL", "TRAIL_LMT"}:
+        has_amount = inputs.trail_amount is not None and inputs.trail_amount > 0
+        has_percent = inputs.trail_percent is not None and inputs.trail_percent > 0
+        if has_amount == has_percent:
+            raise ValueError(
+                "exactly one of trail_amount or trail_percent must be set"
+            )
+        order = _new_order(order_cls, action=action, quantity=quantity, transmit=True)
+        order.orderType = "TRAIL" if order_type == "TRAIL" else "TRAIL LIMIT"
+        if has_amount:
+            order.auxPrice = inputs.trail_amount
+        else:
+            order.trailingPercent = inputs.trail_percent
+        if order_type == "TRAIL_LMT":
+            if inputs.limit_price <= 0:
+                raise ValueError("limit_price must be positive for TRAIL_LMT")
+            order.lmtPrice = inputs.limit_price
+        return [order]
+
+    # BRACKET — parent LMT + opposite-side TP (LMT) + opposite-side SL (STP)
+    if inputs.limit_price <= 0:
+        raise ValueError("limit_price must be positive for BRACKET")
+    tp = inputs.bracket_take_profit_limit_price
+    sl = inputs.bracket_stop_loss_price
+    if tp is None or tp <= 0:
+        raise ValueError("bracket_take_profit_limit_price must be positive")
+    if sl is None or sl <= 0:
+        raise ValueError("bracket_stop_loss_price must be positive")
+
+    parent = _new_order(order_cls, action=action, quantity=quantity, transmit=False)
+    parent.orderType = "LMT"
+    parent.lmtPrice = inputs.limit_price
+
+    opposite = _opposite_side(action)
+    take_profit = _new_order(
+        order_cls, action=opposite, quantity=quantity, transmit=False
+    )
+    take_profit.orderType = "LMT"
+    take_profit.lmtPrice = tp
+    take_profit.parentId = 0  # patched in submit() once parent_id is known
+
+    stop_loss = _new_order(
+        order_cls, action=opposite, quantity=quantity, transmit=True
+    )
+    stop_loss.orderType = "STP"
+    stop_loss.auxPrice = sl
+    stop_loss.parentId = 0  # patched in submit() once parent_id is known
+    return [parent, take_profit, stop_loss]
 
 
 class IbapiOrderSubmissionClient:
-    """Disabled-by-default paper-only LMT/DAY order-submission client."""
+    """Disabled-by-default paper-only §21.3-vocabulary order-submission client."""
 
     def __init__(
         self,
@@ -235,6 +383,10 @@ class IbapiOrderSubmissionClient:
             [OrderSubmissionInputs], tuple[Any, Any]
         ]
         | None = None,
+        contract_orders_builder: Callable[
+            [OrderSubmissionInputs], tuple[Any, list[Any]]
+        ]
+        | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -246,7 +398,20 @@ class IbapiOrderSubmissionClient:
         self._thread: threading.Thread | None = None
         self._closed = False
         self._app = app if app is not None else self._build_app()
-        self._contract_order_builder = contract_order_builder or build_contract_and_order
+        if contract_orders_builder is not None:
+            self._contract_orders_builder = contract_orders_builder
+        elif contract_order_builder is not None:
+            # Adapt the legacy (single-order) injector by wrapping its result
+            # in a one-element list. BRACKET cannot be tested through it.
+            single_builder = contract_order_builder
+
+            def _adapter(inputs: OrderSubmissionInputs) -> tuple[Any, list[Any]]:
+                contract, order = single_builder(inputs)
+                return contract, [order]
+
+            self._contract_orders_builder = _adapter
+        else:
+            self._contract_orders_builder = build_contract_and_orders
 
     def _build_app(self) -> OrderSubmissionAppProtocol:
         load_ibapi_preflight_modules()
@@ -293,9 +458,13 @@ class IbapiOrderSubmissionClient:
             self._state.connected = True
 
     def submit(self, inputs: OrderSubmissionInputs) -> OrderSubmissionResult:
-        """Place one LMT/DAY/whole-share order. The call blocks until either
-        the ``openOrder`` / ``orderStatus`` callback fires or the timeout
-        elapses."""
+        """Place one §21.3-vocabulary order (or a BRACKET parent + 2 children).
+
+        Blocks until the ``openOrder`` / ``orderStatus`` callback fires for
+        the parent or the timeout elapses. The result records the parent
+        ``order_id`` / ``perm_id`` only; child IDs are derived as
+        ``parent_id + 1`` and ``parent_id + 2`` per the IBKR convention.
+        """
 
         self._ensure_connected()
 
@@ -332,7 +501,7 @@ class IbapiOrderSubmissionClient:
             )
 
         try:
-            contract, order = self._contract_order_builder(inputs)
+            contract, orders = self._contract_orders_builder(inputs)
         except ValueError as exc:
             return OrderSubmissionResult(
                 accepted=False,
@@ -343,9 +512,17 @@ class IbapiOrderSubmissionClient:
                 rejected_reason=f"invalid_inputs:{exc}",
             )
 
+        # For BRACKET (or any multi-order build) wire child ``parentId``
+        # to the parent's order_id so IBKR groups them.
+        if len(orders) > 1:
+            for child in orders[1:]:
+                if hasattr(child, "parentId"):
+                    child.parentId = order_id
+
         self._state.confirmation_event.clear()
         try:
-            self._app.placeOrder(order_id, contract, order)
+            for offset, order in enumerate(orders):
+                self._app.placeOrder(order_id + offset, contract, order)
         except Exception as exc:
             return OrderSubmissionResult(
                 accepted=False,
@@ -357,7 +534,7 @@ class IbapiOrderSubmissionClient:
                 raw_diagnostic=str(exc),
             )
 
-        # Wait briefly for openOrder / orderStatus confirmation.
+        # Wait briefly for openOrder / orderStatus confirmation on the parent.
         self._state.confirmation_event.wait(self._timeout)
         rejected_reason = self._state.rejected_reason
         return OrderSubmissionResult(

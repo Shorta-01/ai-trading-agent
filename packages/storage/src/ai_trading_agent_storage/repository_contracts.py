@@ -1993,13 +1993,24 @@ class AssetDecisionPackageRecord:
 class AssetActionDraftRecord:
     """Editable structured action-draft derived from a ready Decision Package.
 
-    V1 scope (locked in `version-1-product-experience-locks.md §10` and
-    `release-1-functional-workflow-blueprint.md §10`):
+    V1 scope (locked in `version-1-product-experience-locks.md §10` plus
+    the §21.3 order-vocabulary expansion):
 
     * stocks/ETFs only, whole shares only
-    * ``order_type == "LMT"`` only
+    * ``order_type`` ∈ ``{LMT, MKT, STP, STP_LMT, TRAIL, TRAIL_LMT, BRACKET}``
     * ``tif == "DAY"`` only
     * ``action_side`` is ``"BUY"`` or ``"SELL"``
+
+    Per-type required fields:
+
+    * **LMT** — ``limit_price > 0``
+    * **MKT** — no extra price fields
+    * **STP** — ``stop_price > 0``
+    * **STP_LMT** — both ``stop_price > 0`` and ``limit_price > 0``
+    * **TRAIL** — exactly one of ``trail_amount > 0`` / ``trail_percent > 0``
+    * **TRAIL_LMT** — TRAIL fields + ``limit_price > 0``
+    * **BRACKET** — ``limit_price > 0`` + ``bracket_take_profit_limit_price > 0``
+      + ``bracket_stop_loss_price > 0``
 
     A draft never auto-promotes to broker submission. The persisted record
     carries the dry-run outcome + the Orderimpact preview; the actual
@@ -2048,6 +2059,14 @@ class AssetActionDraftRecord:
     # computed (older drafts).
     estimated_belgian_tob: Decimal | None = None
     belgian_tob_security_class: str | None = None
+    # Order-vocabulary expansion (Slice 20 / §21.3). Each field is only
+    # required for the order types listed in the class docstring; the
+    # other types must leave them ``None``.
+    stop_price: Decimal | None = None
+    trail_amount: Decimal | None = None
+    trail_percent: Decimal | None = None
+    bracket_take_profit_limit_price: Decimal | None = None
+    bracket_stop_loss_price: Decimal | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -2074,16 +2093,16 @@ class AssetActionDraftRecord:
             raise ValueError(
                 f"action_side must be BUY or SELL, got {self.action_side!r}"
             )
-        if self.order_type != "LMT":
+        if self.order_type not in LOCKED_ORDER_TYPES:
             raise ValueError(
-                "V1 action-drafts only support LMT order_type."
+                f"order_type must be one of {sorted(LOCKED_ORDER_TYPES)}, "
+                f"got {self.order_type!r}"
             )
         if self.tif != "DAY":
             raise ValueError("V1 action-drafts only support DAY tif.")
         if self.quantity <= 0:
             raise ValueError("quantity must be positive.")
-        if self.limit_price <= 0:
-            raise ValueError("limit_price must be positive.")
+        _enforce_order_type_invariants(self)
         if (
             self.safe_for_submission
             or self.safe_for_orders
@@ -2095,6 +2114,93 @@ class AssetActionDraftRecord:
             )
         if self.estimated_belgian_tob is not None and self.estimated_belgian_tob < 0:
             raise ValueError("estimated_belgian_tob must not be negative.")
+        for price_field in (
+            "stop_price",
+            "trail_amount",
+            "trail_percent",
+            "bracket_take_profit_limit_price",
+            "bracket_stop_loss_price",
+        ):
+            value = getattr(self, price_field)
+            if value is not None and value <= 0:
+                raise ValueError(f"{price_field} must be positive when provided.")
+
+
+LOCKED_ORDER_TYPES: frozenset[str] = frozenset(
+    {"LMT", "MKT", "STP", "STP_LMT", "TRAIL", "TRAIL_LMT", "BRACKET"}
+)
+
+
+def _enforce_order_type_invariants(record: AssetActionDraftRecord) -> None:
+    """Per-type field requirements for :class:`AssetActionDraftRecord`."""
+
+    order_type = record.order_type
+    if order_type == "LMT":
+        if record.limit_price <= 0:
+            raise ValueError("LMT order_type requires limit_price > 0.")
+        return
+    if order_type == "MKT":
+        # MKT carries no price; ``limit_price`` is still required to
+        # exist on the dataclass but we allow 0 here. The dataclass
+        # type insists on Decimal — Decimal("0") is fine.
+        return
+    if order_type == "STP":
+        if record.stop_price is None or record.stop_price <= 0:
+            raise ValueError("STP order_type requires stop_price > 0.")
+        return
+    if order_type == "STP_LMT":
+        if record.stop_price is None or record.stop_price <= 0:
+            raise ValueError("STP_LMT order_type requires stop_price > 0.")
+        if record.limit_price <= 0:
+            raise ValueError("STP_LMT order_type requires limit_price > 0.")
+        return
+    if order_type in {"TRAIL", "TRAIL_LMT"}:
+        has_amount = record.trail_amount is not None and record.trail_amount > 0
+        has_percent = record.trail_percent is not None and record.trail_percent > 0
+        if has_amount == has_percent:
+            raise ValueError(
+                f"{order_type} order_type requires exactly one of "
+                "trail_amount or trail_percent (not both, not neither)."
+            )
+        if order_type == "TRAIL_LMT" and record.limit_price <= 0:
+            raise ValueError("TRAIL_LMT order_type requires limit_price > 0.")
+        return
+    if order_type == "BRACKET":
+        if record.limit_price <= 0:
+            raise ValueError("BRACKET order_type requires limit_price > 0.")
+        if (
+            record.bracket_take_profit_limit_price is None
+            or record.bracket_take_profit_limit_price <= 0
+        ):
+            raise ValueError(
+                "BRACKET order_type requires bracket_take_profit_limit_price > 0."
+            )
+        if (
+            record.bracket_stop_loss_price is None
+            or record.bracket_stop_loss_price <= 0
+        ):
+            raise ValueError(
+                "BRACKET order_type requires bracket_stop_loss_price > 0."
+            )
+        if record.action_side == "BUY":
+            if record.bracket_take_profit_limit_price <= record.limit_price:
+                raise ValueError(
+                    "BRACKET BUY requires take-profit price > limit_price."
+                )
+            if record.bracket_stop_loss_price >= record.limit_price:
+                raise ValueError(
+                    "BRACKET BUY requires stop-loss price < limit_price."
+                )
+        else:  # SELL
+            if record.bracket_take_profit_limit_price >= record.limit_price:
+                raise ValueError(
+                    "BRACKET SELL requires take-profit price < limit_price."
+                )
+            if record.bracket_stop_loss_price <= record.limit_price:
+                raise ValueError(
+                    "BRACKET SELL requires stop-loss price > limit_price."
+                )
+        return
 
 
 @dataclass(frozen=True)

@@ -434,6 +434,12 @@ def submit_action_draft_to_paper(
         action_side=draft.action_side,
         quantity=draft.quantity,
         limit_price=draft.limit_price,
+        order_type=draft.order_type,
+        stop_price=draft.stop_price,
+        trail_amount=draft.trail_amount,
+        trail_percent=draft.trail_percent,
+        bracket_take_profit_limit_price=draft.bracket_take_profit_limit_price,
+        bracket_stop_loss_price=draft.bracket_stop_loss_price,
     )
 
     try:

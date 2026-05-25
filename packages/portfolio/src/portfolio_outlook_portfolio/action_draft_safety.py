@@ -3,7 +3,8 @@
 V1 scope (locked):
 
 * stocks/ETFs only, whole shares only
-* ``LMT`` order type only
+* order types: ``LMT``, ``MKT``, ``STP``, ``STP_LMT``, ``TRAIL``,
+  ``TRAIL_LMT``, ``BRACKET`` (per §21.3)
 * ``DAY`` tif only
 * ``BUY`` or ``SELL`` action side only
 * Markets: NYSE, Nasdaq, Euronext Brussels/Amsterdam/Paris, Xetra
@@ -49,6 +50,9 @@ LOCKED_ALLOWED_EXCHANGES: Final[frozenset[str]] = frozenset(
 )
 
 LOCKED_ORDER_TYPE: Final = "LMT"
+LOCKED_ORDER_TYPES: Final[frozenset[str]] = frozenset(
+    {"LMT", "MKT", "STP", "STP_LMT", "TRAIL", "TRAIL_LMT", "BRACKET"}
+)
 LOCKED_TIF: Final = "DAY"
 LOCKED_ACTION_SIDES: Final[frozenset[str]] = frozenset({"BUY", "SELL"})
 
@@ -110,13 +114,25 @@ class DraftSourceContext:
 @dataclass(frozen=True)
 class DraftSizing:
     """Outcome of sizing logic. ``status`` is ``ready`` only when the math
-    produced a positive whole-share quantity at a positive limit price."""
+    produced a positive whole-share quantity (and the price fields the
+    chosen order type requires are all positive).
+
+    ``order_type`` defaults to ``LMT`` to keep callers that only handle
+    plain limit orders unchanged. The extra price fields are only set
+    when the orchestrator emits a non-LMT order (§21.3 vocabulary).
+    """
 
     action_side: str
     quantity: Decimal
     limit_price: Decimal
     status: str  # "ready" | "blocked"
     blocking_reason: str | None
+    order_type: str = "LMT"
+    stop_price: Decimal | None = None
+    trail_amount: Decimal | None = None
+    trail_percent: Decimal | None = None
+    bracket_take_profit_limit_price: Decimal | None = None
+    bracket_stop_loss_price: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -482,10 +498,86 @@ def run_dry_run_safety_checks(
     # but the dry-run reports it explicitly so the user knows).
     if sizing.quantity <= 0:
         failures.append("invalid_quantity")
-    if sizing.limit_price <= 0:
-        failures.append("invalid_limit_price")
+    # ``limit_price`` is only required for order types that carry one
+    # (everything except MKT, STP and TRAIL). Plain TRAIL has only an
+    # offset; STP only has a stop price. MKT has neither.
+    if sizing.order_type in {"LMT", "STP_LMT", "TRAIL_LMT", "BRACKET"}:
+        if sizing.limit_price <= 0:
+            failures.append("invalid_limit_price")
+
+    # Per-order-type extras (§21.3 vocabulary).
+    _append_per_order_type_failures(sizing, failures)
 
     return DryRunResult(
         status="passed" if not failures else "failed",
         failures=tuple(failures),
     )
+
+
+def _append_per_order_type_failures(
+    sizing: DraftSizing,
+    failures: list[str],
+) -> None:
+    """Validate the order-type-specific extras on a ``DraftSizing``.
+
+    Stable failure codes (mapped to Dutch UI strings by the orchestrator):
+
+    * ``unsupported_order_type`` — order_type outside the §21.3 lock
+    * ``stp_missing_stop_price``, ``stp_lmt_missing_stop_or_limit``
+    * ``trail_missing_trail_value``, ``trail_amount_and_percent_set``
+    * ``trail_lmt_missing_limit_price``
+    * ``bracket_missing_take_profit``, ``bracket_missing_stop_loss``
+    * ``bracket_take_profit_below_limit``, ``bracket_stop_loss_above_limit``
+    * ``bracket_inverted_for_sell``
+    """
+
+    order_type = sizing.order_type
+    if order_type not in LOCKED_ORDER_TYPES:
+        failures.append("unsupported_order_type")
+        return
+
+    if order_type == "STP":
+        if sizing.stop_price is None or sizing.stop_price <= 0:
+            failures.append("stp_missing_stop_price")
+        return
+
+    if order_type == "STP_LMT":
+        stop_ok = sizing.stop_price is not None and sizing.stop_price > 0
+        limit_ok = sizing.limit_price > 0
+        if not stop_ok or not limit_ok:
+            failures.append("stp_lmt_missing_stop_or_limit")
+        return
+
+    if order_type in {"TRAIL", "TRAIL_LMT"}:
+        has_amount = sizing.trail_amount is not None and sizing.trail_amount > 0
+        has_percent = sizing.trail_percent is not None and sizing.trail_percent > 0
+        if not has_amount and not has_percent:
+            failures.append("trail_missing_trail_value")
+        elif has_amount and has_percent:
+            failures.append("trail_amount_and_percent_set")
+        if order_type == "TRAIL_LMT" and sizing.limit_price <= 0:
+            failures.append("trail_lmt_missing_limit_price")
+        return
+
+    if order_type == "BRACKET":
+        tp = sizing.bracket_take_profit_limit_price
+        sl = sizing.bracket_stop_loss_price
+        if tp is None or tp <= 0:
+            failures.append("bracket_missing_take_profit")
+        if sl is None or sl <= 0:
+            failures.append("bracket_missing_stop_loss")
+        if (
+            tp is not None
+            and sl is not None
+            and tp > 0
+            and sl > 0
+            and sizing.limit_price > 0
+        ):
+            if sizing.action_side == "BUY":
+                if tp <= sizing.limit_price:
+                    failures.append("bracket_take_profit_below_limit")
+                if sl >= sizing.limit_price:
+                    failures.append("bracket_stop_loss_above_limit")
+            else:  # SELL
+                if tp >= sizing.limit_price or sl <= sizing.limit_price:
+                    failures.append("bracket_inverted_for_sell")

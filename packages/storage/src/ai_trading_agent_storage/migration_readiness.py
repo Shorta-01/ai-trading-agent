@@ -412,6 +412,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0040_action_draft_order_vocabulary",
+        previous_revision_id="0039_universe_scan_runs",
+        filename="0040_action_draft_order_vocabulary.py",
+        label_nl="Action-draft order-type uitbreiding",
+        description_nl=(
+            "Voegt vijf nullable prijs-kolommen toe aan asset_action_drafts: "
+            "stop_price, trail_amount, trail_percent, "
+            "bracket_take_profit_limit_price, bracket_stop_loss_price. "
+            "Order_type kan nu LMT/MKT/STP/STP_LMT/TRAIL/TRAIL_LMT/BRACKET "
+            "zijn; per-type invarianten staan in AssetActionDraftRecord."
+        ),
+    ),
 )
 
 

@@ -55,6 +55,11 @@ def _fake_draft(
         tif = "DAY"
         quantity = Decimal("5")
         limit_price = Decimal("180")
+        stop_price = None
+        trail_amount = None
+        trail_percent = None
+        bracket_take_profit_limit_price = None
+        bracket_stop_loss_price = None
         estimated_order_value = Decimal("900")
         estimated_cash_before = Decimal("10000")
         estimated_cash_after = Decimal("9100")

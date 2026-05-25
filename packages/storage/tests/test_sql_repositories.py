@@ -1242,8 +1242,10 @@ def test_asset_action_draft_rejects_market_orders_and_unsafe_flags() -> None:
         updated_at=now,
     )
 
-    with pytest.raises(ValueError):
-        AssetActionDraftRecord(**{**base_kwargs, "order_type": "MKT"})
+    # Slice 20: MKT is now in the locked set; an unknown order_type
+    # still raises.
+    with pytest.raises(ValueError, match="order_type"):
+        AssetActionDraftRecord(**{**base_kwargs, "order_type": "GTD"})
     with pytest.raises(ValueError):
         AssetActionDraftRecord(**{**base_kwargs, "tif": "GTC"})
     with pytest.raises(ValueError):
@@ -2045,3 +2047,243 @@ def test_universe_scan_run_record_invariants() -> None:
         UniverseScanRunRecord(**{**base, "safe_for_action_drafts": True})
     with pytest.raises(ValueError):
         UniverseScanRunRecord(**{**base, "safe_for_orders": True})
+
+
+def test_asset_action_draft_supports_full_order_vocabulary_per_type() -> None:
+    """Per-type invariants for the §21.3 order-vocabulary expansion."""
+
+    from ai_trading_agent_storage.repository_contracts import AssetActionDraftRecord
+
+    now = datetime.now(UTC)
+    base = dict(
+        draft_id="d",
+        decision_package_id="dp",
+        decision_package_content_hash="hash",
+        ibkr_conid="1",
+        symbol="X",
+        currency="USD",
+        exchange=None,
+        primary_exchange=None,
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_side="BUY",
+        tif="DAY",
+        quantity=Decimal("10"),
+        estimated_order_value=None,
+        estimated_cash_before=None,
+        estimated_cash_after=None,
+        estimated_position_quantity_before=None,
+        estimated_position_quantity_after=None,
+        estimated_position_value_after=None,
+        estimated_portfolio_weight_after_pct=None,
+        estimated_concentration_impact_pct=None,
+        orderimpact_base_currency=None,
+        source_action_label="Kopen",
+        source_action_label_nl="Kopen",
+        status="draft",
+        dry_run_status="not_attempted",
+        dry_run_failures_json=None,
+        blocking_reason=None,
+        rationale_nl="r",
+        explanation_nl="e",
+        created_at=now,
+        updated_at=now,
+    )
+
+    # LMT — happy
+    AssetActionDraftRecord(**{**base, "order_type": "LMT", "limit_price": Decimal("100")})
+
+    # MKT — happy (limit_price allowed as 0 for MKT)
+    AssetActionDraftRecord(**{**base, "order_type": "MKT", "limit_price": Decimal("0")})
+
+    # STP — happy
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "order_type": "STP",
+            "limit_price": Decimal("0"),
+            "stop_price": Decimal("95"),
+        }
+    )
+    # STP — missing stop_price
+    with pytest.raises(ValueError, match="stop_price"):
+        AssetActionDraftRecord(
+            **{**base, "order_type": "STP", "limit_price": Decimal("0")}
+        )
+
+    # STP_LMT — happy
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "order_type": "STP_LMT",
+            "limit_price": Decimal("96"),
+            "stop_price": Decimal("95"),
+        }
+    )
+    # STP_LMT — missing stop
+    with pytest.raises(ValueError, match="stop_price"):
+        AssetActionDraftRecord(
+            **{**base, "order_type": "STP_LMT", "limit_price": Decimal("96")}
+        )
+
+    # TRAIL with amount — happy
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "order_type": "TRAIL",
+            "limit_price": Decimal("0"),
+            "trail_amount": Decimal("2"),
+        }
+    )
+    # TRAIL with percent — happy
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "order_type": "TRAIL",
+            "limit_price": Decimal("0"),
+            "trail_percent": Decimal("3"),
+        }
+    )
+    # TRAIL with both — rejected
+    with pytest.raises(ValueError, match="exactly one"):
+        AssetActionDraftRecord(
+            **{
+                **base,
+                "order_type": "TRAIL",
+                "limit_price": Decimal("0"),
+                "trail_amount": Decimal("2"),
+                "trail_percent": Decimal("3"),
+            }
+        )
+    # TRAIL with neither — rejected
+    with pytest.raises(ValueError, match="exactly one"):
+        AssetActionDraftRecord(
+            **{**base, "order_type": "TRAIL", "limit_price": Decimal("0")}
+        )
+
+    # TRAIL_LMT — needs limit_price too
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "order_type": "TRAIL_LMT",
+            "limit_price": Decimal("95"),
+            "trail_percent": Decimal("3"),
+        }
+    )
+    with pytest.raises(ValueError, match="limit_price"):
+        AssetActionDraftRecord(
+            **{
+                **base,
+                "order_type": "TRAIL_LMT",
+                "limit_price": Decimal("0"),
+                "trail_percent": Decimal("3"),
+            }
+        )
+
+    # BRACKET BUY — tp > limit > sl
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "order_type": "BRACKET",
+            "limit_price": Decimal("100"),
+            "bracket_take_profit_limit_price": Decimal("110"),
+            "bracket_stop_loss_price": Decimal("95"),
+        }
+    )
+    # BRACKET BUY — tp <= limit rejected
+    with pytest.raises(ValueError, match="take-profit"):
+        AssetActionDraftRecord(
+            **{
+                **base,
+                "order_type": "BRACKET",
+                "limit_price": Decimal("100"),
+                "bracket_take_profit_limit_price": Decimal("100"),
+                "bracket_stop_loss_price": Decimal("95"),
+            }
+        )
+    # BRACKET BUY — sl >= limit rejected
+    with pytest.raises(ValueError, match="stop-loss"):
+        AssetActionDraftRecord(
+            **{
+                **base,
+                "order_type": "BRACKET",
+                "limit_price": Decimal("100"),
+                "bracket_take_profit_limit_price": Decimal("110"),
+                "bracket_stop_loss_price": Decimal("100"),
+            }
+        )
+
+    # BRACKET SELL — tp < limit < sl
+    AssetActionDraftRecord(
+        **{
+            **base,
+            "action_side": "SELL",
+            "order_type": "BRACKET",
+            "limit_price": Decimal("100"),
+            "bracket_take_profit_limit_price": Decimal("90"),
+            "bracket_stop_loss_price": Decimal("105"),
+        }
+    )
+    # BRACKET SELL — wrong ordering
+    with pytest.raises(ValueError, match="take-profit"):
+        AssetActionDraftRecord(
+            **{
+                **base,
+                "action_side": "SELL",
+                "order_type": "BRACKET",
+                "limit_price": Decimal("100"),
+                "bracket_take_profit_limit_price": Decimal("110"),
+                "bracket_stop_loss_price": Decimal("105"),
+            }
+        )
+
+
+def test_asset_action_draft_rejects_negative_extra_price_fields() -> None:
+    from ai_trading_agent_storage.repository_contracts import AssetActionDraftRecord
+
+    now = datetime.now(UTC)
+    base = dict(
+        draft_id="d",
+        decision_package_id="dp",
+        decision_package_content_hash="hash",
+        ibkr_conid="1",
+        symbol="X",
+        currency="USD",
+        exchange=None,
+        primary_exchange=None,
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_side="BUY",
+        order_type="LMT",
+        tif="DAY",
+        quantity=Decimal("1"),
+        limit_price=Decimal("100"),
+        estimated_order_value=None,
+        estimated_cash_before=None,
+        estimated_cash_after=None,
+        estimated_position_quantity_before=None,
+        estimated_position_quantity_after=None,
+        estimated_position_value_after=None,
+        estimated_portfolio_weight_after_pct=None,
+        estimated_concentration_impact_pct=None,
+        orderimpact_base_currency=None,
+        source_action_label="Kopen",
+        source_action_label_nl="Kopen",
+        status="draft",
+        dry_run_status="not_attempted",
+        dry_run_failures_json=None,
+        blocking_reason=None,
+        rationale_nl="r",
+        explanation_nl="e",
+        created_at=now,
+        updated_at=now,
+    )
+    for field in (
+        "stop_price",
+        "trail_amount",
+        "trail_percent",
+        "bracket_take_profit_limit_price",
+        "bracket_stop_loss_price",
+    ):
+        with pytest.raises(ValueError, match="must be positive"):
+            AssetActionDraftRecord(**{**base, field: Decimal("-1")})
