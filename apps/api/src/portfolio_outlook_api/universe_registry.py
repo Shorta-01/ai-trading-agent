@@ -9,21 +9,25 @@ Each entry carries:
 * ``index_code`` — the index the ticker belongs to (e.g. ``"BEL20"``)
 * ``sector`` — best-effort sector hint for the QVM cross-section;
   EODHD's `Sector` field overrides this when available
+* ``country_code`` — V1.1 §22.4 addition. Two-letter ISO code (e.g.
+  ``"BE"``, ``"US"``) so the Stoxx 600 cross-country aggregation
+  works cleanly. ``None`` when not known.
 
-This module is pure Python; it does no I/O. The full ~5 000-ticker
-universe will be expanded in a later slice. For Slice 17 we ship a
-representative set covering the locked indices:
+V1.1 §22.4 lock adds operator-selectable universe sets:
 
-* Bel20 (Belgian large-cap)
-* AEX 25 (Dutch large-cap)
-* CAC 40 (French large-cap)
-* DAX 40 (German large-cap)
-* S&P 100 (US large-cap, representative subset of S&P 500)
-* NASDAQ 100 (US tech-heavy large-cap)
-
-Roughly 325 tickers — large enough to make the QVM cross-section
-meaningful, small enough to fit in one Python module and finish a
-scan well under EODHD's daily quota.
+* ``SP500`` (default) — the V1 hand-curated ~325-ticker set covering
+  Bel20 + AEX + CAC40 + DAX40 + S&P 100 + NASDAQ100 extras. Kept
+  for backward compatibility.
+* ``EU600`` — V1 set + representative Stoxx 600 additions (UK FTSE
+  100 top names, Swiss SLI top names, IBEX 35 top names, FTSE MIB
+  top names, Stoxx Nordic 30 names) so the morning chain can scan
+  a broader EU universe.
+* ``ALL_5K`` — superset of the above plus a representative US small-
+  / mid-cap sample. The "full" 5 000-ticker materialisation
+  requires the EODHD bulk-list endpoint — that resolution is a
+  post-V1.1 widening; the in-process registry stays representative
+  so the operator surface is locked from Slice 31 forward without
+  bloating the Python module.
 """
 
 from __future__ import annotations
@@ -39,6 +43,17 @@ class UniverseEntry:
     eodhd_symbol: str
     index_code: str
     sector: str | None = None
+    country_code: str | None = None
+
+
+# V1.1 §22.4 operator-selectable universe sets.
+UNIVERSE_SET_SP500: Final[str] = "SP500"
+UNIVERSE_SET_EU600: Final[str] = "EU600"
+UNIVERSE_SET_ALL_5K: Final[str] = "ALL_5K"
+LOCKED_UNIVERSE_SETS: Final[frozenset[str]] = frozenset(
+    {UNIVERSE_SET_SP500, UNIVERSE_SET_EU600, UNIVERSE_SET_ALL_5K}
+)
+DEFAULT_UNIVERSE_SET: Final[str] = UNIVERSE_SET_SP500
 
 
 # ---- Bel20 -----------------------------------------------------------
@@ -372,7 +387,83 @@ NASDAQ100_EXTRA: Final[tuple[UniverseEntry, ...]] = (
 )
 
 
-_LOCKED_UNIVERSE: tuple[UniverseEntry, ...] = (
+# ---- V1.1 §22.4 EU600 additions --------------------------------------
+#
+# Representative top-cap additions across the major EU indices outside
+# the V1 Bel/AEX/CAC/DAX set so the morning chain can offer a broader
+# EU cross-section. Not the full Stoxx 600 (that would balloon this
+# module); production deployments resolve the full Stoxx 600 from the
+# EODHD index-constituents bulk endpoint — a post-V1.1 widening.
+
+EU600_EXTRA: Final[tuple[UniverseEntry, ...]] = (
+    # UK FTSE 100 — top names
+    UniverseEntry("AZN", "AZN.LSE", "FTSE100", "Healthcare", "GB"),
+    UniverseEntry("BARC", "BARC.LSE", "FTSE100", "Financials", "GB"),
+    UniverseEntry("BP", "BP.LSE", "FTSE100", "Energy", "GB"),
+    UniverseEntry("DGE", "DGE.LSE", "FTSE100", "Consumer Staples", "GB"),
+    UniverseEntry("GSK", "GSK.LSE", "FTSE100", "Healthcare", "GB"),
+    UniverseEntry("HSBA", "HSBA.LSE", "FTSE100", "Financials", "GB"),
+    UniverseEntry("LLOY", "LLOY.LSE", "FTSE100", "Financials", "GB"),
+    UniverseEntry("RIO", "RIO.LSE", "FTSE100", "Materials", "GB"),
+    UniverseEntry("SHEL", "SHEL.LSE", "FTSE100", "Energy", "GB"),
+    UniverseEntry("ULVR", "ULVR.LSE", "FTSE100", "Consumer Staples", "GB"),
+    UniverseEntry("VOD", "VOD.LSE", "FTSE100", "Communication Services", "GB"),
+    # Swiss SLI — top names
+    UniverseEntry("NESN", "NESN.SW", "SLI", "Consumer Staples", "CH"),
+    UniverseEntry("ROG", "ROG.SW", "SLI", "Healthcare", "CH"),
+    UniverseEntry("NOVN", "NOVN.SW", "SLI", "Healthcare", "CH"),
+    UniverseEntry("UBSG", "UBSG.SW", "SLI", "Financials", "CH"),
+    UniverseEntry("ZURN", "ZURN.SW", "SLI", "Financials", "CH"),
+    UniverseEntry("ABBN", "ABBN.SW", "SLI", "Industrials", "CH"),
+    UniverseEntry("SREN", "SREN.SW", "SLI", "Financials", "CH"),
+    # IBEX 35 — top names
+    UniverseEntry("ITX", "ITX.MC", "IBEX35", "Consumer Discretionary", "ES"),
+    UniverseEntry("SAN", "SAN.MC", "IBEX35", "Financials", "ES"),
+    UniverseEntry("IBE", "IBE.MC", "IBEX35", "Utilities", "ES"),
+    UniverseEntry("TEF", "TEF.MC", "IBEX35", "Communication Services", "ES"),
+    UniverseEntry("BBVA", "BBVA.MC", "IBEX35", "Financials", "ES"),
+    UniverseEntry("REP", "REP.MC", "IBEX35", "Energy", "ES"),
+    # FTSE MIB — top names
+    UniverseEntry("ENI", "ENI.MI", "FTSEMIB", "Energy", "IT"),
+    UniverseEntry("ISP", "ISP.MI", "FTSEMIB", "Financials", "IT"),
+    UniverseEntry("UCG", "UCG.MI", "FTSEMIB", "Financials", "IT"),
+    UniverseEntry("STLAM", "STLAM.MI", "FTSEMIB", "Consumer Discretionary", "IT"),
+    UniverseEntry("ENEL", "ENEL.MI", "FTSEMIB", "Utilities", "IT"),
+    UniverseEntry("RACE", "RACE.MI", "FTSEMIB", "Consumer Discretionary", "IT"),
+    UniverseEntry("G", "G.MI", "FTSEMIB", "Financials", "IT"),
+    # Stoxx Nordic 30 — top names
+    UniverseEntry("NOVO-B", "NOVO-B.CO", "NORDIC30", "Healthcare", "DK"),
+    UniverseEntry("MAERSK-B", "MAERSK-B.CO", "NORDIC30", "Industrials", "DK"),
+    UniverseEntry("ATCO-A", "ATCO-A.ST", "NORDIC30", "Industrials", "SE"),
+    UniverseEntry("VOLV-B", "VOLV-B.ST", "NORDIC30", "Industrials", "SE"),
+    UniverseEntry("ERIC-B", "ERIC-B.ST", "NORDIC30", "Communication Services", "SE"),
+    UniverseEntry("EQNR", "EQNR.OL", "NORDIC30", "Energy", "NO"),
+    UniverseEntry("NHY", "NHY.OL", "NORDIC30", "Materials", "NO"),
+)
+
+
+# ---- V1.1 §22.4 ALL_5K representative additions ---------------------
+#
+# A small US small/mid-cap sample so the locked operator surface
+# exists from Slice 31. Production deployments resolve the full
+# ~5 000-ticker universe from the EODHD bulk-list endpoints (a
+# post-V1.1 widening).
+
+ALL_5K_EXTRA: Final[tuple[UniverseEntry, ...]] = (
+    UniverseEntry("PLTR", "PLTR.US", "RUSSELL1000", "Technology", "US"),
+    UniverseEntry("ROKU", "ROKU.US", "RUSSELL1000", "Communication Services", "US"),
+    UniverseEntry("ETSY", "ETSY.US", "RUSSELL1000", "Consumer Discretionary", "US"),
+    UniverseEntry("ZM", "ZM.US", "RUSSELL1000", "Communication Services", "US"),
+    UniverseEntry("DOCU", "DOCU.US", "RUSSELL1000", "Technology", "US"),
+    UniverseEntry("DKNG", "DKNG.US", "RUSSELL1000", "Consumer Discretionary", "US"),
+    UniverseEntry("UPST", "UPST.US", "RUSSELL2000", "Financials", "US"),
+    UniverseEntry("AFRM", "AFRM.US", "RUSSELL2000", "Financials", "US"),
+    UniverseEntry("RBLX", "RBLX.US", "RUSSELL1000", "Communication Services", "US"),
+    UniverseEntry("U", "U.US", "RUSSELL1000", "Technology", "US"),
+)
+
+
+_SP500_SET: tuple[UniverseEntry, ...] = (
     *BEL20,
     *AEX,
     *CAC40,
@@ -381,19 +472,29 @@ _LOCKED_UNIVERSE: tuple[UniverseEntry, ...] = (
     *NASDAQ100_EXTRA,
 )
 
+_EU600_SET: tuple[UniverseEntry, ...] = (
+    *_SP500_SET,
+    *EU600_EXTRA,
+)
 
-def locked_universe() -> tuple[UniverseEntry, ...]:
-    """Return the full V1 locked universe.
+_ALL_5K_SET: tuple[UniverseEntry, ...] = (
+    *_EU600_SET,
+    *ALL_5K_EXTRA,
+)
 
-    De-duplication is by ``eodhd_symbol`` — when the same ticker appears
-    in multiple indices (e.g. ``HON.US`` is in both S&P 100 and NASDAQ
-    100) we keep the first occurrence so the scan never hits EODHD
-    twice for the same symbol.
-    """
+_LOCKED_UNIVERSE_BY_SET: dict[str, tuple[UniverseEntry, ...]] = {
+    UNIVERSE_SET_SP500: _SP500_SET,
+    UNIVERSE_SET_EU600: _EU600_SET,
+    UNIVERSE_SET_ALL_5K: _ALL_5K_SET,
+}
 
+
+def _dedupe_by_eodhd_symbol(
+    entries: Sequence[UniverseEntry],
+) -> tuple[UniverseEntry, ...]:
     seen: set[str] = set()
     deduped: list[UniverseEntry] = []
-    for entry in _LOCKED_UNIVERSE:
+    for entry in entries:
         if entry.eodhd_symbol in seen:
             continue
         seen.add(entry.eodhd_symbol)
@@ -401,18 +502,54 @@ def locked_universe() -> tuple[UniverseEntry, ...]:
     return tuple(deduped)
 
 
-def universe_by_index(index_code: str) -> Sequence[UniverseEntry]:
-    return tuple(e for e in locked_universe() if e.index_code == index_code)
+def locked_universe(
+    set_code: str = DEFAULT_UNIVERSE_SET,
+) -> tuple[UniverseEntry, ...]:
+    """Return the deduplicated locked universe for the requested set.
+
+    V1.1 §22.4: ``set_code`` must be one of
+    :data:`LOCKED_UNIVERSE_SETS` (``SP500`` / ``EU600`` / ``ALL_5K``);
+    unknown codes raise ``ValueError`` so a typo in the operator's
+    env doesn't silently fall back to a smaller / larger set.
+
+    De-duplication is by ``eodhd_symbol`` — when the same ticker
+    appears in multiple indices we keep the first occurrence so the
+    scan never hits EODHD twice for the same symbol.
+    """
+
+    if set_code not in LOCKED_UNIVERSE_SETS:
+        raise ValueError(
+            f"universe_set must be one of {sorted(LOCKED_UNIVERSE_SETS)}, "
+            f"got {set_code!r}"
+        )
+    return _dedupe_by_eodhd_symbol(_LOCKED_UNIVERSE_BY_SET[set_code])
+
+
+def universe_by_index(
+    index_code: str,
+    *,
+    set_code: str = DEFAULT_UNIVERSE_SET,
+) -> Sequence[UniverseEntry]:
+    return tuple(
+        e for e in locked_universe(set_code) if e.index_code == index_code
+    )
 
 
 __all__ = [
-    "UniverseEntry",
-    "BEL20",
     "AEX",
+    "ALL_5K_EXTRA",
+    "BEL20",
     "CAC40",
     "DAX40",
-    "SP100",
+    "DEFAULT_UNIVERSE_SET",
+    "EU600_EXTRA",
+    "LOCKED_UNIVERSE_SETS",
     "NASDAQ100_EXTRA",
+    "SP100",
+    "UNIVERSE_SET_ALL_5K",
+    "UNIVERSE_SET_EU600",
+    "UNIVERSE_SET_SP500",
+    "UniverseEntry",
     "locked_universe",
     "universe_by_index",
 ]
