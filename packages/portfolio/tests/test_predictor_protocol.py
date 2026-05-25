@@ -341,3 +341,95 @@ def test_predictors_expose_their_model_identity() -> None:
     assert mom.model_code == MOMENTUM_MODEL_CODE
     assert gbm.model_version
     assert mom.model_version
+
+
+# ---- V1.1 Slice 24: PredictorResearchProtocol + BacktestWindowScore ----
+
+
+def test_backtest_window_score_is_a_value_object() -> None:
+    from portfolio_outlook_portfolio.predictor_protocol import BacktestWindowScore
+
+    score = BacktestWindowScore(
+        model_code="momentum_v1",
+        model_version="v1.0.0",
+        window_days=90,
+        bars_used=120,
+        brier_score=0.18,
+        hit_rate=0.56,
+        sharpe_ratio=1.23,
+        explanation_nl="walk-forward 90d Momentum",
+    )
+    assert score.model_code == "momentum_v1"
+    assert score.window_days == 90
+    assert score.brier_score == 0.18
+    # Frozen dataclass: assignment raises FrozenInstanceError.
+    from dataclasses import FrozenInstanceError
+
+    with pytest.raises(FrozenInstanceError):
+        score.brier_score = 0.5  # type: ignore[misc]
+
+
+def test_backtest_window_score_supports_none_metrics() -> None:
+    from portfolio_outlook_portfolio.predictor_protocol import BacktestWindowScore
+
+    score = BacktestWindowScore(
+        model_code="momentum_v1",
+        model_version="v1.0.0",
+        window_days=90,
+        bars_used=0,
+        brier_score=None,
+        hit_rate=None,
+        sharpe_ratio=None,
+    )
+    assert score.brier_score is None
+    assert score.hit_rate is None
+    assert score.sharpe_ratio is None
+
+
+def test_predictor_research_protocol_is_structural() -> None:
+    """PredictorResearchProtocol is a Protocol; any object exposing
+    `model_code`, `model_version`, `predict(...)`, and
+    `backtest_window_score(...)` satisfies it. Slice 25 (backtesting
+    framework) wires the real implementations; this test only proves
+    the protocol shape."""
+
+    from portfolio_outlook_portfolio.predictor_protocol import (
+        BacktestWindowScore,
+        PredictorResearchProtocol,
+    )
+
+    class _FakeResearchPredictor:
+        @property
+        def model_code(self) -> str:
+            return "fake_research_v1"
+
+        @property
+        def model_version(self) -> str:
+            return "v0.0.1"
+
+        def predict(self, inputs):  # type: ignore[no-untyped-def]
+            raise NotImplementedError
+
+        def backtest_window_score(
+            self, inputs, *, window_days: int
+        ) -> BacktestWindowScore:  # type: ignore[no-untyped-def]
+            return BacktestWindowScore(
+                model_code=self.model_code,
+                model_version=self.model_version,
+                window_days=window_days,
+                bars_used=0,
+                brier_score=None,
+                hit_rate=None,
+                sharpe_ratio=None,
+                explanation_nl="stub",
+            )
+
+    fake: PredictorResearchProtocol = _FakeResearchPredictor()
+    inputs = PredictorInputs(
+        historical_bars=[],
+        current_price=Decimal("100"),
+        horizon_trading_days=21,
+    )
+    score = fake.backtest_window_score(inputs, window_days=90)
+    assert isinstance(score, BacktestWindowScore)
+    assert score.window_days == 90

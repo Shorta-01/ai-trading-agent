@@ -29,6 +29,8 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Final
 
+import numpy as np
+
 DEFAULT_TRADING_DAYS_PER_YEAR: Final[int] = 252
 DEFAULT_HORIZON_TRADING_DAYS: Final[int] = 21  # ~1 calendar month
 MINIMUM_BARS_REQUIRED: Final[int] = 60
@@ -112,34 +114,44 @@ def _normal_cdf(z: float) -> float:
 
 
 def _log_returns(bars: Sequence[HistoricalBar]) -> list[float]:
-    """Compute daily log returns from a chronologically sorted bar series."""
+    """Compute daily log returns from a chronologically sorted bar series.
+
+    V1.1 §22.1 refactor: numpy-backed under the hood via
+    ``_predictor_math.log_returns``. Returns an empty list when any
+    bar in the series has a non-positive close (the GBM math then
+    surfaces ``invalid_bar_price``).
+    """
+
+    from . import _predictor_math as _pm
 
     if len(bars) < 2:
         return []
-    returns: list[float] = []
-    previous_close = float(bars[0].close_price)
-    if previous_close <= 0:
+    closes = _pm.bar_closes_array(bars)
+    if closes.size == 0 or (closes <= 0).any():
         return []
-    for bar in bars[1:]:
-        close = float(bar.close_price)
-        if close <= 0:
-            return []
-        returns.append(math.log(close / previous_close))
-        previous_close = close
-    return returns
+    return list(_pm.log_returns(closes))
 
 
 def _sample_mean(values: Sequence[float]) -> float:
-    return sum(values) / len(values)
+    """V1.1 §22.1 refactor: numpy-backed mean."""
+
+    from . import _predictor_math as _pm
+
+    return _pm.sample_mean(np.asarray(values, dtype=np.float64))
 
 
 def _sample_stdev(values: Sequence[float], mean: float) -> float:
-    """Sample standard deviation (Bessel-corrected). Returns 0.0 for n < 2."""
+    """Sample standard deviation (Bessel-corrected). Returns 0.0 for n < 2.
 
-    if len(values) < 2:
-        return 0.0
-    squared_devs = sum((v - mean) ** 2 for v in values)
-    return math.sqrt(squared_devs / (len(values) - 1))
+    V1.1 §22.1 refactor: numpy-backed via ``_predictor_math.sample_stdev``.
+    The ``mean`` argument is retained for backward signature compatibility
+    but is recomputed inside numpy; explicit precomputed means won't drift
+    from the recomputed one for normal inputs.
+    """
+
+    from . import _predictor_math as _pm
+
+    return _pm.sample_stdev(np.asarray(values, dtype=np.float64))
 
 
 def _direction_label(expected_return_pct: float) -> tuple[str, str]:

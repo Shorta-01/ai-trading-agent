@@ -33,6 +33,9 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Final
 
+import numpy as np
+
+from . import _predictor_math as _pm
 from .baseline_forecast import DEFAULT_TRADING_DAYS_PER_YEAR
 from .predictor_protocol import (
     BLOCKING_REASON_FLAT_HISTORY,
@@ -124,12 +127,16 @@ def _zscore(value: float, values: Sequence[float]) -> float | None:
     ``values``. Returns ``None`` when the population has fewer than 2
     members (cannot compute SD at all). A zero-spread universe yields a
     z-score of ``0.0`` — the factor genuinely carries no signal across
-    the universe, so the target's relative score is neutral."""
+    the universe, so the target's relative score is neutral.
+
+    V1.1 §22.1 refactor: numpy-backed population SD + mean.
+    """
 
     if len(values) < 2:
         return None
-    mean = statistics.fmean(values)
-    sd = statistics.pstdev(values)
+    arr = np.asarray(values, dtype=np.float64)
+    mean = float(arr.mean())
+    sd = _pm.population_stdev(arr)
     if sd == 0:
         return 0.0
     return (value - mean) / sd
@@ -241,14 +248,9 @@ def _normal_cdf(z: float) -> float:
 
 
 def _log_returns(prices: Sequence[float]) -> list[float]:
-    out: list[float] = []
-    for i in range(1, len(prices)):
-        prev = prices[i - 1]
-        curr = prices[i]
-        if prev <= 0 or curr <= 0:
-            continue
-        out.append(math.log(curr / prev))
-    return out
+    """V1.1 §22.1 refactor: numpy-backed log returns."""
+
+    return list(_pm.log_returns(np.asarray(prices, dtype=np.float64)))
 
 
 def _blocked(

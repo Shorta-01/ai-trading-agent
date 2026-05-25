@@ -425,6 +425,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "zijn; per-type invarianten staan in AssetActionDraftRecord."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0041_predictor_backtest_runs",
+        previous_revision_id="0040_action_draft_order_vocabulary",
+        filename="0041_predictor_backtest_runs.py",
+        label_nl="V1.1 predictor backtest-audit",
+        description_nl=(
+            "Maakt predictor_backtest_runs audit-tabel voor de V1.1 "
+            "backtesting-framework (Slice 25) en de feedback-loop "
+            "(Slice 26). Houdt per-predictor brier-score, hit-rate en "
+            "sharpe-ratio bij; safety booleans blijven False."
+        ),
+    ),
 )
 
 

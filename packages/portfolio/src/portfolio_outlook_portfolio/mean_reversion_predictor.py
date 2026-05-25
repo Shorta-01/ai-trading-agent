@@ -32,6 +32,9 @@ from collections.abc import Sequence
 from decimal import Decimal
 from typing import Final
 
+import numpy as np
+
+from . import _predictor_math as _pm
 from .baseline_forecast import (
     DEFAULT_HORIZON_TRADING_DAYS,
     DEFAULT_TRADING_DAYS_PER_YEAR,
@@ -95,31 +98,27 @@ def _normal_cdf(z: float) -> float:
 
 
 def _bar_closes(bars: Sequence[HistoricalBar]) -> list[float]:
-    return [float(bar.close_price) for bar in bars]
+    """V1.1 §22.1 refactor: numpy-backed close-price extraction."""
+
+    return list(_pm.bar_closes_array(bars))
 
 
 def _mean(values: Sequence[float]) -> float:
-    if not values:
-        return 0.0
-    return sum(values) / len(values)
+    """V1.1 §22.1 refactor: numpy-backed mean."""
+
+    return _pm.sample_mean(np.asarray(values, dtype=np.float64))
 
 
 def _stdev(values: Sequence[float], mean_value: float) -> float:
-    if len(values) < 2:
-        return 0.0
-    variance = sum((v - mean_value) ** 2 for v in values) / (len(values) - 1)
-    return math.sqrt(variance)
+    """V1.1 §22.1 refactor: numpy-backed sample SD."""
+
+    return _pm.sample_stdev(np.asarray(values, dtype=np.float64))
 
 
 def _log_returns(prices: Sequence[float]) -> list[float]:
-    returns: list[float] = []
-    for i in range(1, len(prices)):
-        prev = prices[i - 1]
-        curr = prices[i]
-        if prev <= 0 or curr <= 0:
-            continue
-        returns.append(math.log(curr / prev))
-    return returns
+    """V1.1 §22.1 refactor: numpy-backed log returns."""
+
+    return list(_pm.log_returns(np.asarray(prices, dtype=np.float64)))
 
 
 # ---- RSI (Wilder smoothing) ------------------------------------------
