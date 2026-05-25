@@ -1,47 +1,48 @@
-# Task 187
+# Task 188
 
-Slice 32 — V1.1 conditional orders + GTC/OPG/IOC TIF. Extends the
-V1 §21.3 order vocabulary with the full IBKR conditional set per
-the §22.3 lock.
+Slice 33 — V1.1 UX upgrade. Surfaces the V1.1 internals on the
+Portefeuille via three new web panels + a Dutch-microcopy review.
 
 Scope:
-- Extend `LOCKED_ORDER_TYPES` with `CONDITIONAL`. The
-  conditional order carries a parent base type (LMT / MKT /
-  STP / STP_LMT) plus a list of activation conditions.
-- Extend the locked TIF set from `DAY`-only to
-  `{DAY, GTC, OPG, IOC}`.
-- New `OrderCondition` dataclass family — one variant per IBKR
-  condition kind:
-  - `PriceCondition(symbol, conid, exchange, operator, trigger_price)`
-  - `TimeCondition(operator, trigger_at_utc)`
-  - `MarginCondition(operator, percent)`
-  - `VolumeCondition(symbol, conid, operator, volume)`
-  - `ExecutionCondition(symbol, sec_type, exchange)`
-- Storage migration `0044_action_draft_conditional_orders`
-  adds a child table `action_draft_order_conditions` keyed on
-  `(draft_id, condition_index)` with the union of fields needed
-  to reconstruct any one of the five condition kinds.
-- `AssetActionDraftRecord.tif` constraint widens to
-  `{DAY, GTC, OPG, IOC}`; `__post_init__` rejects anything
-  outside the set. Existing rows stay at `DAY`.
-- Dry-run safety codes for the new vocabulary:
-  - `conditional_missing_parent_order_type`
-  - `conditional_no_conditions_listed`
-  - `conditional_unknown_condition_kind`
-  - `conditional_price_missing_trigger`
-  - `conditional_time_missing_trigger`
-  - `conditional_margin_invalid_percent`
-  - `tif_gtc_requires_real_account` (paper accounts may not
-    honour GTC the same way)
-- IBKR submission client extends `OrderSubmissionInputs` with
-  optional `conditions: list[OrderCondition]` and `tif`; the
-  `build_contract_and_orders(...)` helper maps each condition
-  kind to ibapi's `Order.conditions` API.
-- Tests cover: dataclass invariants per condition kind, dry-run
-  safety codes, ibapi conditions wiring per kind, TIF widening
-  on the record, backwards-compat for existing LMT/DAY orders.
+- New **Predictor leaderboard** panel (apps/web) consuming
+  `GET /predictor/backtest/latest` + `GET /predictor/leaderboard`.
+  Shows each predictor's latest Brier-score, hit-rate,
+  Sharpe-ratio + the auto-weight under the V1.1 §22.5 strategy.
+- New **Backtest history** panel showing the most-recent N backtest
+  rows per (model_code, asset_symbol) so the operator can see the
+  trend after a settings change.
+- New **Decision Package diff** view comparing the most recent
+  Decision Package against the previous morning's version per
+  symbol. Highlights changed `prob_gain`, action label, and the
+  research-evidence list.
+- New **Universe set chooser** in the Portefeuille header,
+  reading `GET /universe/registry` and writing to the
+  `universe_set` setting (a future widening; in this slice the
+  chooser is read-only, surfacing the configured set + the
+  available set list for the operator to put in their env).
+- New **Claude AI budget surface** in the existing AI usage card:
+  current month's running total, remaining headroom, and the cap.
+- Dutch-microcopy review across the Portefeuille panels (action
+  labels, action-draft state machine labels, briefing summary
+  text, dry-run failure-code translations).
+
+Backend additions (only what the UX surface needs):
+- `GET /predictor/backtest/history?model_code=&asset_symbol=&limit=20`
+  returns the last N rows for the trend chart.
+- `GET /claude/budget/status` returns
+  `{budget_month, monthly_cap_eur, monthly_total_eur,
+    remaining_eur, exceeded}` using the existing
+  `claude_ai_budget.monthly_budget_status(...)`.
+- `GET /decision-packages/{conid}/diff` compares the most recent
+  two Decision Packages for a conid; returns the JSON diff +
+  per-field change list.
+
+Tests cover: each new route's blocked / not-found / ok paths;
+the existing apps/api 671 tests still pass; the apps/web Vitest
+suite covers the new panels' rendering.
 
 Manual approval gate stays; safety booleans hard-False on every
-persisted record.
+response.
 
-When Slice 32 ships, Slice 33 (UX upgrade) is unblocked.
+When Slice 33 ships, Slice 34 (V1.1 release readiness) is
+unblocked.

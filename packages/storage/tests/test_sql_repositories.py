@@ -1246,8 +1246,10 @@ def test_asset_action_draft_rejects_market_orders_and_unsafe_flags() -> None:
     # still raises.
     with pytest.raises(ValueError, match="order_type"):
         AssetActionDraftRecord(**{**base_kwargs, "order_type": "GTD"})
-    with pytest.raises(ValueError):
-        AssetActionDraftRecord(**{**base_kwargs, "tif": "GTC"})
+    # V1.1 Slice 32: TIF was widened to {DAY, GTC, OPG, IOC}; an unknown
+    # TIF (e.g. "GAT") still raises.
+    with pytest.raises(ValueError, match="tif"):
+        AssetActionDraftRecord(**{**base_kwargs, "tif": "GAT"})
     with pytest.raises(ValueError):
         AssetActionDraftRecord(**{**base_kwargs, "action_side": "SHORT"})
     with pytest.raises(ValueError):
@@ -1952,6 +1954,279 @@ def test_predictor_backtest_run_repository_roundtrip() -> None:
         assert len(filtered.records) == 1
         empty = repo.list_recent_backtest_runs(model_code="missing_v1")
         assert empty.records == ()
+
+
+def test_action_draft_order_condition_repository_roundtrip() -> None:
+    """V1.1 Slice 32: per-draft order-condition rows for CONDITIONAL
+    action drafts."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        ActionDraftOrderConditionRecord,
+    )
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyActionDraftOrderConditionRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyActionDraftOrderConditionRepository(
+            conn, _report(True)
+        )
+        created = datetime(2026, 6, 1, 7, 0, tzinfo=UTC)
+
+        # Price condition: AAPL crosses $200
+        repo.save_condition(
+            ActionDraftOrderConditionRecord(
+                condition_id="c-1",
+                draft_id="draft-A",
+                condition_index=0,
+                condition_kind="price",
+                comparator=">=",
+                conjunction="and",
+                trigger_symbol="AAPL",
+                trigger_conid="265598",
+                trigger_exchange="SMART",
+                trigger_price=Decimal("200.00"),
+                trigger_at_utc=None,
+                margin_percent=None,
+                trigger_volume=None,
+                execution_symbol=None,
+                execution_sec_type=None,
+                execution_exchange=None,
+                created_at=created,
+            )
+        )
+        # Time condition: after market open
+        repo.save_condition(
+            ActionDraftOrderConditionRecord(
+                condition_id="c-2",
+                draft_id="draft-A",
+                condition_index=1,
+                condition_kind="time",
+                comparator=">=",
+                conjunction="and",
+                trigger_symbol=None,
+                trigger_conid=None,
+                trigger_exchange=None,
+                trigger_price=None,
+                trigger_at_utc=datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
+                margin_percent=None,
+                trigger_volume=None,
+                execution_symbol=None,
+                execution_sec_type=None,
+                execution_exchange=None,
+                created_at=created,
+            )
+        )
+        # Different draft — should not leak in.
+        repo.save_condition(
+            ActionDraftOrderConditionRecord(
+                condition_id="c-3",
+                draft_id="draft-B",
+                condition_index=0,
+                condition_kind="margin",
+                comparator="<=",
+                conjunction="and",
+                trigger_symbol=None,
+                trigger_conid=None,
+                trigger_exchange=None,
+                trigger_price=None,
+                trigger_at_utc=None,
+                margin_percent=Decimal("50.0"),
+                trigger_volume=None,
+                execution_symbol=None,
+                execution_sec_type=None,
+                execution_exchange=None,
+                created_at=created,
+            )
+        )
+
+        a_rows = repo.list_conditions_for_draft("draft-A")
+        assert len(a_rows.records) == 2
+        # Sorted by condition_index ascending.
+        assert a_rows.records[0].condition_kind == "price"
+        assert a_rows.records[1].condition_kind == "time"
+
+        # Replace flow: delete + re-save.
+        repo.delete_conditions_for_draft("draft-A")
+        assert len(repo.list_conditions_for_draft("draft-A").records) == 0
+
+        # draft-B untouched.
+        b_rows = repo.list_conditions_for_draft("draft-B")
+        assert len(b_rows.records) == 1
+        assert b_rows.records[0].margin_percent == Decimal("50.0")
+
+
+def test_action_draft_order_condition_record_invariants() -> None:
+    """V1.1 Slice 32: per-condition invariants."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        ActionDraftOrderConditionRecord,
+    )
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base = dict(
+        condition_id="c-1",
+        draft_id="draft-A",
+        condition_index=0,
+        condition_kind="price",
+        comparator=">=",
+        conjunction="and",
+        trigger_symbol="AAPL",
+        trigger_conid="265598",
+        trigger_exchange="SMART",
+        trigger_price=Decimal("200.00"),
+        trigger_at_utc=None,
+        margin_percent=None,
+        trigger_volume=None,
+        execution_symbol=None,
+        execution_sec_type=None,
+        execution_exchange=None,
+        created_at=now,
+    )
+    # Unknown condition_kind → ValueError.
+    with pytest.raises(ValueError, match="condition_kind"):
+        ActionDraftOrderConditionRecord(**{**base, "condition_kind": "bogus"})
+    # Unknown comparator → ValueError.
+    with pytest.raises(ValueError, match="comparator"):
+        ActionDraftOrderConditionRecord(**{**base, "comparator": "!="})
+    # Unknown conjunction → ValueError.
+    with pytest.raises(ValueError, match="conjunction"):
+        ActionDraftOrderConditionRecord(**{**base, "conjunction": "xor"})
+    # Negative condition_index → ValueError.
+    with pytest.raises(ValueError, match="condition_index"):
+        ActionDraftOrderConditionRecord(**{**base, "condition_index": -1})
+    # Margin percent out of range.
+    with pytest.raises(ValueError, match="margin_percent"):
+        ActionDraftOrderConditionRecord(**{**base, "margin_percent": Decimal("150")})
+    # Negative volume.
+    with pytest.raises(ValueError, match="trigger_volume"):
+        ActionDraftOrderConditionRecord(**{**base, "trigger_volume": -10})
+    # Hard-False safety booleans.
+    with pytest.raises(ValueError, match="safety booleans"):
+        ActionDraftOrderConditionRecord(**{**base, "safe_for_action_drafts": True})
+    with pytest.raises(ValueError, match="safety booleans"):
+        ActionDraftOrderConditionRecord(**{**base, "safe_for_orders": True})
+
+
+def test_asset_action_draft_record_accepts_widened_tif_set() -> None:
+    """V1.1 Slice 32 widens the TIF set from DAY-only to
+    {DAY, GTC, OPG, IOC}. All four values are now valid; an unknown
+    TIF still raises."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        AssetActionDraftRecord,
+    )
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base_kwargs = dict(
+        draft_id="d-1",
+        decision_package_id="dp-1",
+        decision_package_content_hash="hash",
+        ibkr_conid="265598",
+        symbol="AAPL",
+        currency="USD",
+        exchange="SMART",
+        primary_exchange="NASDAQ",
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_side="BUY",
+        order_type="LMT",
+        tif="DAY",
+        quantity=Decimal("5"),
+        limit_price=Decimal("180"),
+        estimated_order_value=Decimal("900"),
+        estimated_cash_before=None,
+        estimated_cash_after=None,
+        estimated_position_quantity_before=Decimal("0"),
+        estimated_position_quantity_after=Decimal("5"),
+        estimated_position_value_after=Decimal("900"),
+        estimated_portfolio_weight_after_pct=None,
+        estimated_concentration_impact_pct=None,
+        orderimpact_base_currency=None,
+        estimated_belgian_tob=None,
+        belgian_tob_security_class=None,
+        source_action_label="Kopen",
+        source_action_label_nl="Kopen",
+        status="dry_run_passed",
+        dry_run_status="passed",
+        dry_run_failures_json=None,
+        blocking_reason=None,
+        rationale_nl="r",
+        explanation_nl="e",
+        created_at=now,
+        updated_at=now,
+    )
+    for tif in ("DAY", "GTC", "OPG", "IOC"):
+        rec = AssetActionDraftRecord(**{**base_kwargs, "tif": tif})
+        assert rec.tif == tif
+    with pytest.raises(ValueError, match="tif"):
+        AssetActionDraftRecord(**{**base_kwargs, "tif": "BOGUS"})
+
+
+def test_asset_action_draft_record_conditional_requires_parent_type() -> None:
+    """V1.1 Slice 32: order_type=CONDITIONAL needs a non-empty
+    conditional_parent_order_type from the locked set."""
+
+    from ai_trading_agent_storage.repository_contracts import (
+        AssetActionDraftRecord,
+    )
+
+    now = datetime(2026, 6, 1, tzinfo=UTC)
+    base_kwargs = dict(
+        draft_id="d-1",
+        decision_package_id="dp-1",
+        decision_package_content_hash="hash",
+        ibkr_conid="265598",
+        symbol="AAPL",
+        currency="USD",
+        exchange="SMART",
+        primary_exchange="NASDAQ",
+        account_mode="paper",
+        expected_account_mode="paper",
+        action_side="BUY",
+        order_type="CONDITIONAL",
+        tif="GTC",
+        quantity=Decimal("5"),
+        limit_price=Decimal("180"),
+        estimated_order_value=Decimal("900"),
+        estimated_cash_before=None,
+        estimated_cash_after=None,
+        estimated_position_quantity_before=Decimal("0"),
+        estimated_position_quantity_after=Decimal("5"),
+        estimated_position_value_after=Decimal("900"),
+        estimated_portfolio_weight_after_pct=None,
+        estimated_concentration_impact_pct=None,
+        orderimpact_base_currency=None,
+        estimated_belgian_tob=None,
+        belgian_tob_security_class=None,
+        source_action_label="Kopen",
+        source_action_label_nl="Kopen",
+        status="dry_run_passed",
+        dry_run_status="passed",
+        dry_run_failures_json=None,
+        blocking_reason=None,
+        rationale_nl="r",
+        explanation_nl="e",
+        created_at=now,
+        updated_at=now,
+    )
+    # Missing parent type → ValueError.
+    with pytest.raises(ValueError, match="CONDITIONAL"):
+        AssetActionDraftRecord(**base_kwargs)
+    # Unknown parent type → ValueError.
+    with pytest.raises(ValueError, match="CONDITIONAL"):
+        AssetActionDraftRecord(
+            **{**base_kwargs, "conditional_parent_order_type": "MOC"}
+        )
+    # Valid parent LMT (uses limit_price=180 > 0) → OK.
+    rec = AssetActionDraftRecord(
+        **{**base_kwargs, "conditional_parent_order_type": "LMT"}
+    )
+    assert rec.order_type == "CONDITIONAL"
+    assert rec.conditional_parent_order_type == "LMT"
+    assert rec.tif == "GTC"
 
 
 def test_claude_ai_budget_usage_repository_roundtrip() -> None:

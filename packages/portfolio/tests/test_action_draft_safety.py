@@ -602,3 +602,240 @@ def test_dry_run_bracket_buy_passes_when_ordering_is_correct() -> None:
     result = run_dry_run_safety_checks(context, sizing, impact)
     assert result.status == "passed"
     assert result.failures == ()
+
+
+# ---- V1.1 Slice 32 — TIF + CONDITIONAL dry-run --------------------------
+
+
+def test_dry_run_tif_gtc_on_paper_account_flags_warning() -> None:
+    """GTC on a paper account fires the locked
+    `tif_gtc_requires_real_account` code so the operator sees that
+    paper accounts may not honour GTC the same way as real ones."""
+
+    from portfolio_outlook_portfolio.action_draft_safety import DraftSizing
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="LMT",
+        tif="GTC",
+        paper_mode=True,
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "tif_gtc_requires_real_account" in result.failures
+
+
+def test_dry_run_unsupported_tif_is_reported() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import DraftSizing
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="LMT",
+        tif="GAT",  # not in the locked set
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "tif_unsupported" in result.failures
+
+
+def test_dry_run_conditional_missing_parent_order_type() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import DraftSizing
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type=None,
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_missing_parent_order_type" in result.failures
+
+
+def test_dry_run_conditional_no_conditions_listed() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import DraftSizing
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type="LMT",
+        conditions=(),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_no_conditions_listed" in result.failures
+
+
+def test_dry_run_conditional_price_missing_trigger() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import (
+        DraftConditionCheck,
+        DraftSizing,
+    )
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type="LMT",
+        conditions=(
+            DraftConditionCheck(
+                condition_kind="price",
+                comparator=">=",
+                trigger_price=None,
+            ),
+        ),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_price_missing_trigger" in result.failures
+
+
+def test_dry_run_conditional_time_missing_trigger() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import (
+        DraftConditionCheck,
+        DraftSizing,
+    )
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type="LMT",
+        conditions=(
+            DraftConditionCheck(
+                condition_kind="time",
+                comparator=">=",
+                trigger_at_utc=None,
+            ),
+        ),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_time_missing_trigger" in result.failures
+
+
+def test_dry_run_conditional_margin_invalid_percent() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import (
+        DraftConditionCheck,
+        DraftSizing,
+    )
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type="LMT",
+        conditions=(
+            DraftConditionCheck(
+                condition_kind="margin",
+                comparator="<=",
+                margin_percent=Decimal("150"),
+            ),
+        ),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_margin_invalid_percent" in result.failures
+
+
+def test_dry_run_conditional_unknown_condition_kind() -> None:
+    from portfolio_outlook_portfolio.action_draft_safety import (
+        DraftConditionCheck,
+        DraftSizing,
+    )
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type="LMT",
+        conditions=(DraftConditionCheck(condition_kind="bogus", comparator=">="),),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_unknown_condition_kind" in result.failures
+
+
+def test_dry_run_conditional_passes_with_valid_price_and_time_conditions() -> None:
+    """When every check passes, a CONDITIONAL with valid conditions
+    and a DAY TIF on a paper account produces no V1.1 failures."""
+
+    from datetime import datetime
+
+    from portfolio_outlook_portfolio.action_draft_safety import (
+        DraftConditionCheck,
+        DraftSizing,
+    )
+
+    context = _context(action_label="Kopen", market_price="100", cash="100000")
+    sizing = DraftSizing(
+        action_side="BUY",
+        quantity=Decimal("10"),
+        limit_price=Decimal("100"),
+        status="ready",
+        blocking_reason=None,
+        order_type="CONDITIONAL",
+        tif="DAY",
+        conditional_parent_order_type="LMT",
+        paper_mode=True,
+        conditions=(
+            DraftConditionCheck(
+                condition_kind="price",
+                comparator=">=",
+                trigger_price=Decimal("150"),
+            ),
+            DraftConditionCheck(
+                condition_kind="time",
+                comparator=">=",
+                trigger_at_utc=datetime(2026, 6, 1),
+            ),
+        ),
+    )
+    impact = compute_orderimpact(context, sizing)
+    result = run_dry_run_safety_checks(context, sizing, impact)
+    assert "conditional_no_conditions_listed" not in result.failures
+    assert "conditional_missing_parent_order_type" not in result.failures
+    assert "conditional_price_missing_trigger" not in result.failures
+    assert "tif_unsupported" not in result.failures
+    assert "tif_gtc_requires_real_account" not in result.failures

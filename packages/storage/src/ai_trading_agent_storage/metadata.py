@@ -6,6 +6,7 @@ No runtime persistence wiring is enabled yet.
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     Column,
@@ -1480,6 +1481,10 @@ asset_action_drafts = Table(
     Column("trail_percent", MONEY_NUMERIC, nullable=True),
     Column("bracket_take_profit_limit_price", MONEY_NUMERIC, nullable=True),
     Column("bracket_stop_loss_price", MONEY_NUMERIC, nullable=True),
+    # V1.1 §22.3 conditional-order parent base type. Nullable so
+    # existing non-conditional rows stay valid; the dataclass
+    # invariant requires non-null when order_type=CONDITIONAL.
+    Column("conditional_parent_order_type", Text, nullable=True),
 )
 
 
@@ -1757,6 +1762,31 @@ claude_ai_budget_usage = Table(
     Column("cost_eur", Numeric(12, 6), nullable=False),
     Column("call_kind", Text, nullable=False),
     Column("explanation_nl", Text, nullable=True),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+)
+
+
+action_draft_order_conditions = Table(
+    "action_draft_order_conditions",
+    metadata,
+    Column("condition_id", Text, primary_key=True),
+    Column("draft_id", Text, nullable=False),
+    Column("condition_index", Integer, nullable=False),
+    Column("condition_kind", Text, nullable=False),
+    Column("comparator", Text, nullable=False),
+    Column("conjunction", Text, nullable=False),
+    Column("trigger_symbol", Text, nullable=True),
+    Column("trigger_conid", Text, nullable=True),
+    Column("trigger_exchange", Text, nullable=True),
+    Column("trigger_price", MONEY_NUMERIC, nullable=True),
+    Column("trigger_at_utc", DateTime(timezone=True), nullable=True),
+    Column("margin_percent", Numeric(10, 6), nullable=True),
+    Column("trigger_volume", BigInteger, nullable=True),
+    Column("execution_symbol", Text, nullable=True),
+    Column("execution_sec_type", Text, nullable=True),
+    Column("execution_exchange", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
     Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
     Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
 )

@@ -2067,6 +2067,12 @@ class AssetActionDraftRecord:
     trail_percent: Decimal | None = None
     bracket_take_profit_limit_price: Decimal | None = None
     bracket_stop_loss_price: Decimal | None = None
+    # V1.1 §22.3: when order_type=CONDITIONAL, the parent order type
+    # that fires after every activation condition is met. The
+    # condition rows live in a child table
+    # (`action_draft_order_conditions`) keyed on `(draft_id,
+    # condition_index)`.
+    conditional_parent_order_type: str | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -2098,8 +2104,10 @@ class AssetActionDraftRecord:
                 f"order_type must be one of {sorted(LOCKED_ORDER_TYPES)}, "
                 f"got {self.order_type!r}"
             )
-        if self.tif != "DAY":
-            raise ValueError("V1 action-drafts only support DAY tif.")
+        if self.tif not in LOCKED_TIF_SET:
+            raise ValueError(
+                f"tif must be one of {sorted(LOCKED_TIF_SET)}, got {self.tif!r}"
+            )
         if self.quantity <= 0:
             raise ValueError("quantity must be positive.")
         _enforce_order_type_invariants(self)
@@ -2127,7 +2135,23 @@ class AssetActionDraftRecord:
 
 
 LOCKED_ORDER_TYPES: frozenset[str] = frozenset(
-    {"LMT", "MKT", "STP", "STP_LMT", "TRAIL", "TRAIL_LMT", "BRACKET"}
+    {"LMT", "MKT", "STP", "STP_LMT", "TRAIL", "TRAIL_LMT", "BRACKET", "CONDITIONAL"}
+)
+
+# V1.1 §22.3 — TIF set extended from V1 DAY-only.
+LOCKED_TIF_SET: frozenset[str] = frozenset({"DAY", "GTC", "OPG", "IOC"})
+
+# V1.1 §22.3 — order-condition kinds.
+LOCKED_CONDITION_KINDS: frozenset[str] = frozenset(
+    {"price", "time", "margin", "volume", "execution"}
+)
+LOCKED_CONDITION_COMPARATORS: frozenset[str] = frozenset({">=", "<=", "=="})
+LOCKED_CONDITION_CONJUNCTIONS: frozenset[str] = frozenset({"and", "or"})
+
+# V1.1 §22.3 — CONDITIONAL parent base types (the underlying order
+# type that fires once the conditions are met).
+LOCKED_CONDITIONAL_PARENT_TYPES: frozenset[str] = frozenset(
+    {"LMT", "MKT", "STP", "STP_LMT"}
 )
 
 
@@ -2201,6 +2225,111 @@ def _enforce_order_type_invariants(record: AssetActionDraftRecord) -> None:
                     "BRACKET SELL requires stop-loss price > limit_price."
                 )
         return
+    if order_type == "CONDITIONAL":
+        parent = record.conditional_parent_order_type
+        if parent is None or parent not in LOCKED_CONDITIONAL_PARENT_TYPES:
+            raise ValueError(
+                "CONDITIONAL order_type requires "
+                f"conditional_parent_order_type ∈ "
+                f"{sorted(LOCKED_CONDITIONAL_PARENT_TYPES)}, got {parent!r}."
+            )
+        # Per-parent-type price requirements mirror the standalone
+        # equivalents — the conditions list lives in a child table so
+        # the dataclass invariant can't check it (the dry-run does).
+        if parent == "LMT" and record.limit_price <= 0:
+            raise ValueError(
+                "CONDITIONAL with parent LMT requires limit_price > 0."
+            )
+        if parent == "STP" and (
+            record.stop_price is None or record.stop_price <= 0
+        ):
+            raise ValueError(
+                "CONDITIONAL with parent STP requires stop_price > 0."
+            )
+        if parent == "STP_LMT":
+            if record.stop_price is None or record.stop_price <= 0:
+                raise ValueError(
+                    "CONDITIONAL with parent STP_LMT requires stop_price > 0."
+                )
+            if record.limit_price <= 0:
+                raise ValueError(
+                    "CONDITIONAL with parent STP_LMT requires limit_price > 0."
+                )
+        return
+
+
+@dataclass(frozen=True)
+class ActionDraftOrderConditionRecord:
+    """V1.1 §22.3 — one activation condition row for a CONDITIONAL
+    action draft.
+
+    The five locked condition kinds (``price`` / ``time`` /
+    ``margin`` / ``volume`` / ``execution``) share one record shape
+    with nullable kind-specific fields so the storage chain stays
+    single-table. The dry-run safety pass enforces per-kind required
+    fields; this dataclass enforces structural integrity (non-empty
+    IDs + locked kind/comparator/conjunction sets + hard-False
+    safety booleans).
+    """
+
+    condition_id: str
+    draft_id: str
+    condition_index: int
+    condition_kind: str
+    comparator: str
+    conjunction: str  # ``and`` / ``or`` — joins this condition with the next
+    trigger_symbol: str | None
+    trigger_conid: str | None
+    trigger_exchange: str | None
+    trigger_price: Decimal | None
+    trigger_at_utc: datetime | None
+    margin_percent: Decimal | None
+    trigger_volume: int | None
+    execution_symbol: str | None
+    execution_sec_type: str | None
+    execution_exchange: str | None
+    created_at: datetime
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "condition_id",
+            "draft_id",
+            "condition_kind",
+            "comparator",
+            "conjunction",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.condition_kind not in LOCKED_CONDITION_KINDS:
+            raise ValueError(
+                f"condition_kind must be one of {sorted(LOCKED_CONDITION_KINDS)}, "
+                f"got {self.condition_kind!r}"
+            )
+        if self.comparator not in LOCKED_CONDITION_COMPARATORS:
+            raise ValueError(
+                f"comparator must be one of "
+                f"{sorted(LOCKED_CONDITION_COMPARATORS)}, got {self.comparator!r}"
+            )
+        if self.conjunction not in LOCKED_CONDITION_CONJUNCTIONS:
+            raise ValueError(
+                f"conjunction must be one of "
+                f"{sorted(LOCKED_CONDITION_CONJUNCTIONS)}, got {self.conjunction!r}"
+            )
+        if self.condition_index < 0:
+            raise ValueError("condition_index must be non-negative")
+        if self.trigger_volume is not None and self.trigger_volume < 0:
+            raise ValueError("trigger_volume must be non-negative when provided")
+        if self.margin_percent is not None and not (
+            Decimal("0") <= self.margin_percent <= Decimal("100")
+        ):
+            raise ValueError(
+                "margin_percent must be in [0, 100] when provided"
+            )
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Action-draft-condition safety booleans must remain false in V1.1."
+            )
 
 
 @dataclass(frozen=True)
