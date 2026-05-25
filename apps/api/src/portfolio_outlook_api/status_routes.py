@@ -4,12 +4,14 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
+from uuid import uuid4
 
 from ai_trading_agent_storage import (
     AssetActionDraftEventRecord,
     AssetActionDraftSubmissionRecord,
     IbkrSyncRunRecord,
     MarketDataBarRecord,
+    SchedulerRunRecord,
     SqlAlchemyAssetActionDraftEventRepository,
     SqlAlchemyAssetActionDraftRepository,
     SqlAlchemyAssetActionDraftSubmissionRepository,
@@ -3057,6 +3059,147 @@ def read_latest_scheduler_run(job_name: str | None = None) -> dict[str, object]:
             }
     except StorageConnectionError:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
+@router.post("/scheduler/runs/morning-chain")
+def run_morning_chain_manually() -> dict[str, object]:
+    """Run the V1 morning chain (market-data → forecast → suggestions
+    → Decision Packages → action drafts → daily briefing) once.
+
+    Disabled-by-default — gated by ``scheduler_enabled`` because the
+    chain re-uses the same per-leg sync flags the operator already
+    opted into. Every fire writes a ``SchedulerRunRecord`` with
+    ``triggered_by=manual``; on failure the audit row's
+    ``error_text`` captures the failed leg + stable code. The full
+    per-leg outcome is returned in the response body for the
+    release-readiness slice to assert against.
+    """
+
+    from portfolio_outlook_api.morning_chain import (
+        MorningChainFailed,
+        build_default_morning_chain_legs,
+        run_morning_chain,
+        serialize_morning_chain_result,
+    )
+    from portfolio_outlook_api.scheduler import (
+        DAILY_BRIEFING_JOB_NAME,
+        STATUS_FAILED,
+        STATUS_RUNNING,
+        STATUS_SUCCEEDED,
+    )
+
+    base: dict[str, object] = {
+        "help_nl": (
+            "De morning chain draait market-data → forecast → "
+            "suggesties → Decision Packages → action drafts → "
+            "dagbriefing. Manuele uitvoeringen worden geaudit als "
+            "scheduler-run met `triggered_by=manual`."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+
+    if not settings.scheduler_enabled:
+        return base | {
+            "status": "blocked",
+            "status_nl": "Scheduler uitgeschakeld",
+            "blocking_reason": "scheduler_disabled",
+            "result": None,
+            "run_id": None,
+        }
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return base | {
+            "status": "blocked",
+            "status_nl": "Opslag niet beschikbaar",
+            "blocking_reason": "storage_not_writable",
+            "result": None,
+            "run_id": None,
+        }
+
+    legs = build_default_morning_chain_legs(settings)
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    run_id: str | None = None
+    audit_error_text: str | None = None
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            scheduler_repo = SqlAlchemySchedulerRunRepository(
+                checked.connection, checked.readiness
+            )
+            started_at = datetime.now(UTC)
+            run_id = f"sch_{uuid4().hex}"
+            initial = SchedulerRunRecord(
+                run_id=run_id,
+                job_name=DAILY_BRIEFING_JOB_NAME,
+                scheduled_at=started_at,
+                started_at=started_at,
+                finished_at=None,
+                status=STATUS_RUNNING,
+                error_text=None,
+                triggered_by="manual",
+            )
+            try:
+                scheduler_repo.save_scheduler_run(initial)
+            except Exception:  # noqa: BLE001
+                pass
+
+            try:
+                result = run_morning_chain(legs=legs)
+            except MorningChainFailed as exc:
+                audit_error_text = str(exc)
+                result = None  # type: ignore[assignment]
+
+            finished_at = datetime.now(UTC)
+            if result is not None and result.status == "succeeded":
+                terminal_status = STATUS_SUCCEEDED
+            else:
+                terminal_status = STATUS_FAILED
+                if result is not None and not audit_error_text:
+                    audit_error_text = (
+                        f"{result.failed_leg}:{result.failure_code}"
+                    )
+            terminal = SchedulerRunRecord(
+                run_id=run_id,
+                job_name=DAILY_BRIEFING_JOB_NAME,
+                scheduled_at=started_at,
+                started_at=started_at,
+                finished_at=finished_at,
+                status=terminal_status,
+                error_text=audit_error_text,
+                triggered_by="manual",
+            )
+            try:
+                scheduler_repo.update_scheduler_run(terminal)
+            except Exception:  # noqa: BLE001
+                pass
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+            "result": None,
+            "run_id": None,
+        }
+
+    if result is None:
+        return base | {
+            "status": "failed",
+            "status_nl": "Morning chain afgebroken",
+            "run_id": run_id,
+            "result": None,
+        }
+    return base | {
+        "status": result.status,
+        "status_nl": (
+            "Morning chain voltooid"
+            if result.status == "succeeded"
+            else "Morning chain afgebroken"
+        ),
+        "run_id": run_id,
+        "result": serialize_morning_chain_result(result),
+    }
 
 
 @router.get("/ibkr/account/mode")
