@@ -42,6 +42,11 @@ const HAPPY: ForecastLatestResponse = {
   confidence_level: "Hoog",
   label: "Bekijken",
   block_reason: null,
+  per_asset_coverage: {
+    forecasts_evaluated: 0,
+    hit_rate_within_band: null,
+    sufficient_history: false,
+  },
   safe_for_action_drafts: false,
   safe_for_orders: false,
 };
@@ -149,6 +154,35 @@ describe("ForecastExplanationPanel", () => {
     expect(
       await screen.findByTestId("forecast-explanation-error"),
     ).toBeInTheDocument();
+  });
+
+  it("shows fallback when per_asset_coverage has insufficient history", async () => {
+    getForecastLatest.mockResolvedValue({ ok: true as const, data: HAPPY });
+    render(
+      <ForecastExplanationPanel conid="ASML.AS" open={true} onClose={() => {}} />,
+    );
+    const coverage = await screen.findByTestId("forecast-field-per-asset-coverage");
+    expect(coverage).toHaveTextContent("Onvoldoende historiek voor kalibratie.");
+  });
+
+  it("shows hit-rate when per_asset_coverage has sufficient history", async () => {
+    getForecastLatest.mockResolvedValue({
+      ok: true as const,
+      data: {
+        ...HAPPY,
+        per_asset_coverage: {
+          forecasts_evaluated: 12,
+          hit_rate_within_band: "0.75",
+          sufficient_history: true,
+        },
+      },
+    });
+    render(
+      <ForecastExplanationPanel conid="ASML.AS" open={true} onClose={() => {}} />,
+    );
+    const coverage = await screen.findByTestId("forecast-field-per-asset-coverage");
+    expect(coverage).toHaveTextContent("75% binnen p10–p90 band");
+    expect(coverage).toHaveTextContent("12 evaluaties");
   });
 
   it("calls onClose when close button clicked", async () => {

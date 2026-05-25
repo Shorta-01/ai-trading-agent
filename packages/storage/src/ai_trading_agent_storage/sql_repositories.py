@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, cast
 
@@ -3760,6 +3760,52 @@ class SqlAlchemyWatchlistItemSeedRepository(_Base):
         ).scalar()
         return int(result or 0)
 
+    def list_active_for_account(
+        self, ibkr_account_id: str
+    ) -> StorageListResult[WatchlistItemSeedRecord]:
+        """Task 131: all active watchlist items for an account.
+
+        Same shape as ``list_starter_seed_for_account`` but without the
+        ``is_starter_seed`` filter — used by the multi-asset forecast
+        universe resolver after the user has confirmed and possibly
+        added their own items beyond the cold-start starter set.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(watchlist_items)
+                .where(watchlist_items.c.ibkr_account_id == ibkr_account_id)
+                .where(watchlist_items.c.status == "active")
+                .order_by(watchlist_items.c.symbol.asc())
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            WatchlistItemSeedRecord(
+                watchlist_item_id=row["watchlist_item_id"],
+                ibkr_account_id=row["ibkr_account_id"],
+                asset_id=row["asset_id"],
+                symbol=row["symbol"],
+                name=row["name"],
+                exchange=row["exchange"],
+                currency=row["currency"],
+                security_type=row["security_type"],
+                status=row["status"],
+                source=row["source"],
+                is_starter_seed=bool(row["is_starter_seed"]),
+                seed_version=row["seed_version"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            watchlist_items.name,
+            f"{len(records)} actieve watchlist-items opgehaald.",
+        )
+
     def list_starter_seed_for_account(
         self, ibkr_account_id: str
     ) -> StorageListResult[WatchlistItemSeedRecord]:
@@ -4153,6 +4199,103 @@ class SqlAlchemyForecastRepository(_Base):
             return None
         return self._row_to_record(row)
 
+    def get_latest_valid_for_conids(
+        self,
+        *,
+        conids: tuple[str, ...],
+        now: datetime,
+    ) -> tuple[ForecastEntry, ...]:
+        """Task 131: latest valid forecast per conid in the input set.
+
+        Returns at most one ``ForecastEntry`` per conid (the most
+        recent generated_at with forecast_valid_until > now). Conids
+        with no valid forecast are omitted from the result; the
+        caller is responsible for surfacing "no forecast yet" in
+        Dutch microcopy.
+        """
+
+        if not conids:
+            return ()
+        rows = (
+            self._connection.execute(
+                select(forecasts)
+                .where(forecasts.c.conid.in_(conids))
+                .where(forecasts.c.forecast_valid_until > now)
+                .order_by(
+                    forecasts.c.conid.asc(),
+                    forecasts.c.generated_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest_by_conid: dict[str, Any] = {}
+        for row in rows:
+            if row["conid"] not in latest_by_conid:
+                latest_by_conid[row["conid"]] = row
+        return tuple(
+            self._row_to_record(row) for row in latest_by_conid.values()
+        )
+
+    def list_for_date_summary(
+        self,
+        *,
+        conids: tuple[str, ...],
+        as_of_date: date,
+    ) -> dict[str, Any]:
+        """Task 131: per-label counts for the latest forecasts generated on a date.
+
+        Counts the latest forecast per conid whose ``generated_at``
+        falls on ``as_of_date`` (UTC). Returns
+        ``{label_counts, total_forecasts, total_blocked,
+        block_reasons}`` — the shape the day-summary API surfaces.
+        """
+
+        if not conids:
+            return {
+                "label_counts": {},
+                "total_forecasts": 0,
+                "total_blocked": 0,
+                "block_reasons": {},
+            }
+        from datetime import datetime as _dt
+        from datetime import time as _time
+
+        day_start = _dt.combine(as_of_date, _time.min, tzinfo=UTC)
+        day_end = _dt.combine(as_of_date, _time.max, tzinfo=UTC)
+        rows = (
+            self._connection.execute(
+                select(forecasts)
+                .where(forecasts.c.conid.in_(conids))
+                .where(forecasts.c.generated_at >= day_start)
+                .where(forecasts.c.generated_at <= day_end)
+                .order_by(
+                    forecasts.c.conid.asc(),
+                    forecasts.c.generated_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest_by_conid: dict[str, Any] = {}
+        for row in rows:
+            if row["conid"] not in latest_by_conid:
+                latest_by_conid[row["conid"]] = row
+        label_counts: dict[str, int] = {}
+        block_reasons: dict[str, int] = {}
+        for row in latest_by_conid.values():
+            label = row["label"]
+            label_counts[label] = label_counts.get(label, 0) + 1
+            if label == "Geblokkeerd" and row["block_reason"] is not None:
+                reason = row["block_reason"]
+                block_reasons[reason] = block_reasons.get(reason, 0) + 1
+        return {
+            "label_counts": label_counts,
+            "total_forecasts": len(latest_by_conid),
+            "total_blocked": label_counts.get("Geblokkeerd", 0),
+            "block_reasons": block_reasons,
+        }
+
     def list_expired_unprocessed(
         self, *, now: datetime, limit: int = 100
     ) -> StorageListResult[ForecastEntry]:
@@ -4300,4 +4443,58 @@ class SqlAlchemyCalibrationDiaryRepository(_Base):
             "hit_rate_within_band": hit_rate,
             "p10_p90_coverage_percent": hit_rate * Decimal("100"),
             "mean_realized_minus_p50": None,
+        }
+
+    def coverage_stats_by_conid(
+        self, *, conid: str, window_days: int = 90, min_sample_size: int = 5
+    ) -> dict[str, Any]:
+        """Task 131: per-asset rolling coverage stats.
+
+        Joins ``calibration_diary`` against ``forecasts`` to filter by
+        conid. Returns the same shape as ``coverage_stats`` plus a
+        ``sufficient_history`` flag: ``True`` iff
+        ``forecasts_evaluated >= min_sample_size``. Callers surface
+        the "Onvoldoende historiek" fallback in the explanation panel
+        when ``sufficient_history`` is False.
+        """
+
+        from datetime import timedelta as _td
+
+        cutoff = datetime.now(UTC) - _td(days=window_days)
+        rows = (
+            self._connection.execute(
+                select(calibration_diary, forecasts.c.conid)
+                .select_from(
+                    calibration_diary.join(
+                        forecasts,
+                        calibration_diary.c.forecast_run_id
+                        == forecasts.c.forecast_run_id,
+                    )
+                )
+                .where(forecasts.c.conid == conid)
+                .where(calibration_diary.c.evaluated_at >= cutoff)
+            )
+            .mappings()
+            .all()
+        )
+        evaluated = len(rows)
+        sufficient = evaluated >= min_sample_size
+        if evaluated == 0:
+            return {
+                "conid": conid,
+                "forecasts_evaluated": 0,
+                "hit_rate_within_band": None,
+                "p10_p90_coverage_percent": None,
+                "sufficient_history": sufficient,
+            }
+        within = sum(
+            1 for row in rows if row["hit_status"] == "realized_within_p10_p90"
+        )
+        hit_rate = Decimal(within) / Decimal(evaluated)
+        return {
+            "conid": conid,
+            "forecasts_evaluated": evaluated,
+            "hit_rate_within_band": hit_rate,
+            "p10_p90_coverage_percent": hit_rate * Decimal("100"),
+            "sufficient_history": sufficient,
         }

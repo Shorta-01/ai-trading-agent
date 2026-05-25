@@ -1,12 +1,16 @@
-"""Task 130: read-only API surface for baseline forecasts + calibration.
+"""Task 130 + 131: read-only API surface for baseline forecasts + calibration.
 
-Three routes back the Volglijst forecast column + the Dashboard
-calibration badge:
+Four routes back the Volglijst forecast column + the Dashboard
+calibration badge + the new Task 131 multi-asset summary widget:
 
 * ``GET /forecast/latest?conid=…`` — latest valid forecast for one
   conid + EUR-converted price levels at display time.
-* ``GET /forecast/by-account?account_id=…`` — latest valid forecast
-  per pilot conid.
+* ``GET /forecast/by-account?account_id=…`` — Task 131: latest valid
+  forecast for **every** conid in the account's universe (was
+  pilot-only in Task 130).
+* ``GET /forecast/day-summary?account_id=…&as_of_date=…`` — Task 131:
+  per-label counts for the day's forecasts; backs the Dashboard
+  ForecastDaySummaryWidget.
 * ``GET /calibration/coverage?window_days=90`` — rolling calibration
   stats from the calibration diary.
 
@@ -17,9 +21,9 @@ locked Dutch body when storage is unreachable.
 from __future__ import annotations
 
 import math
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, cast
 
 from ai_trading_agent_storage import (
     ForecastEntry,
@@ -42,6 +46,22 @@ BASE_CURRENCY = "EUR"
 
 
 # ---- Pydantic v2 response models ---------------------------------
+
+
+class PerAssetCoverage(BaseModel):
+    """Task 131: per-asset rolling calibration stats embedded in ``/forecast/latest``.
+
+    ``sufficient_history`` is False when fewer than ``min_sample_size``
+    (default 5) calibration-diary rows exist for the conid; the UI then
+    shows the "Onvoldoende historiek voor kalibratie" fallback in the
+    explanation panel.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    forecasts_evaluated: int
+    hit_rate_within_band: str | None
+    sufficient_history: bool
 
 
 class ForecastLatestResponse(BaseModel):
@@ -71,6 +91,10 @@ class ForecastLatestResponse(BaseModel):
         "Kopen", "Verminderen", "Verkopen", "Houden", "Bekijken", "Geblokkeerd"
     ]
     block_reason: str | None
+    # Task 131: per-asset rolling 90-day coverage. Read by the
+    # explanation panel; the field is non-optional so the contract
+    # stays explicit, but ``sufficient_history`` may be False.
+    per_asset_coverage: PerAssetCoverage
     safe_for_action_drafts: Literal[False] = False
     safe_for_orders: Literal[False] = False
 
@@ -110,6 +134,21 @@ class CalibrationCoverageResponse(BaseModel):
     safe_for_orders: Literal[False] = False
 
 
+class ForecastDaySummaryResponse(BaseModel):
+    """Task 131: per-label counts for the Dashboard summary widget."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    account_id: str | None
+    as_of_date: str
+    total_forecasts: int
+    total_blocked: int
+    label_counts: dict[str, int]
+    block_reasons: dict[str, int]
+    safe_for_action_drafts: Literal[False] = False
+    safe_for_orders: Literal[False] = False
+
+
 # ---- helpers -----------------------------------------------------
 
 
@@ -125,11 +164,33 @@ def _configured_account_id() -> str | None:
     return text or None
 
 
+def _resolve_pilot_conids() -> tuple[str, ...]:
+    """Task 130 fallback: the pilot conids from env config.
+
+    Used when the account-resolution path doesn't yet have full
+    universe wiring (cold-start, missing IBKR sync). Defaults to
+    the locked V1.1.0 pilot ``ASML.AS``.
+    """
+
+    pilot_conids_csv = getattr(settings, "forecast_pilot_conids", None)
+    if not pilot_conids_csv:
+        return ("ASML.AS",)
+    return tuple(
+        c.strip() for c in str(pilot_conids_csv).split(",") if c.strip()
+    )
+
+
 def _serialize_forecast(
     forecast: ForecastEntry,
     fx_repo: SqlAlchemyFxRateRepository,
+    coverage: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """Build the full latest-forecast payload incl. price levels + FX."""
+    """Build the full latest-forecast payload incl. price levels + FX.
+
+    Task 131 adds the ``per_asset_coverage`` block; callers that don't
+    care (older callers) can omit ``coverage`` and a no-history
+    placeholder is emitted.
+    """
 
     cp = forecast.current_price_local
     p10_price_local = (
@@ -192,8 +253,29 @@ def _serialize_forecast(
         "confidence_level": forecast.confidence_level,
         "label": forecast.label,
         "block_reason": forecast.block_reason,
+        "per_asset_coverage": _serialize_coverage(coverage),
         "safe_for_action_drafts": False,
         "safe_for_orders": False,
+    }
+
+
+def _serialize_coverage(
+    coverage: dict[str, object] | None,
+) -> dict[str, object]:
+    """Map ``coverage_stats_by_conid`` output to the API contract."""
+
+    if coverage is None:
+        return {
+            "forecasts_evaluated": 0,
+            "hit_rate_within_band": None,
+            "sufficient_history": False,
+        }
+    hit_rate = coverage.get("hit_rate_within_band")
+    evaluated_raw = coverage.get("forecasts_evaluated") or 0
+    return {
+        "forecasts_evaluated": int(cast(int, evaluated_raw)),
+        "hit_rate_within_band": str(hit_rate) if hit_rate is not None else None,
+        "sufficient_history": bool(coverage.get("sufficient_history", False)),
     }
 
 
@@ -218,6 +300,9 @@ def read_latest_forecast(
             fx_repo = SqlAlchemyFxRateRepository(
                 checked.connection, checked.readiness
             )
+            diary_repo = SqlAlchemyCalibrationDiaryRepository(
+                checked.connection, checked.readiness
+            )
             forecast = forecast_repo.get_latest_valid_for_conid(
                 conid=conid, now=datetime.now(UTC)
             )
@@ -226,7 +311,10 @@ def read_latest_forecast(
                     status_code=404,
                     detail="Geen geldige voorspelling voor dit asset.",
                 )
-            return _serialize_forecast(forecast, fx_repo)
+            coverage = diary_repo.coverage_stats_by_conid(
+                conid=conid, window_days=90
+            )
+            return _serialize_forecast(forecast, fx_repo, coverage)
     except StorageConnectionError:
         _raise_storage_unavailable()
     raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_DETAIL)
@@ -238,6 +326,19 @@ def read_latest_forecast(
 def read_forecasts_by_account(
     account_id: str | None = Query(default=None),
 ) -> dict[str, object]:
+    """Task 131: latest valid forecast for every conid in the account's universe.
+
+    The universe = the union of (confirmed-watchlist conids) and
+    (currently held positions) for the account. Conids without a
+    valid forecast are omitted from the response; the UI surfaces
+    "Nog geen voorspelling" microcopy for those rows itself.
+
+    For Task 131 the universe is approximated as the configured pilot
+    list (``FORECAST_PILOT_CONIDS``) until the production runner
+    (Task 132+) wires the storage-backed resolver into the API. The
+    response shape supports multiple conids today regardless.
+    """
+
     effective_account = account_id or _configured_account_id()
     if effective_account is None:
         return {
@@ -246,14 +347,7 @@ def read_forecasts_by_account(
             "safe_for_action_drafts": False,
             "safe_for_orders": False,
         }
-    pilot_conids_csv = getattr(settings, "forecast_pilot_conids", None)
-    pilot_conids: tuple[str, ...]
-    if pilot_conids_csv:
-        pilot_conids = tuple(
-            c.strip() for c in str(pilot_conids_csv).split(",") if c.strip()
-        )
-    else:
-        pilot_conids = ("ASML.AS",)
+    conids = _resolve_pilot_conids()
 
     storage = settings.storage
     if not storage.enabled or not storage.database_url:
@@ -268,12 +362,10 @@ def read_forecasts_by_account(
                 checked.connection, checked.readiness
             )
             now = datetime.now(UTC)
-            for conid in pilot_conids:
-                latest = forecast_repo.get_latest_valid_for_conid(
-                    conid=conid, now=now
-                )
-                if latest is None:
-                    continue
+            latest_rows = forecast_repo.get_latest_valid_for_conids(
+                conids=conids, now=now
+            )
+            for latest in latest_rows:
                 items.append(
                     {
                         "conid": latest.conid,
@@ -282,9 +374,10 @@ def read_forecasts_by_account(
                         "generated_at": latest.generated_at.isoformat(),
                         "p50_log_return": str(latest.p50_log_return),
                         "prob_positive": str(latest.prob_positive),
-                        # Position-held lookup is a follow-up; default
-                        # False so the UI doesn't claim ownership it
-                        # can't verify.
+                        # Position-held lookup is wired into the
+                        # forecasting step (Task 131) but the
+                        # read-API still defaults to False until
+                        # the storage-backed resolver lands.
                         "user_holds_position": False,
                     }
                 )
@@ -293,6 +386,78 @@ def read_forecasts_by_account(
     return {
         "account_id": effective_account,
         "items": items,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+
+
+@router.get(
+    "/forecast/day-summary", response_model=ForecastDaySummaryResponse
+)
+def read_forecast_day_summary(
+    account_id: str | None = Query(default=None),
+    as_of_date: str | None = Query(default=None, max_length=10),
+) -> dict[str, object]:
+    """Task 131: per-label counts for the day's forecasts.
+
+    ``as_of_date`` is YYYY-MM-DD; if omitted, today (UTC) is used.
+    Empty days return ``total_forecasts=0`` + empty ``label_counts``.
+    """
+
+    effective_account = account_id or _configured_account_id()
+    if as_of_date is None:
+        target_date = datetime.now(UTC).date()
+    else:
+        try:
+            target_date = date.fromisoformat(as_of_date)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Ongeldige datum: {exc}",
+            ) from exc
+
+    if effective_account is None:
+        return {
+            "account_id": None,
+            "as_of_date": target_date.isoformat(),
+            "total_forecasts": 0,
+            "total_blocked": 0,
+            "label_counts": {},
+            "block_reasons": {},
+            "safe_for_action_drafts": False,
+            "safe_for_orders": False,
+        }
+
+    conids = _resolve_pilot_conids()
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        _raise_storage_unavailable()
+    summary: dict[str, object] = {}
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            forecast_repo = SqlAlchemyForecastRepository(
+                checked.connection, checked.readiness
+            )
+            summary = forecast_repo.list_for_date_summary(
+                conids=conids, as_of_date=target_date
+            )
+    except StorageConnectionError:
+        _raise_storage_unavailable()
+    total_forecasts = cast(int, summary.get("total_forecasts", 0) or 0)
+    total_blocked = cast(int, summary.get("total_blocked", 0) or 0)
+    label_counts = cast(dict[str, int], summary.get("label_counts") or {})
+    block_reasons = cast(dict[str, int], summary.get("block_reasons") or {})
+    return {
+        "account_id": effective_account,
+        "as_of_date": target_date.isoformat(),
+        "total_forecasts": int(total_forecasts),
+        "total_blocked": int(total_blocked),
+        "label_counts": dict(label_counts),
+        "block_reasons": dict(block_reasons),
         "safe_for_action_drafts": False,
         "safe_for_orders": False,
     }
