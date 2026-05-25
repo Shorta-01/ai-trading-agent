@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  apiClient,
   archiveWatchlistItem,
   createWatchlistItem,
   getMarketDataLatestSnapshotStatus,
@@ -13,11 +14,52 @@ import {
   type IbkrContractCandidate,
   type IbkrWatchlistInstrument,
   type IbkrWatchlistSummary,
+  type WatchlistConfirmationStateResponse,
   type WatchlistItemResponse,
 } from "@/lib/apiClient";
 import { StatusBadge } from "@/components/StatusBadge";
+import { VolglijstColdStartFlow } from "@/components/VolglijstColdStartFlow";
 
 export default function Page() {
+  const [confirmationState, setConfirmationState] =
+    useState<WatchlistConfirmationStateResponse | null>(null);
+  const [confirmationLoaded, setConfirmationLoaded] = useState(false);
+
+  const loadConfirmationState = useCallback(async () => {
+    const result = await apiClient.getWatchlistConfirmationState();
+    if (result.ok) {
+      setConfirmationState(result.data);
+    } else {
+      setConfirmationState(null);
+    }
+    setConfirmationLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    void loadConfirmationState();
+  }, [loadConfirmationState]);
+
+  if (!confirmationLoaded) {
+    return (
+      <main className="page-wrap" data-testid="volglijst-loading">
+        <p>Bezig met laden…</p>
+      </main>
+    );
+  }
+
+  if (confirmationState?.state === "unconfirmed") {
+    return (
+      <VolglijstColdStartFlow
+        onConfirmed={() => void loadConfirmationState()}
+      />
+    );
+  }
+
+  return <VolglijstConfirmedView />;
+}
+
+
+function VolglijstConfirmedView() {
   const [items, setItems] = useState<WatchlistItemResponse[]>([]);
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<IbkrContractCandidate[]>([]);

@@ -832,9 +832,24 @@ watchlist_items = Table(
     Column("source", Text, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
+    # Task 128: cold-start onboarding columns.
+    Column("ibkr_account_id", Text, nullable=True),
+    Column(
+        "is_starter_seed",
+        Boolean,
+        nullable=False,
+        server_default=sa_false(),
+    ),
+    Column("seed_version", Text, nullable=True),
     CheckConstraint("symbol <> ''", name="ck_watchlist_items_symbol_not_empty"),
-    CheckConstraint("status IN ('active', 'archived')", name="ck_watchlist_items_status_valid"),
-    CheckConstraint("source = 'manual'", name="ck_watchlist_items_source_manual"),
+    CheckConstraint(
+        "status IN ('active', 'archived')",
+        name="ck_watchlist_items_status_valid",
+    ),
+    CheckConstraint(
+        "source IN ('manual', 'cold_start_seed')",
+        name="ck_watchlist_items_source_valid",
+    ),
 )
 
 market_data_snapshots = Table(
@@ -2088,4 +2103,63 @@ scheduler_state = Table(
     Column("last_heartbeat_at", DateTime(timezone=True), nullable=False),
     Column("next_pre_briefing_at", DateTime(timezone=True), nullable=True),
     Column("next_hourly_at", DateTime(timezone=True), nullable=True),
+)
+
+
+# Task 128: one row per cold-start seed event. ``UNIQUE`` on
+# ``ibkr_account_id`` enforces one-time-only seeding per account.
+cold_start_seed_audit = Table(
+    "cold_start_seed_audit",
+    metadata,
+    Column("ibkr_account_id", Text, primary_key=True),
+    Column("seeded_at", DateTime(timezone=True), nullable=False),
+    Column("seeded_count", Integer, nullable=False),
+    Column("failed_conids_json", JSON, nullable=True),
+    Column("seed_version", Text, nullable=False),
+)
+
+
+# Task 128: per-account watchlist confirmation state.
+watchlist_confirmation_state = Table(
+    "watchlist_confirmation_state",
+    metadata,
+    Column("ibkr_account_id", Text, primary_key=True),
+    Column("state", Text, nullable=False),
+    Column("last_updated_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "state IN ('unconfirmed', 'confirmed')",
+        name="ck_watchlist_confirmation_state_valid",
+    ),
+)
+
+
+# Task 128: append-only audit of every state transition.
+watchlist_confirmation_audit = Table(
+    "watchlist_confirmation_audit",
+    metadata,
+    Column("audit_id", Text, primary_key=True),
+    Column("event_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=False),
+    Column("from_state", Text, nullable=False),
+    Column("to_state", Text, nullable=False),
+    Column("actor", Text, nullable=False),
+    Column("row_count_at_event", Integer, nullable=False),
+    Column("details_json", JSON, nullable=True),
+    CheckConstraint(
+        "from_state IN ('absent', 'unconfirmed', 'confirmed')",
+        name="ck_watchlist_confirmation_audit_from_state",
+    ),
+    CheckConstraint(
+        "to_state IN ('unconfirmed', 'confirmed')",
+        name="ck_watchlist_confirmation_audit_to_state",
+    ),
+    CheckConstraint(
+        "actor IN ('system', 'user')",
+        name="ck_watchlist_confirmation_audit_actor",
+    ),
+)
+Index(
+    "ix_watchlist_confirmation_audit_account_event",
+    watchlist_confirmation_audit.c.ibkr_account_id,
+    watchlist_confirmation_audit.c.event_at,
 )

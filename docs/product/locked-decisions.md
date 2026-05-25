@@ -326,5 +326,15 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Alle gepland werk respecteert `IBKR_ENABLED` + `IbkrGateway.is_connected()`. Disconnected gateway → audit-rij `mode_detected=disconnected` en clean exit; geen error. De scheduler vuurt nooit IBKR-netwerkverkeer buiten de gateway om.
 
 
+## Task 128 product locks (cold-start onboarding)
+- Cold-start triggers a starter watchlist seed (one-time per `ibkr_account_id`). Idempotency via the `cold_start_seed_audit` table's `UNIQUE` on `ibkr_account_id`; the seed function returns an `AlreadySeeded` typed result on the second call.
+- Starter set v1 is locked: 5 broad UCITS ETFs (SXR8, VWCE, EQQQ, EXSA, AGGH), 5 European blue chips (ASML.AS, MC.PA, NOVO-B.CO, SAP.DE, SHEL.L), 2 sector ETFs (WTEC, IS3N). All identified by IBKR `conid` via the existing AssetListing storage; unresolvable conids are logged to the seed-audit row, the remaining set still seeds.
+- Watchlist state machine per `ibkr_account_id`: `unconfirmed` (after seed, before user clicks Bevestig) → `confirmed` (after user types the locked Dutch phrase `BEVESTIG`). Scheduled hourly orchestrator runs skip the normal advice-generation path when state is `unconfirmed` (audit-row `mode_detected="awaiting_watchlist_confirmation"`).
+- Cold-start banner mounted globally just below the `AccountModeBadge`. Locked Dutch microcopy: *"Welkom. Je IBKR-rekening is gesynchroniseerd. Het systeem heeft een startvoorstel voor je Volglijst klaargezet. Bekijk en bevestig in Volglijst voordat suggesties starten."* + "Naar Volglijst" link. Banner disappears the moment state flips to `confirmed`.
+- Volglijst page in the unconfirmed flow shows the yellow info card + starter rows with `Verwijder` buttons + the locked `BEVESTIG`-confirmation block. The text input requires the exact uppercase Dutch phrase `BEVESTIG`; lower-case or other phrasing returns HTTP 400 with `"Bevestigingscode is onjuist."`. Empty watchlist returns HTTP 422; already-confirmed state returns HTTP 409.
+- Every state transition writes an append-only `watchlist_confirmation_audit` row with `{account_id, from_state, to_state, event_at, actor, row_count_at_event, details_json}` — `actor='system'` for the seed, `actor='user'` for the confirmation.
+- Orchestrator behaviour: the `mode_detected` set widens to include `awaiting_watchlist_confirmation`. The sequence is `cold_start` (only on the very first run, when nothing has been seeded yet) → `awaiting_watchlist_confirmation` (after seed, before user confirms) → `normal` (after confirmation). The advice-generation surface stays inactive until the orchestrator emits `mode_detected="normal"`.
+
+
 ## Retired locks
 - **V1-paper-only enforcement** — Retired by Task 126 on 2026-05-25. The software now supports any IBKR account; account mode is detected (via two-tier prefix + behavioural check, persisted to `ibkr_connection_audit`) and displayed via the persistent `AccountModeBadge`, not enforced. The earlier paper-only assertion has been removed; mode is informational only. Older docs referencing the paper-only-V1 lock should be read as historical context.

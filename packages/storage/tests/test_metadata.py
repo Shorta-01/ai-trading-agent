@@ -74,6 +74,9 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "ibkr_connection_audit",
         "scheduled_run_audit",
         "scheduler_state",
+        "cold_start_seed_audit",
+        "watchlist_confirmation_state",
+        "watchlist_confirmation_audit",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
