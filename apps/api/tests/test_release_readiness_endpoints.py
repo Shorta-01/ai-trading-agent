@@ -1,4 +1,4 @@
-"""Endpoint tests for ``GET /v1/release-readiness`` (Slice 22)."""
+"""Endpoint tests for ``GET /v1/release-readiness`` (Slices 22 + 34)."""
 
 from __future__ import annotations
 
@@ -27,6 +27,11 @@ def _reset() -> None:
     api_settings.daily_briefing_sync_enabled = False
     api_settings.reconciliation_sync_enabled = False
     api_settings.prediction_diary_sync_enabled = False
+    api_settings.ensemble_weight_strategy = "equal_weight"
+    api_settings.predictor_backtest_enabled = False
+    api_settings.universe_set = "SP500"
+    api_settings.ai_explanation_real_client_enabled = False
+    api_settings.ai_ts_predictor_real_client_enabled = False
 
 
 def setup_function() -> None:
@@ -64,6 +69,9 @@ def test_endpoint_returns_ready_when_every_flag_is_set() -> None:
     api_settings.daily_briefing_sync_enabled = True
     api_settings.reconciliation_sync_enabled = True
     api_settings.prediction_diary_sync_enabled = True
+    api_settings.ensemble_weight_strategy = "auto"
+    api_settings.predictor_backtest_enabled = True
+    api_settings.universe_set = "SP500"
 
     r = client.get("/v1/release-readiness")
     body = r.json()
@@ -90,6 +98,9 @@ def test_endpoint_surfaces_individual_blocker_when_one_flag_is_off() -> None:
     api_settings.daily_briefing_sync_enabled = True
     api_settings.reconciliation_sync_enabled = True
     api_settings.prediction_diary_sync_enabled = True
+    api_settings.ensemble_weight_strategy = "auto"
+    api_settings.predictor_backtest_enabled = True
+    api_settings.universe_set = "SP500"
     api_settings.scheduler_enabled = False
 
     r = client.get("/v1/release-readiness")

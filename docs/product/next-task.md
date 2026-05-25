@@ -1,47 +1,53 @@
-# Task 189
+# V1.1 complete — fresh scope discussion needed for V1.2
 
-Slice 34 — V1.1 release readiness. The final slice of the V1.1
-expansion queue. Mirrors Slice 22's V1 release-readiness pattern
-extended to cover the V1.1 §22 surface.
+**V1.1 is feature-complete.** Slices 23-34 have all shipped, the V1.1
+expansion queue is closed, and the V1.1 acceptance test pins the
+combined V1+V1.1 scorecard into the ready-for-production
+configuration.
 
-Scope:
-- Extend the `release_readiness` module with V1.1-specific
-  blocker codes:
-  - `ensemble_weight_strategy_invalid` (must be `equal_weight`
-    or `auto`)
-  - `predictor_backtest_disabled`
-  - `claude_ai_api_key_missing_when_real_client_enabled`
-  - `claude_ai_budget_exceeded` (live check via the
-    `claude_ai_budget_usage` audit table)
-  - `universe_set_unknown` (when `UNIVERSE_SET` outside the
-    locked set)
-- Extend the `compute_release_readiness(settings, *, budget_repo)`
-  helper so the budget-exceeded gate runs when storage is
-  reachable; existing callers stay backward-compatible (the
-  budget gate is skipped when `budget_repo=None`).
-- Update the `GET /v1/release-readiness` route to thread the
-  budget repo through; the scorecard now reports the V1.1
-  gates alongside the V1 ones.
-- New V1.1 end-to-end acceptance test (`test_v1_1_acceptance.py`)
-  that runs the morning chain with every per-leg flag on AND
-  the V1.1 rebuild knobs on (e.g.
-  `momentum_horizon_scaled_thresholds=True`,
-  `qvm_sector_neutral_zscore=True`,
-  `ensemble_weight_strategy="auto"`) and asserts the chain
-  still passes + the readiness scorecard reports `status="ready"`.
-- Documentation:
-  - Add a "V1.1 release readiness" section to
-    `docs/deployment.md` mirroring the V1 runbook + listing the
-    new env vars (the §22.2 budget cap, the universe-set
-    chooser, the AI provider keys, the rebuild knobs).
-  - Lock the V1.1 expansion queue closed: amend
-    `version-1-1-backlog.md` with a "V1.1 is feature-complete"
-    banner.
-- `next-task.md` after this slice points at "V1.1 complete —
-  fresh scope discussion needed for V1.2".
+No coded slice is queued. The next task requires an owner-driven
+scope discussion before any code lands. V1.2 candidate themes
+(documented across `version-1-backlog.md`, `version-1-1-backlog.md`,
+and the §22 scope register but **not yet committed**):
 
-No new persisted records; no migration. Manual approval gate
-stays; safety booleans hard-False everywhere.
+- **Predictor families** — new predictors beyond the V1 five
+  (volatility-as-prediction, options-implied probabilities,
+  sentiment-from-research-as-predictor, PEAD post-earnings drift).
+  V1.1's auto-weighted ensemble + leaderboard make adding a sixth
+  vote mechanically straightforward; what's locked is *which*
+  family to add first.
+- **Real-money path** — the live-money slice. V1.1 stays paper-first
+  by doctrine; any real-money work needs its own scope discussion +
+  separate manual-approval doctrine + a deeper compliance review.
+- **Multi-account portfolios** — operator manages > 1 IBKR account
+  from one cockpit. Requires storage refactor (account_id on every
+  audit row + cross-account reconciliation rules).
+- **Mobile app** — Next.js → React Native or PWA. UX panels from
+  Slice 33's API contract are mobile-friendly but the layout work
+  is post-V1.1.
+- **Full ~5 000-ticker universe materialisation** — replaces the
+  Slice 31 representative ALL_5K extras with the EODHD bulk-list
+  endpoint. Operator-side rate-limit work + per-set cache TTL
+  tuning.
+- **Real TimesFM / Chronos / Lag-Llama clients** — Slice 30 declared
+  the operator surface but only wired the Anthropic Claude TS
+  provider. Each additional provider is a focused slice plus a
+  budget-routing decision.
+- **ibapi `Order.conditions` + extended `Order.tif` submission-client
+  extension** — Slice 32 locked the data model + dry-run + storage
+  shape; the actual TWS submission needs an end-to-end test against
+  a real paper account.
+- **Next.js UX panels** — Slice 33 shipped the API contract; the
+  browser-side rendering layer is post-V1.1.
+- **Real-time intraday predictor evaluation** — V1.1 stays daily,
+  scheduler-driven.
 
-When Slice 34 ships, the V1.1 expansion queue (Slices 23–34)
-closes.
+Before any of the above starts, please discuss scope and lock the
+selected theme(s) into `version-1-product-experience-locks.md`
+§23. A new backlog file (`version-1-2-backlog.md`) + scope register
+(`version-1-2-scope-register.md`) will replace this `next-task.md`
+once the first V1.2 slice is committed.
+
+Until then, the daily morning chain (`GET /v1/release-readiness`
+should report `status="ready"` once every locked env-var is set)
+continues to run on V1.1 with the §22 rebuild knobs operator-toggled.

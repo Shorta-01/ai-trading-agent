@@ -3235,13 +3235,17 @@ def read_ibkr_account_mode() -> dict[str, object]:
 
 @router.get("/v1/release-readiness")
 def read_v1_release_readiness() -> dict[str, object]:
-    """Return the V1 release-readiness scorecard.
+    """Return the V1 + V1.1 release-readiness scorecard.
 
     Informational only — the scorecard never authorises an order; the
     manual approval gate stays. Blockers are stable string codes the
     UI can localise; ``status="ready"`` means every required flag is
-    set and the morning chain can run end-to-end against the
-    configured paper account.
+    set, the V1.1 §22-rebuild knobs are inside the locked set, and the
+    morning chain can run end-to-end against the configured paper
+    account. The Claude AI budget gate runs live against the
+    ``claude_ai_budget_usage`` audit table when storage is reachable;
+    if the connection is down the scorecard still reports the other
+    V1+V1.1 checks instead of blanket-failing.
     """
 
     from portfolio_outlook_api.release_readiness import (
@@ -3249,7 +3253,28 @@ def read_v1_release_readiness() -> dict[str, object]:
         serialize_release_readiness,
     )
 
-    report = compute_release_readiness(settings)
+    storage = settings.storage
+    if storage.enabled and storage.database_url:
+        try:
+            storage_provider = StorageConnectionProvider(
+                build_database_connection_settings(storage.database_url)
+            )
+            with storage_provider.checked_connection(
+                require_writable=False
+            ) as checked:
+                budget_repo = SqlAlchemyClaudeAiBudgetUsageRepository(
+                    checked.connection, checked.readiness
+                )
+                report = compute_release_readiness(
+                    settings, budget_repo=budget_repo
+                )
+                return serialize_release_readiness(report)
+        except (StorageConnectionError, ImportError, ModuleNotFoundError):
+            # The budget gate is purely informational; never let a
+            # transient DB/driver failure bring down the readiness
+            # scorecard. Fall through to the no-repo path.
+            pass
+    report = compute_release_readiness(settings, budget_repo=None)
     return serialize_release_readiness(report)
 
 
