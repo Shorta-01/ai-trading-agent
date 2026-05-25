@@ -1,5 +1,7 @@
 """Configuration for the API service."""
 
+from decimal import Decimal
+
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -162,6 +164,19 @@ class Settings(BaseSettings):
     ai_ts_predictor_enabled: bool = False
     ai_ts_predictor_real_client_enabled: bool = False
     ai_ts_predictor_provider_code: str = "stub"
+    # V1.1 §22.2: monthly budget cap for real Anthropic Claude calls.
+    # Wired by Slice 29 (real explanation provider) + Slice 30 (real TS
+    # predictor); declared here so the env-var surface is documented from
+    # Slice 23 onward. Default 50 EUR locked by §22.2.
+    claude_ai_budget_monthly_eur: Decimal = Decimal("50")
+    # V1.1 §22.4: operator-selectable universe set. Wired by Slice 31;
+    # default `SP500` keeps V1 behaviour (the locked registry is a
+    # subset of S&P 500 + the EU + Bel/AEX cross-listings).
+    universe_set: str = "SP500"
+    # V1.1 Slice 24 + 25: backtesting opt-in. Default False keeps the
+    # morning chain running on the V1 predictors until Slice 26 wires
+    # the auto-weight feedback loop.
+    predictor_backtest_enabled: bool = False
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings
