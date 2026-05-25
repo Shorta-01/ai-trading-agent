@@ -167,16 +167,28 @@ class StubTsModelProvider:
 
 def build_ts_model_provider(
     runtime_settings: Settings,
-) -> StubTsModelProvider | TsModelProviderUnavailable:
+    *,
+    budget_repo: object | None = None,
+    invoked_from_scheduler: bool = False,
+) -> StubTsModelProvider | TsModelProviderUnavailable | object:
     """Return a provider or a :class:`TsModelProviderUnavailable` sentinel.
 
     Gates (every one must pass for the stub):
     - ``ai_ts_predictor_enabled``
     - ``ai_ts_predictor_provider_code == "stub"``
 
-    Any other provider code returns ``real_client_not_implemented``
-    until a future slice wires Anthropic / Hugging Face / Bedrock
-    providers.
+    V1.1 Slice 30: when ``provider_code="anthropic_claude"`` AND
+    ``ai_ts_predictor_real_client_enabled=True`` AND the API key is
+    set AND ``budget_repo`` is supplied AND either
+    ``ai_ts_predictor_daily_only=False`` or
+    ``invoked_from_scheduler=True``, the factory returns the real
+    :class:`AnthropicTsModelProvider`. Missing any of these gates
+    surfaces a stable ``TsModelProviderUnavailable`` reason so the
+    orchestrator can fall back cleanly.
+
+    Real TimesFM / Chronos / Lag-Llama providers still return
+    ``real_client_not_implemented``; the operator surface is
+    declared via the existing provider-code setting.
     """
 
     if not runtime_settings.ai_ts_predictor_enabled:
@@ -199,11 +211,66 @@ def build_ts_model_provider(
                 "fallback, of zet `AI_TS_PREDICTOR_REAL_CLIENT_ENABLED=true`."
             ),
         )
+    if code == "anthropic_claude":
+        api_key = (runtime_settings.claude_ai_api_key or "").strip()
+        if not api_key:
+            return TsModelProviderUnavailable(
+                reason="claude_ai_api_key_missing",
+                detail_nl=(
+                    "Anthropic Claude TS-provider vereist `CLAUDE_AI_API_KEY` "
+                    "in de env. Zonder de sleutel valt de provider terug "
+                    "op de stub."
+                ),
+            )
+        if budget_repo is None:
+            return TsModelProviderUnavailable(
+                reason="claude_ai_budget_repo_missing",
+                detail_nl=(
+                    "Anthropic Claude TS-provider vereist een budget-repo "
+                    "(usage audit). Roep `build_ts_model_provider(..., "
+                    "budget_repo=repo)` aan."
+                ),
+            )
+        if (
+            runtime_settings.ai_ts_predictor_daily_only
+            and not invoked_from_scheduler
+        ):
+            return TsModelProviderUnavailable(
+                reason="daily_only_invocation_required",
+                detail_nl=(
+                    "AI TS-provider draait alleen via de scheduler-gestuurde "
+                    "morning chain (`AI_TS_PREDICTOR_DAILY_ONLY=true`). "
+                    "Roep aan met `invoked_from_scheduler=True` of zet de "
+                    "vlag uit voor ad-hoc oproepen."
+                ),
+            )
+        from portfolio_outlook_api.anthropic_ts_provider import (
+            AnthropicTsModelProvider,
+        )
+
+        return AnthropicTsModelProvider(
+            budget_repo=budget_repo,  # type: ignore[arg-type]
+            monthly_cap_eur=runtime_settings.claude_ai_budget_monthly_eur,
+            model_name=runtime_settings.claude_ai_explanation_model,
+            max_tokens=runtime_settings.ai_ts_predictor_max_tokens,
+        )
+    if code == "timesfm":
+        # V1.1 §22 placeholder — TimesFM HTTP wiring lands in a post-V1.1
+        # widening once the operator points the deployment at a real
+        # endpoint. The provider-code surface is declared from Slice 30
+        # forward.
+        return TsModelProviderUnavailable(
+            reason="timesfm_not_implemented",
+            detail_nl=(
+                "TimesFM HTTP-adapter is gedeclareerd maar niet geïmplementeerd "
+                "in V1.1; gebruik `anthropic_claude` of `stub`."
+            ),
+        )
     return TsModelProviderUnavailable(
         reason="real_client_not_implemented",
         detail_nl=(
-            f"Provider `{code}` is nog niet geïmplementeerd in V1. "
-            "Beschikbaar: `stub`."
+            f"Provider `{code}` is nog niet geïmplementeerd in V1.1. "
+            "Beschikbaar: `stub`, `anthropic_claude`."
         ),
     )
 

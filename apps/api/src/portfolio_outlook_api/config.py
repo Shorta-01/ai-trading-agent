@@ -164,6 +164,12 @@ class Settings(BaseSettings):
     ai_ts_predictor_enabled: bool = False
     ai_ts_predictor_real_client_enabled: bool = False
     ai_ts_predictor_provider_code: str = "stub"
+    # V1.1 Slice 30: daily-only invocation lock. When True (default)
+    # the orchestrator only calls the real AI TS provider as part of
+    # the scheduler-driven morning chain; on-demand routes fall back
+    # to the stub.
+    ai_ts_predictor_daily_only: bool = True
+    ai_ts_predictor_max_tokens: int = 1024
     # V1.1 §22.2: monthly budget cap for real Anthropic Claude calls.
     # Wired by Slice 29 (real explanation provider) + Slice 30 (real TS
     # predictor); declared here so the env-var surface is documented from
