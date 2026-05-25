@@ -3230,6 +3230,26 @@ def read_ibkr_account_mode() -> dict[str, object]:
     }
 
 
+@router.get("/v1/release-readiness")
+def read_v1_release_readiness() -> dict[str, object]:
+    """Return the V1 release-readiness scorecard.
+
+    Informational only — the scorecard never authorises an order; the
+    manual approval gate stays. Blockers are stable string codes the
+    UI can localise; ``status="ready"`` means every required flag is
+    set and the morning chain can run end-to-end against the
+    configured paper account.
+    """
+
+    from portfolio_outlook_api.release_readiness import (
+        compute_release_readiness,
+        serialize_release_readiness,
+    )
+
+    report = compute_release_readiness(settings)
+    return serialize_release_readiness(report)
+
+
 def _build_blocked_universe_scan_response(
     *, reason: str, status_nl: str, help_nl: str
 ) -> dict[str, object]:

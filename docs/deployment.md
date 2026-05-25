@@ -46,3 +46,72 @@ Settings/secrets metadata and OpenAI usage-cost budget contracts are added as do
 - Productie-database-URL moet later uit veilige env/secret-referenties komen.
 - `alembic.ini` bevat alleen een placeholder, geen echte wachtwoorden.
 - Backup/restore-tests blijven verplicht vóór persistence als betrouwbaar geldt.
+
+## V1 release readiness (Task 177 / Slice 22)
+
+Het `GET /v1/release-readiness` endpoint (Slice 22) aggregeert alle
+operationele vlaggen tot een Dutch scorecard met stabiele blocker-codes.
+De morning chain en de readiness-check delen dezelfde set vlaggen, dus
+zodra het endpoint `status="ready"` rapporteert kan de 06:30
+morning chain end-to-end draaien tegen het gekoppelde IBKR-paper
+account.
+
+### Vereiste env-variabelen voor V1
+
+Opslag (verplicht):
+- `STORAGE_ENABLED=true`
+- `STORAGE_DATABASE_URL=postgresql+psycopg://...`
+- `STORAGE_WRITES_ENABLED=true`
+
+EODHD (verplicht voor market-data + fundamentals):
+- `EODHD_ENABLED=true`
+- `EODHD_API_KEY=<sleutel>`
+
+IBKR (verplicht voor paper-spiegeling):
+- `IBKR_ENABLED=true`
+- `IBKR_SYNC_ENABLED=true`
+- `IBKR_SYNC_HOST` / `IBKR_SYNC_PORT` / `IBKR_SYNC_CLIENT_ID` voor de TWS-koppeling.
+
+Scheduler (verplicht voor 06:30 morning chain):
+- `SCHEDULER_ENABLED=true`
+- `SCHEDULER_TIMEZONE=Europe/Brussels`
+- `SCHEDULER_DAILY_BRIEFING_CRON="30 6 * * *"` (default).
+
+Morning-chain legs (alle verplicht voor end-to-end V1):
+- `MARKET_DATA_SYNC_ENABLED=true`
+- `FORECAST_SYNC_ENABLED=true`
+- `SUGGESTIONS_SYNC_ENABLED=true`
+- `DECISION_PACKAGES_SYNC_ENABLED=true`
+- `ACTION_DRAFTS_SYNC_ENABLED=true`
+- `DAILY_BRIEFING_SYNC_ENABLED=true`
+
+Audit-pad (verplicht voor V1 acceptatie):
+- `RECONCILIATION_SYNC_ENABLED=true`
+- `PREDICTION_DIARY_SYNC_ENABLED=true`
+
+### Operator runbook (dagelijks)
+
+1. **07:00** — Open Portefeuille. De morning chain (gefireerd om 06:30)
+   heeft de dagbriefing al berekend. Lees de Dutch samenvatting.
+2. **Per draft** — Bekijk het Decision Package, de research-evidence en
+   de AI-uitleg. Approve manueel als alles correct is. Geen draft
+   vertrekt zonder approval.
+3. **Na approval** — De action draft wordt via `POST
+   /action-drafts/{id}/submit-to-ibkr-paper` verzonden. De
+   reconciliatie-sync werkt FILL/CANCELLED-events bij; de Prediction
+   Diary registreert het resultaat per horizon.
+4. **Bij CI-failure** — Bekijk `GET /scheduler/runs/latest` voor de
+   audit-rij; `error_text` toont de falende leg + code. Re-run met
+   `POST /scheduler/runs/morning-chain` zodra het probleem is opgelost.
+5. **Voor productie** — Poll `GET /v1/release-readiness`; zolang
+   `status != "ready"` ontbreekt minstens één vereiste vlag of
+   integratie. De manual approval-gate blijft altijd actief; een groene
+   scorecard autoriseert geen order.
+
+### V1 scope-lock
+
+Slice 22 sluit de V1 expansion queue af. Post-V1 widening-ideeën
+(zoals de volledige ~5 000-ticker universe-scan, echte TimesFM /
+Chronos / Lag-Llama clients, conditional orders, GTC/OPG TIF, multi-
+account portfolios, een mobiele app) blijven gedocumenteerd in
+`version-1-backlog.md` maar zijn expliciet **buiten V1-scope**.
