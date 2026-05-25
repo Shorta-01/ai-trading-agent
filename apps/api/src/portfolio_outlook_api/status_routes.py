@@ -25,6 +25,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyMarketDataBarRepository,
     SqlAlchemyMarketDataSnapshotRepository,
     SqlAlchemyPredictionDiaryRepository,
+    SqlAlchemyPredictorBacktestRunRepository,
     SqlAlchemyResearchSourceArchiveRepository,
     SqlAlchemySchedulerRunRepository,
     SqlAlchemyUniverseScanRunRepository,
@@ -3248,6 +3249,190 @@ def read_v1_release_readiness() -> dict[str, object]:
 
     report = compute_release_readiness(settings)
     return serialize_release_readiness(report)
+
+
+# ---- V1.1 Slice 25: predictor backtesting routes ----------------------
+
+
+def _build_blocked_backtest_response(
+    *, reason: str, status_nl: str, help_nl: str
+) -> dict[str, object]:
+    return {
+        "status": "blocked",
+        "status_nl": status_nl,
+        "help_nl": help_nl,
+        "reason": reason,
+        "item": None,
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+
+
+@router.post("/predictor/backtest/run")
+def run_predictor_backtest_route(
+    body: Annotated[dict[str, object] | None, Body()] = None,
+) -> dict[str, object]:
+    """Run one walk-forward backtest and persist an audit row.
+
+    Body fields:
+    - ``model_code`` — required; one of `baseline_gbm` / `momentum_v1` /
+      `mean_reversion_v1` (the V1.1 Slice 25 supported set).
+      `qvm_factor_v1` + `ai_ts_v1` are accepted but return a
+      ``skipped`` row pointing at the slice that will wire them.
+    - ``asset_symbol`` — required.
+    - ``ibkr_conid`` — required; the conid the bars are persisted under.
+    - ``window_days`` / ``horizon_trading_days`` / ``step_days`` —
+      optional; default 252 / 21 / 5 respectively.
+
+    Gated on `predictor_backtest_enabled` + writable storage.
+    """
+
+    from portfolio_outlook_api.predictor_backtest_orchestrator import (
+        LOCKED_MODEL_CODES,
+        run_backtest_for_symbol,
+        serialize_backtest_run_record,
+    )
+
+    if not settings.predictor_backtest_enabled:
+        return _build_blocked_backtest_response(
+            reason="predictor_backtest_disabled",
+            status_nl="Backtest uitgeschakeld",
+            help_nl="Stel `PREDICTOR_BACKTEST_ENABLED=true` in om de backtest-route te activeren.",
+        )
+
+    payload = body or {}
+    model_code = str(payload.get("model_code", "")).strip()
+    asset_symbol = str(payload.get("asset_symbol", "")).strip()
+    ibkr_conid = str(payload.get("ibkr_conid", "")).strip()
+    if not model_code or not asset_symbol or not ibkr_conid:
+        return _build_blocked_backtest_response(
+            reason="missing_input",
+            status_nl="Onvolledige aanvraag",
+            help_nl=(
+                "model_code, asset_symbol en ibkr_conid zijn verplicht. "
+                f"Geldige model_codes (V1.1 Slice 25): {sorted(LOCKED_MODEL_CODES)}."
+            ),
+        )
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url or not storage.writes_enabled:
+        return _build_blocked_backtest_response(
+            reason="storage_not_writable",
+            status_nl="Opslag niet beschikbaar",
+            help_nl="Backtest schrijft een audit-rij — opslag moet writable zijn.",
+        )
+
+    def _int_field(key: str, default: int) -> int:
+        raw = payload.get(key, default)
+        if isinstance(raw, bool):
+            return default
+        if isinstance(raw, int):
+            return raw
+        if isinstance(raw, str) and raw.strip():
+            return int(raw)
+        return default
+
+    window_days = _int_field("window_days", 252)
+    horizon = _int_field("horizon_trading_days", 21)
+    step_days = _int_field("step_days", 5)
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=True) as checked:
+            bar_repo = SqlAlchemyMarketDataBarRepository(
+                checked.connection, checked.readiness
+            )
+            backtest_repo = SqlAlchemyPredictorBacktestRunRepository(
+                checked.connection, checked.readiness
+            )
+            outcome = run_backtest_for_symbol(
+                model_code=model_code,
+                asset_symbol=asset_symbol,
+                ibkr_conid=ibkr_conid,
+                bar_repo=bar_repo,
+                backtest_repo=backtest_repo,
+                window_days=window_days,
+                horizon_trading_days=horizon,
+                step_days=step_days,
+            )
+    except StorageConnectionError:
+        return _build_blocked_backtest_response(
+            reason="storage_unavailable",
+            status_nl="Opslag niet bereikbaar",
+            help_nl="Probeer opnieuw zodra de database beschikbaar is.",
+        )
+
+    return {
+        "status": outcome.record.status,
+        "status_nl": outcome.status_nl,
+        "help_nl": outcome.help_nl,
+        "item": serialize_backtest_run_record(outcome.record),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+
+
+@router.get("/predictor/backtest/latest")
+def read_latest_predictor_backtests(
+    model_code: str | None = None,
+    asset_symbol: str | None = None,
+    limit: int = 25,
+) -> dict[str, object]:
+    """Return the most-recent backtest rows (optionally filtered).
+
+    Acts as the operator-facing leaderboard surface — surfaced read-
+    only; the row never authorises an order. Returns
+    ``not_configured`` when storage is not enabled."""
+
+    from portfolio_outlook_api.predictor_backtest_orchestrator import (
+        serialize_backtest_run_record,
+    )
+
+    base: dict[str, object] = {
+        "items": [],
+        "help_nl": (
+            "Walk-forward backtest-audit per (predictor, asset). "
+            "Brier-score lager is beter; hit-rate hoger is beter. "
+            "Een groene rij autoriseert geen order."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {
+            "status": "not_configured",
+            "status_nl": "Opslag niet geconfigureerd",
+        }
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyPredictorBacktestRunRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.list_recent_backtest_runs(
+                model_code=model_code,
+                asset_symbol=asset_symbol,
+                limit=limit,
+            )
+            return base | {
+                "status": "ok",
+                "status_nl": "Leaderboard opgehaald",
+                "items": [
+                    serialize_backtest_run_record(record)
+                    for record in result.records
+                ],
+            }
+    except StorageConnectionError:
+        return base | {
+            "status": "storage_unavailable",
+            "status_nl": "Opslag niet bereikbaar",
+        }
 
 
 def _build_blocked_universe_scan_response(

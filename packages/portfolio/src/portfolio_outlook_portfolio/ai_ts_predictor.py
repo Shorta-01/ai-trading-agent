@@ -40,6 +40,7 @@ from .predictor_protocol import (
     DIRECTION_STRONG_UP,
     STATUS_BLOCKED,
     STATUS_READY,
+    BacktestWindowScore,
     PredictionDistribution,
     PredictorInputs,
 )
@@ -275,6 +276,23 @@ class AiTsPredictor:
             status=STATUS_READY,
             blocking_reason=None,
             explanation_nl=explanation,
+        )
+
+    def backtest_window_score(
+        self, inputs: PredictorInputs, *, window_days: int
+    ) -> BacktestWindowScore:
+        """V1.1 §22.5: walk-forward backtest helper.
+
+        When the injected provider is unavailable every fold blocks
+        cleanly; the harness then returns a ``skipped`` score so the
+        leaderboard surfaces "AI predictor not available" without
+        crashing the batch.
+        """
+
+        from .predictor_backtester import backtest_window_score_for_predictor
+
+        return backtest_window_score_for_predictor(
+            self, inputs, window_days=window_days
         )
 
 

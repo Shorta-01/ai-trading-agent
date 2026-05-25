@@ -1,49 +1,41 @@
-# Task 180
+# Task 181
 
-Slice 25 — V1.1 backtesting framework. Builds on the Slice 24
-predictor refactor base (numpy + pandas internals, the audit table
-`predictor_backtest_runs`, and `PredictorResearchProtocol`).
+Slice 26 — V1.1 feedback loop + auto-weighted ensemble. The
+slice that closes the predictor-quality feedback loop the Slice 22
+audit identified as V1.1's biggest single lever.
 
 Scope:
-- New `predictor_backtester` module in `packages/portfolio` with a
-  pandas-based walk-forward harness:
-  `walk_forward_backtest(predictor, bars, *, window_days, horizon, step)
-  -> Iterable[BacktestWindowScore]`. Slides a `window_days`-wide
-  fitting/refit window forward by `step` bars; at each fold the
-  predictor's `predict(...)` is called on the in-window history and
-  the realised horizon outcome is scored against the predicted
-  distribution.
-- Per-predictor scoring: Brier-score on the predicted probabilities
-  (`prob_gain` vs realised gain/loss), hit-rate on the direction
-  label (was the realised price direction in the predicted
-  category?), and Sharpe-ratio on the expected-return vector vs.
-  realised returns.
-- Each fold writes one `PredictorBacktestRunRecord` via the Slice
-  24 repository; aggregate over folds produces the
-  `BacktestWindowScore` returned to the caller.
-- Implement `backtest_window_score(...)` on each of the five V1
-  predictors (`GbmPredictor`, `MomentumPredictor`,
-  `MeanReversionPredictor`, `QvmFactorPredictor`, `AiTsPredictor`).
-  AI predictor + QVM may degrade gracefully when their dependencies
-  (provider, universe) aren't available — return a `skipped` row
-  rather than failing the whole batch.
-- New routes:
-  * `POST /predictor/backtest/run` — gated on
-    `predictor_backtest_enabled`; runs a single
-    `{model_code, asset_symbol, window_days}` backtest and persists
-    the audit row.
-  * `GET /predictor/backtest/latest` — returns the leaderboard
-    (most recent row per `model_code`) with Dutch summary text.
-- Tests:
-  * Walk-forward harness correctness (fold boundaries; can't
-    leak future data into the window).
-  * Each predictor's `backtest_window_score(...)` produces a row
-    with the right `model_code`/`model_version`/`bars_used`.
-  * Endpoint gating + happy-path persistence.
+- Extend the Prediction Diary to track per-predictor outcomes
+  (currently only the ensemble outcome is persisted). Storage
+  migration `0042_prediction_diary_per_predictor` adds a child
+  table `prediction_diary_predictor_contributions` keyed on
+  `(diary_entry_id, model_code)` with the per-predictor
+  outcome label + the predicted/realised return spread.
+- Helper `compute_per_predictor_outcomes(...)` in
+  `packages/portfolio` consumes the Slice 15 `EnsembleResult`
+  + the realised price series and emits one row per
+  contribution.
+- Helper `compute_inverse_brier_weights(history, *, clip=(0.05, 0.40))`
+  reads the persisted backtest rows from Slice 24 and produces a
+  `{model_code: Decimal}` weighting dict by inverse-Brier-score
+  normalised + clipped to the per-predictor band. Missing /
+  blocked-only history defaults to the equal-weight strategy.
+- Ensemble combiner gains a `weight_strategy: "equal_weight" | "auto"`
+  argument. `auto` runs `compute_inverse_brier_weights` against
+  a provided weight-history loader and falls back to equal-weight
+  on insufficient data — the chain never goes dark.
+- `forecast_sync` orchestrator threads the new strategy from a
+  setting `ensemble_weight_strategy` (default `equal_weight`).
+- New route `GET /predictor/leaderboard` returns the rolling
+  per-predictor Brier-score + the corresponding auto-weight.
+- Tests cover: per-predictor outcome computation correctness;
+  inverse-Brier weighting math (zero clip, max clip, all-equal
+  fallback); strategy switch on the combiner; route gating + Dutch
+  copy.
 
-No new schema beyond the Slice-24 audit table. No new predictor
-behaviour change. Manual approval gate stays; safety booleans
-hard-False on every row.
+Manual approval gate stays. AI is still one vote in the ensemble;
+the auto-weight strategy may down-weight it but never silence it.
+Safety booleans hard-False on every persisted record.
 
-When Slice 25 ships, Slice 26 (feedback loop + auto-weighting)
+When Slice 26 ships, the predictor refactor work (Slices 27 + 28)
 is unblocked.
