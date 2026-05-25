@@ -152,3 +152,74 @@ def test_run_carries_scheduled_at_and_started_at() -> None:
     assert isinstance(record.scheduled_at, datetime)
     assert isinstance(record.started_at, datetime)
     assert record.scheduled_at.tzinfo == UTC
+
+
+# ---- Default job uses morning-chain (Slice 21) -------------------------
+
+
+def test_install_default_jobs_wires_morning_chain_when_no_callable_provided() -> None:
+    """When no explicit callable is supplied, the scheduler must wire the
+    morning-chain runner — not the no-op skeleton. The chain respects
+    each per-leg `<x>_sync_enabled` flag, so with everything off it
+    still completes (every leg returns ``skipped``)."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    repo = FakeRepo()
+    install_default_jobs(
+        scheduler,
+        _settings(scheduler_enabled=True),
+        repo_factory=lambda: repo,
+    )
+    # Manually fire the registered job to prove it routes through
+    # run_daily_briefing_job → morning-chain callable → succeed.
+    jobs = list_jobs(scheduler)
+    assert len(jobs) == 1
+    job = scheduler.get_job(DAILY_BRIEFING_JOB_NAME)
+    assert job is not None
+    job.func()  # the closure built by install_default_jobs
+
+    # One audit row written + updated to succeeded.
+    assert len(repo.saved) == 1
+    assert len(repo.updated) == 1
+    assert repo.updated[0].status == STATUS_SUCCEEDED
+
+
+def test_install_default_jobs_captures_morning_chain_failure() -> None:
+    """A morning-chain leg failure surfaces on the scheduler audit row
+    as ``failed`` with the failure summary in ``error_text``."""
+
+    from portfolio_outlook_api import morning_chain as mc
+    from portfolio_outlook_api import scheduler as sched_module
+
+    def _failing_runner(runtime_settings):
+        legs = (
+            lambda: mc.MorningChainLegOutcome(
+                leg_name=mc.LEG_MARKET_DATA_SYNC,
+                status=mc.LEG_STATUS_FAILED,
+                failure_code="market_data_unavailable",
+                detail_nl="market data unavailable",
+            ),
+        )
+        return mc.build_scheduler_chain_callable(legs_factory=lambda: legs)
+
+    original = sched_module._build_default_morning_chain_callable
+    sched_module._build_default_morning_chain_callable = _failing_runner
+    try:
+        scheduler = build_scheduler(_settings(scheduler_enabled=True))
+        assert scheduler is not None
+        repo = FakeRepo()
+        install_default_jobs(
+            scheduler,
+            _settings(scheduler_enabled=True),
+            repo_factory=lambda: repo,
+        )
+        job = scheduler.get_job(DAILY_BRIEFING_JOB_NAME)
+        assert job is not None
+        job.func()
+    finally:
+        sched_module._build_default_morning_chain_callable = original
+
+    assert repo.updated[0].status == STATUS_FAILED
+    assert repo.updated[0].error_text is not None
+    assert "market_data_sync" in repo.updated[0].error_text

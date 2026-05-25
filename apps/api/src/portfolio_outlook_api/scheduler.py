@@ -171,16 +171,34 @@ def run_daily_briefing_job(
 
 
 def _skeleton_job_callable() -> None:
-    """Slice-13 placeholder: log the scheduler tick.
-
-    Slice 21 replaces this with the full morning-chain orchestrator
-    (market-data → forecast ensemble → suggestions → Decision Packages
-    → action drafts → daily briefing). Returning ``None`` keeps the
-    audit row at ``succeeded``.
+    """Slice-13 fallback: log the scheduler tick when no morning-chain
+    runner is injected. Slice 21 replaced this as the default — the
+    factory in :func:`install_default_jobs` now defaults to the
+    :mod:`portfolio_outlook_api.morning_chain` runner. This callable
+    survives as a deterministic no-op for tests that need a job that
+    always succeeds without exercising the chain.
     """
 
-    logger.info("daily_briefing scheduler tick (skeleton)")
+    logger.info("daily_briefing scheduler tick (skeleton no-op)")
     return None
+
+
+def _build_default_morning_chain_callable(
+    runtime_settings: Settings,
+) -> Callable[[], Any]:
+    """Build the morning-chain callable that backs the scheduler job.
+
+    Imported lazily so the scheduler module stays free of the
+    chain-orchestrator's imports until the job is wired.
+    """
+
+    from portfolio_outlook_api.morning_chain import (
+        build_default_morning_chain_legs,
+        build_scheduler_chain_callable,
+    )
+
+    legs = build_default_morning_chain_legs(runtime_settings)
+    return build_scheduler_chain_callable(legs_factory=lambda: legs)
 
 
 def build_scheduler(
@@ -219,7 +237,14 @@ def install_default_jobs(
         runtime_settings.scheduler_daily_briefing_cron,
         runtime_settings.scheduler_timezone,
     )
-    effective_callable = job_callable or _skeleton_job_callable
+    if job_callable is not None:
+        effective_callable = job_callable
+    else:
+        # Slice 21: default to the morning-chain runner. The chain
+        # respects each per-leg `<x>_sync_enabled` flag — a fresh
+        # install with no flags set short-circuits all legs to
+        # ``skipped`` and the audit row records ``succeeded`` cleanly.
+        effective_callable = _build_default_morning_chain_callable(runtime_settings)
 
     def _fire() -> None:
         repo = None if repo_factory is None else repo_factory()
