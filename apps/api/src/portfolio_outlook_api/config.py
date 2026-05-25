@@ -159,6 +159,9 @@ class Settings(BaseSettings):
     universe_scan_sync_enabled: bool = False
     universe_scan_max_tickers_per_run: int = 50
     universe_scan_history_lookback_days: int = 400
+    ai_ts_predictor_enabled: bool = False
+    ai_ts_predictor_real_client_enabled: bool = False
+    ai_ts_predictor_provider_code: str = "stub"
     research_upload: ResearchUploadSettings = Field(default_factory=ResearchUploadSettings)
     research_extraction: ResearchExtractionSettings = Field(
         default_factory=ResearchExtractionSettings
