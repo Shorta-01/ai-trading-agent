@@ -69,6 +69,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "universe_scan_runs",
         "predictor_backtest_runs",
         "prediction_diary_predictor_contributions",
+        "claude_ai_budget_usage",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

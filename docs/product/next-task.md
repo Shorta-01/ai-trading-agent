@@ -1,45 +1,49 @@
-# Task 184
+# Task 185
 
-Slice 29 — V1.1 real AI explanation provider. Replaces the
-existing Slice 10 stub Anthropic Claude explanation provider with
-a real HTTP client honouring the §22.2 monthly budget cap.
+Slice 30 — V1.1 real AI TS predictor. Last AI-provider slice;
+replaces the Slice 18 `StubTsModelProvider` with a real Anthropic
+Claude numerical-forecast client honouring the §22.2 budget cap.
 
 Scope:
-- New `apps/api` module `anthropic_explanation_provider.py`
-  wrapping the official `anthropic` SDK. Implements the existing
-  Slice 10 `ExplanationProviderProtocol`. Uses Claude Haiku by
-  default (cheapest tier suitable for paraphrase tasks).
-- **Mandatory prompt caching**: the locked Dutch system prompt +
-  the deterministic legal disclaimer use Anthropic ephemeral
-  cache breakpoints so the per-call cost stays at the cache-hit
-  rate. The Research Desk evidence summaries are also cached
-  per-day so the morning chain pays the full input cost once.
-- **Budget enforcement**: a new
-  `apps/api/src/portfolio_outlook_api/claude_ai_budget.py` module
-  tracks per-month total token cost in a tiny audit table
-  `claude_ai_budget_usage` (storage migration `0043`). The
-  provider checks the running total before each call; once the
-  total exceeds `CLAUDE_AI_BUDGET_MONTHLY_EUR` the provider
-  raises `ClaudeAiBudgetExceededError` and the orchestrator falls
-  back to the stub. The audit row persists usage per
-  (day, provider_code, input_tokens, output_tokens) so the
-  operator can see exactly when the budget runs out.
-- New settings: `claude_ai_explanation_model` (default
-  `claude-haiku-4-5-20251001`), `claude_ai_api_key` (env-only;
-  no committed default).
-- Factory `build_explanation_provider(settings)` returns the real
-  client when `claude_ai_explanation_real_client_enabled=true`
-  AND the API key is set, otherwise the stub (V1 behaviour).
-- Hallucinated-number guard stays from Slice 10 — the real
-  client's output still goes through the same validation pass;
-  any number not in the source Decision Package fails.
-- Tests cover: budget cap blocks the real call when the running
-  total exceeds the threshold; cache-breakpoint markers in the
-  prompt; factory gates (key missing / flag off / both set);
-  hallucinated-number guard still fires on the real response.
+- New `apps/api/anthropic_ts_provider.py` implementing the
+  `TsModelProviderProtocol` from
+  `packages/portfolio/ai_ts_predictor.py`. The provider uses
+  Anthropic's structured-output mode (tool-use returning JSON) so
+  the prob_gain / quantile fields validate cleanly against the
+  Slice 18 validator — any malformed response counts as
+  ``provider_error`` and the AI predictor blocks rather than
+  hallucinating.
+- **Budget enforcement reuses Slice 29's
+  `claude_ai_budget` module** — single call kind
+  ``ts_forecast``; the per-call cost lands in the same
+  `claude_ai_budget_usage` audit table so the monthly cap is
+  shared across explanation + TS providers.
+- **Daily-only invocation**: the factory returns the real client
+  only when the scheduler-driven morning chain fires; on-demand
+  TS predictions stay routed to the stub.
+- Optional **TimesFM HTTP adapter** behind a `timesfm_enabled`
+  flag (off by default; placeholder raises
+  ``NotImplementedError`` until the operator wires a real
+  TimesFM deployment).
+- New settings:
+  `ai_ts_predictor_provider_code` accepts a new
+  `anthropic_claude` value alongside the existing `stub` /
+  `timesfm` / `chronos` / `lag_llama`. A new
+  `ai_ts_predictor_daily_only` flag (default True) enforces the
+  daily-call invariant.
+- Factory `build_ts_model_provider(settings, *, budget_repo)`
+  returns the real client when the gates open
+  (`ai_ts_predictor_real_client_enabled` AND
+  `provider_code=anthropic_claude` AND key set AND budget_repo
+  supplied), otherwise falls back to the stub or returns
+  `TsModelProviderUnavailable`.
+- Tests cover: structured-output round-trip with a fake client;
+  budget cap blocks the call; validator catches malformed JSON;
+  factory gates (key missing / budget_repo missing / daily-only
+  enforced); TimesFM placeholder raises NotImplementedError.
 
-Manual approval gate stays; safety booleans hard-False; AI never
-originates a number.
+Manual approval gate stays; safety booleans hard-False; AI is
+still one vote in the ensemble, never authoritative.
 
-When Slice 29 ships, Slice 30 (real AI TS predictor) is
-unblocked.
+When Slice 30 ships, Slice 31 (universe scan expansion +
+operator-selectable set) is unblocked.

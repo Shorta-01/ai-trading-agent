@@ -39,6 +39,7 @@ from ai_trading_agent_storage.metadata import (
     daily_briefings,
     decision_package_explanations,
     explanation_evidence_ledger,
+    claude_ai_budget_usage,
     prediction_diary_predictor_contributions,
     predictor_backtest_runs,
     scheduler_runs,
@@ -85,6 +86,7 @@ from ai_trading_agent_storage.repository_contracts import (
     DailyBriefingRecord,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
+    ClaudeAiBudgetUsageRecord,
     PredictionDiaryEntryRecord,
     PredictionDiaryPredictorContributionRecord,
     PredictorBacktestRunRecord,
@@ -2865,6 +2867,59 @@ class SqlAlchemySchedulerRunRepository(_Base):
             records,
             scheduler_runs.name,
             f"{len(records)} scheduler-runs opgehaald.",
+        )
+
+
+class SqlAlchemyClaudeAiBudgetUsageRepository(_Base):
+    """V1.1 Slice 29: Anthropic Claude budget-usage audit repository.
+
+    The provider checks the running monthly total via
+    :meth:`monthly_total_eur` before issuing a call; once the total
+    exceeds the locked ``CLAUDE_AI_BUDGET_MONTHLY_EUR`` cap the
+    provider refuses and the orchestrator falls back to the stub.
+    """
+
+    def save_usage(
+        self, record: ClaudeAiBudgetUsageRecord
+    ) -> StorageWriteResult:
+        self._insert(claude_ai_budget_usage, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.usage_id,
+            claude_ai_budget_usage.name,
+            True,
+            "Claude AI budget-usage opgeslagen.",
+        )
+
+    def monthly_total_eur(self, budget_month: str) -> Decimal:
+        statement = select(claude_ai_budget_usage.c.cost_eur).where(
+            claude_ai_budget_usage.c.budget_month == budget_month
+        )
+        rows = self._connection.execute(statement).all()
+        return sum((row[0] for row in rows), Decimal("0"))
+
+    def list_recent_usage(
+        self,
+        *,
+        budget_month: str | None = None,
+        limit: int = 100,
+    ) -> StorageListResult[ClaudeAiBudgetUsageRecord]:
+        statement = select(claude_ai_budget_usage)
+        if budget_month is not None:
+            statement = statement.where(
+                claude_ai_budget_usage.c.budget_month == budget_month
+            )
+        statement = statement.order_by(
+            claude_ai_budget_usage.c.called_at.desc()
+        ).limit(_bounded_limit(limit))
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            ClaudeAiBudgetUsageRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            claude_ai_budget_usage.name,
+            f"{len(records)} budget-usage rijen opgehaald.",
         )
 
 

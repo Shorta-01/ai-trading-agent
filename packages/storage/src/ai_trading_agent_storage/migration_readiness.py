@@ -450,6 +450,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0043_claude_ai_budget_usage",
+        previous_revision_id="0042_prediction_diary_per_predictor",
+        filename="0043_claude_ai_budget_usage.py",
+        label_nl="V1.1 Claude AI budget-usage audit",
+        description_nl=(
+            "Maakt claude_ai_budget_usage audit-tabel zodat de real "
+            "Anthropic-explanation provider (Slice 29) + TS-forecast "
+            "provider (Slice 30) de §22.2 maandelijkse budget-cap "
+            "kunnen handhaven. Houdt input/cached/output tokens + "
+            "kosten in EUR bij; safety booleans blijven False."
+        ),
+    ),
 )
 
 

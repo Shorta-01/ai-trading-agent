@@ -116,6 +116,8 @@ class ExplanationProviderUnavailable:
 
 def build_explanation_provider(
     runtime_settings: Settings,
+    *,
+    budget_repo: object | None = None,
 ) -> ExplanationProviderProtocol | ExplanationProviderUnavailable:
     """Construct a provider, or describe why none is available.
 
@@ -124,6 +126,14 @@ def build_explanation_provider(
     :class:`ExplanationProviderUnavailable` with reason
     ``ai_explanation_disabled``. The orchestrator treats that as a
     no-op and writes nothing.
+
+    V1.1 Slice 29 — when ``provider_code="anthropic_claude"`` AND
+    ``ai_explanation_real_client_enabled=true`` AND the API key is
+    set AND a ``budget_repo`` is supplied, the factory returns the
+    real :class:`AnthropicExplanationProvider`. Missing any of these
+    gates falls back to a stable
+    :class:`ExplanationProviderUnavailable` reason so the operator
+    can tell at a glance which gate failed.
     """
 
     if not runtime_settings.ai_explanation_enabled:
@@ -147,14 +157,42 @@ def build_explanation_provider(
                 "voor een ingebouwde provider."
             ),
         )
-    # Real provider implementations (Anthropic / OpenAI) are out of scope
-    # for Slice 10. The boundary is wired so a future slice can plug them
-    # in here without changing the orchestrator.
+    if provider_code == "anthropic_claude":
+        api_key = (runtime_settings.claude_ai_api_key or "").strip()
+        if not api_key:
+            return ExplanationProviderUnavailable(
+                reason="claude_ai_api_key_missing",
+                detail_nl=(
+                    "Anthropic Claude provider vereist `CLAUDE_AI_API_KEY` "
+                    "in de env. Zonder de sleutel valt de provider terug "
+                    "op de stub."
+                ),
+            )
+        if budget_repo is None:
+            return ExplanationProviderUnavailable(
+                reason="claude_ai_budget_repo_missing",
+                detail_nl=(
+                    "Anthropic Claude provider vereist een budget-repo "
+                    "(usage audit). Roep `build_explanation_provider(..., "
+                    "budget_repo=repo)` aan."
+                ),
+            )
+        from portfolio_outlook_api.anthropic_explanation_provider import (
+            AnthropicExplanationProvider,
+        )
+
+        return AnthropicExplanationProvider(
+            budget_repo=budget_repo,  # type: ignore[arg-type]
+            monthly_cap_eur=runtime_settings.claude_ai_budget_monthly_eur,
+            max_output_chars=runtime_settings.claude_ai_explanation_max_output_chars,
+            model_name=runtime_settings.claude_ai_explanation_model,
+        )
+    # Other real-provider codes (OpenAI, ...) are out of scope.
     return ExplanationProviderUnavailable(
         reason="real_client_not_implemented",
         detail_nl=(
-            f"Provider `{provider_code}` is nog niet geïmplementeerd in V1. "
-            "Beschikbaar: `stub`."
+            f"Provider `{provider_code}` is nog niet geïmplementeerd in V1.1. "
+            "Beschikbaar: `stub`, `anthropic_claude`."
         ),
     )
 

@@ -2806,3 +2806,58 @@ class PredictionDiaryPredictorContributionRecord:
             raise ValueError(
                 "Predictor-contribution safety booleans must remain false in V1.1."
             )
+
+
+@dataclass(frozen=True)
+class ClaudeAiBudgetUsageRecord:
+    """One audit row per Anthropic Claude API call.
+
+    Locked by V1.1 §22.2: the explanation + TS-forecast providers
+    consult the running monthly total before issuing a call; once
+    the total exceeds ``CLAUDE_AI_BUDGET_MONTHLY_EUR`` the
+    provider refuses to call and the orchestrator falls back to
+    the stub. Safety booleans hard-False; a budget row never
+    authorises an order.
+    """
+
+    usage_id: str
+    budget_month: str  # ``YYYY-MM``
+    provider_code: str
+    model_name: str
+    called_at: datetime
+    input_units: int
+    cached_input_units: int
+    output_units: int
+    cost_eur: Decimal
+    call_kind: str  # ``explanation`` | ``ts_forecast``
+    explanation_nl: str | None = None
+    safe_for_action_drafts: bool = False
+    safe_for_orders: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "usage_id",
+            "budget_month",
+            "provider_code",
+            "model_name",
+            "call_kind",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.call_kind not in {"explanation", "ts_forecast"}:
+            raise ValueError(
+                f"call_kind must be explanation/ts_forecast, got {self.call_kind!r}"
+            )
+        if len(self.budget_month) != 7 or self.budget_month[4] != "-":
+            raise ValueError(
+                f"budget_month must be YYYY-MM, got {self.budget_month!r}"
+            )
+        for field_name in ("input_units", "cached_input_units", "output_units"):
+            value = getattr(self, field_name)
+            if value < 0:
+                raise ValueError(f"{field_name} must be non-negative")
+        if self.cost_eur < 0:
+            raise ValueError("cost_eur must be non-negative")
+        if self.safe_for_action_drafts or self.safe_for_orders:
+            raise ValueError(
+                "Claude AI budget-usage safety booleans must remain false in V1.1."
+            )
