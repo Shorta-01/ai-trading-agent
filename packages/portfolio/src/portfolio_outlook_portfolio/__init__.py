@@ -46,6 +46,34 @@ from .ai_explanation_guards import (
     ExplanationValidationResult,
     validate_explanation_output,
 )
+from .ai_ts_predictor import (
+    BLOCKING_REASON_INVALID_CONFIDENCE as AI_TS_BLOCKING_REASON_INVALID_CONFIDENCE,
+)
+from .ai_ts_predictor import (
+    BLOCKING_REASON_INVALID_PROB_GAIN as AI_TS_BLOCKING_REASON_INVALID_PROB_GAIN,
+)
+from .ai_ts_predictor import (
+    BLOCKING_REASON_INVALID_QUANTILES as AI_TS_BLOCKING_REASON_INVALID_QUANTILES,
+)
+from .ai_ts_predictor import (
+    BLOCKING_REASON_PROVIDER_ERROR as AI_TS_BLOCKING_REASON_PROVIDER_ERROR,
+)
+from .ai_ts_predictor import (
+    BLOCKING_REASON_PROVIDER_UNAVAILABLE as AI_TS_BLOCKING_REASON_PROVIDER_UNAVAILABLE,
+)
+from .ai_ts_predictor import (
+    MODEL_CODE as AI_TS_MODEL_CODE,
+)
+from .ai_ts_predictor import (
+    MODEL_VERSION as AI_TS_MODEL_VERSION,
+)
+from .ai_ts_predictor import (
+    AiTsPredictor,
+    TsModelProviderInputs,
+    TsModelProviderProtocol,
+    TsModelProviderResult,
+    TsModelProviderUnavailable,
+)
 from .approval_guards import (
     build_approved_action,
     is_approval_decision_final,
@@ -619,5 +647,17 @@ __all__ = [
     "QVM_BLOCKING_REASON_INSUFFICIENT_UNIVERSE",
     "QVM_BLOCKING_REASON_SYMBOL_NOT_IN_UNIVERSE",
     "QVM_BLOCKING_REASON_INSUFFICIENT_FACTORS",
+    "AiTsPredictor",
+    "TsModelProviderInputs",
+    "TsModelProviderResult",
+    "TsModelProviderProtocol",
+    "TsModelProviderUnavailable",
+    "AI_TS_MODEL_CODE",
+    "AI_TS_MODEL_VERSION",
+    "AI_TS_BLOCKING_REASON_PROVIDER_UNAVAILABLE",
+    "AI_TS_BLOCKING_REASON_PROVIDER_ERROR",
+    "AI_TS_BLOCKING_REASON_INVALID_QUANTILES",
+    "AI_TS_BLOCKING_REASON_INVALID_PROB_GAIN",
+    "AI_TS_BLOCKING_REASON_INVALID_CONFIDENCE",
 ]
 

@@ -1,38 +1,40 @@
-# Task 173
+# Task 174
 
-Slice 18 — AI foundation TS-model predictor. Fifth and final concrete
-step of the V1 §21.4 ensemble lock. Plugs an AI time-series model into
-the predictor protocol behind the same gate pattern as Slice 10's
-explanation provider.
+Slice 19 — Fractional Kelly + risk-parity sizing. Locked in
+`version-1-product-experience-locks.md §21.5`. Replaces the current
+fixed-buy-value sizing in `action_draft_safety.derive_action_draft_sizing(...)`
+with Kelly math driven by the ensemble's distribution.
 
 Scope:
-- New `ai_ts_predictor` module in `apps/api` with:
-  * `TsModelProviderInputs` (bars + horizon + asset metadata) and
-    `TsModelProviderResult` (p10/p50/p90 + prob_gain + explanation +
-    model identity).
-  * `TsModelProviderProtocol` with a single `forecast(inputs)` method.
-  * `StubTsModelProvider` — deterministic Python: takes the last N
-    bars, computes a small-sample empirical quantile + simple drift,
-    returns a `TsModelProviderResult`. No AI runtime — keeps the
-    boundary testable. Mirrors Slice 10's `StubExplanationProvider`
-    pattern.
-  * `build_ts_model_provider(settings)` factory: returns the stub
-    when `ai_ts_predictor_enabled=True` + `ai_ts_predictor_provider_code="stub"`,
-    otherwise returns an `Unavailable` reason. Real providers
-    (TimesFM / Chronos / Lag-Llama) return
-    `real_client_not_implemented` for V1.
-- New pure-Python `AiTsPredictor` in `packages/portfolio` implementing
-  `PredictorProtocol`: delegates to a provider (factory-injected),
-  validates the result (numeric quantile ordering, prob_gain ∈ [0, 1]),
-  and returns a `PredictionDistribution`. Gracefully degrades to
-  ``status=blocked`` with `provider_unavailable` when the provider is
-  not built.
-- New settings: `ai_ts_predictor_enabled` (default `False`),
-  `ai_ts_predictor_real_client_enabled` (default `False`),
-  `ai_ts_predictor_provider_code` (default `"stub"`).
-- Tests cover the protocol, the stub provider, the factory gates, the
-  predictor's graceful-degrade path on provider unavailability, and
-  the validation guards.
+- New pure-Python `kelly_sizing` module in `packages/portfolio`:
+  * `compute_fractional_kelly_fraction(*, prob_gain, expected_return_pct,
+    downside_loss_pct, kelly_fraction=0.5)` returns the Kelly-recommended
+    fraction of investable capital for one asset (always clipped to
+    [0, 1]). Negative expected return → 0. Half-Kelly default.
+  * `apply_risk_parity_caps(*, fraction, position_count,
+    sector_exposure_pct, per_asset_cap_pct=5.0,
+    per_sector_cap_pct=30.0)` clips an individual Kelly fraction so
+    no single position exceeds 5% of the portfolio and no sector
+    exceeds 30%.
+- Extend `DraftSourceContext` with `prob_gain`, `expected_return_pct`,
+  `downside_loss_pct`, `current_sector_exposure_pct`, and
+  `current_portfolio_position_count` so the sizing function has
+  enough to apply Kelly + risk-parity caps.
+- Replace `derive_action_draft_sizing(...)` BUY math from
+  ``floor(default_buy_value / market_price)`` to
+  ``floor(kelly_fraction × usable_cash / market_price)``. Existing
+  `Langzaam bijkopen` / `Verminderen` / `Verkopen` paths keep their
+  current top-up/reduce semantics — Kelly only changes the BUY path.
+- Wire the ensemble's `PredictionDistribution` (p50, prob_gain,
+  expected_return_pct) into the `decision_package_sync` so the
+  Decision Package carries the Kelly-derived sizing context. The
+  Decision Package gains five new audit fields: `kelly_fraction`,
+  `kelly_fraction_capped`, `kelly_per_asset_cap_hit`,
+  `kelly_per_sector_cap_hit`, `kelly_explanation_nl`.
+- Migration `0040_decision_package_kelly_fields` adds those fields to
+  `asset_decision_packages` (nullable).
+- Tests cover the Kelly math (every edge case), the risk-parity cap
+  application, the sizing replacement on the BUY path, and the
+  Decision Package serialisation surface.
 
-No orchestrator change yet; the AI predictor joins the ensemble when
-Slice 19+ wires `forecast_sync` to compose all five predictors.
+No new routes; no broker action; safety booleans hard-False.
