@@ -116,6 +116,23 @@ class _CalibrationRunnerProtocol(Protocol):
     def run(self) -> dict[str, object]: ...
 
 
+class _DecisionPackageRunnerProtocol(Protocol):
+    """Task 132 adapter that composes Decision Packages.
+
+    Called immediately after the forecasting runner on
+    ``morning_briefing`` fires in ``normal`` mode. The implementation
+    is responsible for: (1) querying every forecast persisted under the
+    given ``scheduled_run_id``, (2) filtering out ``Geblokkeerd``
+    forecasts, (3) composing + persisting one Decision Package per
+    remaining forecast. Never raises — failures fold into the returned
+    dict and the orchestrator continues.
+    """
+
+    def run(
+        self, *, ibkr_account_id: str, scheduled_run_id: str
+    ) -> dict[str, object]: ...
+
+
 class _GatewayProtocol(Protocol):
     def is_connected(self) -> bool: ...
 
@@ -179,6 +196,7 @@ def run_orchestrator(
     market_data_runner: _MarketDataRunnerProtocol | None = None,
     forecasting_runner: _ForecastingRunnerProtocol | None = None,
     calibration_runner: _CalibrationRunnerProtocol | None = None,
+    decision_package_runner: _DecisionPackageRunnerProtocol | None = None,
 ) -> OrchestratorResult:
     """One scheduled-run cycle.
 
@@ -327,6 +345,30 @@ def run_orchestrator(
                 logger.exception("forecasting_runner failed")
                 forecast_details = {"error": "forecasting_runner_exception"}
 
+        # 7b. Task 132 Decision Package composition (morning_briefing
+        # only, immediately after forecasting). Only fires if the
+        # forecasting step ran successfully; if forecasting raised,
+        # there's nothing to compose against.
+        decision_package_details: dict[str, object] | None = None
+        if (
+            decision_package_runner is not None
+            and forecast_details is not None
+            and "error" not in forecast_details
+            and mode_detected == "normal"
+            and run_type == "morning_briefing"
+            and ibkr_account_id is not None
+        ):
+            try:
+                decision_package_details = decision_package_runner.run(
+                    ibkr_account_id=ibkr_account_id,
+                    scheduled_run_id=run_id,
+                )
+            except Exception:  # noqa: BLE001 — boundary
+                logger.exception("decision_package_runner failed")
+                decision_package_details = {
+                    "error": "decision_package_runner_exception"
+                }
+
         # 8. Task 130 calibration step (pre_briefing only).
         calibration_details: dict[str, object] | None = None
         if (
@@ -347,6 +389,8 @@ def run_orchestrator(
             audit_payload["market_data"] = market_data_details
         if forecast_details is not None:
             audit_payload["forecast"] = forecast_details
+        if decision_package_details is not None:
+            audit_payload["decision_package"] = decision_package_details
         if calibration_details is not None:
             audit_payload["calibration"] = calibration_details
         if audit_payload:

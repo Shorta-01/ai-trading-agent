@@ -30,6 +30,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_sync_runs,
     cold_start_seed_audit,
     calibration_diary,
+    decision_packages,
     forecasts,
     fx_rates,
     market_data_eod_snapshots,
@@ -137,7 +138,10 @@ from ai_trading_agent_storage.repository_contracts import (
     CalibrationDiaryEntry,
     ColdStartAlreadySeededError,
     ColdStartSeedAuditEntry,
+    DecisionPackageEntry,
+    EvidenceReference,
     ForecastEntry,
+    GateOutcome,
     FxRateRecord,
     MarketDataEodSnapshotEntry,
     ProviderCallAuditEntry,
@@ -4498,3 +4502,220 @@ class SqlAlchemyCalibrationDiaryRepository(_Base):
             "p10_p90_coverage_percent": hit_rate * Decimal("100"),
             "sufficient_history": sufficient,
         }
+
+
+
+
+class SqlAlchemyDecisionPackageRepository(_Base):
+    """Task 132: append-only Decision Package repository.
+
+    No ``update`` / ``delete`` methods exist by design — Decision
+    Packages are immutable per Task 132 product lock §4. Storage-side
+    CHECK constraints reject ``safe_for_action_drafts=True`` or
+    ``safe_for_orders=True``; the dataclass enforces the same
+    invariant at the Python layer (defense in depth).
+    """
+
+    def append(
+        self, record: DecisionPackageEntry
+    ) -> StorageWriteResult:
+        if record.safe_for_action_drafts or record.safe_for_orders:
+            raise ValueError(
+                "safe_for_action_drafts and safe_for_orders must be "
+                "False (Task 132 product lock §1)"
+            )
+        payload = {
+            "decision_package_id": record.decision_package_id,
+            "forecast_run_id": record.forecast_run_id,
+            "composed_at": record.composed_at,
+            "valid_until": record.valid_until,
+            "ibkr_account_id": record.ibkr_account_id,
+            "conid": record.conid,
+            "symbol": record.symbol,
+            "exchange": record.exchange,
+            "currency_local": record.currency_local,
+            "asset_class": record.asset_class,
+            "user_holds_position": record.user_holds_position,
+            "held_quantity": record.held_quantity,
+            "held_avg_cost_local": record.held_avg_cost_local,
+            "current_price_local": record.current_price_local,
+            "current_price_eur": record.current_price_eur,
+            "as_of_market_data_ts": record.as_of_market_data_ts,
+            "freshness_state": record.freshness_state,
+            "data_age_trading_days": record.data_age_trading_days,
+            "forecast_method": record.forecast_method,
+            "p10_log_return": record.p10_log_return,
+            "p50_log_return": record.p50_log_return,
+            "p90_log_return": record.p90_log_return,
+            "p10_price_eur": record.p10_price_eur,
+            "p50_price_eur": record.p50_price_eur,
+            "p90_price_eur": record.p90_price_eur,
+            "prob_positive": record.prob_positive,
+            "prob_loss_gt_5pct": record.prob_loss_gt_5pct,
+            "expected_volatility_annualized": (
+                record.expected_volatility_annualized
+            ),
+            "forecast_confidence_level": record.forecast_confidence_level,
+            "suggested_action_label": record.suggested_action_label,
+            "block_reason": record.block_reason,
+            "gate_outcomes_json": [
+                {
+                    "gate_name": g.gate_name,
+                    "passed": g.passed,
+                    "reason_nl": g.reason_nl,
+                }
+                for g in record.gate_outcomes
+            ],
+            "evidence_references_json": [
+                {
+                    "source_id": e.source_id,
+                    "source_type": e.source_type,
+                    "claim_summary": e.claim_summary,
+                }
+                for e in record.evidence_references
+            ],
+            "deterministic_dutch_explanation": (
+                record.deterministic_dutch_explanation
+            ),
+            "audit_trail_hash": record.audit_trail_hash,
+            "previous_package_hash": record.previous_package_hash,
+            "safe_for_action_drafts": record.safe_for_action_drafts,
+            "safe_for_orders": record.safe_for_orders,
+        }
+        self._insert(decision_packages, payload)
+        return StorageWriteResult(
+            True,
+            record.decision_package_id,
+            decision_packages.name,
+            True,
+            "Decision Package opgeslagen.",
+        )
+
+    def get_by_id(
+        self, decision_package_id: str
+    ) -> DecisionPackageEntry | None:
+        row = (
+            self._connection.execute(
+                select(decision_packages).where(
+                    decision_packages.c.decision_package_id
+                    == decision_package_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
+    def get_latest_for_account_conid(
+        self, *, ibkr_account_id: str, conid: str
+    ) -> DecisionPackageEntry | None:
+        row = (
+            self._connection.execute(
+                select(decision_packages)
+                .where(
+                    decision_packages.c.ibkr_account_id == ibkr_account_id
+                )
+                .where(decision_packages.c.conid == conid)
+                .order_by(decision_packages.c.composed_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
+    def list_chain(
+        self,
+        *,
+        ibkr_account_id: str,
+        conid: str,
+        limit: int = 20,
+    ) -> StorageListResult[DecisionPackageEntry]:
+        """Return the per-asset Decision Package chain, newest first."""
+
+        rows = (
+            self._connection.execute(
+                select(decision_packages)
+                .where(
+                    decision_packages.c.ibkr_account_id == ibkr_account_id
+                )
+                .where(decision_packages.c.conid == conid)
+                .order_by(decision_packages.c.composed_at.desc())
+                .limit(_bounded_limit(limit))
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(self._row_to_record(row) for row in rows)
+        return StorageListResult(
+            records,
+            decision_packages.name,
+            f"{len(records)} Decision Packages opgehaald.",
+        )
+
+    @staticmethod
+    def _row_to_record(row: Any) -> DecisionPackageEntry:
+        gates_payload = row["gate_outcomes_json"] or []
+        evidence_payload = row["evidence_references_json"] or []
+        return DecisionPackageEntry(
+            decision_package_id=row["decision_package_id"],
+            forecast_run_id=row["forecast_run_id"],
+            composed_at=row["composed_at"],
+            valid_until=row["valid_until"],
+            ibkr_account_id=row["ibkr_account_id"],
+            conid=row["conid"],
+            symbol=row["symbol"],
+            exchange=row["exchange"],
+            currency_local=row["currency_local"],
+            asset_class=row["asset_class"],
+            user_holds_position=bool(row["user_holds_position"]),
+            held_quantity=row["held_quantity"],
+            held_avg_cost_local=row["held_avg_cost_local"],
+            current_price_local=row["current_price_local"],
+            current_price_eur=row["current_price_eur"],
+            as_of_market_data_ts=row["as_of_market_data_ts"],
+            freshness_state=row["freshness_state"],
+            data_age_trading_days=row["data_age_trading_days"],
+            forecast_method=row["forecast_method"],
+            p10_log_return=row["p10_log_return"],
+            p50_log_return=row["p50_log_return"],
+            p90_log_return=row["p90_log_return"],
+            p10_price_eur=row["p10_price_eur"],
+            p50_price_eur=row["p50_price_eur"],
+            p90_price_eur=row["p90_price_eur"],
+            prob_positive=row["prob_positive"],
+            prob_loss_gt_5pct=row["prob_loss_gt_5pct"],
+            expected_volatility_annualized=(
+                row["expected_volatility_annualized"]
+            ),
+            forecast_confidence_level=row["forecast_confidence_level"],
+            suggested_action_label=row["suggested_action_label"],
+            block_reason=row["block_reason"],
+            gate_outcomes=tuple(
+                GateOutcome(
+                    gate_name=g["gate_name"],
+                    passed=bool(g["passed"]),
+                    reason_nl=g["reason_nl"],
+                )
+                for g in gates_payload
+            ),
+            evidence_references=tuple(
+                EvidenceReference(
+                    source_id=e["source_id"],
+                    source_type=e["source_type"],
+                    claim_summary=e["claim_summary"],
+                )
+                for e in evidence_payload
+            ),
+            deterministic_dutch_explanation=(
+                row["deterministic_dutch_explanation"]
+            ),
+            audit_trail_hash=row["audit_trail_hash"],
+            previous_package_hash=row["previous_package_hash"],
+            safe_for_action_drafts=bool(row["safe_for_action_drafts"]),
+            safe_for_orders=bool(row["safe_for_orders"]),
+        )

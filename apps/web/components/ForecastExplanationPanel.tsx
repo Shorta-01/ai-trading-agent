@@ -52,6 +52,9 @@ function fmtDate(iso: string): string {
 export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
   const [data, setData] = useState<ForecastLatestResponse | null>(null);
   const [errorReason, setErrorReason] = useState<string | null>(null);
+  const [decisionPackageId, setDecisionPackageId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!open) {
@@ -60,6 +63,7 @@ export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
     let cancelled = false;
     setData(null);
     setErrorReason(null);
+    setDecisionPackageId(null);
 
     async function load() {
       const result = await apiClient.getForecastLatest(conid);
@@ -68,6 +72,15 @@ export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
         setData(result.data);
       } else {
         setErrorReason(result.reason ?? "not_reachable");
+        return;
+      }
+      // Task 132: best-effort Decision Package lookup. Missing
+      // package → button hidden (no error surfaced; the package
+      // is simply not yet composed).
+      const pkgResult = await apiClient.getLatestDecisionPackage({ conid });
+      if (cancelled) return;
+      if (pkgResult.ok) {
+        setDecisionPackageId(pkgResult.data.decision_package_id);
       }
     }
     void load();
@@ -228,6 +241,26 @@ export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
             </dd>
           </dl>
         )}
+
+        {decisionPackageId !== null ? (
+          <p style={{ marginTop: 12 }}>
+            <a
+              href={`/decision-package/${encodeURIComponent(decisionPackageId)}`}
+              data-testid="forecast-bekijk-decision-package"
+              style={{
+                display: "inline-block",
+                padding: "6px 14px",
+                background: "#1f2937",
+                color: "#ffffff",
+                borderRadius: 4,
+                fontSize: 13,
+                textDecoration: "none",
+              }}
+            >
+              Bekijk Decision Package
+            </a>
+          </p>
+        ) : null}
 
         <p
           style={{

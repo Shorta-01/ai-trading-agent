@@ -10,10 +10,13 @@ import {
 import type { ForecastLatestResponse } from "@/lib/apiClient";
 
 const getForecastLatest = vi.fn();
+const getLatestDecisionPackage = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     getForecastLatest: (...args: unknown[]) => getForecastLatest(...args),
+    getLatestDecisionPackage: (...args: unknown[]) =>
+      getLatestDecisionPackage(...args),
   },
 }));
 
@@ -53,6 +56,12 @@ const HAPPY: ForecastLatestResponse = {
 
 beforeEach(() => {
   getForecastLatest.mockReset();
+  getLatestDecisionPackage.mockReset();
+  // Default: no Decision Package — keeps existing tests unaffected.
+  getLatestDecisionPackage.mockResolvedValue({
+    ok: false as const,
+    reason: "not_reachable",
+  });
 });
 
 afterEach(() => {
@@ -194,5 +203,37 @@ describe("ForecastExplanationPanel", () => {
     await screen.findByTestId("forecast-field-direction");
     fireEvent.click(screen.getByTestId("forecast-explanation-close"));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows 'Bekijk Decision Package' button linking to the detail page", async () => {
+    getForecastLatest.mockResolvedValue({ ok: true as const, data: HAPPY });
+    getLatestDecisionPackage.mockResolvedValue({
+      ok: true as const,
+      data: { decision_package_id: "dp-xyz-123" },
+    });
+    render(
+      <ForecastExplanationPanel conid="ASML.AS" open={true} onClose={() => {}} />,
+    );
+    const button = await screen.findByTestId(
+      "forecast-bekijk-decision-package",
+    );
+    expect(button.getAttribute("href")).toBe(
+      "/decision-package/dp-xyz-123",
+    );
+  });
+
+  it("hides 'Bekijk Decision Package' when no package exists", async () => {
+    getForecastLatest.mockResolvedValue({ ok: true as const, data: HAPPY });
+    getLatestDecisionPackage.mockResolvedValue({
+      ok: false as const,
+      reason: "not_reachable",
+    });
+    render(
+      <ForecastExplanationPanel conid="ASML.AS" open={true} onClose={() => {}} />,
+    );
+    await screen.findByTestId("forecast-field-direction");
+    expect(
+      screen.queryByTestId("forecast-bekijk-decision-package"),
+    ).toBeNull();
   });
 });

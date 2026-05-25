@@ -834,6 +834,72 @@ export type ForecastDaySummaryResponse = {
   safe_for_orders: boolean;
 };
 
+export type DecisionPackageGateOutcome = {
+  gate_name: string;
+  passed: boolean;
+  reason_nl: string;
+};
+
+export type DecisionPackageEvidenceReference = {
+  source_id: string;
+  source_type: string;
+  claim_summary: string;
+};
+
+export type DecisionPackageResponse = {
+  decision_package_id: string;
+  forecast_run_id: string;
+  composed_at: string;
+  valid_until: string;
+  ibkr_account_id: string;
+  conid: string;
+  symbol: string;
+  exchange: string | null;
+  currency_local: string;
+  asset_class: string | null;
+  user_holds_position: boolean;
+  held_quantity: string | null;
+  held_avg_cost_local: string | null;
+  current_price_local: string;
+  current_price_eur: string;
+  as_of_market_data_ts: string;
+  freshness_state: "fresh" | "stale" | "unavailable";
+  data_age_trading_days: number;
+  forecast_method: string;
+  p10_log_return: string;
+  p50_log_return: string;
+  p90_log_return: string;
+  p10_price_eur: string;
+  p50_price_eur: string;
+  p90_price_eur: string;
+  prob_positive: string;
+  prob_loss_gt_5pct: string;
+  expected_volatility_annualized: string;
+  forecast_confidence_level: ForecastConfidenceLevel;
+  suggested_action_label:
+    | "Kopen"
+    | "Verminderen"
+    | "Verkopen"
+    | "Houden"
+    | "Bekijken";
+  block_reason: string | null;
+  gate_outcomes: DecisionPackageGateOutcome[];
+  evidence_references: DecisionPackageEvidenceReference[];
+  deterministic_dutch_explanation: string;
+  audit_trail_hash: string;
+  previous_package_hash: string | null;
+  safe_for_action_drafts: false;
+  safe_for_orders: false;
+};
+
+export type DecisionPackageChainResponse = {
+  ibkr_account_id: string;
+  conid: string;
+  packages: DecisionPackageResponse[];
+  safe_for_action_drafts: false;
+  safe_for_orders: false;
+};
+
 export type ForecastByAccountRow = {
   conid: string;
   label: ForecastLabel;
@@ -1182,6 +1248,33 @@ export const apiClient = {
     const qs = search.toString();
     return getJson<ForecastDaySummaryResponse>(
       qs ? `/forecast/day-summary?${qs}` : "/forecast/day-summary",
+    );
+  },
+  getDecisionPackage: (id: string) =>
+    getJson<DecisionPackageResponse>(
+      `/decision-package/${encodeURIComponent(id)}`,
+    ),
+  getLatestDecisionPackage: (params: { conid: string; accountId?: string }) => {
+    const search = new URLSearchParams();
+    search.set("conid", params.conid);
+    if (params.accountId) {
+      search.set("account_id", params.accountId);
+    }
+    return getJson<DecisionPackageResponse>(
+      `/decision-package/latest?${search.toString()}`,
+    );
+  },
+  getDecisionPackageChain: (params: {
+    conid: string;
+    accountId: string;
+    limit?: number;
+  }) => {
+    const search = new URLSearchParams();
+    search.set("conid", params.conid);
+    search.set("account_id", params.accountId);
+    if (params.limit !== undefined) search.set("limit", String(params.limit));
+    return getJson<DecisionPackageChainResponse>(
+      `/decision-package/chain?${search.toString()}`,
     );
   },
   getSchedulerV127Status: () =>
