@@ -202,16 +202,19 @@ test.describe("Decision Package navigation from Volglijst", () => {
       "**/forecast/day-summary**",
       fulfillJson(DAY_SUMMARY),
     );
+    // Task 132 hot-fix: use regex patterns instead of glob — Playwright
+    // glob's ``?`` is a single-character wildcard which is ambiguous
+    // when matching against URLs that contain literal query separators.
     await context.route(
-      "**/forecast/latest?conid=ASML.AS",
+      /\/forecast\/latest\?conid=ASML\.AS/,
       fulfillJson(FORECAST_LATEST),
     );
     await context.route(
-      "**/decision-package/latest?conid=ASML.AS**",
+      /\/decision-package\/latest\?conid=ASML\.AS/,
       fulfillJson(DECISION_PACKAGE),
     );
     await context.route(
-      `**/decision-package/${DECISION_PACKAGE.decision_package_id}`,
+      new RegExp(`/decision-package/${DECISION_PACKAGE.decision_package_id}$`),
       fulfillJson(DECISION_PACKAGE),
     );
   });
@@ -233,23 +236,14 @@ test.describe("Decision Package navigation from Volglijst", () => {
 
     await expect(page).toHaveURL(/\/decision-package\/dp-e2e-1/);
 
-    // Task 132 hot-fix regression assertion: confirm we actually landed
-    // on the rendered Decision Package detail page and the API mock
-    // returned meaningful content. This catches the failure mode where
-    // the page is stuck on the loading state because the dynamic-route
-    // params Promise was suspending without a Suspense boundary (the
-    // original bug: ``use(params)`` instead of ``useParams()``).
-    await expect(
-      page
-        .locator('text="ASML"')
-        .or(page.locator('text="Verwachte bandbreedte"')),
-    ).toBeVisible({ timeout: 5_000 });
-    // Loading state must NOT still be visible — surfaces a stuck-loading
-    // regression as a distinct failure rather than swallowing it into
-    // the section-visibility timeout below.
+    // Task 132 hot-fix regression assertion: surface the stuck-loading
+    // failure mode as a distinct error rather than burying it in the
+    // per-section visibility timeouts below. The original bug was
+    // ``use(params)`` suspending without a Suspense boundary, leaving
+    // the page rendering only the loading state forever.
     await expect(
       page.getByTestId("decision-package-loading"),
-    ).toHaveCount(0);
+    ).toHaveCount(0, { timeout: 10_000 });
 
     // All seven sections render.
     await expect(page.getByTestId("dp-section-header")).toBeVisible();
@@ -259,6 +253,17 @@ test.describe("Decision Package navigation from Volglijst", () => {
     await expect(page.getByTestId("dp-section-evidence")).toBeVisible();
     await expect(page.getByTestId("dp-section-explanation")).toBeVisible();
     await expect(page.getByTestId("dp-section-audit")).toBeVisible();
+
+    // Confirm at least one section carries real text content from the
+    // API mock — catches the failure mode where test IDs exist but
+    // the page is otherwise broken (e.g. rendered with default
+    // placeholders instead of the mocked DECISION_PACKAGE).
+    await expect(page.getByTestId("dp-section-header")).toContainText(
+      "ASML",
+    );
+    await expect(
+      page.getByTestId("dp-explanation-text"),
+    ).toContainText("Voor ASML");
 
     // Label badge color-coded.
     await expect(page.getByTestId("dp-label-badge")).toHaveText("Bekijken");
