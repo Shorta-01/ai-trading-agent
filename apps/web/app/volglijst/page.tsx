@@ -11,12 +11,14 @@ import {
   listIbkrWatchlists,
   listWatchlistItems,
   searchIbkrContracts,
+  type ForecastByAccountRow,
   type IbkrContractCandidate,
   type IbkrWatchlistInstrument,
   type IbkrWatchlistSummary,
   type WatchlistConfirmationStateResponse,
   type WatchlistItemResponse,
 } from "@/lib/apiClient";
+import { ForecastExplanationPanel } from "@/components/ForecastExplanationPanel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { VolglijstColdStartFlow } from "@/components/VolglijstColdStartFlow";
 
@@ -71,6 +73,8 @@ function VolglijstConfirmedView() {
   const [watchlistInstruments, setWatchlistInstruments] = useState<IbkrWatchlistInstrument[]>([]);
   const [ibkrStatus, setIbkrStatus] = useState<string>("");
   const [marketDataStatusByConid, setMarketDataStatusByConid] = useState<Record<string, { label: string; help: string }>>({});
+  const [forecastsByConid, setForecastsByConid] = useState<Record<string, ForecastByAccountRow>>({});
+  const [openForecastConid, setOpenForecastConid] = useState<string | null>(null);
 
   async function load() {
     const res = await listWatchlistItems();
@@ -98,6 +102,12 @@ function VolglijstConfirmedView() {
         })
     );
     setMarketDataStatusByConid(Object.fromEntries(entries));
+    const forecastResult = await apiClient.getForecastsByAccount();
+    if (forecastResult.ok) {
+      setForecastsByConid(
+        Object.fromEntries(forecastResult.data.items.map((row) => [row.conid, row])),
+      );
+    }
   }
   useEffect(() => { void load(); }, []);
   const getReadinessStatus = (wrapped: WatchlistItemResponse) => wrapped.asset_listing_readiness.status_nl;
@@ -123,6 +133,7 @@ function VolglijstConfirmedView() {
       <button type="submit">Toevoegen aan Volglijst</button>
     </form>
     {error ? <p>{error}</p> : null}
-    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Marktdata</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; const marketStatus = i.ibkr_conid ? marketDataStatusByConid[i.ibkr_conid] : null; return <tr key={i.watchlist_item_id}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Geen contract"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td>{i.ibkr_conid ? <><StatusBadge label={marketStatus?.label ?? "Alleen status"} status="info" title={marketStatus?.help ?? "Nog geen analyse"} /><br /><small>{marketStatus?.help ?? "Nog geen analyse"}</small></> : <><StatusBadge label="Geen contract" status="geblokkeerd" title="Contract niet aanwezig of niet gevalideerd." /><br /><small>Contract niet gevalideerd</small></>}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
+    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Marktdata</th><th>Voorspelling</th><th>Actie</th></tr></thead><tbody>{items.map((wrapped)=>{const i=wrapped.item; const marketStatus = i.ibkr_conid ? marketDataStatusByConid[i.ibkr_conid] : null; const forecast = i.ibkr_conid ? forecastsByConid[i.ibkr_conid] : null; return <tr key={i.watchlist_item_id} data-testid={`volglijst-row-${i.symbol}`}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Geen contract"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td>{i.ibkr_conid ? <><StatusBadge label={marketStatus?.label ?? "Alleen status"} status="info" title={marketStatus?.help ?? "Nog geen analyse"} /><br /><small>{marketStatus?.help ?? "Nog geen analyse"}</small></> : <><StatusBadge label="Geen contract" status="geblokkeerd" title="Contract niet aanwezig of niet gevalideerd." /><br /><small>Contract niet gevalideerd</small></>}</td><td data-testid={`volglijst-forecast-cell-${i.symbol}`}>{forecast ? <><strong data-testid={`volglijst-forecast-label-${i.symbol}`}>{forecast.label}</strong><br /><small>Betrouwbaarheid: {forecast.confidence_level}</small><br /><button type="button" data-testid={`volglijst-forecast-why-${i.symbol}`} onClick={()=>setOpenForecastConid(i.ibkr_conid)}>Waarom?</button></> : <small>Nog geen voorspelling</small>}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
+    {openForecastConid ? <ForecastExplanationPanel conid={openForecastConid} open={true} onClose={()=>setOpenForecastConid(null)} /> : null}
   </main>;
 }

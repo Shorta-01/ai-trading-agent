@@ -24,6 +24,9 @@ dependencies = [
   # lazily (so the worker stays loadable in stub-only test runs),
   # but mypy --strict needs the package present.
   "httpx>=0.27.0",
+  # Task 130: historical-bootstrap forecast math. numpy float64 for
+  # distribution stats only; Decimal at every money boundary.
+  "numpy>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -55,4 +58,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["apscheduler", "apscheduler.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
 ignore_missing_imports = true

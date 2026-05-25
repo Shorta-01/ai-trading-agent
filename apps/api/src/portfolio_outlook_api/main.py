@@ -17,6 +17,9 @@ from fastapi import FastAPI
 from portfolio_outlook_api.asset_listings import router as asset_listings_router
 from portfolio_outlook_api.asset_master import router as asset_master_router
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.forecast_routes import (
+    router as forecast_routes_router,
+)
 from portfolio_outlook_api.health import HealthResponse, get_health_response
 from portfolio_outlook_api.ibkr_connection_routes import (
     router as ibkr_connection_router,
@@ -108,3 +111,4 @@ app.include_router(ibkr_connection_router)
 app.include_router(scheduler_v127_router)
 app.include_router(watchlist_confirmation_router)
 app.include_router(market_data_runtime_router)
+app.include_router(forecast_routes_router)

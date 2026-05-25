@@ -779,6 +779,70 @@ export type MarketDataByAccountResponse = {
   safe_for_orders: boolean;
 };
 
+export type ForecastLabel =
+  | "Kopen"
+  | "Verminderen"
+  | "Verkopen"
+  | "Houden"
+  | "Bekijken"
+  | "Geblokkeerd";
+
+export type ForecastConfidenceLevel = "Laag" | "Gemiddeld" | "Hoog";
+
+export type ForecastLatestResponse = {
+  conid: string;
+  generated_at: string;
+  forecast_valid_until: string;
+  horizon_trading_days: number;
+  method: string;
+  current_price_local: string;
+  currency_local: string;
+  p10_log_return: string;
+  p50_log_return: string;
+  p90_log_return: string;
+  p10_price_local: string;
+  p50_price_local: string;
+  p90_price_local: string;
+  p10_price_eur: string | null;
+  p50_price_eur: string | null;
+  p90_price_eur: string | null;
+  prob_positive: string;
+  prob_loss_gt_5pct: string;
+  expected_volatility_annualized: string;
+  confidence_level: ForecastConfidenceLevel;
+  label: ForecastLabel;
+  block_reason: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type ForecastByAccountRow = {
+  conid: string;
+  label: ForecastLabel;
+  confidence_level: ForecastConfidenceLevel;
+  generated_at: string;
+  p50_log_return: string;
+  prob_positive: string;
+  user_holds_position: boolean;
+};
+
+export type ForecastByAccountResponse = {
+  account_id: string | null;
+  items: ForecastByAccountRow[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type CalibrationCoverageResponse = {
+  window_days: number;
+  forecasts_evaluated: number;
+  hit_rate_within_band: string | null;
+  p10_p90_coverage_percent: string | null;
+  mean_realized_minus_p50: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
 export type ProviderCallRow = {
   audit_id: string;
   called_at: string;
@@ -1078,6 +1142,20 @@ export const apiClient = {
   getMarketDataProviderCalls: (limit = 20) =>
     getJson<ProviderCallsResponse>(
       `/market-data/provider-calls?limit=${limit}`,
+    ),
+  getForecastLatest: (conid: string) =>
+    getJson<ForecastLatestResponse>(
+      `/forecast/latest?conid=${encodeURIComponent(conid)}`,
+    ),
+  getForecastsByAccount: (accountId?: string) =>
+    getJson<ForecastByAccountResponse>(
+      accountId
+        ? `/forecast/by-account?account_id=${encodeURIComponent(accountId)}`
+        : "/forecast/by-account",
+    ),
+  getCalibrationCoverage: (windowDays = 90) =>
+    getJson<CalibrationCoverageResponse>(
+      `/calibration/coverage?window_days=${windowDays}`,
     ),
   getSchedulerV127Status: () =>
     getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),

@@ -129,6 +129,11 @@ class Settings(BaseSettings):
     forecast_minimum_bars_required: int = 60
     forecast_max_assets_per_run: int = 50
     forecast_valid_minutes: int = 1440
+    # V1.1.0 Task 130: pilot conids whose baseline forecasts the
+    # /forecast/by-account route surfaces. CSV-formatted env var
+    # (e.g. ``ASML.AS,ASML.MI``). Defaults to ``ASML.AS`` per the
+    # locked pilot-asset decision.
+    forecast_pilot_conids: str = "ASML.AS"
     suggestions_sync_enabled: bool = False
     suggestions_risk_profile: str = "Gebalanceerd"
     suggestions_valid_minutes: int = 1440

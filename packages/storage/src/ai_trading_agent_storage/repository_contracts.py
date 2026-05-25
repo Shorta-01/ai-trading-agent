@@ -3390,3 +3390,116 @@ class EodhdNotConfiguredError(RuntimeError):
     Lives in storage so the orchestrator + the worker EODHD client
     can both surface the typed error without circular imports.
     """
+
+
+# Task 130: historical-bootstrap forecast + calibration diary records.
+_LOCKED_FORECAST_METHODS = frozenset({"historical_bootstrap_v1"})
+_LOCKED_FORECAST_LABELS = frozenset(
+    {"Kopen", "Verminderen", "Verkopen", "Houden", "Bekijken", "Geblokkeerd"}
+)
+_LOCKED_FORECAST_CONFIDENCE = frozenset({"Laag", "Gemiddeld", "Hoog"})
+_LOCKED_HIT_STATUSES = frozenset(
+    {
+        "realized_within_p10_p90",
+        "realized_outside_band",
+        "realized_above_p90",
+        "realized_below_p10",
+    }
+)
+
+
+@dataclass(frozen=True)
+class ForecastEntry:
+    """One probabilistic forecast row.
+
+    Task 130 product lock §3 + §4: locked p10/p50/p90 + probabilities +
+    confidence + locked Dutch label. Append-only; UNIQUE on
+    (conid, generated_at).
+    """
+
+    forecast_run_id: str
+    conid: str
+    generated_at: datetime
+    generated_by_scheduled_run_id: str
+    horizon_trading_days: int
+    forecast_valid_until: datetime
+    method: str
+    history_window_days: int
+    history_closes_count: int
+    current_price_local: Decimal
+    currency_local: str
+    p10_log_return: Decimal
+    p50_log_return: Decimal
+    p90_log_return: Decimal
+    prob_positive: Decimal
+    prob_loss_gt_5pct: Decimal
+    expected_volatility_annualized: Decimal
+    confidence_level: str
+    label: str
+    block_reason: str | None
+    expired_at: datetime | None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.forecast_run_id, "forecast_run_id")
+        _require_non_empty(self.conid, "conid")
+        _require_non_empty(
+            self.generated_by_scheduled_run_id, "generated_by_scheduled_run_id"
+        )
+        if self.horizon_trading_days <= 0:
+            raise ValueError("horizon_trading_days must be positive")
+        if self.method not in _LOCKED_FORECAST_METHODS:
+            raise ValueError(
+                f"method {self.method!r} not in "
+                f"{sorted(_LOCKED_FORECAST_METHODS)}"
+            )
+        if self.confidence_level not in _LOCKED_FORECAST_CONFIDENCE:
+            raise ValueError(
+                f"confidence_level {self.confidence_level!r} not in "
+                f"{sorted(_LOCKED_FORECAST_CONFIDENCE)}"
+            )
+        if self.label not in _LOCKED_FORECAST_LABELS:
+            raise ValueError(
+                f"label {self.label!r} not in {sorted(_LOCKED_FORECAST_LABELS)}"
+            )
+        if not (Decimal("0") <= self.prob_positive <= Decimal("1")):
+            raise ValueError("prob_positive must be in [0, 1]")
+        if not (Decimal("0") <= self.prob_loss_gt_5pct <= Decimal("1")):
+            raise ValueError("prob_loss_gt_5pct must be in [0, 1]")
+        if self.expected_volatility_annualized < 0:
+            raise ValueError("expected_volatility_annualized must be non-negative")
+        if self.current_price_local < 0:
+            raise ValueError("current_price_local must be non-negative")
+        if self.label == "Geblokkeerd" and not self.block_reason:
+            raise ValueError(
+                "block_reason is required when label is Geblokkeerd"
+            )
+
+
+@dataclass(frozen=True)
+class CalibrationDiaryEntry:
+    """One row per evaluated forecast.
+
+    Task 130 product lock §8: append-only; UNIQUE on forecast_run_id.
+    The realized return is the actual 20-trading-day-later log-return;
+    hit_status is computed deterministically.
+    """
+
+    forecast_run_id: str
+    evaluated_at: datetime
+    realized_log_return: Decimal
+    hit_status: str
+    realized_close_price: Decimal
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.forecast_run_id, "forecast_run_id")
+        if self.hit_status not in _LOCKED_HIT_STATUSES:
+            raise ValueError(
+                f"hit_status {self.hit_status!r} not in "
+                f"{sorted(_LOCKED_HIT_STATUSES)}"
+            )
+        if self.realized_close_price < 0:
+            raise ValueError("realized_close_price must be non-negative")
+
+
+class BootstrapInsufficientHistoryError(RuntimeError):
+    """Raised when the bootstrap input doesn't have ≥200 daily closes."""

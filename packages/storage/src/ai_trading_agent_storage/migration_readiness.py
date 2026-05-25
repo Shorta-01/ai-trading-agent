@@ -530,6 +530,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0049_forecasts_and_calibration_diary",
+        previous_revision_id="0048_market_data_eod_and_fx_runtime",
+        filename="0049_forecasts_and_calibration_diary.py",
+        label_nl="Task 130 baseline-forecast + calibratie-dagboek",
+        description_nl=(
+            "Maakt forecasts (UNIQUE op (conid, generated_at) + locked "
+            "CHECK op method/label/confidence/horizon) en calibration_diary "
+            "(UNIQUE op forecast_run_id + locked hit_status). "
+            "Bewaart de probabilistische forecasts (p10/p50/p90 + "
+            "probabilities + Dutch label) en de retrospectieve "
+            "evaluatie 20 dagen later. Safety booleans blijven False."
+        ),
+    ),
 )
 
 
