@@ -7,11 +7,18 @@
  * ``DecisionPackageDetail`` for rendering. Three states: loading,
  * not-found (Dutch fallback), and rendered.
  *
+ * Uses ``useParams()`` rather than the ``use(params)`` Promise-unwrap
+ * pattern — ``use()`` suspends and requires a Suspense boundary,
+ * which the parent layout doesn't provide, leaving the page blank in
+ * production builds (caught by the Task 132 e2e suite, fixed in the
+ * Task 132 hot-fix).
+ *
  * Kept thin on purpose — the rendering logic lives in the component
  * for testability.
  */
 
-import { use, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { DecisionPackageDetail } from "@/components/DecisionPackageDetail";
 import {
@@ -19,19 +26,16 @@ import {
   type DecisionPackageResponse,
 } from "@/lib/apiClient";
 
-export default function Page({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const resolvedParams = use(params);
+export default function Page() {
+  const params = useParams<{ id: string }>();
   const [pkg, setPkg] = useState<DecisionPackageResponse | null>(null);
   const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
+    if (!params?.id) return;
     let cancelled = false;
     async function load() {
-      const result = await apiClient.getDecisionPackage(resolvedParams.id);
+      const result = await apiClient.getDecisionPackage(params.id);
       if (cancelled) return;
       if (result.ok) {
         setPkg(result.data);
@@ -46,7 +50,7 @@ export default function Page({
     return () => {
       cancelled = true;
     };
-  }, [resolvedParams.id]);
+  }, [params?.id]);
 
   if (unavailable) {
     return (

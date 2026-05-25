@@ -233,6 +233,24 @@ test.describe("Decision Package navigation from Volglijst", () => {
 
     await expect(page).toHaveURL(/\/decision-package\/dp-e2e-1/);
 
+    // Task 132 hot-fix regression assertion: confirm we actually landed
+    // on the rendered Decision Package detail page and the API mock
+    // returned meaningful content. This catches the failure mode where
+    // the page is stuck on the loading state because the dynamic-route
+    // params Promise was suspending without a Suspense boundary (the
+    // original bug: ``use(params)`` instead of ``useParams()``).
+    await expect(
+      page
+        .locator('text="ASML"')
+        .or(page.locator('text="Verwachte bandbreedte"')),
+    ).toBeVisible({ timeout: 5_000 });
+    // Loading state must NOT still be visible — surfaces a stuck-loading
+    // regression as a distinct failure rather than swallowing it into
+    // the section-visibility timeout below.
+    await expect(
+      page.getByTestId("decision-package-loading"),
+    ).toHaveCount(0);
+
     // All seven sections render.
     await expect(page.getByTestId("dp-section-header")).toBeVisible();
     await expect(page.getByTestId("dp-section-forecast")).toBeVisible();
