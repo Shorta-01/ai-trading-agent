@@ -24,7 +24,10 @@ import {
   IbkrCashLatestResponse,
   IbkrConnectionStatusResponse,
   IbkrPositionsLatestResponse,
+  MarketDataByAccountResponse,
+  MarketDataByAccountRow,
 } from "@/lib/apiClient";
+import { PriceFreshnessBadge } from "@/components/PriceFreshnessBadge";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -65,6 +68,8 @@ export function PortefeuilleRealtimeSection() {
   const [positions, setPositions] =
     useState<IbkrPositionsLatestResponse | null>(null);
   const [cash, setCash] = useState<IbkrCashLatestResponse | null>(null);
+  const [marketData, setMarketData] =
+    useState<MarketDataByAccountResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [hasStorageError, setHasStorageError] = useState(false);
 
@@ -72,15 +77,18 @@ export function PortefeuilleRealtimeSection() {
     let cancelled = false;
 
     async function load() {
-      const [statusResult, positionsResult, cashResult] = await Promise.all([
-        apiClient.getIbkrConnectionStatus(),
-        apiClient.getIbkrSyncPositionsLatest(),
-        apiClient.getIbkrSyncCashLatest(),
-      ]);
+      const [statusResult, positionsResult, cashResult, marketDataResult] =
+        await Promise.all([
+          apiClient.getIbkrConnectionStatus(),
+          apiClient.getIbkrSyncPositionsLatest(),
+          apiClient.getIbkrSyncCashLatest(),
+          apiClient.getMarketDataByAccount(),
+        ]);
       if (cancelled) return;
       setStatus(statusResult.ok ? statusResult.data : null);
       setPositions(positionsResult.ok ? positionsResult.data : null);
       setCash(cashResult.ok ? cashResult.data : null);
+      setMarketData(marketDataResult.ok ? marketDataResult.data : null);
       setHasStorageError(
         !statusResult.ok || !positionsResult.ok || !cashResult.ok,
       );
@@ -182,7 +190,7 @@ export function PortefeuilleRealtimeSection() {
       </div>
       <div className="panel-body">
         <CashSummaryCard cash={cash} />
-        <PositionsGrid positions={positions} />
+        <PositionsGrid positions={positions} marketData={marketData} />
       </div>
     </section>
   );
@@ -266,8 +274,10 @@ function CashSummaryCard({
 
 function PositionsGrid({
   positions,
+  marketData,
 }: {
   positions: IbkrPositionsLatestResponse | null;
+  marketData: MarketDataByAccountResponse | null;
 }) {
   if (!positions || positions.items.length === 0) {
     return (
@@ -277,9 +287,25 @@ function PositionsGrid({
       </div>
     );
   }
+  const byConid = new Map<string, MarketDataByAccountRow>();
+  if (marketData) {
+    for (const row of marketData.items) {
+      byConid.set(row.ibkr_conid, row);
+    }
+  }
+  const subtitle =
+    marketData && marketData.as_of_date
+      ? `Prijzen bijgewerkt: ${marketData.as_of_date} via ${marketData.fetched_via ?? "onbekend"}`
+      : "Prijzen nog niet opgehaald";
   return (
     <div data-testid="positions-grid" data-state="populated">
       <h3 style={{ marginTop: 0 }}>Posities</h3>
+      <p
+        data-testid="positions-grid-subtitle"
+        style={{ color: "#374151", marginTop: 0, marginBottom: "0.5rem" }}
+      >
+        {subtitle}
+      </p>
       <table
         style={{ width: "100%", borderCollapse: "collapse" }}
         aria-label="IBKR posities"
@@ -293,22 +319,36 @@ function PositionsGrid({
             <th style={cellHead}>Huidige prijs</th>
             <th style={cellHead}>Waarde (EUR)</th>
             <th style={cellHead}>Niet-gerealiseerde W/V</th>
+            <th style={cellHead}>Verversingsstatus</th>
             <th style={cellHead}>Verversingsdatum</th>
           </tr>
         </thead>
         <tbody>
-          {positions.items.map((row) => (
-            <tr key={`${row.symbol}-${row.conid ?? "x"}`}>
-              <td style={cellBody}>{row.symbol}</td>
-              <td style={cellBody}>{row.exchange ?? NIET_BESCHIKBAAR}</td>
-              <td style={cellBody}>{formatNumber(row.quantity)}</td>
-              <td style={cellBody}>{formatNumber(row.avg_cost)}</td>
-              <td style={cellBody}>{formatNumber(row.market_price)}</td>
-              <td style={cellBody}>{formatNumber(row.market_value)}</td>
-              <td style={cellBody}>{formatNumber(row.unrealized_pnl)}</td>
-              <td style={cellBody}>{formatTimestamp(row.as_of)}</td>
-            </tr>
-          ))}
+          {positions.items.map((row) => {
+            const md = row.conid ? byConid.get(row.conid) : undefined;
+            const currentPrice =
+              md?.close_local ?? row.market_price;
+            const valueEur = md?.close_eur ?? row.market_value;
+            return (
+              <tr key={`${row.symbol}-${row.conid ?? "x"}`}>
+                <td style={cellBody}>{row.symbol}</td>
+                <td style={cellBody}>
+                  {row.exchange ?? NIET_BESCHIKBAAR}
+                </td>
+                <td style={cellBody}>{formatNumber(row.quantity)}</td>
+                <td style={cellBody}>{formatNumber(row.avg_cost)}</td>
+                <td style={cellBody}>{formatNumber(currentPrice)}</td>
+                <td style={cellBody}>{formatNumber(valueEur)}</td>
+                <td style={cellBody}>{formatNumber(row.unrealized_pnl)}</td>
+                <td style={cellBody}>
+                  <PriceFreshnessBadge
+                    freshness={md?.freshness ?? "unavailable"}
+                  />
+                </td>
+                <td style={cellBody}>{formatTimestamp(row.as_of)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

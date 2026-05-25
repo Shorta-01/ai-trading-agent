@@ -3270,3 +3270,123 @@ class ColdStartAlreadySeededError(RuntimeError):
     constraint violation and translates it into this typed error so
     the worker can return cleanly without leaking SQLAlchemy types.
     """
+
+
+# Task 129: EOD market-data runtime records.
+_LOCKED_MARKET_DATA_PROVIDERS = frozenset({"eodhd", "manual", "unknown"})
+_LOCKED_FX_RATE_PROVIDERS = frozenset({"eodhd", "ecb", "manual"})
+
+
+@dataclass(frozen=True)
+class MarketDataEodSnapshotEntry:
+    """One row per (ibkr_conid, as_of_date, provider).
+
+    Task 129 product lock §3: locked OHLCV columns + provider hash
+    for audit. All money fields Decimal end-to-end. The UNIQUE
+    constraint at the DB level enforces fetch idempotency — the
+    second call for the same (conid, date, provider) is a no-op.
+    """
+
+    snapshot_id: str
+    ibkr_conid: str
+    symbol: str
+    exchange: str | None
+    currency_local: str
+    as_of_date: date
+    as_of_close_ts: datetime
+    ingested_ts: datetime
+    open_local: Decimal | None
+    high_local: Decimal | None
+    low_local: Decimal | None
+    close_local: Decimal
+    adj_close_local: Decimal | None
+    volume: int | None
+    provider: str
+    provider_response_hash: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.snapshot_id, "snapshot_id")
+        _require_non_empty(self.ibkr_conid, "ibkr_conid")
+        _require_non_empty(self.symbol, "symbol")
+        _require_non_empty(self.currency_local, "currency_local")
+        _require_non_empty(self.provider_response_hash, "provider_response_hash")
+        if self.provider not in _LOCKED_MARKET_DATA_PROVIDERS:
+            raise ValueError(
+                f"provider {self.provider!r} not in "
+                f"{sorted(_LOCKED_MARKET_DATA_PROVIDERS)}"
+            )
+        if self.close_local < 0:
+            raise ValueError("close_local must be non-negative")
+        if self.volume is not None and self.volume < 0:
+            raise ValueError("volume must be non-negative")
+
+
+@dataclass(frozen=True)
+class FxRateRecord:
+    """One row per (base, quote, as_of_date, provider).
+
+    Task 129 product lock §5: the EUR conversion happens at display
+    time via the API joining the per-day rate. Stored rate is the
+    quote-per-base rate (1 base unit = ``rate`` quote units).
+    """
+
+    base_currency: str
+    quote_currency: str
+    as_of_date: date
+    rate: Decimal
+    ingested_ts: datetime
+    provider: str
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.base_currency, "base_currency")
+        _require_non_empty(self.quote_currency, "quote_currency")
+        if self.provider not in _LOCKED_FX_RATE_PROVIDERS:
+            raise ValueError(
+                f"provider {self.provider!r} not in "
+                f"{sorted(_LOCKED_FX_RATE_PROVIDERS)}"
+            )
+        if self.rate < 0:
+            raise ValueError("rate must be non-negative")
+        if len(self.base_currency) != 3 or len(self.quote_currency) != 3:
+            raise ValueError("currency codes must be 3-letter ISO")
+
+
+@dataclass(frozen=True)
+class ProviderCallAuditEntry:
+    """One row per outbound provider HTTP call.
+
+    Task 129 product lock §8: every EODHD call (success / 4xx / 5xx)
+    writes one row capturing status + duration + size + error
+    details. Append-only.
+    """
+
+    audit_id: str
+    called_at: datetime
+    provider: str
+    endpoint: str
+    request_params_json: str | None
+    response_status: int | None
+    response_size_bytes: int | None
+    duration_ms: int | None
+    error_class: str | None
+    error_details_json: str | None
+    account_id: str | None
+    triggered_by_run_id: str | None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.audit_id, "audit_id")
+        _require_non_empty(self.provider, "provider")
+        _require_non_empty(self.endpoint, "endpoint")
+        if (
+            self.response_status is not None
+            and not 100 <= self.response_status <= 599
+        ):
+            raise ValueError("response_status out of range")
+
+
+class EodhdNotConfiguredError(RuntimeError):
+    """Raised by callers attempting EODHD work without an API key.
+
+    Lives in storage so the orchestrator + the worker EODHD client
+    can both surface the typed error without circular imports.
+    """

@@ -77,6 +77,9 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "cold_start_seed_audit",
         "watchlist_confirmation_state",
         "watchlist_confirmation_audit",
+        "market_data_eod_snapshots",
+        "fx_rates",
+        "provider_call_audit",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

@@ -743,6 +743,60 @@ export type ColdStartWatchlistResponse = {
   safe_for_orders: boolean;
 };
 
+export type MarketDataLatestSnapshotResponse = {
+  ibkr_conid: string;
+  symbol: string;
+  exchange: string | null;
+  as_of_date: string;
+  close_local: string;
+  currency_local: string;
+  close_eur: string | null;
+  fx_rate_used: string | null;
+  fx_rate_as_of: string | null;
+  freshness: "fresh" | "stale" | "unavailable";
+  provider: string;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type MarketDataByAccountRow = {
+  ibkr_conid: string;
+  symbol: string;
+  exchange: string | null;
+  as_of_date: string;
+  close_local: string;
+  currency_local: string;
+  close_eur: string | null;
+  freshness: "fresh" | "stale" | "unavailable";
+};
+
+export type MarketDataByAccountResponse = {
+  account_id: string | null;
+  items: MarketDataByAccountRow[];
+  fetched_via: string | null;
+  as_of_date: string | null;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
+export type ProviderCallRow = {
+  audit_id: string;
+  called_at: string;
+  provider: string;
+  endpoint: string;
+  response_status: number | null;
+  duration_ms: number | null;
+  error_class: string | null;
+  account_id: string | null;
+  triggered_by_run_id: string | null;
+};
+
+export type ProviderCallsResponse = {
+  items: ProviderCallRow[];
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
+
 export type SchedulerV127StatusResponse = {
   enabled: boolean;
   last_run_at: string | null;
@@ -1014,6 +1068,16 @@ export const apiClient = {
     requestJson<{ archived: boolean }>(
       `/watchlist/cold-start-items/${encodeURIComponent(watchlistItemId)}`,
       "DELETE",
+    ),
+  getMarketDataByAccount: (accountId?: string) =>
+    getJson<MarketDataByAccountResponse>(
+      accountId
+        ? `/market-data/eod/snapshots/by-account?account_id=${encodeURIComponent(accountId)}`
+        : "/market-data/eod/snapshots/by-account",
+    ),
+  getMarketDataProviderCalls: (limit = 20) =>
+    getJson<ProviderCallsResponse>(
+      `/market-data/provider-calls?limit=${limit}`,
     ),
   getSchedulerV127Status: () =>
     getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),

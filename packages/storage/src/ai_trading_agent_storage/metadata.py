@@ -2163,3 +2163,83 @@ Index(
     watchlist_confirmation_audit.c.ibkr_account_id,
     watchlist_confirmation_audit.c.event_at,
 )
+
+
+# Task 129: EOD market-data runtime tables.
+market_data_eod_snapshots = Table(
+    "market_data_eod_snapshots",
+    metadata,
+    Column("snapshot_id", Text, primary_key=True),
+    Column("ibkr_conid", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("exchange", Text, nullable=True),
+    Column("currency_local", Text, nullable=False),
+    Column("as_of_date", Date, nullable=False),
+    Column("as_of_close_ts", DateTime(timezone=True), nullable=False),
+    Column("ingested_ts", DateTime(timezone=True), nullable=False),
+    Column("open_local", MONEY_NUMERIC, nullable=True),
+    Column("high_local", MONEY_NUMERIC, nullable=True),
+    Column("low_local", MONEY_NUMERIC, nullable=True),
+    Column("close_local", MONEY_NUMERIC, nullable=False),
+    Column("adj_close_local", MONEY_NUMERIC, nullable=True),
+    Column("volume", BigInteger, nullable=True),
+    Column("provider", Text, nullable=False),
+    Column("provider_response_hash", Text, nullable=False),
+    UniqueConstraint(
+        "ibkr_conid",
+        "as_of_date",
+        "provider",
+        name="uq_market_data_eod_snapshots_conid_date_provider",
+    ),
+    CheckConstraint(
+        "provider IN ('eodhd', 'manual', 'unknown')",
+        name="ck_market_data_eod_snapshots_provider",
+    ),
+)
+Index(
+    "ix_market_data_eod_snapshots_conid_date",
+    market_data_eod_snapshots.c.ibkr_conid,
+    market_data_eod_snapshots.c.as_of_date.desc(),
+)
+
+
+fx_rates = Table(
+    "fx_rates",
+    metadata,
+    Column("base_currency", Text, primary_key=True),
+    Column("quote_currency", Text, primary_key=True),
+    Column("as_of_date", Date, primary_key=True),
+    Column("provider", Text, primary_key=True),
+    Column("rate", Numeric(precision=20, scale=8), nullable=False),
+    Column("ingested_ts", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "provider IN ('eodhd', 'ecb', 'manual')",
+        name="ck_fx_rates_provider",
+    ),
+)
+
+
+provider_call_audit = Table(
+    "provider_call_audit",
+    metadata,
+    Column("audit_id", Text, primary_key=True),
+    Column("called_at", DateTime(timezone=True), nullable=False),
+    Column("provider", Text, nullable=False),
+    Column("endpoint", Text, nullable=False),
+    Column("request_params_json", JSON, nullable=True),
+    Column("response_status", Integer, nullable=True),
+    Column("response_size_bytes", Integer, nullable=True),
+    Column("duration_ms", Integer, nullable=True),
+    Column("error_class", Text, nullable=True),
+    Column("error_details_json", JSON, nullable=True),
+    Column("account_id", Text, nullable=True),
+    Column("triggered_by_run_id", Text, nullable=True),
+)
+Index(
+    "ix_provider_call_audit_called_at",
+    provider_call_audit.c.called_at.desc(),
+)
+Index(
+    "ix_provider_call_audit_run_id",
+    provider_call_audit.c.triggered_by_run_id,
+)
