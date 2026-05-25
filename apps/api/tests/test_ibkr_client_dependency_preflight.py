@@ -55,11 +55,27 @@ def test_api_metadata_includes_ibapi_dependency() -> None:
     assert _metadata_contains_dependency(pyproject_text, "ibapi")
 
 
-def test_project_metadata_does_not_include_ib_insync_dependency() -> None:
+def test_project_metadata_only_allows_ib_insync_in_worker() -> None:
+    """Task 126 product lock §1: the worker is the sole owner of the
+    TWS API session, so ``ib_insync`` is allowed in ``apps/worker``
+    but blocked everywhere else. The API + packages stay on
+    ``ibapi``-via-facade.
+    """
+
+    worker_pyproject = REPO_ROOT / "apps" / "worker" / "pyproject.toml"
     for metadata_path in _iter_project_metadata_files():
         metadata_text = _read_text(metadata_path)
-        assert not _metadata_contains_dependency(metadata_text, "ib_insync")
-        assert not _metadata_contains_dependency(metadata_text, "ib-insync")
+        contains = _metadata_contains_dependency(
+            metadata_text, "ib_insync"
+        ) or _metadata_contains_dependency(metadata_text, "ib-insync")
+        if metadata_path.resolve() == worker_pyproject.resolve():
+            assert contains, (
+                "Task 126 expects apps/worker/pyproject.toml to declare ib_insync."
+            )
+            continue
+        assert not contains, (
+            f"ib_insync should only live in apps/worker; found in {metadata_path}"
+        )
 
 
 def test_ibapi_import_succeeds_without_network_connect(monkeypatch) -> None:
@@ -121,10 +137,28 @@ def test_production_runtime_source_only_allows_ibapi_in_facade() -> None:
             )
 
 
-def test_production_runtime_source_does_not_import_ib_insync() -> None:
+def test_production_runtime_source_only_allows_ib_insync_in_worker_gateway() -> None:
+    """Task 126 — ``ib_insync`` import lives only in the worker's
+    isolated gateway module. Every other production file must stay
+    free of the SDK."""
+
     disallowed_tokens = ("from ib_insync", "import ib_insync")
+    allowed_files = {
+        (
+            REPO_ROOT
+            / "apps"
+            / "worker"
+            / "src"
+            / "portfolio_outlook_worker"
+            / "ibkr_gateway.py"
+        ).resolve(),
+    }
 
     for file_path in _iter_production_source_files():
         source = _read_text(file_path)
         for token in disallowed_tokens:
-            assert token not in source, f"{token} found in production source file: {file_path}"
+            if token not in source:
+                continue
+            assert file_path.resolve() in allowed_files, (
+                f"{token} found outside the worker gateway: {file_path}"
+            )

@@ -18,6 +18,9 @@ dependencies = [
   # + the API key + a budget_repo so the dep stays inert in stub-
   # only deployments.
   "anthropic>=0.40.0",
+  # Task 126: Postgres driver for production runtime (`DATABASE_URL=
+  # postgresql://...`). SQLite-based tests remain unaffected.
+  "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]

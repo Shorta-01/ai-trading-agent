@@ -13,6 +13,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     MetaData,
     Numeric,
@@ -1287,6 +1288,11 @@ ibkr_sync_runs = Table(
     Column("order_cancellation_allowed", Boolean, nullable=False, server_default=sa_false()),
     Column("suggestions_allowed", Boolean, nullable=False, server_default=sa_false()),
     Column("stored_at", DateTime(timezone=True), nullable=False),
+    # Task 126: ibkr_account_id tagging across IBKR snapshots.
+    # Nullable in 126a; 126b's API rewrite populates everywhere and a
+    # follow-up migration tightens to NOT NULL.
+    Column("ibkr_account_id", Text, nullable=True),
+    Column("verified_at", DateTime(timezone=True), nullable=True),
 )
 
 
@@ -1302,6 +1308,7 @@ ibkr_account_cash_snapshots = Table(
     Column("buying_power", MONEY_NUMERIC, nullable=True),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=True),
 )
 
 ibkr_position_snapshots = Table(
@@ -1320,6 +1327,7 @@ ibkr_position_snapshots = Table(
     Column("average_cost", MONEY_NUMERIC, nullable=True),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=True),
 )
 
 
@@ -1352,6 +1360,7 @@ ibkr_open_order_snapshots = Table(
     Column("raw_status_reference", Text, nullable=True),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=True),
 )
 
 ibkr_execution_snapshots = Table(
@@ -1378,7 +1387,75 @@ ibkr_execution_snapshots = Table(
     Column("raw_execution_reference", Text, nullable=True),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("stored_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=True),
 )
+
+
+# Task 126: per-snapshot indexes on the new ibkr_account_id column
+# so the dashboard's per-account filter doesn't full-scan the
+# snapshot tables. Declared at metadata level to keep metadata
+# authoritative; the matching ``op.create_index`` calls live in
+# alembic/versions/0045_ibkr_account_id_and_mode_tagging.py.
+Index(
+    "ix_ibkr_sync_runs_ibkr_account_id",
+    ibkr_sync_runs.c.ibkr_account_id,
+)
+Index(
+    "ix_ibkr_account_cash_snapshots_ibkr_account_id",
+    ibkr_account_cash_snapshots.c.ibkr_account_id,
+)
+Index(
+    "ix_ibkr_position_snapshots_ibkr_account_id",
+    ibkr_position_snapshots.c.ibkr_account_id,
+)
+Index(
+    "ix_ibkr_open_order_snapshots_ibkr_account_id",
+    ibkr_open_order_snapshots.c.ibkr_account_id,
+)
+Index(
+    "ix_ibkr_execution_snapshots_ibkr_account_id",
+    ibkr_execution_snapshots.c.ibkr_account_id,
+)
+
+
+# Task 126: IBKR connection lifecycle audit. Append-only; both
+# mode-detection checks (prefix and behavioural) plus connect /
+# disconnect / session_error events write rows here. Safety
+# booleans hard-False per project doctrine.
+ibkr_connection_audit = Table(
+    "ibkr_connection_audit",
+    metadata,
+    Column("audit_id", Text, primary_key=True),
+    Column("event_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_account_id", Text, nullable=False),
+    Column("event_type", Text, nullable=False),
+    Column("account_mode_detected", Text, nullable=True),
+    Column("connection_id", Text, nullable=True),
+    Column("details_json", JSON, nullable=True),
+    Column(
+        "safe_for_action_drafts",
+        Boolean,
+        nullable=False,
+        server_default=sa_false(),
+    ),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
+    CheckConstraint(
+        "event_type IN ('connect_attempt','connect_success','connect_refused',"
+        "'mode_check_prefix','mode_check_behavioural','disconnect','session_error')",
+        name="ck_ibkr_connection_audit_event_type",
+    ),
+    CheckConstraint(
+        "account_mode_detected IS NULL OR "
+        "account_mode_detected IN ('paper','live','unknown')",
+        name="ck_ibkr_connection_audit_account_mode_detected",
+    ),
+    Index(
+        "ix_ibkr_connection_audit_account_event",
+        "ibkr_account_id",
+        "event_at",
+    ),
+)
+
 
 fx_rate_snapshots = Table(
     "fx_rate_snapshots",

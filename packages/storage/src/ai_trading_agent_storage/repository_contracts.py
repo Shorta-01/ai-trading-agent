@@ -184,6 +184,20 @@ class BrokerCommissionSnapshotRecord:
     explanation_nl: str
 
 
+_LOCKED_IBKR_ACCOUNT_MODES = frozenset({"paper", "live", "unknown"})
+_LOCKED_IBKR_CONNECTION_EVENT_TYPES = frozenset(
+    {
+        "connect_attempt",
+        "connect_success",
+        "connect_refused",
+        "mode_check_prefix",
+        "mode_check_behavioural",
+        "disconnect",
+        "session_error",
+    }
+)
+
+
 @dataclass(frozen=True)
 class IbkrSyncRunRecord:
     sync_run_id: str
@@ -211,6 +225,11 @@ class IbkrSyncRunRecord:
     order_cancellation_allowed: bool
     suggestions_allowed: bool
     stored_at: datetime
+    # Task 126: ibkr_account_id tagging. Nullable in 126a so existing
+    # call sites stay valid; 126b's API rewrite populates it everywhere
+    # and the column tightens to NOT NULL with a follow-up migration.
+    ibkr_account_id: str | None = None
+    verified_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -224,6 +243,7 @@ class IbkrAccountCashSnapshotRecord:
     buying_power: Decimal | None
     received_at: datetime
     stored_at: datetime
+    ibkr_account_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -241,6 +261,7 @@ class IbkrPositionSnapshotRecord:
     average_cost: Decimal | None
     received_at: datetime
     stored_at: datetime
+    ibkr_account_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -271,6 +292,7 @@ class IbkrOpenOrderSnapshotRecord:
     raw_status_reference: str | None
     received_at: datetime
     stored_at: datetime
+    ibkr_account_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -296,6 +318,44 @@ class IbkrExecutionSnapshotRecord:
     raw_execution_reference: str | None
     received_at: datetime
     stored_at: datetime
+    ibkr_account_id: str | None = None
+
+
+@dataclass(frozen=True)
+class IbkrConnectionAuditRecord:
+    """One audit row per IBKR connection lifecycle event.
+
+    Task 126 product lock §2: both mode-detection checks (prefix and
+    behavioural) write audit rows; connect_attempt / connect_success /
+    connect_refused / disconnect / session_error round out the
+    lifecycle. Append-only — never updated, never deleted. Safety
+    booleans hard-False; an audit row never authorises an order.
+    """
+
+    audit_id: str
+    event_at: datetime
+    ibkr_account_id: str
+    event_type: str
+    account_mode_detected: str | None
+    connection_id: str | None
+    details_json: str | None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.audit_id, "audit_id")
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        if self.event_type not in _LOCKED_IBKR_CONNECTION_EVENT_TYPES:
+            raise ValueError(
+                f"event_type {self.event_type!r} is not in the locked set "
+                f"{sorted(_LOCKED_IBKR_CONNECTION_EVENT_TYPES)}"
+            )
+        if (
+            self.account_mode_detected is not None
+            and self.account_mode_detected not in _LOCKED_IBKR_ACCOUNT_MODES
+        ):
+            raise ValueError(
+                f"account_mode_detected {self.account_mode_detected!r} is not in the "
+                f"locked set {sorted(_LOCKED_IBKR_ACCOUNT_MODES)}"
+            )
 
 
 @dataclass(frozen=True)

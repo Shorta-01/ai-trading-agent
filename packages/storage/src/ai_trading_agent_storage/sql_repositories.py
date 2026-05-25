@@ -23,6 +23,7 @@ from ai_trading_agent_storage.metadata import (
     broker_sync_runs,
     external_broker_activities,
     ibkr_account_cash_snapshots,
+    ibkr_connection_audit,
     ibkr_execution_snapshots,
     ibkr_open_order_snapshots,
     ibkr_position_snapshots,
@@ -117,6 +118,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ProviderSourceRecord,
     FreshnessAuditRecord,
     IbkrAccountCashSnapshotRecord,
+    IbkrConnectionAuditRecord,
     IbkrExecutionSnapshotRecord,
     IbkrOpenOrderSnapshotRecord,
     IbkrPositionSnapshotRecord,
@@ -3269,4 +3271,64 @@ class SqlAlchemyUniverseScanRunRepository(_Base):
             records,
             universe_scan_runs.name,
             f"{len(records)} universe-scan runs opgehaald.",
+        )
+
+
+class SqlAlchemyIbkrConnectionAuditRepository(_Base):
+    """Task 126: append-only IBKR connection lifecycle audit.
+
+    Both mode-detection checks (prefix + behavioural) plus
+    ``connect_attempt``, ``connect_success``, ``connect_refused``,
+    ``disconnect``, ``session_error`` events land here. Append-only —
+    no update or delete methods. Safety booleans hard-False per
+    project doctrine.
+    """
+
+    def append(
+        self, record: IbkrConnectionAuditRecord
+    ) -> StorageWriteResult:
+        payload = asdict(record)
+        # `details_json` is stored as a JSON column; the dataclass
+        # carries it as the already-serialised JSON string so callers
+        # don't need to dump every event.
+        self._insert(ibkr_connection_audit, payload)
+        return StorageWriteResult(
+            True,
+            record.audit_id,
+            ibkr_connection_audit.name,
+            True,
+            "IBKR connection-audit rij opgeslagen.",
+        )
+
+    def list_recent(
+        self,
+        *,
+        ibkr_account_id: str | None = None,
+        limit: int = 50,
+    ) -> StorageListResult[IbkrConnectionAuditRecord]:
+        statement = select(ibkr_connection_audit)
+        if ibkr_account_id is not None:
+            statement = statement.where(
+                ibkr_connection_audit.c.ibkr_account_id == ibkr_account_id
+            )
+        statement = statement.order_by(
+            ibkr_connection_audit.c.event_at.desc()
+        ).limit(_bounded_limit(limit))
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(
+            IbkrConnectionAuditRecord(
+                audit_id=row["audit_id"],
+                event_at=row["event_at"],
+                ibkr_account_id=row["ibkr_account_id"],
+                event_type=row["event_type"],
+                account_mode_detected=row["account_mode_detected"],
+                connection_id=row["connection_id"],
+                details_json=row["details_json"],
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            ibkr_connection_audit.name,
+            f"{len(records)} IBKR connection-audit rijen opgehaald.",
         )

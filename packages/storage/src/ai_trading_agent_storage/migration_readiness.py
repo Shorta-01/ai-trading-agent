@@ -475,6 +475,18 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "kunnen opslaan. Safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0045_ibkr_account_id_and_mode_tagging",
+        previous_revision_id="0044_action_draft_conditional_orders",
+        filename="0045_ibkr_account_id_and_mode_tagging.py",
+        label_nl="Task 126 IBKR account-id tagging + connection audit",
+        description_nl=(
+            "Voegt ibkr_account_id (nullable in 126a; NOT NULL in 126b) toe "
+            "aan alle vijf IBKR snapshot-tabellen + indexen, plus de "
+            "append-only ibkr_connection_audit tabel voor connect/disconnect/"
+            "mode-check audit-rijen. Safety booleans blijven False."
+        ),
+    ),
 )
 
 
