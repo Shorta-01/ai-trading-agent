@@ -196,3 +196,4 @@ _None._
 - **T-050** — `ruff` baseline (0 findings; per-file-ignores + noqa inventory in `_dismissed.md`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/435 — merged 2026-05-26.
 - **T-002** — Reality docs for `packages/portfolio` (4 files, 38 modules cited; Kelly + A-K guard observations in Open Questions). PR: https://github.com/Shorta-01/ai-trading-agent/pull/436 — merged 2026-05-26.
 - **T-051** — `mypy --strict` baseline (0 errors across 198 source files; ignore_missing_imports + type:ignore inventory in `_dismissed.md`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/437 — merged 2026-05-26.
+- **T-003** — Reality doc for `packages/storage` + Alembic chain (1 file; 8 modules + 53-migration overview cited; tri-defense safety-boolean + per-asset hash-chain patterns surfaced). PR: https://github.com/Shorta-01/ai-trading-agent/pull/438 — merged 2026-05-26.

@@ -153,3 +153,47 @@ Pattern: `**kwargs` splats into pydantic constructors and `BudgetRepository` pol
 #### File-level pragma (×1)
 
 - `packages/storage/sql_repositories.py:1` — `# mypy: disable-error-code="union-attr"` (module-level). Pre-existing; documentary record only.
+
+## T-052 — vulture baseline (2026-05-26)
+
+**Tool:** `vulture 2.16`
+**Command:** `vulture --min-confidence 80 apps/api/src apps/worker/src packages/domain/src packages/portfolio/src packages/storage/src`
+**Findings:** 16 total at ≥80% confidence.
+**Triage:** 1 → `FIND-VULTURE-001` in `docs/code-health/01-dead-code.md`. 15 → dismissed below.
+**Raw output:** `/tmp/vulture-baseline.log`. Config: repo-root `pyproject.toml:[tool.vulture]` `min_confidence = 80`, `paths` scoped to the five `*/src` directories, tests + migrations excluded.
+
+### Dismissed: IBKR `ibapi` callback signatures (×10)
+
+Pattern: every occurrence is an `ibapi`-imposed callback signature. The argument is required by the IBKR client interface; the callback either ignores it or stores it in a fixture. Already inventoried under T-050 noqa codes `N802` / `ARG002` (callback name conventions) and T-051 mypy code `no-untyped-def`.
+
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_manual_status_client.py:68` — `reqId` (IBKR `error()` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_manual_status_client.py:70` — `errorString` (IBKR `error()` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_manual_status_client.py:71` — `args` (IBKR `error()` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_order_submission_client.py:98` — `num_ids` (IBKR `reqIds` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_sync_client.py:53` — `reqId` (IBKR `reqAccountSummary` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_sync_client.py:53` — `tags` (IBKR `reqAccountSummary` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_sync_client.py:56` — `reqId` (IBKR `cancelAccountSummary` callback)
+- `apps/api/src/portfolio_outlook_api/ibkr_ibapi_sync_client.py:64` — `reqId` (IBKR `reqExecutions` callback)
+- `apps/worker/src/portfolio_outlook_worker/ibkr_gateway.py:63` — `args` (worker-side IBKR adapter signature)
+- `apps/worker/src/portfolio_outlook_worker/ibkr_gateway.py:63` — `kwargs` (same)
+
+Reason for dismissal: **framework-callback**. The IBKR API contract requires these signatures; removing the arguments would break the API.
+
+### Dismissed: provider Protocol signatures (×3)
+
+Pattern: `**kwargs` retained in concrete-provider methods to keep the call site duck-typed against future Protocol additions. Two are AI explanation / time-series providers; one is the EODHD HTTP-client Protocol.
+
+- `apps/api/src/portfolio_outlook_api/anthropic_explanation_provider.py:85` — `kwargs` (Anthropic explanation-provider stub)
+- `apps/api/src/portfolio_outlook_api/anthropic_ts_provider.py:101` — `kwargs` (Anthropic time-series provider stub)
+- `apps/worker/src/portfolio_outlook_worker/providers/eodhd.py:59` — `timeout` (HTTP-client Protocol method, httpx-compatible signature; the doc-comment confirms intent: "the protocol the EODHD client expects from a typed HTTP client without importing `httpx` at module load time")
+
+Reason for dismissal: **framework-callback / interface-conformance**. The signatures exist to satisfy a Protocol contract (`docs/reality/components/domain-runtime-and-integration.md` notes the broader `Protocol` pattern in `market_data_foundation.py`); removing them would break the interface.
+
+### Dismissed: backward-compat parameter retained for signature stability (×2)
+
+Pattern: `mean_value` parameter retained on `_stdev(values, mean_value)` after a V1.1 §22.1 numpy-backed refactor. The comment on the momentum version explicitly states the intent.
+
+- `packages/portfolio/src/portfolio_outlook_portfolio/mean_reversion_predictor.py:113` — `mean_value` (paired with `_mean()` above at `:108-112`)
+- `packages/portfolio/src/portfolio_outlook_portfolio/momentum_predictor.py:126` — `mean_value` — module comment at `:127-128` reads: `"V1.1 §22.1 refactor: numpy-backed sample SD (mean_value kept for backward signature compatibility; recomputed internally)."`
+
+Reason for dismissal: **deliberate backward-compatible signature**. The parameter is documented at the source; removing it would break callers that pass it.
