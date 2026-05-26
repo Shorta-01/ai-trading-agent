@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-_None._
+- **T-006** — Reality doc for the API infrastructure + AI cluster (1 file). *Branch:* `task/T-006-reality-api-infrastructure-and-ai`.
 
 ## Locked
 
@@ -201,3 +201,4 @@ _None._
 - **T-004** — Reality docs for the API IBKR cluster (3 files; 26 modules cited; safety-boundary verified — one `placeOrder` call site at `ibkr_ibapi_order_submission_client.py:525`, zero `cancelOrder` anywhere in the API; two state-vocabulary islands surfaced). PR: https://github.com/Shorta-01/ai-trading-agent/pull/440 — merged 2026-05-26.
 - **T-053** — `bandit` baseline (1 FIND-BANDIT-001 for the B101 assert-for-mypy-narrowing cluster across 20 sites; 20 dismissed: enum value / kwarg false positives + documented boundary catches + config-derived URL). PR: https://github.com/Shorta-01/ai-trading-agent/pull/441 — merged 2026-05-26.
 - **T-005** — Reality docs for the API forecasting + actions clusters (2 files; 31 modules, 72 routes cited; storage write-path map + state-machine touchpoints; AI scope: anthropic_ts_provider Case B, ai_ts_provider stub Case A). PR: https://github.com/Shorta-01/ai-trading-agent/pull/442 — merged 2026-05-26.
+- **T-054** — `pip-audit` baseline (1 HIGH FIND-PIPAUDIT-001 for fastapi==0.136.3 MAL-2026-4750; 4 pip CVEs dismissed as build-time-only; 5 local-package skips for accounting). PR: https://github.com/Shorta-01/ai-trading-agent/pull/443 — merged 2026-05-26.
