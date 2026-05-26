@@ -4795,7 +4795,16 @@ class ActionDraftStateTransitionError(ValueError):
 
 
 _ACTION_DRAFT_TERMINAL_STATUSES = frozenset(
-    {"user_approved", "dismissed", "deleted", "superseded"}
+    {
+        "dismissed",
+        "deleted",
+        "superseded",
+        # Task 134 lifecycle terminal states.
+        "filled",
+        "cancelled",
+        "rejected",
+        "awaiting_reply_timeout",
+    }
 )
 _ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
     "proposed": frozenset(
@@ -4804,10 +4813,45 @@ _ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
     "edited": frozenset(
         {"user_approved", "dismissed", "deleted", "superseded"}
     ),
-    "user_approved": frozenset(),
+    # Task 134b widens user_approved with the IBKR submission lifecycle.
+    # ``dismissed``/``deleted`` stay reachable so the user can still
+    # withdraw an approval before the worker sweeps it; ``submitted``
+    # is the worker's entry into the IBKR lifecycle.
+    "user_approved": frozenset({"submitted", "dismissed", "deleted"}),
+    # Task 134 lifecycle transitions. IBKR's reply-handshake walks
+    # ``submitted → accepted → working`` and then either fills,
+    # cancels, or rejects. ``awaiting_reply_timeout`` is the safety
+    # bucket when no callback arrives within 60s (Task 135 reconciles).
+    "submitted": frozenset(
+        {"accepted", "rejected", "cancelled", "awaiting_reply_timeout"}
+    ),
+    "accepted": frozenset({"working", "cancelled", "rejected"}),
+    "working": frozenset(
+        {
+            "filled",
+            "partially_filled",
+            "cancelled",
+            "rejected",
+            "pending_cancellation",
+        }
+    ),
+    "partially_filled": frozenset(
+        {"filled", "cancelled", "rejected", "pending_cancellation"}
+    ),
+    # The user requested cancellation, but IBKR may still fill or
+    # partially-fill before the cancel propagates — that's a race the
+    # state machine has to accommodate.
+    "pending_cancellation": frozenset(
+        {"cancelled", "filled", "partially_filled"}
+    ),
+    # Terminal — no transitions out.
     "dismissed": frozenset(),
     "deleted": frozenset(),
     "superseded": frozenset(),
+    "filled": frozenset(),
+    "cancelled": frozenset(),
+    "rejected": frozenset(),
+    "awaiting_reply_timeout": frozenset(),
 }
 
 
@@ -5086,6 +5130,164 @@ class SqlAlchemyActionDraftRepository(_Base):
         )
         return updated
 
+    # -----------------------------------------------------------------
+    # Task 134b — IBKR lifecycle helpers.
+    # The user-facing audit chain (``action_draft_audit``) records only
+    # user actions (created/edited/approved/dismissed/deleted/superseded);
+    # the in-flight IBKR transitions (submitted/accepted/working/filled/
+    # ...) have their own audit table ``ibkr_submission_lifecycle``
+    # written by ``lifecycle_handler`` separately. That's why
+    # ``apply_lifecycle_transition`` updates draft state without
+    # writing an ``action_draft_audit`` row.
+    # -----------------------------------------------------------------
+
+    def apply_lifecycle_transition(
+        self,
+        *,
+        action_draft_id: str,
+        new_status: str,
+        transitioned_at: datetime,
+    ) -> ActionDraftEntry:
+        """Apply an IBKR-driven status transition (Task 134 lock §6).
+
+        Validates against ``_ACTION_DRAFT_TRANSITIONS`` and sets the
+        appropriate lifecycle timestamp (``submission_started_at`` on
+        ``submitted`` entry; ``terminal_state_at`` on terminal states).
+        Does not write ``action_draft_audit`` — the lifecycle handler
+        writes ``ibkr_submission_lifecycle`` itself.
+        """
+
+        current = self.get_by_id(action_draft_id)
+        if current is None:
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} niet gevonden."
+            )
+        _require_action_draft_transition_allowed(
+            current.status, new_status
+        )
+        updates: dict[str, Any] = {"status": new_status}
+        if new_status == "submitted":
+            updates["submission_started_at"] = transitioned_at
+            # Clear any prior block reason — the sweep is committing.
+            updates["submission_block_reason"] = None
+        if new_status in _ACTION_DRAFT_TERMINAL_STATUSES:
+            updates["terminal_state_at"] = transitioned_at
+        self._connection.execute(
+            action_drafts.update()
+            .where(action_drafts.c.action_draft_id == action_draft_id)
+            .values(**updates)
+        )
+        updated = self.get_by_id(action_draft_id)
+        if updated is None:  # pragma: no cover — defensive
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} disappeared after "
+                "lifecycle transition."
+            )
+        return updated
+
+    def set_submission_block_reason(
+        self,
+        *,
+        action_draft_id: str,
+        reason: str,
+        set_at: datetime,
+    ) -> ActionDraftEntry:
+        """Stamp a block reason without changing status (Task 134 lock §3).
+
+        The draft stays at ``user_approved`` so the UI can surface the
+        Dutch ``submission_block_reason`` badge on the Te keuren tab.
+        The sweep retries on the next tick; the reason gets replaced
+        if a different gate trips, or cleared on a successful
+        ``submitted`` transition.
+        """
+
+        current = self.get_by_id(action_draft_id)
+        if current is None:
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} niet gevonden."
+            )
+        if current.status != "user_approved":
+            raise ActionDraftStateTransitionError(
+                "submission_block_reason kan alleen op user_approved "
+                f"drafts gezet worden; status is {current.status!r}."
+            )
+        self._connection.execute(
+            action_drafts.update()
+            .where(action_drafts.c.action_draft_id == action_draft_id)
+            .values(submission_block_reason=reason)
+        )
+        # ``set_at`` is captured for downstream observability in the
+        # sweep tick log but not persisted on the draft row itself
+        # (the column doesn't exist — we'd otherwise need a new
+        # column for last_block_at, which is out of scope for 134b).
+        _ = set_at  # kept in the signature for future expansion.
+        updated = self.get_by_id(action_draft_id)
+        if updated is None:  # pragma: no cover — defensive
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} disappeared after "
+                "block-reason update."
+            )
+        return updated
+
+    def list_in_flight_for_conid(
+        self, *, ibkr_account_id: str, conid: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """In-flight drafts for the (account, conid) duplicate-detection gate.
+
+        Returns drafts in any status the Tier 1 safety_recheck treats
+        as "already going to IBKR": submitted / accepted / working /
+        partially_filled / pending_cancellation. Used by the sweep to
+        block a second draft for the same asset while one is still
+        live.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(action_drafts.c.conid == conid)
+                .where(
+                    action_drafts.c.status.in_(
+                        (
+                            "submitted",
+                            "accepted",
+                            "working",
+                            "partially_filled",
+                            "pending_cancellation",
+                        )
+                    )
+                )
+                .order_by(action_drafts.c.created_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_new_action_draft_from_row(row) for row in rows)
+
+    def list_user_approved_for_sweep(
+        self, *, ibkr_account_id: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """FIFO list of ``user_approved`` drafts for the sweep job.
+
+        Ordered by ``user_approved_at`` ascending so the oldest
+        approval gets the next sweep tick. Block-reason drafts (still
+        ``user_approved`` but with a non-NULL ``submission_block_reason``)
+        are still returned — the gate evaluation may pass on the next
+        tick and clear the reason.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(action_drafts.c.status == "user_approved")
+                .order_by(action_drafts.c.user_approved_at.asc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_new_action_draft_from_row(row) for row in rows)
+
 
 class SqlAlchemyActionDraftAuditRepository(_Base):
     """Task 133: append-only ``action_draft_audit`` repository."""
@@ -5197,6 +5399,9 @@ def _new_action_draft_to_payload(record: ActionDraftEntry) -> dict[str, Any]:
         "audit_trail_hash": record.audit_trail_hash,
         "previous_draft_hash": record.previous_draft_hash,
         "safe_for_submission": record.safe_for_submission,
+        "submission_block_reason": record.submission_block_reason,
+        "submission_started_at": record.submission_started_at,
+        "terminal_state_at": record.terminal_state_at,
     }
 
 
@@ -5243,6 +5448,11 @@ def _new_action_draft_from_row(row: Any) -> ActionDraftEntry:
         audit_trail_hash=row["audit_trail_hash"],
         previous_draft_hash=row["previous_draft_hash"],
         safe_for_submission=bool(row["safe_for_submission"]),
+        submission_block_reason=row.get(
+            "submission_block_reason"
+        ),
+        submission_started_at=row.get("submission_started_at"),
+        terminal_state_at=row.get("terminal_state_at"),
     )
 
 

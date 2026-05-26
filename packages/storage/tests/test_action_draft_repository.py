@@ -249,20 +249,25 @@ def test_update_status_to_dismissed_records_reason() -> None:
 
 
 def test_update_status_rejects_invalid_transition() -> None:
+    """Task 134b widened user_approved to allow dismissed/deleted (the
+    user can still withdraw an approval pre-submission) — so the
+    transition that's *now* illegal is from a TERMINAL state like
+    ``dismissed`` to ``user_approved``."""
     with _conn() as conn:
         repo = SqlAlchemyActionDraftRepository(conn, _report())
         repo.append(_draft())
-        # First approve.
+        # Dismiss directly from proposed (allowed).
         repo.update_status(
             action_draft_id="draft-1",
-            new_status="user_approved",
+            new_status="dismissed",
             transition_actor="user",
             transition_at=_BASE_TS + timedelta(minutes=5),
         )
+        # Re-approving a dismissed draft is the illegal transition.
         with pytest.raises(ActionDraftStateTransitionError):
             repo.update_status(
                 action_draft_id="draft-1",
-                new_status="dismissed",
+                new_status="user_approved",
                 transition_actor="user",
                 transition_at=_BASE_TS + timedelta(minutes=10),
             )
