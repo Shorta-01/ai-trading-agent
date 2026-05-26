@@ -601,6 +601,30 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "via de lifecycle-statemachine status mag veranderen."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0053_reconciliation_audit_and_manual_review",
+        previous_revision_id=(
+            "0052_ibkr_submission_lifecycle_audit_and_executions"
+        ),
+        filename="0053_reconciliation_audit_and_manual_review.py",
+        label_nl=(
+            "Task 135a IBKR reconciliation audit + manual review queue"
+        ),
+        description_nl=(
+            "Verbreedt action_drafts.status met "
+            "requires_manual_review (Task 135 lock §3 Pass C "
+            "escalatie). Maakt vier nieuwe append-only tabellen: "
+            "reconciliation_audit (één rij per reconciler-actie met "
+            "ibkr_evidence_json), unmatched_execution_audit (UNIQUE "
+            "op ibkr_exec_id; IBKR-side executies zonder draft), "
+            "manual_review_queue (geflaggede drafts met pending → "
+            "resolved/acknowledged transitie), en "
+            "reconciliation_run_audit (één rij per reconciler-tick "
+            "met per-pass counts en mode_detected). Reconciler is "
+            "read-only naar IBKR — Task 135 product lock §1 — en "
+            "draait op zijn eigen APScheduler job in 135b."
+        ),
+    ),
 )
 
 

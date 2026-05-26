@@ -2596,14 +2596,16 @@ action_drafts = Table(
         name="ck_action_drafts_time_in_force",
     ),
     # Task 134 widens the Task 133 enum with nine in-flight + terminal
-    # statuses. Geblokkeerd-style block reasons live in the separate
-    # ``submission_block_reason`` column; the status enum stays clean.
+    # statuses. Task 135 adds ``requires_manual_review`` (escalation
+    # from the reconciler when a timeout sits >24h with no IBKR data).
+    # ``submission_block_reason`` lives in its own column; the status
+    # enum stays clean.
     CheckConstraint(
         "status IN ('proposed', 'edited', 'user_approved', "
         "'dismissed', 'deleted', 'superseded', 'submitted', "
         "'accepted', 'working', 'filled', 'partially_filled', "
         "'cancelled', 'rejected', 'pending_cancellation', "
-        "'awaiting_reply_timeout')",
+        "'awaiting_reply_timeout', 'requires_manual_review')",
         name="ck_action_drafts_status",
     ),
     CheckConstraint(
@@ -2908,4 +2910,207 @@ behavioural_guardrail_settings = Table(
         "fomo_drift_pct >= 0",
         name="ck_behavioural_guardrail_fomo_non_negative",
     ),
+)
+
+
+# ---------------------------------------------------------------------------
+# Task 135 — Reconciliation audit + manual review queue + unmatched
+# executions. Every table is append-only at the storage layer except for
+# ``manual_review_queue.resolution_status`` and
+# ``unmatched_execution_audit.resolution_status`` which can transition
+# pending → resolved/acknowledged once the user has handled the row.
+# ---------------------------------------------------------------------------
+
+reconciliation_audit = Table(
+    "reconciliation_audit",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("reconciliation_run_id", Text, nullable=False),
+    Column(
+        "action_draft_id",
+        Text,
+        ForeignKey("action_drafts.action_draft_id"),
+        nullable=True,
+    ),
+    Column("event_at", DateTime(timezone=True), nullable=False),
+    Column("pass_name", Text, nullable=False),
+    Column("divergence_type", Text, nullable=False),
+    Column("before_status", Text, nullable=True),
+    Column("after_status", Text, nullable=True),
+    Column("ibkr_evidence_json", JSON, nullable=False),
+    Column("notes_dutch", Text, nullable=True),
+    CheckConstraint(
+        "pass_name IN ('orphaned_execution', 'stale_in_flight', "
+        "'timeout_recovery')",
+        name="ck_reconciliation_audit_pass_name",
+    ),
+    CheckConstraint(
+        "divergence_type IN ("
+        "'missing_execution_applied', "
+        "'status_corrected_to_filled', "
+        "'status_corrected_to_cancelled', "
+        "'status_corrected_to_rejected', "
+        "'status_corrected_to_partially_filled', "
+        "'timeout_recovered_to_terminal', "
+        "'timeout_flagged_manual_review', "
+        "'unmatched_execution', "
+        "'terminal_state_divergence_logged')",
+        name="ck_reconciliation_audit_divergence_type",
+    ),
+)
+Index(
+    "ix_reconciliation_audit_run",
+    reconciliation_audit.c.reconciliation_run_id,
+)
+Index(
+    "ix_reconciliation_audit_draft_event",
+    reconciliation_audit.c.action_draft_id,
+    reconciliation_audit.c.event_at,
+)
+
+
+unmatched_execution_audit = Table(
+    "unmatched_execution_audit",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("event_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_perm_id", BigInteger, nullable=False),
+    Column("ibkr_exec_id", Text, nullable=False, unique=True),
+    Column("account_id", Text, nullable=False),
+    Column("conid", Text, nullable=False),
+    Column("side", Text, nullable=False),
+    Column(
+        "fill_price_local",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    Column(
+        "fill_quantity", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column("fill_time", DateTime(timezone=True), nullable=False),
+    Column("raw_execution_json", JSON, nullable=False),
+    Column(
+        "resolution_status",
+        Text,
+        nullable=False,
+        server_default="unresolved",
+    ),
+    CheckConstraint(
+        "side IN ('BUY', 'SELL')",
+        name="ck_unmatched_execution_audit_side",
+    ),
+    CheckConstraint(
+        "resolution_status IN ('unresolved', 'manually_matched', "
+        "'ignored')",
+        name="ck_unmatched_execution_audit_resolution_status",
+    ),
+    CheckConstraint(
+        "fill_price_local > 0",
+        name="ck_unmatched_execution_audit_fill_price_positive",
+    ),
+    CheckConstraint(
+        "fill_quantity > 0",
+        name="ck_unmatched_execution_audit_fill_quantity_positive",
+    ),
+)
+Index(
+    "ix_unmatched_execution_audit_account",
+    unmatched_execution_audit.c.account_id,
+    unmatched_execution_audit.c.fill_time,
+)
+
+
+manual_review_queue = Table(
+    "manual_review_queue",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("flagged_at", DateTime(timezone=True), nullable=False),
+    Column(
+        "action_draft_id",
+        Text,
+        ForeignKey("action_drafts.action_draft_id"),
+        nullable=False,
+    ),
+    Column("reason", Text, nullable=False),
+    Column("details_dutch", Text, nullable=False),
+    Column(
+        "resolution_status",
+        Text,
+        nullable=False,
+        server_default="pending",
+    ),
+    Column("resolved_at", DateTime(timezone=True), nullable=True),
+    Column("resolution_note", Text, nullable=True),
+    CheckConstraint(
+        "reason IN ('timeout_24h_no_data', "
+        "'terminal_state_divergence', "
+        "'unmatched_execution_no_draft')",
+        name="ck_manual_review_queue_reason",
+    ),
+    CheckConstraint(
+        "resolution_status IN ('pending', 'resolved', "
+        "'acknowledged')",
+        name="ck_manual_review_queue_resolution_status",
+    ),
+)
+Index(
+    "ix_manual_review_queue_status",
+    manual_review_queue.c.resolution_status,
+    manual_review_queue.c.flagged_at,
+)
+Index(
+    "ix_manual_review_queue_draft",
+    manual_review_queue.c.action_draft_id,
+)
+
+
+reconciliation_run_audit = Table(
+    "reconciliation_run_audit",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "reconciliation_run_id",
+        Text,
+        nullable=False,
+        unique=True,
+    ),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("completed_at", DateTime(timezone=True), nullable=True),
+    Column("account_id", Text, nullable=False),
+    Column(
+        "pass_a_orphaned_count",
+        Integer,
+        nullable=False,
+        server_default="0",
+    ),
+    Column(
+        "pass_b_stale_count",
+        Integer,
+        nullable=False,
+        server_default="0",
+    ),
+    Column(
+        "pass_c_timeout_count",
+        Integer,
+        nullable=False,
+        server_default="0",
+    ),
+    Column(
+        "divergences_found",
+        Integer,
+        nullable=False,
+        server_default="0",
+    ),
+    Column("mode_detected", Text, nullable=False),
+    Column("error_details_json", JSON, nullable=True),
+    CheckConstraint(
+        "mode_detected IN ('completed', 'skipped_locked', "
+        "'skipped_disconnected', 'error')",
+        name="ck_reconciliation_run_audit_mode_detected",
+    ),
+)
+Index(
+    "ix_reconciliation_run_audit_account_started",
+    reconciliation_run_audit.c.account_id,
+    reconciliation_run_audit.c.started_at,
 )
