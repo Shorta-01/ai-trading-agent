@@ -8,7 +8,7 @@ owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url: (set on push)
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/436
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
