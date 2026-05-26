@@ -36,6 +36,9 @@ dev = [
   "ruff>=0.6.0",
 ]
 
+[tool.setuptools.package-data]
+portfolio_outlook_worker = ["py.typed"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src", "../../packages/storage/src"]
 testpaths = ["tests"]
