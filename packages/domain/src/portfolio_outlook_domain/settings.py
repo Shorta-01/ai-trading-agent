@@ -150,11 +150,17 @@ class UserStrategySettings(DomainBaseModel):
     min_cash_reserve_pct: Decimal = Decimal("5")
     currency_preference: CurrencyPreference = CurrencyPreference.EUR_PREFERRED_USD_ALLOWED
     prefer_simple_belgian_tax_admin: bool = True
+    # Task 133 product lock §4 — EUR headroom subtracted from
+    # available_funds when sizing BUY drafts. Default €0; users can
+    # raise it in the Settings UI for more conservative sizing.
+    user_buffer_eur: Decimal = Decimal("0")
     explanation_nl: str = (
         "Dit is je voorkeurlaag voor ranking en fit, niet voor harde blokkeringen."
     )
 
-    @field_validator("max_position_pct", "min_cash_reserve_pct", mode="before")
+    @field_validator(
+        "max_position_pct", "min_cash_reserve_pct", "user_buffer_eur", mode="before"
+    )
     @classmethod
     def reject_float(cls, value: object) -> object:
         if isinstance(value, float):
@@ -166,6 +172,13 @@ class UserStrategySettings(DomainBaseModel):
     def validate_percentage_range(cls, value: Decimal) -> Decimal:
         if value < Decimal("0") or value > Decimal("100"):
             raise ValueError("Percentage moet tussen 0 en 100 liggen.")
+        return value
+
+    @field_validator("user_buffer_eur")
+    @classmethod
+    def validate_user_buffer_non_negative(cls, value: Decimal) -> Decimal:
+        if value < Decimal("0"):
+            raise ValueError("user_buffer_eur moet ≥ 0 zijn.")
         return value
 
 
@@ -265,6 +278,14 @@ def get_user_strategy_help_texts() -> tuple[SettingHelpText, ...]:
             key="currency_preference",
             label_nl="Valutavoorkeur",
             help_nl="Dit stuurt de voorkeur voor euro en het toelaten van dollarposities.",
+        ),
+        SettingHelpText(
+            key="user_buffer_eur",
+            label_nl="Cashbuffer voor actiedrafts (EUR)",
+            help_nl=(
+                "Dit bedrag wordt afgetrokken van je beschikbare cash voordat de "
+                "voorgestelde aankoophoeveelheid wordt berekend. Standaard €0."
+            ),
         ),
     )
 

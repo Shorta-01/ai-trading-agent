@@ -11,6 +11,8 @@ from ai_trading_agent_storage.connection_provider import (
     StorageConnectionProvider,
 )
 from ai_trading_agent_storage.metadata import (
+    action_drafts,
+    action_draft_audit,
     asset_identifier_aliases,
     asset_listings,
     asset_master_records,
@@ -81,6 +83,8 @@ from ai_trading_agent_storage.migration_readiness import (
     read_database_alembic_revision,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    ActionDraftAuditEntry,
+    ActionDraftEntry,
     AssetActionDraftEventRecord,
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
@@ -189,6 +193,9 @@ from ai_trading_agent_storage.settings import (
     redact_database_url,
 )
 from ai_trading_agent_storage.sql_repositories import (
+    ActionDraftStateTransitionError,
+    SqlAlchemyActionDraftAuditRepository,
+    SqlAlchemyActionDraftRepository,
     SqlAlchemyAssetActionDraftEventRepository,
     SqlAlchemyAssetActionDraftRepository,
     SqlAlchemyAssetActionDraftSubmissionRepository,
@@ -372,10 +379,15 @@ __all__ = [
     "SqlAlchemyProviderCallAuditRepository",
     "BootstrapInsufficientHistoryError",
     "CalibrationDiaryEntry",
+    "ActionDraftAuditEntry",
+    "ActionDraftEntry",
+    "ActionDraftStateTransitionError",
     "DecisionPackageEntry",
     "EvidenceReference",
     "ForecastEntry",
     "GateOutcome",
+    "SqlAlchemyActionDraftAuditRepository",
+    "SqlAlchemyActionDraftRepository",
     "SqlAlchemyCalibrationDiaryRepository",
     "SqlAlchemyDecisionPackageRepository",
     "SqlAlchemyForecastRepository",
@@ -412,6 +424,8 @@ __all__ = [
     "asset_action_drafts",
     "asset_action_draft_submissions",
     "asset_action_draft_events",
+    "action_drafts",
+    "action_draft_audit",
     "prediction_diary_entries",
     "IbkrAccountCashSnapshotRecord",
     "IbkrConnectionAuditRecord",

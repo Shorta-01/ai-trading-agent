@@ -3702,5 +3702,166 @@ class DecisionPackageEntry:
                 )
 
 
+# Task 133 — Action Draft locked vocabularies.
+_LOCKED_ACTION_DRAFT_SIDES = frozenset({"BUY", "SELL"})
+_LOCKED_ACTION_DRAFT_ORDER_TYPES = frozenset({"LMT"})
+_LOCKED_ACTION_DRAFT_TIME_IN_FORCE = frozenset({"DAY"})
+_LOCKED_ACTION_DRAFT_CREATED_BY = frozenset({"user", "system"})
+_LOCKED_ACTION_DRAFT_STATUSES = frozenset(
+    {
+        "proposed",
+        "edited",
+        "user_approved",
+        "dismissed",
+        "deleted",
+        "superseded",
+    }
+)
+_LOCKED_ACTION_DRAFT_EVENT_TYPES = frozenset(
+    {"created", "edited", "approved", "dismissed", "deleted", "superseded"}
+)
+_LOCKED_ACTION_DRAFT_AUDIT_ACTORS = frozenset({"user", "system"})
+
+
+@dataclass(frozen=True)
+class ActionDraftEntry:
+    """Immutable Action Draft — Task 133 product lock §3.
+
+    A user-promotable IBKR-format order proposal derived from a
+    non-Geblokkeerd Decision Package (or user-supplied without a package).
+    Editable through the repository's ``update_fields`` /
+    ``update_status`` paths until ``user_approved``; after that the
+    repository refuses further mutation.
+
+    ``safe_for_submission`` is hard-False at the dataclass level too,
+    mirroring the DB CHECK constraint — defense in depth so no caller
+    can slip a True past the repo until Task 134 (actual submission)
+    ships its own product locks.
+    """
+
+    action_draft_id: str
+    decision_package_id: str | None
+    forecast_run_id: str | None
+    created_at: datetime
+    created_by: str
+    ibkr_account_id: str
+    conid: str
+    symbol: str
+    exchange: str
+    currency_local: str
+    side: str
+    quantity: Decimal
+    order_type: str
+    limit_price_local: Decimal
+    time_in_force: str
+    notional_local: Decimal
+    notional_eur: Decimal
+    fx_rate_at_creation: Decimal
+    usable_cash_eur_at_creation: Decimal
+    held_quantity_at_creation: Decimal | None
+    status: str
+    last_edited_at: datetime | None
+    user_approved_at: datetime | None
+    dismissed_at: datetime | None
+    deleted_at: datetime | None
+    dismissed_reason: str | None
+    user_note: str | None
+    superseded_by_decision_package_id: str | None
+    audit_trail_hash: str
+    previous_draft_hash: str | None
+    safe_for_submission: bool = False
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.action_draft_id, "action_draft_id")
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        _require_non_empty(self.conid, "conid")
+        _require_non_empty(self.symbol, "symbol")
+        _require_non_empty(self.exchange, "exchange")
+        _require_non_empty(self.currency_local, "currency_local")
+        _require_non_empty(self.audit_trail_hash, "audit_trail_hash")
+        if self.created_by not in _LOCKED_ACTION_DRAFT_CREATED_BY:
+            raise ValueError(
+                f"created_by {self.created_by!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_CREATED_BY)}"
+            )
+        if self.side not in _LOCKED_ACTION_DRAFT_SIDES:
+            raise ValueError(
+                f"side {self.side!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_SIDES)}"
+            )
+        if self.order_type not in _LOCKED_ACTION_DRAFT_ORDER_TYPES:
+            raise ValueError(
+                f"order_type {self.order_type!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_ORDER_TYPES)}"
+            )
+        if self.time_in_force not in _LOCKED_ACTION_DRAFT_TIME_IN_FORCE:
+            raise ValueError(
+                f"time_in_force {self.time_in_force!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_TIME_IN_FORCE)}"
+            )
+        if self.status not in _LOCKED_ACTION_DRAFT_STATUSES:
+            raise ValueError(
+                f"status {self.status!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_STATUSES)}"
+            )
+        if self.quantity <= 0:
+            raise ValueError("quantity must be positive")
+        if self.limit_price_local <= 0:
+            raise ValueError("limit_price_local must be positive")
+        if self.notional_local < 0:
+            raise ValueError("notional_local must be non-negative")
+        if self.notional_eur < 0:
+            raise ValueError("notional_eur must be non-negative")
+        if self.fx_rate_at_creation <= 0:
+            raise ValueError("fx_rate_at_creation must be positive")
+        if self.usable_cash_eur_at_creation < 0:
+            raise ValueError(
+                "usable_cash_eur_at_creation must be non-negative"
+            )
+        if (
+            self.held_quantity_at_creation is not None
+            and self.held_quantity_at_creation < 0
+        ):
+            raise ValueError("held_quantity_at_creation must be non-negative")
+        if self.safe_for_submission:
+            raise ValueError(
+                "safe_for_submission must be False until the "
+                "submission workflow ships (Task 133 product lock §3)"
+            )
+
+
+@dataclass(frozen=True)
+class ActionDraftAuditEntry:
+    """One row in the append-only ``action_draft_audit`` table.
+
+    Task 133 product lock §8. Mirrors the Decision Package chain pattern:
+    every status transition or field edit writes one row carrying
+    before/after JSON snapshots so the chain is independently verifiable.
+    ``id`` is None on insert (the storage layer issues an autoincrement
+    primary key); reads populate it from the row.
+    """
+
+    action_draft_id: str
+    event_at: datetime
+    event_type: str
+    before_state_json: dict[str, object] | None
+    after_state_json: dict[str, object] | None
+    actor: str
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.action_draft_id, "action_draft_id")
+        if self.event_type not in _LOCKED_ACTION_DRAFT_EVENT_TYPES:
+            raise ValueError(
+                f"event_type {self.event_type!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_EVENT_TYPES)}"
+            )
+        if self.actor not in _LOCKED_ACTION_DRAFT_AUDIT_ACTORS:
+            raise ValueError(
+                f"actor {self.actor!r} not in "
+                f"{sorted(_LOCKED_ACTION_DRAFT_AUDIT_ACTORS)}"
+            )
+
+
 class BootstrapInsufficientHistoryError(RuntimeError):
     """Raised when the bootstrap input doesn't have ≥200 daily closes."""

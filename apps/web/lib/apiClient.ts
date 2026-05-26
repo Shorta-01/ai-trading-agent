@@ -900,6 +900,77 @@ export type DecisionPackageChainResponse = {
   safe_for_orders: false;
 };
 
+// ---------------------------------------------------------------------
+// Task 133 — Action Draft (user-facing To-Do tier).
+// ---------------------------------------------------------------------
+
+export type ActionDraftStatus =
+  | "proposed"
+  | "edited"
+  | "user_approved"
+  | "dismissed"
+  | "deleted"
+  | "superseded";
+
+export type ActionDraftResponse = {
+  action_draft_id: string;
+  decision_package_id: string | null;
+  forecast_run_id: string | null;
+  created_at: string;
+  created_by: "user" | "system";
+  ibkr_account_id: string;
+  conid: string;
+  symbol: string;
+  exchange: string;
+  currency_local: string;
+  side: "BUY" | "SELL";
+  quantity: string;
+  order_type: "LMT";
+  limit_price_local: string;
+  time_in_force: "DAY";
+  notional_local: string;
+  notional_eur: string;
+  fx_rate_at_creation: string;
+  usable_cash_eur_at_creation: string;
+  held_quantity_at_creation: string | null;
+  status: ActionDraftStatus;
+  last_edited_at: string | null;
+  user_approved_at: string | null;
+  dismissed_at: string | null;
+  deleted_at: string | null;
+  dismissed_reason: string | null;
+  user_note: string | null;
+  superseded_by_decision_package_id: string | null;
+  audit_trail_hash: string;
+  previous_draft_hash: string | null;
+  safe_for_submission: false;
+};
+
+export type ActionDraftListResponse = {
+  ibkr_account_id: string;
+  drafts: ActionDraftResponse[];
+  safe_for_submission: false;
+};
+
+export type CreateActionDraftInput = {
+  decision_package_id?: string;
+  user_note?: string;
+  ibkr_account_id?: string;
+  conid?: string;
+  symbol?: string;
+  exchange?: string;
+  currency_local?: string;
+  side?: "BUY" | "SELL";
+  quantity?: string;
+  limit_price_local?: string;
+};
+
+export type PatchActionDraftInput = {
+  quantity?: string;
+  limit_price_local?: string;
+  user_note?: string;
+};
+
 export type ForecastByAccountRow = {
   conid: string;
   label: ForecastLabel;
@@ -1277,6 +1348,41 @@ export const apiClient = {
       `/decision-package/chain?${search.toString()}`,
     );
   },
+  // -------------------------------------------------------------------
+  // Task 133 — Action Draft operations.
+  // -------------------------------------------------------------------
+  getActionDraftsTeKeuren: (accountId?: string) => {
+    const qs = accountId
+      ? `?account_id=${encodeURIComponent(accountId)}`
+      : "";
+    return getJson<ActionDraftListResponse>(`/action-draft/te-keuren${qs}`);
+  },
+  getActionDraft: (id: string) =>
+    getJson<ActionDraftResponse>(`/action-draft/${encodeURIComponent(id)}`),
+  createActionDraft: (payload: CreateActionDraftInput) =>
+    requestJson<ActionDraftResponse>("/action-draft", "POST", payload),
+  patchActionDraft: (id: string, payload: PatchActionDraftInput) =>
+    requestJson<ActionDraftResponse>(
+      `/action-draft/${encodeURIComponent(id)}`,
+      "PATCH",
+      payload,
+    ),
+  approveActionDraft: (id: string) =>
+    requestJson<ActionDraftResponse>(
+      `/action-draft/${encodeURIComponent(id)}/approve`,
+      "POST",
+    ),
+  dismissActionDraft: (id: string, reason?: string) =>
+    requestJson<ActionDraftResponse>(
+      `/action-draft/${encodeURIComponent(id)}/dismiss`,
+      "POST",
+      reason ? { reason } : {},
+    ),
+  deleteActionDraft: (id: string) =>
+    requestJson<ActionDraftResponse>(
+      `/action-draft/${encodeURIComponent(id)}/delete`,
+      "POST",
+    ),
   getSchedulerV127Status: () =>
     getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),
   getSchedulerV127Runs: (limit = 20) =>

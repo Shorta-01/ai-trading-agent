@@ -21,6 +21,15 @@ import {
 import { ForecastExplanationPanel } from "@/components/ForecastExplanationPanel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { VolglijstColdStartFlow } from "@/components/VolglijstColdStartFlow";
+import { useRouter } from "next/navigation";
+
+// Task 133 product lock §2: quick-action button only for the three
+// actionable labels. Houden / Bekijken / Geblokkeerd are filtered.
+const VOLGLIJST_ACTIONABLE_LABELS: ReadonlySet<string> = new Set([
+  "Kopen",
+  "Verminderen",
+  "Verkopen",
+]);
 
 export default function Page() {
   const [confirmationState, setConfirmationState] =
@@ -62,6 +71,7 @@ export default function Page() {
 
 
 function VolglijstConfirmedView() {
+  const router = useRouter();
   const [items, setItems] = useState<WatchlistItemResponse[]>([]);
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<IbkrContractCandidate[]>([]);
@@ -76,6 +86,32 @@ function VolglijstConfirmedView() {
   const [forecastsByConid, setForecastsByConid] = useState<Record<string, ForecastByAccountRow>>({});
   const [openForecastConid, setOpenForecastConid] = useState<string | null>(null);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
+  const [maakActieBusyConid, setMaakActieBusyConid] = useState<string | null>(null);
+  const [maakActieError, setMaakActieError] = useState<string | null>(null);
+
+  async function handleMaakActie(conid: string) {
+    setMaakActieError(null);
+    setMaakActieBusyConid(conid);
+    const latest = await apiClient.getLatestDecisionPackage({ conid });
+    if (!latest.ok) {
+      setMaakActieBusyConid(null);
+      setMaakActieError(
+        "Geen Decision Package gevonden voor dit asset. Wacht op de volgende morgenrun.",
+      );
+      return;
+    }
+    const result = await apiClient.createActionDraft({
+      decision_package_id: latest.data.decision_package_id,
+    });
+    setMaakActieBusyConid(null);
+    if (!result.ok) {
+      setMaakActieError(result.message || "Actiedraft aanmaken mislukt.");
+      return;
+    }
+    router.push(
+      `/ibkr-acties?new=${encodeURIComponent(result.data.action_draft_id)}`,
+    );
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -148,12 +184,17 @@ function VolglijstConfirmedView() {
       <button type="submit">Toevoegen aan Volglijst</button>
     </form>
     {error ? <p>{error}</p> : null}
+    {maakActieError ? (
+      <div data-testid="volglijst-maak-actie-error" style={{ background: "#fee2e2", color: "#7f1d1d", padding: "8px 12px", borderRadius: 6, marginBottom: 8 }}>
+        {maakActieError}
+      </div>
+    ) : null}
     {labelFilter ? (
       <div data-testid="volglijst-filter-banner" style={{ background: "#fef3c7", color: "#92400e", padding: "8px 12px", borderRadius: 6, marginBottom: 8 }}>
         Filter actief: alleen rijen met voorspelling &quot;{labelFilter}&quot;. <button type="button" data-testid="volglijst-filter-clear" onClick={()=>{setLabelFilter(null); if (typeof window !== "undefined") window.history.replaceState(null, "", "/volglijst");}} style={{ marginLeft: 8 }}>Toon alles</button>
       </div>
     ) : null}
-    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Marktdata</th><th>Voorspelling</th><th>Actie</th></tr></thead><tbody>{visibleItems.map((wrapped)=>{const i=wrapped.item; const marketStatus = i.ibkr_conid ? marketDataStatusByConid[i.ibkr_conid] : null; const forecast = i.ibkr_conid ? forecastsByConid[i.ibkr_conid] : null; return <tr key={i.watchlist_item_id} data-testid={`volglijst-row-${i.symbol}`}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Geen contract"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td>{i.ibkr_conid ? <><StatusBadge label={marketStatus?.label ?? "Alleen status"} status="info" title={marketStatus?.help ?? "Nog geen analyse"} /><br /><small>{marketStatus?.help ?? "Nog geen analyse"}</small></> : <><StatusBadge label="Geen contract" status="geblokkeerd" title="Contract niet aanwezig of niet gevalideerd." /><br /><small>Contract niet gevalideerd</small></>}</td><td data-testid={`volglijst-forecast-cell-${i.symbol}`}>{forecast ? <><strong data-testid={`volglijst-forecast-label-${i.symbol}`}>{forecast.label}</strong><br /><small>Betrouwbaarheid: {forecast.confidence_level}</small><br /><button type="button" data-testid={`volglijst-forecast-why-${i.symbol}`} onClick={()=>setOpenForecastConid(i.ibkr_conid)}>Waarom?</button></> : <small title="Geen voorspelling beschikbaar — wacht op morgenrun of forecast is geblokkeerd.">—</small>}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
+    <table><thead><tr><th>Symbool</th><th>IBKR-contract</th><th>Gevalideerd</th><th>Status</th><th>Marktdata</th><th>Voorspelling</th><th>Actie</th></tr></thead><tbody>{visibleItems.map((wrapped)=>{const i=wrapped.item; const marketStatus = i.ibkr_conid ? marketDataStatusByConid[i.ibkr_conid] : null; const forecast = i.ibkr_conid ? forecastsByConid[i.ibkr_conid] : null; return <tr key={i.watchlist_item_id} data-testid={`volglijst-row-${i.symbol}`}><td>{i.symbol}</td><td>{i.ibkr_conid ?? "Geen contract"}</td><td>{wrapped.ibkr_status_label_nl}</td><td><strong>{getReadinessStatus(wrapped)}</strong><br /><small>{getReadinessHelp(wrapped)}</small></td><td>{i.ibkr_conid ? <><StatusBadge label={marketStatus?.label ?? "Alleen status"} status="info" title={marketStatus?.help ?? "Nog geen analyse"} /><br /><small>{marketStatus?.help ?? "Nog geen analyse"}</small></> : <><StatusBadge label="Geen contract" status="geblokkeerd" title="Contract niet aanwezig of niet gevalideerd." /><br /><small>Contract niet gevalideerd</small></>}</td><td data-testid={`volglijst-forecast-cell-${i.symbol}`}>{forecast ? <><strong data-testid={`volglijst-forecast-label-${i.symbol}`}>{forecast.label}</strong><br /><small>Betrouwbaarheid: {forecast.confidence_level}</small><br /><button type="button" data-testid={`volglijst-forecast-why-${i.symbol}`} onClick={()=>setOpenForecastConid(i.ibkr_conid)}>Waarom?</button>{VOLGLIJST_ACTIONABLE_LABELS.has(forecast.label) && i.ibkr_conid ? <> <button type="button" data-testid={`volglijst-maak-actie-${i.symbol}`} onClick={()=>{void handleMaakActie(i.ibkr_conid as string);}} disabled={maakActieBusyConid === i.ibkr_conid} style={{ marginLeft: 4 }}>{maakActieBusyConid === i.ibkr_conid ? "Bezig…" : "Maak actie"}</button></> : null}</> : <small title="Geen voorspelling beschikbaar — wacht op morgenrun of forecast is geblokkeerd.">—</small>}</td><td><button onClick={async()=>{await archiveWatchlistItem(i.watchlist_item_id); await load();}}>Archiveren</button></td></tr>;})}</tbody></table>
     {openForecastConid ? <ForecastExplanationPanel conid={openForecastConid} open={true} onClose={()=>setOpenForecastConid(null)} /> : null}
   </main>;
 }
