@@ -16,3 +16,4 @@ Conventions:
 | ID | Date | Phase | Status | Title | Supersedes | Superseded by | Tasks |
 |----|------|-------|--------|-------|------------|---------------|-------|
 | 0001 | 2026-05-26 | P1 | accepted | [Run four-track Phase 1 audit before any code changes](0001-phase-1-charter.md) | — | — | T-001 … T-060 |
+| 0002 | 2026-05-26 | — | locked | [Trading System Doctrine](0002-trading-system-doctrine.md) | paper-only language in `README.md` and `AGENTS.md` | — | — |
