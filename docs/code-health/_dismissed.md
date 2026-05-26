@@ -197,3 +197,62 @@ Pattern: `mean_value` parameter retained on `_stdev(values, mean_value)` after a
 - `packages/portfolio/src/portfolio_outlook_portfolio/momentum_predictor.py:126` — `mean_value` — module comment at `:127-128` reads: `"V1.1 §22.1 refactor: numpy-backed sample SD (mean_value kept for backward signature compatibility; recomputed internally)."`
 
 Reason for dismissal: **deliberate backward-compatible signature**. The parameter is documented at the source; removing it would break callers that pass it.
+
+## T-053 — bandit baseline (2026-05-26)
+
+**Tool:** `bandit 1.9.4`
+**Command:** `bandit -r apps packages -x "*/tests/*,*/test_*.py,*/alembic/*" -f json -o /tmp/bandit-low-and-up.json`
+**Findings:** 40 total (39 LOW + 1 MEDIUM).
+**Triage:** 1 → `FIND-BANDIT-001` in `docs/code-health/02-anti-patterns.md` (covers the 20 B101 occurrences as a single umbrella pattern). 20 → dismissed below.
+**Raw output:** `/tmp/bandit-low-and-up.json` (JSON), `/tmp/bandit-baseline.txt` (text). Run metrics: 20 B101 / 5 B105 / 10 B106 / 3 B110 / 1 B112 / 1 B310.
+
+### Dismissed: B105 hardcoded_password_string — enum value false positives (×5)
+
+Pattern: bandit's heuristic matches the substrings `"secret"` / `"password"` in module-level string constants. Every site is an `enum.StrEnum` member declaration — the **enum value is the persisted string** for an audit row, not a credential.
+
+- `packages/domain/src/portfolio_outlook_domain/enums.py:956` — `EXTERNAL_SECRET_MANAGER_FUTURE = "external_secret_manager_future"` (`SecretStorageKind` enum)
+- `packages/domain/src/portfolio_outlook_domain/enums.py:1109` — `SECRET_STORAGE_UNSAFE = "secret_storage_unsafe"` (`StorageBlockReason` enum)
+- `packages/domain/src/portfolio_outlook_domain/enums.py:1150` — `SECRET_REFERENCE_ONLY = "secret_reference_only"` (`StorageSensitivity` enum)
+- `packages/domain/src/portfolio_outlook_domain/enums.py:1151` — `PROHIBITED_SECRET_VALUE = "prohibited_secret_value"` (`StorageSensitivity` enum)
+- `packages/domain/src/portfolio_outlook_domain/enums.py:1162` — `SECRET_REFERENCE_METADATA = "secret_reference_metadata"` (`PersistedEntityKind` enum)
+
+Reason for dismissal: **false positive**. AGENTS.md "no hardcoded secrets" forbids actual credentials in source; these are typed enum vocabularies that classify *the absence* of a secret value (e.g. `PROHIBITED_SECRET_VALUE` flags rows that must never carry a secret).
+
+### Dismissed: B106 hardcoded_password_funcarg — kwarg name false positives (×10)
+
+Pattern: bandit's heuristic matches kwargs whose name pattern resembles `*password*` / `*pass*` / `*secret*`. Every site here is either a `pass_name=` (reconciliation pass label) or a `secret_reference_id=` (typed reference to a `SecretReference` row, not the secret itself).
+
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_a_orphaned_executions.py:255` — `pass_name="orphaned_execution"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_a_orphaned_executions.py:310` — `pass_name="orphaned_execution"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_a_orphaned_executions.py:347` — `pass_name="orphaned_execution"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_b_stale_in_flight.py:260` — `pass_name="stale_in_flight"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_b_stale_in_flight.py:334` — `pass_name="stale_in_flight"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_b_stale_in_flight.py:368` — `pass_name="stale_in_flight"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_b_stale_in_flight.py:403` — `pass_name="stale_in_flight"`
+- `apps/worker/src/portfolio_outlook_worker/ibkr_reconciliation/pass_c_timeout_recovery.py:145` — `pass_name="timeout_recovery"`
+- `packages/domain/src/portfolio_outlook_domain/settings.py:705` — `api_key_secret_reference_id="secret_openai_api_key"` (typed FK to a `SecretReference` row, not a key)
+- `packages/domain/src/portfolio_outlook_domain/settings.py:710` — `secret_reference_id="secret_openai_api_key"` (same row's PK declaration)
+
+Reason for dismissal: **false positive**. `pass_name` is the reconciliation pass label (locked enum: `"orphaned_execution"`, `"stale_in_flight"`, `"timeout_recovery"` — see `_LOCKED_RECONCILIATION_PASS_NAMES` in `repository_contracts.py`). `secret_reference_id` is a typed `SafeIdentifier` pointing at a `SecretReference` row whose body still has `status=NOT_CONFIGURED` and `configured=False` — there is no actual secret stored in either location.
+
+### Dismissed: B110 try_except_pass — documented boundary catches (×3)
+
+Pattern: deliberate boundary swallow already inventoried under T-050 noqa `BLE001`.
+
+- `apps/api/src/portfolio_outlook_api/ibkr_tws_readonly_adapter.py:118` — disconnect-error swallow in the `finally` clause; `docs/reality/components/api-ibkr-connection-and-status.md` notes: "Keep status checks resilient; never escalate disconnect errors."
+- `apps/api/src/portfolio_outlook_api/status_routes.py:3149` — boundary catch (already in T-050 `BLE001` list).
+- `apps/api/src/portfolio_outlook_api/status_routes.py:3179` — boundary catch (already in T-050 `BLE001` list).
+
+Reason for dismissal: documented intent at the source; the catch boundary keeps a status surface resilient. Not a security defect.
+
+### Dismissed: B112 try_except_continue — documented per-fold catch (×1)
+
+- `packages/portfolio/src/portfolio_outlook_portfolio/predictor_backtester.py:162` — `except Exception:` paired with `continue` inside the walk-forward fold loop. Already inventoried in T-050 `BLE001` list and in `docs/reality/components/portfolio-predictors.md`: "Per-fold exceptions caught silently with `except Exception` boundary; blocked predictions skipped, not failed."
+
+Reason for dismissal: documented per-fold boundary; the loop continues to the next fold rather than crashing the whole backtest.
+
+### Dismissed: B310 audit-url-open — config-derived URL (×1)
+
+- `apps/api/src/portfolio_outlook_api/eodhd_client.py:148` — `urllib.request.urlopen(request, timeout=timeout_seconds)`. Bandit warns "Audit url open for permitted schemes."
+
+Reason for dismissal: the URL is constructed inside the EODHD client from configuration values (`base_url`, `endpoint`, query params from typed inputs), not from user-controllable input. No `file://` / custom-scheme attack surface — bandit cannot statically prove this, hence the audit-warning.
