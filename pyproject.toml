@@ -1,0 +1,35 @@
+## Repo-root tooling config for Phase 1d code-health audit.
+##
+## This file intentionally does NOT declare a Python package — each app
+## and package keeps its own `pyproject.toml` and its own tool config.
+## What lives here is config for *cross-cutting* code-health tools that
+## are introduced by Phase 0 scaffolding and not yet configured per
+## package: vulture (dead code), bandit (security smells), radon
+## (complexity). pip-audit needs no config.
+##
+## Per-package ruff and mypy settings are unchanged and continue to live
+## in their respective package pyproject files; this file does not
+## override them.
+
+[tool.vulture]
+min_confidence = 80
+paths = [
+  "apps/api/src",
+  "apps/worker/src",
+  "packages/domain/src",
+  "packages/portfolio/src",
+  "packages/storage/src",
+]
+exclude = [
+  "*/tests/*",
+  "*/migrations/*",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "node_modules"]
+# Phase 0 introduces bandit in report-only mode. Per-finding triage and
+# any project-wide skips will be decided during Phase 1d.
+
+# radon has no [tool.radon] section in pyproject; it reads CLI flags.
+# The code-health workflow invokes it with `radon cc -s -a` and
+# `radon mi -s`.
