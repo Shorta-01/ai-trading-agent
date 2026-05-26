@@ -12,6 +12,10 @@ from sqlalchemy.engine import Connection, RowMapping
 from ai_trading_agent_storage.metadata import (
     action_drafts,
     action_draft_audit,
+    behavioural_guardrail_settings,
+    ibkr_executions,
+    ibkr_submission_audit,
+    ibkr_submission_lifecycle,
     asset_identifier_aliases,
     asset_listings,
     asset_master_records,
@@ -95,6 +99,10 @@ from ai_trading_agent_storage.migration_readiness import (
 from ai_trading_agent_storage.repository_contracts import (
     ActionDraftAuditEntry,
     ActionDraftEntry,
+    BehaviouralGuardrailSettings,
+    IbkrExecutionEntry,
+    IbkrSubmissionAuditEntry,
+    IbkrSubmissionLifecycleEntry,
     AssetActionDraftEventRecord,
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
@@ -5289,3 +5297,432 @@ def _new_action_draft_state_snapshot(
         "audit_trail_hash": record.audit_trail_hash,
         "previous_draft_hash": record.previous_draft_hash,
     }
+
+
+class SqlAlchemyIbkrSubmissionAuditRepository(_Base):
+    """Task 134: append-only ``ibkr_submission_audit`` repository.
+
+    Written by the worker immediately after every ``placeOrder()``
+    attempt. No update/delete methods exist — fixes for a corrupt row
+    are recorded as a new compensating row.
+    """
+
+    def append(
+        self, entry: IbkrSubmissionAuditEntry
+    ) -> IbkrSubmissionAuditEntry:
+        result = self._connection.execute(
+            ibkr_submission_audit.insert()
+            .values(
+                action_draft_id=entry.action_draft_id,
+                submitted_at=entry.submitted_at,
+                sent_to_account_id=entry.sent_to_account_id,
+                sent_account_mode=entry.sent_account_mode,
+                ibkr_perm_id=entry.ibkr_perm_id,
+                ibkr_order_id=entry.ibkr_order_id,
+                contract_json=entry.contract_json,
+                order_json=entry.order_json,
+                gateway_session_id=entry.gateway_session_id,
+                result=entry.result,
+                error_class=entry.error_class,
+                error_message_dutch=entry.error_message_dutch,
+            )
+            .returning(ibkr_submission_audit.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return IbkrSubmissionAuditEntry(
+            action_draft_id=entry.action_draft_id,
+            submitted_at=entry.submitted_at,
+            sent_to_account_id=entry.sent_to_account_id,
+            sent_account_mode=entry.sent_account_mode,
+            ibkr_perm_id=entry.ibkr_perm_id,
+            ibkr_order_id=entry.ibkr_order_id,
+            contract_json=entry.contract_json,
+            order_json=entry.order_json,
+            gateway_session_id=entry.gateway_session_id,
+            result=entry.result,
+            error_class=entry.error_class,
+            error_message_dutch=entry.error_message_dutch,
+            id=new_id,
+        )
+
+    def list_for_account(
+        self, *, ibkr_account_id: str, limit: int = 50
+    ) -> tuple[IbkrSubmissionAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_submission_audit)
+                .where(
+                    ibkr_submission_audit.c.sent_to_account_id
+                    == ibkr_account_id
+                )
+                .order_by(
+                    ibkr_submission_audit.c.submitted_at.desc()
+                )
+                .limit(_ibkr_audit_bounded_limit(limit, upper=200))
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_ibkr_submission_audit_from_row(r) for r in rows)
+
+    def list_for_draft(
+        self, action_draft_id: str
+    ) -> tuple[IbkrSubmissionAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_submission_audit)
+                .where(
+                    ibkr_submission_audit.c.action_draft_id
+                    == action_draft_id
+                )
+                .order_by(ibkr_submission_audit.c.submitted_at)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_ibkr_submission_audit_from_row(r) for r in rows)
+
+
+class SqlAlchemyIbkrSubmissionLifecycleRepository(_Base):
+    """Task 134: append-only ``ibkr_submission_lifecycle`` repository."""
+
+    def append(
+        self, entry: IbkrSubmissionLifecycleEntry
+    ) -> IbkrSubmissionLifecycleEntry:
+        result = self._connection.execute(
+            ibkr_submission_lifecycle.insert()
+            .values(
+                action_draft_id=entry.action_draft_id,
+                event_at=entry.event_at,
+                ibkr_perm_id=entry.ibkr_perm_id,
+                event_type=entry.event_type,
+                from_status=entry.from_status,
+                to_status=entry.to_status,
+                ibkr_raw_status=entry.ibkr_raw_status,
+                fill_price_local=entry.fill_price_local,
+                fill_quantity=entry.fill_quantity,
+                commission=entry.commission,
+                commission_currency=entry.commission_currency,
+                raw_callback_json=entry.raw_callback_json,
+            )
+            .returning(ibkr_submission_lifecycle.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return IbkrSubmissionLifecycleEntry(
+            action_draft_id=entry.action_draft_id,
+            event_at=entry.event_at,
+            ibkr_perm_id=entry.ibkr_perm_id,
+            event_type=entry.event_type,
+            from_status=entry.from_status,
+            to_status=entry.to_status,
+            ibkr_raw_status=entry.ibkr_raw_status,
+            fill_price_local=entry.fill_price_local,
+            fill_quantity=entry.fill_quantity,
+            commission=entry.commission,
+            commission_currency=entry.commission_currency,
+            raw_callback_json=entry.raw_callback_json,
+            id=new_id,
+        )
+
+    def list_for_draft(
+        self, action_draft_id: str
+    ) -> tuple[IbkrSubmissionLifecycleEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_submission_lifecycle)
+                .where(
+                    ibkr_submission_lifecycle.c.action_draft_id
+                    == action_draft_id
+                )
+                .order_by(ibkr_submission_lifecycle.c.event_at)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _ibkr_submission_lifecycle_from_row(r) for r in rows
+        )
+
+    def list_for_perm_id(
+        self, ibkr_perm_id: int
+    ) -> tuple[IbkrSubmissionLifecycleEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_submission_lifecycle)
+                .where(
+                    ibkr_submission_lifecycle.c.ibkr_perm_id == ibkr_perm_id
+                )
+                .order_by(ibkr_submission_lifecycle.c.event_at)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _ibkr_submission_lifecycle_from_row(r) for r in rows
+        )
+
+
+class SqlAlchemyIbkrExecutionsRepository(_Base):
+    """Task 134: append-only ``ibkr_executions`` repository.
+
+    Unique on ``ibkr_exec_id`` — a duplicate fill notification from
+    IBKR raises ``IntegrityError`` at insert time, which is the
+    correct behaviour (the caller treats it as already-recorded).
+    """
+
+    def append(self, entry: IbkrExecutionEntry) -> IbkrExecutionEntry:
+        result = self._connection.execute(
+            ibkr_executions.insert()
+            .values(
+                ibkr_exec_id=entry.ibkr_exec_id,
+                ibkr_perm_id=entry.ibkr_perm_id,
+                action_draft_id=entry.action_draft_id,
+                account_id=entry.account_id,
+                conid=entry.conid,
+                side=entry.side,
+                fill_price_local=entry.fill_price_local,
+                fill_quantity=entry.fill_quantity,
+                fill_time=entry.fill_time,
+                commission=entry.commission,
+                commission_currency=entry.commission_currency,
+                exchange=entry.exchange,
+            )
+            .returning(ibkr_executions.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return IbkrExecutionEntry(
+            ibkr_exec_id=entry.ibkr_exec_id,
+            ibkr_perm_id=entry.ibkr_perm_id,
+            action_draft_id=entry.action_draft_id,
+            account_id=entry.account_id,
+            conid=entry.conid,
+            side=entry.side,
+            fill_price_local=entry.fill_price_local,
+            fill_quantity=entry.fill_quantity,
+            fill_time=entry.fill_time,
+            commission=entry.commission,
+            commission_currency=entry.commission_currency,
+            exchange=entry.exchange,
+            id=new_id,
+        )
+
+    def get_by_exec_id(
+        self, ibkr_exec_id: str
+    ) -> IbkrExecutionEntry | None:
+        row = (
+            self._connection.execute(
+                select(ibkr_executions).where(
+                    ibkr_executions.c.ibkr_exec_id == ibkr_exec_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return _ibkr_execution_from_row(row)
+
+    def list_for_account_conid(
+        self, *, account_id: str, conid: str
+    ) -> tuple[IbkrExecutionEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_executions)
+                .where(ibkr_executions.c.account_id == account_id)
+                .where(ibkr_executions.c.conid == conid)
+                .order_by(ibkr_executions.c.fill_time.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_ibkr_execution_from_row(r) for r in rows)
+
+    def list_for_draft(
+        self, action_draft_id: str
+    ) -> tuple[IbkrExecutionEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(ibkr_executions)
+                .where(
+                    ibkr_executions.c.action_draft_id == action_draft_id
+                )
+                .order_by(ibkr_executions.c.fill_time)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_ibkr_execution_from_row(r) for r in rows)
+
+
+class SqlAlchemyBehaviouralGuardrailSettingsRepository(_Base):
+    """Task 134: per-account behavioural guardrail thresholds.
+
+    ``get_or_default(ibkr_account_id, now)`` returns the persisted row
+    if one exists, otherwise the brainstorm-locked defaults — without
+    auto-inserting. The submission sweep calls this on every tick;
+    the row only materialises when the user (later, via Task 138)
+    explicitly saves a non-default setting.
+    """
+
+    def upsert(
+        self, settings: BehaviouralGuardrailSettings
+    ) -> BehaviouralGuardrailSettings:
+        existing = self.get_for_account(settings.ibkr_account_id)
+        payload = {
+            "ibkr_account_id": settings.ibkr_account_id,
+            "daily_max_approvals": settings.daily_max_approvals,
+            "cooldown_seconds": settings.cooldown_seconds,
+            "anti_revenge_window_hours": settings.anti_revenge_window_hours,
+            "anti_revenge_loss_threshold_pct": (
+                settings.anti_revenge_loss_threshold_pct
+            ),
+            "soft_drawdown_pct": settings.soft_drawdown_pct,
+            "soft_drawdown_window_days": settings.soft_drawdown_window_days,
+            "hard_drawdown_pct": settings.hard_drawdown_pct,
+            "hard_drawdown_window_days": settings.hard_drawdown_window_days,
+            "fomo_drift_pct": settings.fomo_drift_pct,
+            "last_updated_at": settings.last_updated_at,
+        }
+        if existing is None:
+            self._insert(behavioural_guardrail_settings, payload)
+        else:
+            self._connection.execute(
+                behavioural_guardrail_settings.update()
+                .where(
+                    behavioural_guardrail_settings.c.ibkr_account_id
+                    == settings.ibkr_account_id
+                )
+                .values(**payload)
+            )
+        return settings
+
+    def get_for_account(
+        self, ibkr_account_id: str
+    ) -> BehaviouralGuardrailSettings | None:
+        row = (
+            self._connection.execute(
+                select(behavioural_guardrail_settings).where(
+                    behavioural_guardrail_settings.c.ibkr_account_id
+                    == ibkr_account_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return _behavioural_guardrail_settings_from_row(row)
+
+    def get_or_default(
+        self, *, ibkr_account_id: str, now: datetime
+    ) -> BehaviouralGuardrailSettings:
+        existing = self.get_for_account(ibkr_account_id)
+        if existing is not None:
+            return existing
+        return BehaviouralGuardrailSettings.default_for_account(
+            ibkr_account_id=ibkr_account_id, last_updated_at=now
+        )
+
+
+def _ibkr_submission_audit_from_row(row: Any) -> IbkrSubmissionAuditEntry:
+    contract_json = row["contract_json"] or {}
+    order_json = row["order_json"] or {}
+    return IbkrSubmissionAuditEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        action_draft_id=row["action_draft_id"],
+        submitted_at=row["submitted_at"],
+        sent_to_account_id=row["sent_to_account_id"],
+        sent_account_mode=row["sent_account_mode"],
+        ibkr_perm_id=(
+            int(row["ibkr_perm_id"])
+            if row["ibkr_perm_id"] is not None
+            else None
+        ),
+        ibkr_order_id=(
+            int(row["ibkr_order_id"])
+            if row["ibkr_order_id"] is not None
+            else None
+        ),
+        contract_json=dict(contract_json),
+        order_json=dict(order_json),
+        gateway_session_id=row["gateway_session_id"],
+        result=row["result"],
+        error_class=row["error_class"],
+        error_message_dutch=row["error_message_dutch"],
+    )
+
+
+def _ibkr_submission_lifecycle_from_row(
+    row: Any,
+) -> IbkrSubmissionLifecycleEntry:
+    return IbkrSubmissionLifecycleEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        action_draft_id=row["action_draft_id"],
+        event_at=row["event_at"],
+        ibkr_perm_id=int(row["ibkr_perm_id"]),
+        event_type=row["event_type"],
+        from_status=row["from_status"],
+        to_status=row["to_status"],
+        ibkr_raw_status=row["ibkr_raw_status"],
+        fill_price_local=_to_decimal(row["fill_price_local"]),
+        fill_quantity=_to_decimal(row["fill_quantity"]),
+        commission=_to_decimal(row["commission"]),
+        commission_currency=row["commission_currency"],
+        raw_callback_json=dict(row["raw_callback_json"] or {}),
+    )
+
+
+def _ibkr_execution_from_row(row: Any) -> IbkrExecutionEntry:
+    return IbkrExecutionEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        ibkr_exec_id=row["ibkr_exec_id"],
+        ibkr_perm_id=int(row["ibkr_perm_id"]),
+        action_draft_id=row["action_draft_id"],
+        account_id=row["account_id"],
+        conid=row["conid"],
+        side=row["side"],
+        fill_price_local=_to_decimal(row["fill_price_local"]) or Decimal("0"),
+        fill_quantity=_to_decimal(row["fill_quantity"]) or Decimal("0"),
+        fill_time=row["fill_time"],
+        commission=_to_decimal(row["commission"]) or Decimal("0"),
+        commission_currency=row["commission_currency"],
+        exchange=row["exchange"],
+    )
+
+
+def _behavioural_guardrail_settings_from_row(
+    row: Any,
+) -> BehaviouralGuardrailSettings:
+    return BehaviouralGuardrailSettings(
+        ibkr_account_id=row["ibkr_account_id"],
+        daily_max_approvals=int(row["daily_max_approvals"]),
+        cooldown_seconds=int(row["cooldown_seconds"]),
+        anti_revenge_window_hours=int(row["anti_revenge_window_hours"]),
+        anti_revenge_loss_threshold_pct=(
+            _to_decimal(row["anti_revenge_loss_threshold_pct"])
+            or Decimal("0")
+        ),
+        soft_drawdown_pct=(
+            _to_decimal(row["soft_drawdown_pct"]) or Decimal("0")
+        ),
+        soft_drawdown_window_days=int(row["soft_drawdown_window_days"]),
+        hard_drawdown_pct=(
+            _to_decimal(row["hard_drawdown_pct"]) or Decimal("0")
+        ),
+        hard_drawdown_window_days=int(row["hard_drawdown_window_days"]),
+        fomo_drift_pct=_to_decimal(row["fomo_drift_pct"]) or Decimal("0"),
+        last_updated_at=row["last_updated_at"],
+    )
+
+
+def _ibkr_audit_bounded_limit(limit: int, *, upper: int = 50) -> int:
+    """Used by the Task 134 IBKR audit repos to clamp ``limit=``."""
+
+    if limit < 1:
+        return 1
+    if limit > upper:
+        return upper
+    return limit

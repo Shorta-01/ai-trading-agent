@@ -3707,6 +3707,11 @@ _LOCKED_ACTION_DRAFT_SIDES = frozenset({"BUY", "SELL"})
 _LOCKED_ACTION_DRAFT_ORDER_TYPES = frozenset({"LMT"})
 _LOCKED_ACTION_DRAFT_TIME_IN_FORCE = frozenset({"DAY"})
 _LOCKED_ACTION_DRAFT_CREATED_BY = frozenset({"user", "system"})
+# Task 134 extends this to cover the in-flight + terminal IBKR
+# statuses ``ActionDraftEntry`` may be read back with. The original
+# six statuses stay valid; the additional nine are the lifecycle
+# values the storage layer accepts and that ``ActionDraftEntry`` must
+# round-trip.
 _LOCKED_ACTION_DRAFT_STATUSES = frozenset(
     {
         "proposed",
@@ -3715,6 +3720,15 @@ _LOCKED_ACTION_DRAFT_STATUSES = frozenset(
         "dismissed",
         "deleted",
         "superseded",
+        "submitted",
+        "accepted",
+        "working",
+        "filled",
+        "partially_filled",
+        "cancelled",
+        "rejected",
+        "pending_cancellation",
+        "awaiting_reply_timeout",
     }
 )
 _LOCKED_ACTION_DRAFT_EVENT_TYPES = frozenset(
@@ -3861,6 +3875,260 @@ class ActionDraftAuditEntry:
                 f"actor {self.actor!r} not in "
                 f"{sorted(_LOCKED_ACTION_DRAFT_AUDIT_ACTORS)}"
             )
+
+
+# Task 134 — IBKR submission locked vocabularies.
+_LOCKED_SUBMISSION_RESULTS = frozenset(
+    {"placed", "rejected_at_send", "connection_lost"}
+)
+_LOCKED_SUBMISSION_ACCOUNT_MODES = frozenset({"paper", "live"})
+_LOCKED_SUBMISSION_LIFECYCLE_EVENTS = frozenset(
+    {"status_change", "fill", "commission_report", "cancellation_request"}
+)
+_LOCKED_SUBMISSION_BLOCK_REASONS = frozenset(
+    {
+        "cash_insufficient",
+        "mode_mismatch",
+        "connection_down",
+        "account_id_mismatch",
+        "duplicate_in_flight",
+        "market_closed",
+        "cooldown",
+        "daily_limit",
+        "soft_drawdown",
+        "hard_drawdown",
+        "fomo",
+        "tick_size_invalid",
+        "unknown",
+    }
+)
+# Alias retained for documentation; the lifecycle set is now the
+# same as ``_LOCKED_ACTION_DRAFT_STATUSES`` after Task 134 widened it.
+_LOCKED_ACTION_DRAFT_STATUSES_WITH_LIFECYCLE = frozenset(
+    {
+        "proposed",
+        "edited",
+        "user_approved",
+        "dismissed",
+        "deleted",
+        "superseded",
+        "submitted",
+        "accepted",
+        "working",
+        "filled",
+        "partially_filled",
+        "cancelled",
+        "rejected",
+        "pending_cancellation",
+        "awaiting_reply_timeout",
+    }
+)
+_LOCKED_IBKR_EXECUTION_SIDES = frozenset({"BUY", "SELL"})
+
+
+@dataclass(frozen=True)
+class IbkrSubmissionAuditEntry:
+    """One row in ``ibkr_submission_audit`` — Task 134 lock §5.
+
+    Written by the worker immediately after a ``placeOrder()`` attempt.
+    Append-only: the storage layer has no update/delete. ``id`` is
+    None on insert (the repo issues an autoincrement primary key) and
+    populated on read.
+    """
+
+    action_draft_id: str
+    submitted_at: datetime
+    sent_to_account_id: str
+    sent_account_mode: str
+    ibkr_perm_id: int | None
+    ibkr_order_id: int | None
+    contract_json: dict[str, object]
+    order_json: dict[str, object]
+    gateway_session_id: str
+    result: str
+    error_class: str | None
+    error_message_dutch: str | None
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.action_draft_id, "action_draft_id")
+        _require_non_empty(self.sent_to_account_id, "sent_to_account_id")
+        _require_non_empty(self.gateway_session_id, "gateway_session_id")
+        if self.sent_account_mode not in _LOCKED_SUBMISSION_ACCOUNT_MODES:
+            raise ValueError(
+                f"sent_account_mode {self.sent_account_mode!r} not in "
+                f"{sorted(_LOCKED_SUBMISSION_ACCOUNT_MODES)}"
+            )
+        if self.result not in _LOCKED_SUBMISSION_RESULTS:
+            raise ValueError(
+                f"result {self.result!r} not in "
+                f"{sorted(_LOCKED_SUBMISSION_RESULTS)}"
+            )
+
+
+@dataclass(frozen=True)
+class IbkrSubmissionLifecycleEntry:
+    """One row in ``ibkr_submission_lifecycle`` — Task 134 lock §6.
+
+    Written by the worker's lifecycle handler in response to every
+    IBKR callback (status change, fill, commission report,
+    cancellation request). Append-only; the source of truth for the
+    full audit chain of an in-flight draft.
+    """
+
+    action_draft_id: str
+    event_at: datetime
+    ibkr_perm_id: int
+    event_type: str
+    from_status: str | None
+    to_status: str | None
+    ibkr_raw_status: str | None
+    fill_price_local: Decimal | None
+    fill_quantity: Decimal | None
+    commission: Decimal | None
+    commission_currency: str | None
+    raw_callback_json: dict[str, object]
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.action_draft_id, "action_draft_id")
+        if self.event_type not in _LOCKED_SUBMISSION_LIFECYCLE_EVENTS:
+            raise ValueError(
+                f"event_type {self.event_type!r} not in "
+                f"{sorted(_LOCKED_SUBMISSION_LIFECYCLE_EVENTS)}"
+            )
+        for status_field in (self.from_status, self.to_status):
+            if (
+                status_field is not None
+                and status_field
+                not in _LOCKED_ACTION_DRAFT_STATUSES_WITH_LIFECYCLE
+            ):
+                raise ValueError(
+                    f"status {status_field!r} not in "
+                    f"{sorted(_LOCKED_ACTION_DRAFT_STATUSES_WITH_LIFECYCLE)}"
+                )
+
+
+@dataclass(frozen=True)
+class IbkrExecutionEntry:
+    """One row in ``ibkr_executions`` — Task 134 lock §7.
+
+    Written exactly once per IBKR fill notification. ``ibkr_exec_id``
+    is the natural unique key from IBKR. Append-only; if IBKR
+    retracts a fill (rare), the system writes a corrective row rather
+    than mutating this one.
+    """
+
+    ibkr_exec_id: str
+    ibkr_perm_id: int
+    action_draft_id: str
+    account_id: str
+    conid: str
+    side: str
+    fill_price_local: Decimal
+    fill_quantity: Decimal
+    fill_time: datetime
+    commission: Decimal
+    commission_currency: str
+    exchange: str
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.ibkr_exec_id, "ibkr_exec_id")
+        _require_non_empty(self.action_draft_id, "action_draft_id")
+        _require_non_empty(self.account_id, "account_id")
+        _require_non_empty(self.conid, "conid")
+        _require_non_empty(
+            self.commission_currency, "commission_currency"
+        )
+        _require_non_empty(self.exchange, "exchange")
+        if self.side not in _LOCKED_IBKR_EXECUTION_SIDES:
+            raise ValueError(
+                f"side {self.side!r} not in "
+                f"{sorted(_LOCKED_IBKR_EXECUTION_SIDES)}"
+            )
+        if self.fill_price_local <= 0:
+            raise ValueError("fill_price_local must be positive")
+        if self.fill_quantity <= 0:
+            raise ValueError("fill_quantity must be positive")
+        if self.commission < 0:
+            raise ValueError("commission must be non-negative")
+
+
+@dataclass(frozen=True)
+class BehaviouralGuardrailSettings:
+    """One row in ``behavioural_guardrail_settings`` — Task 134 lock §4.
+
+    Brainstorm-locked default thresholds (60s cool-down, 5/day, 72h/1%
+    anti-revenge, 5%/5d soft drawdown, 10%/20d hard drawdown, 1.5%
+    FOMO drift) are exposed via ``default_for_account`` so the
+    submission sweep can act even before the user has explicitly
+    saved per-account settings. The UI to edit them ships in Task 138.
+    """
+
+    ibkr_account_id: str
+    daily_max_approvals: int
+    cooldown_seconds: int
+    anti_revenge_window_hours: int
+    anti_revenge_loss_threshold_pct: Decimal
+    soft_drawdown_pct: Decimal
+    soft_drawdown_window_days: int
+    hard_drawdown_pct: Decimal
+    hard_drawdown_window_days: int
+    fomo_drift_pct: Decimal
+    last_updated_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.ibkr_account_id, "ibkr_account_id")
+        if self.daily_max_approvals <= 0:
+            raise ValueError("daily_max_approvals must be positive")
+        if self.cooldown_seconds < 0:
+            raise ValueError("cooldown_seconds must be non-negative")
+        if self.anti_revenge_window_hours < 0:
+            raise ValueError(
+                "anti_revenge_window_hours must be non-negative"
+            )
+        if self.anti_revenge_loss_threshold_pct < 0:
+            raise ValueError(
+                "anti_revenge_loss_threshold_pct must be non-negative"
+            )
+        if self.soft_drawdown_pct < 0:
+            raise ValueError("soft_drawdown_pct must be non-negative")
+        if self.soft_drawdown_window_days < 0:
+            raise ValueError(
+                "soft_drawdown_window_days must be non-negative"
+            )
+        if self.hard_drawdown_pct < 0:
+            raise ValueError("hard_drawdown_pct must be non-negative")
+        if self.hard_drawdown_window_days < 0:
+            raise ValueError(
+                "hard_drawdown_window_days must be non-negative"
+            )
+        if self.fomo_drift_pct < 0:
+            raise ValueError("fomo_drift_pct must be non-negative")
+
+    @classmethod
+    def default_for_account(
+        cls,
+        *,
+        ibkr_account_id: str,
+        last_updated_at: datetime,
+    ) -> BehaviouralGuardrailSettings:
+        """Brainstorm-locked defaults, mirroring the migration server_default."""
+
+        return cls(
+            ibkr_account_id=ibkr_account_id,
+            daily_max_approvals=5,
+            cooldown_seconds=60,
+            anti_revenge_window_hours=72,
+            anti_revenge_loss_threshold_pct=Decimal("1.0"),
+            soft_drawdown_pct=Decimal("5.0"),
+            soft_drawdown_window_days=5,
+            hard_drawdown_pct=Decimal("10.0"),
+            hard_drawdown_window_days=20,
+            fomo_drift_pct=Decimal("1.5"),
+            last_updated_at=last_updated_at,
+        )
 
 
 class BootstrapInsufficientHistoryError(RuntimeError):
