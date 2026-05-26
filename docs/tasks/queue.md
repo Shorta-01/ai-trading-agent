@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-001** — Write reality docs for the `packages/domain` package. *Branch:* `task/T-001-reality-domain-package`.
+_None._
 
 ## Locked
 
