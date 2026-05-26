@@ -256,3 +256,30 @@ Reason for dismissal: documented per-fold boundary; the loop continues to the ne
 - `apps/api/src/portfolio_outlook_api/eodhd_client.py:148` — `urllib.request.urlopen(request, timeout=timeout_seconds)`. Bandit warns "Audit url open for permitted schemes."
 
 Reason for dismissal: the URL is constructed inside the EODHD client from configuration values (`base_url`, `endpoint`, query params from typed inputs), not from user-controllable input. No `file://` / custom-scheme attack surface — bandit cannot statically prove this, hence the audit-warning.
+
+## T-054 — pip-audit baseline (2026-05-26)
+
+**Tool:** `pip-audit 2.10.0`
+**Command:** `pip-audit --format=json -o /tmp/pip-audit-baseline.json` (after `pip install -e ./packages/{domain,storage,portfolio} -e ./apps/{worker,api}` into a Python 3.12 venv)
+**Findings:** 5 known vulnerabilities in 2 packages (1 fastapi MAL + 4 pip CVEs).
+**Triage:** 1 → `FIND-PIPAUDIT-001` in `docs/code-health/04-bugs.md` (`fastapi==0.136.3` malicious release MAL-2026-4750). 4 → dismissed below (all in the build-time `pip` tool, not in the deployed application).
+**Raw outputs:** `/tmp/pip-audit-baseline.json` (JSON), `/tmp/pip-audit-baseline.txt` (text).
+
+Five `Skip Reason` entries on the project's own packages (`ai-trading-agent-storage`, `portfolio-outlook-api`, `portfolio-outlook-domain`, `portfolio-outlook-portfolio`, `portfolio-outlook-worker`) are not vulnerabilities — they are pip-audit's "Dependency not found on PyPI and could not be audited" messages for local editable installs. Skipped as not-applicable.
+
+### Dismissed: `pip` CVEs (×4) — build-time tool, not deployed
+
+Pattern: the four `pip` CVEs in `pip==24.0` are all vulnerabilities in the **package installer tool itself**, not in any application dependency. `pip` is not declared in any of the project's `pyproject.toml` files (it is whatever the venv / OS provides). CI uses GitHub's `actions/setup-python@v5` which provides its own pip; production deployments don't bundle pip. The application code never imports or invokes pip programmatically.
+
+- `pip==24.0` `CVE-2025-8869` (alias `GHSA-4xh5-x5gv-qwph`) — *"When extracting a tar archive pip may not check symbolic links point into the extraction directory if the tarfile module doesn't implement PEP 706."* Fixed in pip 25.3.
+- `pip==24.0` `CVE-2026-1703` (alias `GHSA-6vgw-5pg2-w6jp`) — *"When pip is installing and extracting a maliciously crafted wheel archive, files may be extracted outside the installation directory."* Fixed in pip 26.0.
+- `pip==24.0` `CVE-2026-3219` (alias `GHSA-58qw-9mgm-455v`) — *"pip handles concatenated tar and ZIP files as ZIP files regardless of filename."* Fixed in pip 26.1.
+- `pip==24.0` `CVE-2026-6357` (alias `GHSA-jp4c-xjxw-mgf9`) — *"pip prior to version 26.1 would run self-update check functionality after installing wheel files which required importing well-known Python modules names."* Fixed in pip 26.1.
+
+Reason for dismissal: **build-time tool, not deployed.** The project does not declare `pip` as a dependency. Mitigation is a developer-/CI-side `pip install --upgrade pip` outside the scope of any source change. None of the four vulnerabilities can be exploited against the running application — they only apply when pip itself is processing a malicious archive at install time.
+
+Phase 4 / Phase 5 consideration: the CI workflow could pin a known-good pip via `actions/setup-python` cache or `pip install --upgrade pip` step. Out of scope for T-054 (`pyproject.toml` modification is explicitly out of scope per the task spec).
+
+### Not applicable: local editable installs (×5)
+
+pip-audit emits "Dependency not found on PyPI and could not be audited" for each of the five project packages (`ai-trading-agent-storage 0.1.0`, `portfolio-outlook-api 0.1.0`, `portfolio-outlook-domain 0.1.0`, `portfolio-outlook-portfolio 0.1.0`, `portfolio-outlook-worker 0.1.0`). These are local-only packages installed via `pip install -e .` — they have no PyPI release and no advisory database coverage. Not vulnerabilities; recorded here so the baseline accounting is complete.
