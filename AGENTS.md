@@ -1,6 +1,6 @@
 # Development Guardrails
 
-> **Top-level doctrine:** `docs/decisions/0002-trading-system-doctrine.md` (locked, 2026-05-26).
+> **Top-level doctrine:** `docs/intent/_trading-system-doctrine.md` (locked 2026-05-26; adoption record: `docs/decisions/0002-trading-system-doctrine.md`).
 > Where this file conflicts with the doctrine, the doctrine wins.
 
 ## Product safety boundaries

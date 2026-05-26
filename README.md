@@ -1,6 +1,6 @@
 # AI Trading Agent
 
-> **Top-level doctrine:** `docs/decisions/0002-trading-system-doctrine.md` (locked, 2026-05-26).
+> **Top-level doctrine:** `docs/intent/_trading-system-doctrine.md` (locked 2026-05-26; adoption record: `docs/decisions/0002-trading-system-doctrine.md`).
 > Deze README is samenvattend; bij conflict wint de doctrine.
 
 ## Doel van het project
@@ -65,14 +65,15 @@ cd infra/docker
 docker compose up --build
 ```
 
-## Geen automatische orderplaatsing
-De applicatie plaatst nooit een order zonder expliciete user-goedkeuring. De twee-grids-twee-goedkeuringen-flow (doctrine §4) is verplicht; het systeem heeft geen auto-submit pad.
-
 ## Product-governance documentatie
 - Version 1 scope register: `docs/product/version-1-scope-register.md`
 
 ## Eenvoudige Nederlandse UI-principe
 Alle hoofdschermen, labels, waarschuwingen en acties moeten begrijpelijk zijn voor niet-experts. Elke veldwaarde krijgt eenvoudige Nederlandse helptekst/tooltip.
+
+## Historische projectgeschiedenis (vóór doctrine 2026-05-26)
+
+> De onderstaande paragrafen documenteren eerdere project-iteraties, waaronder een paper-only foundation-fase. Deze beschrijven historische beslissingen en code-toestanden die door de huidige doctrine (`docs/intent/_trading-system-doctrine.md`, vastgelegd 2026-05-26) zijn vervangen. Inhoudelijke regels in dit historische gedeelte zijn niet meer bindend — raadpleeg de doctrine voor de actuele werking.
 
 - Nieuw in de paper-only foundation: contracten en berekeningshelpers voor **Mijn termijnrekeningen**.
 
