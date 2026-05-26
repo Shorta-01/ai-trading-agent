@@ -62,6 +62,10 @@ jobs:
       - run: cd ../../packages/domain && pip install -e .
       - run: cd ../../packages/storage && pip install -e .
       - run: cd ../../packages/portfolio && pip install -e .
+      # Task 133: the api consumes the worker's pure-function Action
+      # Draft composer (no network/IO). Pre-install editable so pip
+      # sees the local package and skips a PyPI lookup that would 404.
+      - run: cd ../../apps/worker && pip install -e .
       - run: pip install -e .[dev]
       - run: ruff check .
       - run: mypy src

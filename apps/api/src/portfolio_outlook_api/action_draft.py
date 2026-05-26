@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import Literal, NoReturn
 
 from ai_trading_agent_storage import (
     ActionDraftEntry,
@@ -231,8 +231,9 @@ def _storage_provider() -> StorageConnectionProvider:
     storage = settings.storage
     if not storage.enabled or not storage.database_url:
         _raise_storage_unavailable()
+    assert storage.database_url is not None  # _raise_storage_unavailable raises above
     return StorageConnectionProvider(
-        build_database_connection_settings(storage.database_url)  # type: ignore[arg-type]
+        build_database_connection_settings(storage.database_url)
     )
 
 
@@ -532,7 +533,7 @@ def _load_fx_rate(
     *,
     ibkr_repo: SqlAlchemyIbkrSyncSnapshotRepository,
     currency_local: str,
-):
+) -> NoReturn:
     """Resolve FX rate (local → EUR) from the latest fx-rate snapshot.
 
     The actual FX repository is module-scoped elsewhere; for V1 the
