@@ -91,7 +91,7 @@ implementation choices for the module group.
 **Stubs (1 file)**
 25. `stub-packages.md` — the six README-only packages `packages/{ai,analytics,audit,data_providers,risk,tax}` (currently containing no source code).
 
-#### `docs/reality/functionality/` (14 files)
+#### `docs/reality/functionality/` (19 files)
 
 One file per major end-to-end functionality. Each file walks the
 behaviour from trigger → modules touched → side effects → outputs,
@@ -100,7 +100,7 @@ citing concrete code references.
 1. `morning-chain-orchestration.md` — Worker `orchestrator.py` + `morning_chain` API.
 2. `cold-start-seeding-and-watchlist-confirmation.md` — `starter_watchlist` + `watchlist_confirmation_routes`.
 3. `ibkr-readonly-sync-positions-cash.md` — TWS connection + position/cash/open-orders/executions sync.
-4. `market-data-eod-and-fx-snapshots.md` — EODHD fetch + FX + provider audit.
+4. `market-data-pipeline.md` — research data (EODHD EOD + intraday + fundamentals + earnings calendar) and execution data (IBKR live quotes for order ticket construction), including how the two interact and freshness detection.
 5. `forecast-generation-and-labelling.md` — Historical bootstrap + label translator + per-asset universe.
 6. `forecast-calibration-and-prediction-diary.md` — 06:00 calibration + per-predictor outcomes + diary.
 7. `decision-package-composition.md` — Gate evaluation + Dutch explanation + hash chain.
@@ -111,6 +111,11 @@ citing concrete code references.
 12. `belgian-tax-computation.md` — `portfolio.belgian_tax` + frontend display.
 13. `ai-explanation-and-budget.md` — Anthropic Claude explanation provider + monthly budget cap.
 14. `predictor-backtest-and-leaderboard.md` — `predictor_backtester` + auto-weight ensemble + `/predictor/leaderboard`.
+15. `hourly-decision-refresh.md` (T-011b) — Lighter hourly run that keeps the action list current between 07:00 evaluations.
+16. `dashboard-composition.md` (T-011c) — The dashboard contract as a whole: portfolio area, watchlist area, actions area (suggested + Open orders grids), system-health line, mode badge.
+17. `data-maturation-and-confidence-buildup.md` (T-012b) — How suggestions evolve from day 1 (low data, low confidence) to mature operation; gap entry if no explicit maturation logic exists.
+18. `prediction-track-record-screen.md` (T-016b) — Screen spec for filters by predictor / asset / window, aggregate views, drill-downs; current implementation status.
+19. `performance-review.md` (T-021b) — Screen spec for time-weighted return vs benchmark, drawdown, volatility / risk-budget usage, exposure breakdown, portfolio chart, weekly/monthly views; current implementation status.
 
 #### `docs/reality/workflows/` (11 files)
 
@@ -134,14 +139,14 @@ One file per workflow, `user-` prefix for interactive flows,
 
 ### Phase 1 task index
 
-Total: **60 tasks** (T-001 … T-060). All start at `status: locked`;
-the standing prompt picks them up in numbered order respecting the
-declared dependencies.
+Total: **66 tasks** (T-001 … T-060 plus the six 2026-05-26 functional-review additions: T-061 and T-011b / T-011c / T-012b / T-016b / T-021b). All start at `status: locked`; the standing prompt picks them up in numbered order respecting the declared dependencies.
 
 | Range | Track | Tasks | Outputs |
 |-------|-------|-------|---------|
 | T-001 … T-010 | 1a — Reality components | 10 | 25 files in `docs/reality/components/` |
+| T-061 | 1a — Reality components (functional-review addition) | 1 | 1 file in `docs/reality/components/` (settings + credentials infrastructure) |
 | T-011 … T-024 | 1a — Reality functionality | 14 | 14 files in `docs/reality/functionality/` |
+| T-011b, T-011c, T-012b, T-016b, T-021b | 1a — Reality functionality (functional-review additions) | 5 | 5 files in `docs/reality/functionality/` (`hourly-decision-refresh.md`, `dashboard-composition.md`, `data-maturation-and-confidence-buildup.md`, `prediction-track-record-screen.md`, `performance-review.md`) |
 | T-025 … T-035 | 1a — Reality workflows | 11 | 11 files in `docs/reality/workflows/` |
 | T-036 … T-043 | 1b — Architecture review | 8 | 8 files in `docs/architecture-review/` (00-summary written last) |
 | T-044 … T-049 | 1c — Gap analysis | 6 | 6 files in `docs/gap-analysis/` (00-summary written last) |

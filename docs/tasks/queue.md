@@ -70,7 +70,7 @@ first).
 - **T-011** — Write `morning-chain-orchestration.md`. *dep:* T-007.
 - **T-012** — Write `cold-start-seeding-and-watchlist-confirmation.md`. *dep:* T-005, T-007.
 - **T-013** — Write `ibkr-readonly-sync-positions-cash.md`. *dep:* T-004, T-007.
-- **T-014** — Write `market-data-eod-and-fx-snapshots.md`. *dep:* T-003, T-005, T-007.
+- **T-014** — Write `market-data-pipeline.md`. *dep:* T-003, T-005, T-007. Covers both research data (EODHD EOD + intraday + fundamentals + earnings calendar) and execution data (IBKR live quotes for order ticket construction), how the two interact, freshness detection.
 - **T-015** — Write `forecast-generation-and-labelling.md`. *dep:* T-002, T-007.
 - **T-016** — Write `forecast-calibration-and-prediction-diary.md`. *dep:* T-002, T-005, T-007.
 - **T-017** — Write `decision-package-composition.md`. *dep:* T-002, T-007.
@@ -170,6 +170,17 @@ Consolidation (T-059) depends on all per-tool baselines. Batching
   *dep:* T-050 … T-058. *Working file:* `docs/tasks/T-059-codehealth-findings-consolidation.md`.
 - **T-060** — Produce batching proposal in `docs/code-health/05-fix-batches.md`.  
   *dep:* T-059. *Working file:* `docs/tasks/T-060-codehealth-batching-proposal.md`.
+
+### Functional-review additions (carry-forward of 2026-05-26 T-011…T-024 review)
+
+Six tasks added 2026-05-26 to cover gaps surfaced during the functional review. All share the defaults at the top of this section.
+
+- **T-061** — Write reality doc for settings and credentials management infrastructure. *dep:* —. *Working file:* `docs/tasks/T-061-reality-settings-and-credentials.md`. Scope: document the existing settings/secrets infrastructure across `packages/domain/.../settings.py`, `claude_ai_budget.py`, `paper_setup.py`, and any `.env` handling. Map to intent in `docs/intent/settings-and-credentials.md`. Produces 1 file under `docs/reality/components/` (location chosen during the task).
+- **T-011b** — Write reality doc for `hourly-decision-refresh.md`. *dep:* T-007. Documents the lighter hourly run that keeps the action list current between 07:00 evaluations. Produces 1 file in `docs/reality/functionality/`.
+- **T-011c** — Write reality doc for `dashboard-composition.md`. *dep:* T-008. Documents what the dashboard assembles (portfolio area, watchlist area, actions area, system-health line, mode badge) — the dashboard contract as a whole, distinct from the frontend component reality (T-008). Produces 1 file in `docs/reality/functionality/`.
+- **T-012b** — Write reality doc for `data-maturation-and-confidence-buildup.md`. *dep:* T-005, T-007. Documents (or explicitly notes as gap) how the system's suggestions evolve from day 1 (low data, low confidence) to mature operation. If no explicit maturation logic exists, the file says so and the finding becomes a Phase 1c gap entry. Produces 1 file in `docs/reality/functionality/`.
+- **T-016b** — Write reality doc for `prediction-track-record-screen.md`. *dep:* T-008, T-016. Documents the screen specification (filters by predictor / asset / window, aggregate views, drill-downs) and current implementation status. Produces 1 file in `docs/reality/functionality/`.
+- **T-021b** — Write reality doc for `performance-review.md`. *dep:* T-008, T-021. Documents the performance review screen spec (time-weighted return vs benchmark, drawdown, volatility / risk-budget usage, exposure breakdown, portfolio chart, weekly/monthly views) and current implementation status. Produces 1 file in `docs/reality/functionality/`.
 
 ## Blocked
 

@@ -17,3 +17,15 @@ Conventions:
 |----|------|-------|--------|-------|------------|---------------|-------|
 | 0001 | 2026-05-26 | P1 | accepted | [Run four-track Phase 1 audit before any code changes](0001-phase-1-charter.md) | — | — | T-001 … T-060 |
 | 0002 | 2026-05-26 | — | locked | [Trading System Doctrine](0002-trading-system-doctrine.md) | paper-only language in `README.md` and `AGENTS.md` | — | — |
+| 0003 | 2026-05-26 | P1 | accepted | [Adopt the forecast engine architecture](0003-forecast-engine-architecture.md) | — | — | T-015, T-016, T-024, T-046 |
+| 0004 | 2026-05-26 | P1 | accepted | [Adopt the settings and credentials structure](0004-settings-and-credentials-structure.md) | — | — | T-061, T-029, T-018, T-022, T-023 |
+| 0005 | 2026-05-26 | P1 | accepted | [Adopt the data-sources doctrine](0005-data-sources-doctrine.md) | — | — | T-014, T-061 |
+| 0006 | 2026-05-26 | P1 | accepted | [Adopt the prediction-diary and calibration lifecycle](0006-prediction-diary-and-calibration.md) | — | — | T-016, T-024 |
+| 0007 | 2026-05-26 | P1 | accepted | [Adopt the decision-package architecture](0007-decision-package-architecture.md) | — | — | T-017, T-030, T-011, T-011b |
+| 0008 | 2026-05-26 | P1 | accepted | [Adopt the action-draft architecture](0008-action-draft-architecture.md) | — | — | T-018, T-026, T-008 |
+| 0009 | 2026-05-26 | P1 | accepted | [Adopt the order-lifecycle architecture](0009-order-lifecycle-architecture.md) | — | — | T-019, T-027, T-020 |
+| 0010 | 2026-05-26 | P1 | accepted | [Adopt the reconciliation architecture](0010-reconciliation-architecture.md) | — | — | T-020, T-028, T-011 |
+| 0011 | 2026-05-26 | P1 | accepted | [Adopt the portfolio-valuation architecture](0011-portfolio-valuation-architecture.md) | — | — | T-021, T-021b, T-022 |
+| 0012 | 2026-05-26 | P1 | accepted | [Adopt the Belgian-tax architecture](0012-belgian-tax-architecture.md) | — | — | T-022, T-021 |
+| 0013 | 2026-05-26 | P1 | accepted | [Adopt the AI-usage architecture](0013-ai-usage-architecture.md) | doctrine §13 phrasing prior to 2026-05-26 | — | T-023, T-015, T-008 |
+| 0014 | 2026-05-26 | P1 | accepted | [Adopt the predictor-lifecycle architecture](0014-predictor-lifecycle.md) | — | — | T-024, T-016b |
