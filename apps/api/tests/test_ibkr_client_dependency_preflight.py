@@ -138,9 +138,19 @@ def test_production_runtime_source_only_allows_ibapi_in_facade() -> None:
 
 
 def test_production_runtime_source_only_allows_ib_insync_in_worker_gateway() -> None:
-    """Task 126 — ``ib_insync`` import lives only in the worker's
-    isolated gateway module. Every other production file must stay
-    free of the SDK."""
+    """Task 126 + Task 134a — ``ib_insync`` imports live only in the
+    worker's two intentional integration points:
+
+    * ``ibkr_gateway.py`` (Task 126): the long-lived TWS session +
+      account-mode detection.
+    * ``ibkr_submission/order_builder.py`` (Task 134a): the locked
+      Decimal → float boundary that builds the ``Contract`` + ``Order``
+      pair for ``placeOrder()``. The import is lazy (inside the
+      function body), but the source-scan looks for the text so the
+      allowlist must include it.
+
+    Every other production file must stay free of the SDK.
+    """
 
     disallowed_tokens = ("from ib_insync", "import ib_insync")
     allowed_files = {
@@ -151,6 +161,15 @@ def test_production_runtime_source_only_allows_ib_insync_in_worker_gateway() -> 
             / "src"
             / "portfolio_outlook_worker"
             / "ibkr_gateway.py"
+        ).resolve(),
+        (
+            REPO_ROOT
+            / "apps"
+            / "worker"
+            / "src"
+            / "portfolio_outlook_worker"
+            / "ibkr_submission"
+            / "order_builder.py"
         ).resolve(),
     }
 
