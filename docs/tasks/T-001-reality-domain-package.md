@@ -2,7 +2,7 @@
 id: T-001
 title: Write reality docs for the `packages/domain` package
 phase: P1
-status: locked
+status: in-progress
 source: brainstorm
 owner: claude
 created: 2026-05-26
@@ -10,6 +10,18 @@ intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
 pr_url:
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the touch scope is creation of four new docs under `docs/reality/components/`; none exist yet, so there are no files to read in the *target* path. The *source* files to read (`packages/domain/src/portfolio_outlook_domain/*.py` plus their tests) are inventoried below — 35 source modules organised into four groups per the locked file plan.
+- **Step 2 (one-line per touched file):** the four target files do not exist; each will hold a reality doc for one module group:
+  - `domain-primitives-and-money.md` — covers primitives, costs, lots, identifiers, enums, instruments, term_deposits.
+  - `domain-portfolio-and-policy.md` — covers portfolio, paper_setup, investment_policy, eligibility, approvals, capabilities, settings, market_calendar, market_data_foundation, audit.
+  - `domain-research-and-suggestions.md` — covers suggestion_engine, suggestions, research, research_library, research_suggestions, quantitative_research, data_quality, data_sources, sources.
+  - `domain-runtime-and-integration.md` — covers runtime, scheduler, storage, broker_adapter, broker_reconciliation, ibkr, orders, execution, ledger.
+- **Step 3 (one-line change):** write four cited reality docs describing what the existing `packages/domain` modules actually export, what invariants they encode, and what depends on what.
+- **Step 4 (criteria measurable):** yes — the six acceptance criteria are observable (file existence, `wc -l` count, grep for `path:NNN` cites, grep for the required sections, `git diff` scope check).
+- **Step 5 (out-of-scope does not block goal):** confirmed. The out-of-scope list (no code fixes, no Phase 1b verdicts, no Phase 1c gaps, no Phase 1d findings, no test edits) is descriptive of what reality docs are *not* — none of those items is a prerequisite for the four docs themselves.
 
 ## Goal
 
