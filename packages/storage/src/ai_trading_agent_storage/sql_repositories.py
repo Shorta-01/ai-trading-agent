@@ -16,6 +16,10 @@ from ai_trading_agent_storage.metadata import (
     ibkr_executions,
     ibkr_submission_audit,
     ibkr_submission_lifecycle,
+    manual_review_queue,
+    reconciliation_audit,
+    reconciliation_run_audit,
+    unmatched_execution_audit,
     asset_identifier_aliases,
     asset_listings,
     asset_master_records,
@@ -103,6 +107,10 @@ from ai_trading_agent_storage.repository_contracts import (
     IbkrExecutionEntry,
     IbkrSubmissionAuditEntry,
     IbkrSubmissionLifecycleEntry,
+    ManualReviewQueueEntry,
+    ReconciliationAuditEntry,
+    ReconciliationRunAuditEntry,
+    UnmatchedExecutionAuditEntry,
     AssetActionDraftEventRecord,
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
@@ -4804,6 +4812,9 @@ _ACTION_DRAFT_TERMINAL_STATUSES = frozenset(
         "cancelled",
         "rejected",
         "awaiting_reply_timeout",
+        # Task 135 escalation terminal — written by Pass C when an
+        # awaiting_reply_timeout draft has had no IBKR data for >24h.
+        "requires_manual_review",
     }
 )
 _ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
@@ -4833,10 +4844,27 @@ _ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
             "cancelled",
             "pending_cancellation",
             "awaiting_reply_timeout",
+            # Task 135 reconciliation heals: the IBKR fill or terminal
+            # callback may have arrived in the gap between submit and
+            # the worker's next callback poll; allow the heal to skip
+            # the intermediate ``accepted``/``working`` states rather
+            # than fabricate callback rows that never happened.
+            "working",
+            "filled",
+            "partially_filled",
         }
     ),
     "accepted": frozenset(
-        {"working", "cancelled", "rejected", "pending_cancellation"}
+        {
+            "working",
+            "cancelled",
+            "rejected",
+            "pending_cancellation",
+            # Task 135 reconciliation heals — same rationale as
+            # ``submitted`` above.
+            "filled",
+            "partially_filled",
+        }
     ),
     "working": frozenset(
         {
@@ -4863,7 +4891,23 @@ _ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
     "filled": frozenset(),
     "cancelled": frozenset(),
     "rejected": frozenset(),
-    "awaiting_reply_timeout": frozenset(),
+    # Task 135: ``awaiting_reply_timeout`` was terminal in Task 134,
+    # but the reconciler can now heal it once IBKR-side evidence
+    # arrives, or escalate it to ``requires_manual_review`` after the
+    # 24h cut-off.
+    "awaiting_reply_timeout": frozenset(
+        {
+            "filled",
+            "partially_filled",
+            "cancelled",
+            "rejected",
+            "requires_manual_review",
+        }
+    ),
+    # Task 135 escalation terminal — Pass C writes here when an
+    # awaiting_reply_timeout sits without IBKR data for >24h. The
+    # user resolves the queue row to close the loop.
+    "requires_manual_review": frozenset(),
 }
 
 
@@ -5681,6 +5725,29 @@ class SqlAlchemyIbkrSubmissionAuditRepository(_Base):
         )
         return tuple(_ibkr_submission_audit_from_row(r) for r in rows)
 
+    def get_action_draft_id_for_perm_id(
+        self, ibkr_perm_id: int
+    ) -> str | None:
+        """Task 135 Pass A — reverse-lookup the draft that placed a
+        perm_id. Returns the most recent submission's draft when
+        multiple audit rows exist (which only happens on retries with
+        the same perm_id, which IBKR doesn't issue)."""
+
+        row = (
+            self._connection.execute(
+                select(
+                    ibkr_submission_audit.c.action_draft_id
+                ).where(
+                    ibkr_submission_audit.c.ibkr_perm_id
+                    == ibkr_perm_id
+                )
+                .order_by(ibkr_submission_audit.c.submitted_at.desc())
+                .limit(1)
+            )
+            .first()
+        )
+        return None if row is None else str(row[0])
+
 
 class SqlAlchemyIbkrSubmissionLifecycleRepository(_Base):
     """Task 134: append-only ``ibkr_submission_lifecycle`` repository."""
@@ -6024,3 +6091,527 @@ def _ibkr_audit_bounded_limit(limit: int, *, upper: int = 50) -> int:
     if limit > upper:
         return upper
     return limit
+
+
+# ---------------------------------------------------------------------------
+# Task 135 — reconciliation repositories.
+# ---------------------------------------------------------------------------
+
+
+class SqlAlchemyReconciliationAuditRepository(_Base):
+    """Task 135: append-only reconciler action log."""
+
+    def append(
+        self, entry: ReconciliationAuditEntry
+    ) -> ReconciliationAuditEntry:
+        result = self._connection.execute(
+            reconciliation_audit.insert()
+            .values(
+                reconciliation_run_id=entry.reconciliation_run_id,
+                action_draft_id=entry.action_draft_id,
+                event_at=entry.event_at,
+                pass_name=entry.pass_name,
+                divergence_type=entry.divergence_type,
+                before_status=entry.before_status,
+                after_status=entry.after_status,
+                ibkr_evidence_json=entry.ibkr_evidence_json,
+                notes_dutch=entry.notes_dutch,
+            )
+            .returning(reconciliation_audit.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return ReconciliationAuditEntry(
+            reconciliation_run_id=entry.reconciliation_run_id,
+            action_draft_id=entry.action_draft_id,
+            event_at=entry.event_at,
+            pass_name=entry.pass_name,
+            divergence_type=entry.divergence_type,
+            before_status=entry.before_status,
+            after_status=entry.after_status,
+            ibkr_evidence_json=entry.ibkr_evidence_json,
+            notes_dutch=entry.notes_dutch,
+            id=new_id,
+        )
+
+    def list_for_account(
+        self, *, account_id: str, limit: int = 50
+    ) -> tuple[ReconciliationAuditEntry, ...]:
+        # ``account_id`` doesn't live on the audit row directly — the
+        # join is via ``action_drafts.ibkr_account_id``. For V1 we
+        # filter at the action_drafts FK; rows with NULL draft id
+        # (unmatched executions) are included if their run touched the
+        # account.
+        rows = (
+            self._connection.execute(
+                select(reconciliation_audit)
+                .outerjoin(
+                    action_drafts,
+                    action_drafts.c.action_draft_id
+                    == reconciliation_audit.c.action_draft_id,
+                )
+                .where(
+                    (action_drafts.c.ibkr_account_id == account_id)
+                    | (reconciliation_audit.c.action_draft_id.is_(None))
+                )
+                .order_by(reconciliation_audit.c.event_at.desc())
+                .limit(_ibkr_audit_bounded_limit(limit, upper=200))
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _reconciliation_audit_from_row(row) for row in rows
+        )
+
+    def list_for_run(
+        self, reconciliation_run_id: str
+    ) -> tuple[ReconciliationAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(reconciliation_audit)
+                .where(
+                    reconciliation_audit.c.reconciliation_run_id
+                    == reconciliation_run_id
+                )
+                .order_by(reconciliation_audit.c.event_at)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _reconciliation_audit_from_row(row) for row in rows
+        )
+
+    def list_for_draft(
+        self, action_draft_id: str
+    ) -> tuple[ReconciliationAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(reconciliation_audit)
+                .where(
+                    reconciliation_audit.c.action_draft_id
+                    == action_draft_id
+                )
+                .order_by(reconciliation_audit.c.event_at)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _reconciliation_audit_from_row(row) for row in rows
+        )
+
+    def count_drafts_healed_since(
+        self, *, account_id: str, since: datetime
+    ) -> int:
+        """Healed drafts in the window — for the dashboard widget."""
+
+        rows = (
+            self._connection.execute(
+                select(reconciliation_audit.c.action_draft_id)
+                .outerjoin(
+                    action_drafts,
+                    action_drafts.c.action_draft_id
+                    == reconciliation_audit.c.action_draft_id,
+                )
+                .where(action_drafts.c.ibkr_account_id == account_id)
+                .where(reconciliation_audit.c.event_at >= since)
+                .where(
+                    reconciliation_audit.c.divergence_type.in_(
+                        (
+                            "missing_execution_applied",
+                            "status_corrected_to_filled",
+                            "status_corrected_to_cancelled",
+                            "status_corrected_to_rejected",
+                            "status_corrected_to_partially_filled",
+                            "timeout_recovered_to_terminal",
+                        )
+                    )
+                )
+                .distinct()
+            )
+            .all()
+        )
+        return len(rows)
+
+
+class SqlAlchemyUnmatchedExecutionAuditRepository(_Base):
+    """Task 135: append-only IBKR-side executions with no matching draft."""
+
+    def append(
+        self, entry: UnmatchedExecutionAuditEntry
+    ) -> UnmatchedExecutionAuditEntry:
+        result = self._connection.execute(
+            unmatched_execution_audit.insert()
+            .values(
+                event_at=entry.event_at,
+                ibkr_perm_id=entry.ibkr_perm_id,
+                ibkr_exec_id=entry.ibkr_exec_id,
+                account_id=entry.account_id,
+                conid=entry.conid,
+                side=entry.side,
+                fill_price_local=entry.fill_price_local,
+                fill_quantity=entry.fill_quantity,
+                fill_time=entry.fill_time,
+                raw_execution_json=entry.raw_execution_json,
+                resolution_status=entry.resolution_status,
+            )
+            .returning(unmatched_execution_audit.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return UnmatchedExecutionAuditEntry(
+            event_at=entry.event_at,
+            ibkr_perm_id=entry.ibkr_perm_id,
+            ibkr_exec_id=entry.ibkr_exec_id,
+            account_id=entry.account_id,
+            conid=entry.conid,
+            side=entry.side,
+            fill_price_local=entry.fill_price_local,
+            fill_quantity=entry.fill_quantity,
+            fill_time=entry.fill_time,
+            raw_execution_json=entry.raw_execution_json,
+            resolution_status=entry.resolution_status,
+            id=new_id,
+        )
+
+    def get_by_exec_id(
+        self, ibkr_exec_id: str
+    ) -> UnmatchedExecutionAuditEntry | None:
+        row = (
+            self._connection.execute(
+                select(unmatched_execution_audit).where(
+                    unmatched_execution_audit.c.ibkr_exec_id
+                    == ibkr_exec_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        return (
+            None if row is None
+            else _unmatched_execution_from_row(row)
+        )
+
+    def list_unresolved_for_account(
+        self, account_id: str
+    ) -> tuple[UnmatchedExecutionAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(unmatched_execution_audit)
+                .where(
+                    unmatched_execution_audit.c.account_id == account_id
+                )
+                .where(
+                    unmatched_execution_audit.c.resolution_status
+                    == "unresolved"
+                )
+                .order_by(unmatched_execution_audit.c.fill_time.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _unmatched_execution_from_row(row) for row in rows
+        )
+
+
+class SqlAlchemyManualReviewQueueRepository(_Base):
+    """Task 135: manual-review queue with pending → resolved transitions.
+
+    The transition is mutation-of-resolution_status only — the
+    underlying draft is never re-statused by an acknowledgement.
+    """
+
+    def append(
+        self, entry: ManualReviewQueueEntry
+    ) -> ManualReviewQueueEntry:
+        result = self._connection.execute(
+            manual_review_queue.insert()
+            .values(
+                flagged_at=entry.flagged_at,
+                action_draft_id=entry.action_draft_id,
+                reason=entry.reason,
+                details_dutch=entry.details_dutch,
+                resolution_status=entry.resolution_status,
+                resolved_at=entry.resolved_at,
+                resolution_note=entry.resolution_note,
+            )
+            .returning(manual_review_queue.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return ManualReviewQueueEntry(
+            flagged_at=entry.flagged_at,
+            action_draft_id=entry.action_draft_id,
+            reason=entry.reason,
+            details_dutch=entry.details_dutch,
+            resolution_status=entry.resolution_status,
+            resolved_at=entry.resolved_at,
+            resolution_note=entry.resolution_note,
+            id=new_id,
+        )
+
+    def get_by_id(
+        self, queue_id: int
+    ) -> ManualReviewQueueEntry | None:
+        row = (
+            self._connection.execute(
+                select(manual_review_queue).where(
+                    manual_review_queue.c.id == queue_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        return None if row is None else _manual_review_from_row(row)
+
+    def acknowledge(
+        self,
+        *,
+        queue_id: int,
+        resolved_at: datetime,
+        note: str | None = None,
+    ) -> ManualReviewQueueEntry:
+        existing = self.get_by_id(queue_id)
+        if existing is None:
+            raise LookupError(
+                f"manual_review_queue row {queue_id} niet gevonden."
+            )
+        # Idempotent: acknowledging an already-acknowledged row is a
+        # no-op rather than an error so the UI's double-click is safe.
+        if existing.resolution_status != "pending":
+            return existing
+        self._connection.execute(
+            manual_review_queue.update()
+            .where(manual_review_queue.c.id == queue_id)
+            .values(
+                resolution_status="acknowledged",
+                resolved_at=resolved_at,
+                resolution_note=note,
+            )
+        )
+        updated = self.get_by_id(queue_id)
+        assert updated is not None
+        return updated
+
+    def list_pending_for_account(
+        self, account_id: str
+    ) -> tuple[ManualReviewQueueEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(manual_review_queue)
+                .join(
+                    action_drafts,
+                    action_drafts.c.action_draft_id
+                    == manual_review_queue.c.action_draft_id,
+                )
+                .where(action_drafts.c.ibkr_account_id == account_id)
+                .where(
+                    manual_review_queue.c.resolution_status == "pending"
+                )
+                .order_by(manual_review_queue.c.flagged_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_manual_review_from_row(row) for row in rows)
+
+    def count_pending_for_account(self, account_id: str) -> int:
+        return len(self.list_pending_for_account(account_id))
+
+
+class SqlAlchemyReconciliationRunAuditRepository(_Base):
+    """Task 135: append + complete reconciler-tick records.
+
+    The ``complete_run`` method updates the ``completed_at`` + count
+    columns on an existing row — this is the only mutation allowed on
+    the table, and it only flips a NULL ``completed_at`` to a value.
+    """
+
+    def append(
+        self, entry: ReconciliationRunAuditEntry
+    ) -> ReconciliationRunAuditEntry:
+        result = self._connection.execute(
+            reconciliation_run_audit.insert()
+            .values(
+                reconciliation_run_id=entry.reconciliation_run_id,
+                started_at=entry.started_at,
+                completed_at=entry.completed_at,
+                account_id=entry.account_id,
+                pass_a_orphaned_count=entry.pass_a_orphaned_count,
+                pass_b_stale_count=entry.pass_b_stale_count,
+                pass_c_timeout_count=entry.pass_c_timeout_count,
+                divergences_found=entry.divergences_found,
+                mode_detected=entry.mode_detected,
+                error_details_json=entry.error_details_json,
+            )
+            .returning(reconciliation_run_audit.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return ReconciliationRunAuditEntry(
+            reconciliation_run_id=entry.reconciliation_run_id,
+            started_at=entry.started_at,
+            completed_at=entry.completed_at,
+            account_id=entry.account_id,
+            pass_a_orphaned_count=entry.pass_a_orphaned_count,
+            pass_b_stale_count=entry.pass_b_stale_count,
+            pass_c_timeout_count=entry.pass_c_timeout_count,
+            divergences_found=entry.divergences_found,
+            mode_detected=entry.mode_detected,
+            error_details_json=entry.error_details_json,
+            id=new_id,
+        )
+
+    def complete_run(
+        self,
+        *,
+        reconciliation_run_id: str,
+        completed_at: datetime,
+        pass_a_orphaned_count: int,
+        pass_b_stale_count: int,
+        pass_c_timeout_count: int,
+        divergences_found: int,
+        mode_detected: str,
+        error_details_json: dict[str, object] | None = None,
+    ) -> ReconciliationRunAuditEntry:
+        self._connection.execute(
+            reconciliation_run_audit.update()
+            .where(
+                reconciliation_run_audit.c.reconciliation_run_id
+                == reconciliation_run_id
+            )
+            .values(
+                completed_at=completed_at,
+                pass_a_orphaned_count=pass_a_orphaned_count,
+                pass_b_stale_count=pass_b_stale_count,
+                pass_c_timeout_count=pass_c_timeout_count,
+                divergences_found=divergences_found,
+                mode_detected=mode_detected,
+                error_details_json=error_details_json,
+            )
+        )
+        row = (
+            self._connection.execute(
+                select(reconciliation_run_audit).where(
+                    reconciliation_run_audit.c.reconciliation_run_id
+                    == reconciliation_run_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            raise LookupError(
+                f"reconciliation_run {reconciliation_run_id!r} not found."
+            )
+        return _reconciliation_run_audit_from_row(row)
+
+    def get_latest_for_account(
+        self, account_id: str
+    ) -> ReconciliationRunAuditEntry | None:
+        row = (
+            self._connection.execute(
+                select(reconciliation_run_audit)
+                .where(reconciliation_run_audit.c.account_id == account_id)
+                .order_by(reconciliation_run_audit.c.started_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        return (
+            None
+            if row is None
+            else _reconciliation_run_audit_from_row(row)
+        )
+
+    def list_for_account(
+        self, *, account_id: str, limit: int = 50
+    ) -> tuple[ReconciliationRunAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(reconciliation_run_audit)
+                .where(reconciliation_run_audit.c.account_id == account_id)
+                .order_by(reconciliation_run_audit.c.started_at.desc())
+                .limit(_ibkr_audit_bounded_limit(limit, upper=200))
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            _reconciliation_run_audit_from_row(row) for row in rows
+        )
+
+
+def _reconciliation_audit_from_row(row: Any) -> ReconciliationAuditEntry:
+    return ReconciliationAuditEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        reconciliation_run_id=row["reconciliation_run_id"],
+        action_draft_id=row["action_draft_id"],
+        event_at=row["event_at"],
+        pass_name=row["pass_name"],
+        divergence_type=row["divergence_type"],
+        before_status=row["before_status"],
+        after_status=row["after_status"],
+        ibkr_evidence_json=dict(row["ibkr_evidence_json"] or {}),
+        notes_dutch=row["notes_dutch"],
+    )
+
+
+def _unmatched_execution_from_row(row: Any) -> UnmatchedExecutionAuditEntry:
+    return UnmatchedExecutionAuditEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        event_at=row["event_at"],
+        ibkr_perm_id=int(row["ibkr_perm_id"]),
+        ibkr_exec_id=row["ibkr_exec_id"],
+        account_id=row["account_id"],
+        conid=row["conid"],
+        side=row["side"],
+        fill_price_local=(
+            _to_decimal(row["fill_price_local"]) or Decimal("0")
+        ),
+        fill_quantity=(
+            _to_decimal(row["fill_quantity"]) or Decimal("0")
+        ),
+        fill_time=row["fill_time"],
+        raw_execution_json=dict(row["raw_execution_json"] or {}),
+        resolution_status=row["resolution_status"],
+    )
+
+
+def _manual_review_from_row(row: Any) -> ManualReviewQueueEntry:
+    return ManualReviewQueueEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        flagged_at=row["flagged_at"],
+        action_draft_id=row["action_draft_id"],
+        reason=row["reason"],
+        details_dutch=row["details_dutch"],
+        resolution_status=row["resolution_status"],
+        resolved_at=row["resolved_at"],
+        resolution_note=row["resolution_note"],
+    )
+
+
+def _reconciliation_run_audit_from_row(
+    row: Any,
+) -> ReconciliationRunAuditEntry:
+    return ReconciliationRunAuditEntry(
+        id=int(row["id"]) if row["id"] is not None else None,
+        reconciliation_run_id=row["reconciliation_run_id"],
+        started_at=row["started_at"],
+        completed_at=row["completed_at"],
+        account_id=row["account_id"],
+        pass_a_orphaned_count=int(row["pass_a_orphaned_count"]),
+        pass_b_stale_count=int(row["pass_b_stale_count"]),
+        pass_c_timeout_count=int(row["pass_c_timeout_count"]),
+        divergences_found=int(row["divergences_found"]),
+        mode_detected=row["mode_detected"],
+        error_details_json=(
+            dict(row["error_details_json"])
+            if row["error_details_json"] is not None
+            else None
+        ),
+    )

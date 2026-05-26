@@ -3729,6 +3729,9 @@ _LOCKED_ACTION_DRAFT_STATUSES = frozenset(
         "rejected",
         "pending_cancellation",
         "awaiting_reply_timeout",
+        # Task 135: reconciler escalation path for timeouts older than 24h
+        # or terminal-state divergence that needs user attention.
+        "requires_manual_review",
     }
 )
 _LOCKED_ACTION_DRAFT_EVENT_TYPES = frozenset(
@@ -3936,6 +3939,9 @@ _LOCKED_ACTION_DRAFT_STATUSES_WITH_LIFECYCLE = frozenset(
         "rejected",
         "pending_cancellation",
         "awaiting_reply_timeout",
+        # Task 135: reconciler escalation path for timeouts older than 24h
+        # or terminal-state divergence that needs user attention.
+        "requires_manual_review",
     }
 )
 _LOCKED_IBKR_EXECUTION_SIDES = frozenset({"BUY", "SELL"})
@@ -4144,6 +4150,203 @@ class BehaviouralGuardrailSettings:
             fomo_drift_pct=Decimal("1.5"),
             last_updated_at=last_updated_at,
         )
+
+
+# Task 135 — Reconciliation locked vocabularies.
+_LOCKED_RECONCILIATION_PASS_NAMES = frozenset(
+    {"orphaned_execution", "stale_in_flight", "timeout_recovery"}
+)
+_LOCKED_RECONCILIATION_DIVERGENCE_TYPES = frozenset(
+    {
+        "missing_execution_applied",
+        "status_corrected_to_filled",
+        "status_corrected_to_cancelled",
+        "status_corrected_to_rejected",
+        "status_corrected_to_partially_filled",
+        "timeout_recovered_to_terminal",
+        "timeout_flagged_manual_review",
+        "unmatched_execution",
+        "terminal_state_divergence_logged",
+    }
+)
+_LOCKED_UNMATCHED_EXECUTION_RESOLUTIONS = frozenset(
+    {"unresolved", "manually_matched", "ignored"}
+)
+_LOCKED_MANUAL_REVIEW_REASONS = frozenset(
+    {
+        "timeout_24h_no_data",
+        "terminal_state_divergence",
+        "unmatched_execution_no_draft",
+    }
+)
+_LOCKED_MANUAL_REVIEW_RESOLUTIONS = frozenset(
+    {"pending", "resolved", "acknowledged"}
+)
+_LOCKED_RECONCILIATION_RUN_MODES = frozenset(
+    {"completed", "skipped_locked", "skipped_disconnected", "error"}
+)
+
+
+@dataclass(frozen=True)
+class ReconciliationAuditEntry:
+    """One row in ``reconciliation_audit`` — Task 135 product lock §6.
+
+    Written by the reconciler whenever a pass detects a divergence and
+    applies (or logs) a heal. Append-only; the ``ibkr_evidence_json``
+    field captures the raw IBKR response that justified the action so
+    every audit row is independently verifiable.
+    """
+
+    reconciliation_run_id: str
+    action_draft_id: str | None
+    event_at: datetime
+    pass_name: str
+    divergence_type: str
+    before_status: str | None
+    after_status: str | None
+    ibkr_evidence_json: dict[str, object]
+    notes_dutch: str | None
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(
+            self.reconciliation_run_id, "reconciliation_run_id"
+        )
+        if self.pass_name not in _LOCKED_RECONCILIATION_PASS_NAMES:
+            raise ValueError(
+                f"pass_name {self.pass_name!r} not in "
+                f"{sorted(_LOCKED_RECONCILIATION_PASS_NAMES)}"
+            )
+        if (
+            self.divergence_type
+            not in _LOCKED_RECONCILIATION_DIVERGENCE_TYPES
+        ):
+            raise ValueError(
+                f"divergence_type {self.divergence_type!r} not in "
+                f"{sorted(_LOCKED_RECONCILIATION_DIVERGENCE_TYPES)}"
+            )
+
+
+@dataclass(frozen=True)
+class UnmatchedExecutionAuditEntry:
+    """One row in ``unmatched_execution_audit`` — Task 135 lock §3 Pass A.
+
+    Written when the reconciler finds an IBKR execution whose
+    ``ibkr_perm_id`` doesn't match any draft in the system (typically
+    a user-placed-in-TWS order during the worker's offline window).
+    UNIQUE on ``ibkr_exec_id`` so duplicate detections are idempotent.
+    """
+
+    event_at: datetime
+    ibkr_perm_id: int
+    ibkr_exec_id: str
+    account_id: str
+    conid: str
+    side: str
+    fill_price_local: Decimal
+    fill_quantity: Decimal
+    fill_time: datetime
+    raw_execution_json: dict[str, object]
+    resolution_status: str = "unresolved"
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.ibkr_exec_id, "ibkr_exec_id")
+        _require_non_empty(self.account_id, "account_id")
+        _require_non_empty(self.conid, "conid")
+        if self.side not in {"BUY", "SELL"}:
+            raise ValueError(
+                f"side {self.side!r} must be BUY or SELL"
+            )
+        if self.fill_price_local <= 0:
+            raise ValueError("fill_price_local must be positive")
+        if self.fill_quantity <= 0:
+            raise ValueError("fill_quantity must be positive")
+        if (
+            self.resolution_status
+            not in _LOCKED_UNMATCHED_EXECUTION_RESOLUTIONS
+        ):
+            raise ValueError(
+                f"resolution_status {self.resolution_status!r} not in "
+                f"{sorted(_LOCKED_UNMATCHED_EXECUTION_RESOLUTIONS)}"
+            )
+
+
+@dataclass(frozen=True)
+class ManualReviewQueueEntry:
+    """One row in ``manual_review_queue`` — Task 135 product lock §3 Pass C.
+
+    Flagged when the reconciler can't heal a divergence automatically
+    (24h timeout, terminal-state mismatch, or unmatched execution
+    without a matching draft). The user resolves these via the API.
+    """
+
+    flagged_at: datetime
+    action_draft_id: str
+    reason: str
+    details_dutch: str
+    resolution_status: str = "pending"
+    resolved_at: datetime | None = None
+    resolution_note: str | None = None
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.action_draft_id, "action_draft_id")
+        _require_non_empty(self.details_dutch, "details_dutch")
+        if self.reason not in _LOCKED_MANUAL_REVIEW_REASONS:
+            raise ValueError(
+                f"reason {self.reason!r} not in "
+                f"{sorted(_LOCKED_MANUAL_REVIEW_REASONS)}"
+            )
+        if (
+            self.resolution_status
+            not in _LOCKED_MANUAL_REVIEW_RESOLUTIONS
+        ):
+            raise ValueError(
+                f"resolution_status {self.resolution_status!r} not in "
+                f"{sorted(_LOCKED_MANUAL_REVIEW_RESOLUTIONS)}"
+            )
+
+
+@dataclass(frozen=True)
+class ReconciliationRunAuditEntry:
+    """One row in ``reconciliation_run_audit`` — Task 135 lock §6.
+
+    One per reconciler tick; ``completed_at`` is None until the tick
+    finishes. Per-pass counts let the dashboard widget surface the
+    "healed in last 24h" headline.
+    """
+
+    reconciliation_run_id: str
+    started_at: datetime
+    completed_at: datetime | None
+    account_id: str
+    pass_a_orphaned_count: int
+    pass_b_stale_count: int
+    pass_c_timeout_count: int
+    divergences_found: int
+    mode_detected: str
+    error_details_json: dict[str, object] | None = None
+    id: int | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(
+            self.reconciliation_run_id, "reconciliation_run_id"
+        )
+        _require_non_empty(self.account_id, "account_id")
+        if self.mode_detected not in _LOCKED_RECONCILIATION_RUN_MODES:
+            raise ValueError(
+                f"mode_detected {self.mode_detected!r} not in "
+                f"{sorted(_LOCKED_RECONCILIATION_RUN_MODES)}"
+            )
+        if self.pass_a_orphaned_count < 0:
+            raise ValueError("pass_a_orphaned_count must be non-negative")
+        if self.pass_b_stale_count < 0:
+            raise ValueError("pass_b_stale_count must be non-negative")
+        if self.pass_c_timeout_count < 0:
+            raise ValueError("pass_c_timeout_count must be non-negative")
+        if self.divergences_found < 0:
+            raise ValueError("divergences_found must be non-negative")
 
 
 class BootstrapInsufficientHistoryError(RuntimeError):

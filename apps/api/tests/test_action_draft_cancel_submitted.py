@@ -32,7 +32,7 @@ from portfolio_outlook_api.status_routes import settings as api_settings
 
 client = TestClient(app)
 
-_LATEST = "0052_ibkr_submission_lifecycle_audit_and_executions"
+_LATEST = "0053_reconciliation_audit_and_manual_review"
 _NOW = datetime(2026, 5, 26, 10, 0, tzinfo=UTC)
 
 

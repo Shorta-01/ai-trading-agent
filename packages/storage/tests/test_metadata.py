@@ -89,6 +89,10 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "ibkr_submission_lifecycle",
         "ibkr_executions",
         "behavioural_guardrail_settings",
+        "reconciliation_audit",
+        "unmatched_execution_audit",
+        "manual_review_queue",
+        "reconciliation_run_audit",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected
