@@ -2,13 +2,13 @@
 id: T-001
 title: Write reality docs for the `packages/domain` package
 phase: P1
-status: in-progress
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: (set on push)
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
