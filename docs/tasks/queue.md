@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-055** — `radon` baseline (complexity + maintainability) — 212 CC findings at rank C+ (10 high E/F + 202 medium C/D) + 17 MI findings (9 high C + 8 medium B). *Branch:* `task/T-055-codehealth-radon-baseline`.
+- **T-007** — Reality docs for the worker (3 files; 37 source files / ~8871 LoC across orchestration / forecasting+decision-package / actions+reconciliation sub-clusters). *Branch:* `task/T-007-reality-worker`.
 
 ## Locked
 
@@ -203,3 +203,4 @@ _None._
 - **T-005** — Reality docs for the API forecasting + actions clusters (2 files; 31 modules, 72 routes cited; storage write-path map + state-machine touchpoints; AI scope: anthropic_ts_provider Case B, ai_ts_provider stub Case A). PR: https://github.com/Shorta-01/ai-trading-agent/pull/442 — merged 2026-05-26.
 - **T-054** — `pip-audit` baseline (1 HIGH FIND-PIPAUDIT-001 for fastapi==0.136.3 MAL-2026-4750; 4 pip CVEs dismissed as build-time-only; 5 local-package skips for accounting). PR: https://github.com/Shorta-01/ai-trading-agent/pull/443 — merged 2026-05-26.
 - **T-006** — Reality doc for the API infrastructure + AI cluster (1 file; 20 modules ~8985 LoC cited; 15 `include_router` registrations + 20 release-readiness blocker codes + Anthropic Claude provider call shape + monthly EUR budget cap + Case C AI classification documented). PR: https://github.com/Shorta-01/ai-trading-agent/pull/444 — merged 2026-05-26.
+- **T-055** — `radon` baseline (4 FINDs: 10 high-CC + 202 medium-CC + 9 high-MI + 8 medium-MI; 541 rank-B "watch" entries dismissed per locked threshold; hottest module status_routes.py — 14 CC C+ + 20 CC B + MI 0.00). PR: https://github.com/Shorta-01/ai-trading-agent/pull/445 — merged 2026-05-26.
