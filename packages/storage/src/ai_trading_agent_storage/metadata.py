@@ -2490,3 +2490,163 @@ Index(
     "ix_decision_packages_audit_hash",
     decision_packages.c.audit_trail_hash,
 )
+
+
+# ---------------------------------------------------------------------------
+# Task 133 — Action Drafts + audit (User To-Do layer).
+# A draft is a user-promotable IBKR-format order proposal derived from a
+# non-Geblokkeerd Decision Package. Editable until approved.
+# ``safe_for_submission`` is hard-False via CHECK constraint — Task 134
+# (actual submission) flips it conditionally; nothing else may.
+# ---------------------------------------------------------------------------
+action_drafts = Table(
+    "action_drafts",
+    metadata,
+    Column("action_draft_id", Text, primary_key=True),
+    Column(
+        "decision_package_id",
+        Text,
+        ForeignKey("decision_packages.decision_package_id"),
+        nullable=True,
+    ),
+    Column("forecast_run_id", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("created_by", Text, nullable=False),
+    Column("ibkr_account_id", Text, nullable=False),
+    Column("conid", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("exchange", Text, nullable=False),
+    Column("currency_local", Text, nullable=False),
+    Column("side", Text, nullable=False),
+    Column("quantity", Numeric(precision=20, scale=8), nullable=False),
+    Column("order_type", Text, nullable=False),
+    Column(
+        "limit_price_local",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    Column("time_in_force", Text, nullable=False),
+    Column(
+        "notional_local", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column(
+        "notional_eur", Numeric(precision=20, scale=8), nullable=False
+    ),
+    Column(
+        "fx_rate_at_creation",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    Column(
+        "usable_cash_eur_at_creation",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    Column(
+        "held_quantity_at_creation",
+        Numeric(precision=20, scale=8),
+        nullable=True,
+    ),
+    Column("status", Text, nullable=False),
+    Column("last_edited_at", DateTime(timezone=True), nullable=True),
+    Column("user_approved_at", DateTime(timezone=True), nullable=True),
+    Column("dismissed_at", DateTime(timezone=True), nullable=True),
+    Column("deleted_at", DateTime(timezone=True), nullable=True),
+    Column("dismissed_reason", Text, nullable=True),
+    Column("user_note", Text, nullable=True),
+    Column(
+        "superseded_by_decision_package_id",
+        Text,
+        ForeignKey("decision_packages.decision_package_id"),
+        nullable=True,
+    ),
+    Column("audit_trail_hash", Text, nullable=False),
+    Column("previous_draft_hash", Text, nullable=True),
+    Column(
+        "safe_for_submission",
+        Boolean,
+        nullable=False,
+        server_default="false",
+    ),
+    CheckConstraint(
+        "created_by IN ('user', 'system')",
+        name="ck_action_drafts_created_by",
+    ),
+    CheckConstraint(
+        "side IN ('BUY', 'SELL')",
+        name="ck_action_drafts_side",
+    ),
+    CheckConstraint(
+        "order_type IN ('LMT')",
+        name="ck_action_drafts_order_type",
+    ),
+    CheckConstraint(
+        "time_in_force IN ('DAY')",
+        name="ck_action_drafts_time_in_force",
+    ),
+    CheckConstraint(
+        "status IN ('proposed', 'edited', 'user_approved', "
+        "'dismissed', 'deleted', 'superseded')",
+        name="ck_action_drafts_status",
+    ),
+    CheckConstraint(
+        "quantity > 0",
+        name="ck_action_drafts_quantity_positive",
+    ),
+    CheckConstraint(
+        "limit_price_local > 0",
+        name="ck_action_drafts_limit_price_positive",
+    ),
+    CheckConstraint(
+        "safe_for_submission = FALSE",
+        name="ck_action_drafts_safe_for_submission_false",
+    ),
+)
+Index(
+    "ix_action_drafts_account_status_created",
+    action_drafts.c.ibkr_account_id,
+    action_drafts.c.status,
+    action_drafts.c.created_at.desc(),
+)
+Index(
+    "ix_action_drafts_decision_package_id",
+    action_drafts.c.decision_package_id,
+)
+Index(
+    "ix_action_drafts_conid_account_status",
+    action_drafts.c.conid,
+    action_drafts.c.ibkr_account_id,
+    action_drafts.c.status,
+)
+
+
+action_draft_audit = Table(
+    "action_draft_audit",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "action_draft_id",
+        Text,
+        ForeignKey("action_drafts.action_draft_id"),
+        nullable=False,
+    ),
+    Column("event_at", DateTime(timezone=True), nullable=False),
+    Column("event_type", Text, nullable=False),
+    Column("before_state_json", JSON, nullable=True),
+    Column("after_state_json", JSON, nullable=True),
+    Column("actor", Text, nullable=False),
+    CheckConstraint(
+        "event_type IN ('created', 'edited', 'approved', "
+        "'dismissed', 'deleted', 'superseded')",
+        name="ck_action_draft_audit_event_type",
+    ),
+    CheckConstraint(
+        "actor IN ('user', 'system')",
+        name="ck_action_draft_audit_actor",
+    ),
+)
+Index(
+    "ix_action_draft_audit_draft_id_event_at",
+    action_draft_audit.c.action_draft_id,
+    action_draft_audit.c.event_at,
+)

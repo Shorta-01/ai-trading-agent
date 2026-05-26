@@ -10,6 +10,8 @@ from sqlalchemy import Table, func, select
 from sqlalchemy.engine import Connection, RowMapping
 
 from ai_trading_agent_storage.metadata import (
+    action_drafts,
+    action_draft_audit,
     asset_identifier_aliases,
     asset_listings,
     asset_master_records,
@@ -91,6 +93,8 @@ from ai_trading_agent_storage.migration_readiness import (
     migration_readiness_is_safe_to_write,
 )
 from ai_trading_agent_storage.repository_contracts import (
+    ActionDraftAuditEntry,
+    ActionDraftEntry,
     AssetActionDraftEventRecord,
     AssetActionDraftRecord,
     AssetActionDraftSubmissionRecord,
@@ -4719,3 +4723,520 @@ class SqlAlchemyDecisionPackageRepository(_Base):
             safe_for_action_drafts=bool(row["safe_for_action_drafts"]),
             safe_for_orders=bool(row["safe_for_orders"]),
         )
+
+
+class ActionDraftStateTransitionError(ValueError):
+    """Raised when an Action Draft status transition is not allowed.
+
+    The locked transition map mirrors Task 133 product lock §7:
+
+    * ``proposed``  → ``edited`` | ``user_approved`` | ``dismissed`` | ``deleted`` | ``superseded``
+    * ``edited``    → ``user_approved`` | ``dismissed`` | ``deleted`` | ``superseded``
+    * ``user_approved`` is terminal for V1 (Task 134 will extend).
+    * ``dismissed`` / ``deleted`` / ``superseded`` are terminal.
+    """
+
+
+_ACTION_DRAFT_TERMINAL_STATUSES = frozenset(
+    {"user_approved", "dismissed", "deleted", "superseded"}
+)
+_ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
+    "proposed": frozenset(
+        {"edited", "user_approved", "dismissed", "deleted", "superseded"}
+    ),
+    "edited": frozenset(
+        {"user_approved", "dismissed", "deleted", "superseded"}
+    ),
+    "user_approved": frozenset(),
+    "dismissed": frozenset(),
+    "deleted": frozenset(),
+    "superseded": frozenset(),
+}
+
+
+def _require_action_draft_transition_allowed(
+    from_status: str, to_status: str
+) -> None:
+    allowed = _ACTION_DRAFT_TRANSITIONS.get(from_status)
+    if allowed is None or to_status not in allowed:
+        raise ActionDraftStateTransitionError(
+            f"Action Draft transition {from_status!r} → {to_status!r} "
+            "is not allowed (Task 133 product lock §7)."
+        )
+
+
+class SqlAlchemyActionDraftRepository(_Base):
+    """Task 133: ``action_drafts`` repository.
+
+    Append-on-write; mutations go through ``update_fields`` /
+    ``update_status`` / ``mark_superseded`` which also write one
+    ``action_draft_audit`` row atomically. There is no ``delete()`` — a
+    "delete" is a status transition that keeps the row intact (Task 133
+    product lock §3).
+    """
+
+    def append(self, record: ActionDraftEntry) -> ActionDraftEntry:
+        if record.safe_for_submission:
+            raise ValueError(
+                "safe_for_submission must be False (Task 133 product lock §3)"
+            )
+        self._insert(action_drafts, _action_draft_to_payload(record))
+        self._connection.execute(
+            action_draft_audit.insert().values(
+                action_draft_id=record.action_draft_id,
+                event_at=record.created_at,
+                event_type="created",
+                before_state_json=None,
+                after_state_json=_action_draft_state_snapshot(record),
+                actor=record.created_by,
+            )
+        )
+        return record
+
+    def get_by_id(
+        self, action_draft_id: str
+    ) -> ActionDraftEntry | None:
+        row = (
+            self._connection.execute(
+                select(action_drafts).where(
+                    action_drafts.c.action_draft_id == action_draft_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return _action_draft_from_row(row)
+
+    def list_te_keuren_for_account(
+        self, ibkr_account_id: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """Drafts in proposed/edited/user_approved (Task 133 §7)."""
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(
+                    action_drafts.c.status.in_(
+                        ("proposed", "edited", "user_approved")
+                    )
+                )
+                .order_by(action_drafts.c.created_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_action_draft_from_row(row) for row in rows)
+
+    def list_by_status(
+        self, ibkr_account_id: str, status: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(action_drafts.c.status == status)
+                .order_by(action_drafts.c.created_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_action_draft_from_row(row) for row in rows)
+
+    def list_pending_for_conid(
+        self, *, ibkr_account_id: str, conid: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """Pending drafts (``proposed`` / ``edited``) for a (conid, account).
+
+        Used by the supersede check — only drafts the user has not yet
+        resolved are eligible to be flagged superseded.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(action_drafts.c.conid == conid)
+                .where(action_drafts.c.status.in_(("proposed", "edited")))
+                .order_by(action_drafts.c.created_at.desc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_action_draft_from_row(row) for row in rows)
+
+    def update_status(
+        self,
+        *,
+        action_draft_id: str,
+        new_status: str,
+        transition_actor: str,
+        transition_at: datetime,
+        dismissed_reason: str | None = None,
+    ) -> ActionDraftEntry:
+        current = self.get_by_id(action_draft_id)
+        if current is None:
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} niet gevonden."
+            )
+        _require_action_draft_transition_allowed(
+            current.status, new_status
+        )
+        if transition_actor not in {"user", "system"}:
+            raise ValueError(
+                f"transition_actor {transition_actor!r} not in "
+                "{'user','system'}"
+            )
+        updates: dict[str, Any] = {"status": new_status}
+        if new_status == "user_approved":
+            updates["user_approved_at"] = transition_at
+        elif new_status == "dismissed":
+            updates["dismissed_at"] = transition_at
+            if dismissed_reason is not None:
+                updates["dismissed_reason"] = dismissed_reason
+            updates["superseded_by_decision_package_id"] = None
+        elif new_status == "deleted":
+            updates["deleted_at"] = transition_at
+            updates["superseded_by_decision_package_id"] = None
+        elif new_status == "edited":
+            updates["last_edited_at"] = transition_at
+
+        self._connection.execute(
+            action_drafts.update()
+            .where(action_drafts.c.action_draft_id == action_draft_id)
+            .values(**updates)
+        )
+        updated = self.get_by_id(action_draft_id)
+        if updated is None:  # pragma: no cover — defensive
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} disappeared after update."
+            )
+        event_type = _STATUS_TO_EVENT_TYPE[new_status]
+        self._connection.execute(
+            action_draft_audit.insert().values(
+                action_draft_id=action_draft_id,
+                event_at=transition_at,
+                event_type=event_type,
+                before_state_json=_action_draft_state_snapshot(current),
+                after_state_json=_action_draft_state_snapshot(updated),
+                actor=transition_actor,
+            )
+        )
+        return updated
+
+    def update_fields(
+        self,
+        *,
+        action_draft_id: str,
+        quantity: Decimal | None = None,
+        limit_price_local: Decimal | None = None,
+        notional_local: Decimal | None = None,
+        notional_eur: Decimal | None = None,
+        user_note: str | None = None,
+        actor: str,
+        edited_at: datetime,
+    ) -> ActionDraftEntry:
+        current = self.get_by_id(action_draft_id)
+        if current is None:
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} niet gevonden."
+            )
+        if current.status not in ("proposed", "edited"):
+            raise ActionDraftStateTransitionError(
+                f"Edits niet toegestaan in status {current.status!r}."
+            )
+        updates: dict[str, Any] = {"last_edited_at": edited_at}
+        if current.status == "proposed":
+            updates["status"] = "edited"
+        if quantity is not None:
+            updates["quantity"] = quantity
+        if limit_price_local is not None:
+            updates["limit_price_local"] = limit_price_local
+        if notional_local is not None:
+            updates["notional_local"] = notional_local
+        if notional_eur is not None:
+            updates["notional_eur"] = notional_eur
+        if user_note is not None:
+            updates["user_note"] = user_note
+        self._connection.execute(
+            action_drafts.update()
+            .where(action_drafts.c.action_draft_id == action_draft_id)
+            .values(**updates)
+        )
+        updated = self.get_by_id(action_draft_id)
+        if updated is None:  # pragma: no cover — defensive
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} disappeared after edit."
+            )
+        self._connection.execute(
+            action_draft_audit.insert().values(
+                action_draft_id=action_draft_id,
+                event_at=edited_at,
+                event_type="edited",
+                before_state_json=_action_draft_state_snapshot(current),
+                after_state_json=_action_draft_state_snapshot(updated),
+                actor=actor,
+            )
+        )
+        return updated
+
+    def mark_superseded(
+        self,
+        *,
+        action_draft_id: str,
+        by_decision_package_id: str,
+        marked_at: datetime,
+    ) -> ActionDraftEntry:
+        """Flag a pending draft as superseded (Task 133 product lock §6).
+
+        Only ``proposed`` / ``edited`` drafts are eligible — already
+        dismissed / deleted / approved drafts are NOT touched.
+        """
+
+        current = self.get_by_id(action_draft_id)
+        if current is None:
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} niet gevonden."
+            )
+        if current.status not in ("proposed", "edited"):
+            raise ActionDraftStateTransitionError(
+                f"Cannot supersede draft in status {current.status!r}."
+            )
+        self._connection.execute(
+            action_drafts.update()
+            .where(action_drafts.c.action_draft_id == action_draft_id)
+            .values(
+                superseded_by_decision_package_id=by_decision_package_id,
+            )
+        )
+        updated = self.get_by_id(action_draft_id)
+        if updated is None:  # pragma: no cover — defensive
+            raise LookupError(
+                f"Action Draft {action_draft_id!r} disappeared after "
+                "supersede."
+            )
+        self._connection.execute(
+            action_draft_audit.insert().values(
+                action_draft_id=action_draft_id,
+                event_at=marked_at,
+                event_type="superseded",
+                before_state_json=_action_draft_state_snapshot(current),
+                after_state_json=_action_draft_state_snapshot(updated),
+                actor="system",
+            )
+        )
+        return updated
+
+
+class SqlAlchemyActionDraftAuditRepository(_Base):
+    """Task 133: append-only ``action_draft_audit`` repository."""
+
+    def append(
+        self, entry: ActionDraftAuditEntry
+    ) -> ActionDraftAuditEntry:
+        result = self._connection.execute(
+            action_draft_audit.insert()
+            .values(
+                action_draft_id=entry.action_draft_id,
+                event_at=entry.event_at,
+                event_type=entry.event_type,
+                before_state_json=entry.before_state_json,
+                after_state_json=entry.after_state_json,
+                actor=entry.actor,
+            )
+            .returning(action_draft_audit.c.id)
+        )
+        row = result.first()
+        new_id = int(row[0]) if row is not None else None
+        return ActionDraftAuditEntry(
+            action_draft_id=entry.action_draft_id,
+            event_at=entry.event_at,
+            event_type=entry.event_type,
+            before_state_json=entry.before_state_json,
+            after_state_json=entry.after_state_json,
+            actor=entry.actor,
+            id=new_id,
+        )
+
+    def list_for_draft(
+        self, action_draft_id: str
+    ) -> tuple[ActionDraftAuditEntry, ...]:
+        rows = (
+            self._connection.execute(
+                select(action_draft_audit)
+                .where(
+                    action_draft_audit.c.action_draft_id == action_draft_id
+                )
+                .order_by(action_draft_audit.c.event_at)
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(
+            ActionDraftAuditEntry(
+                id=int(row["id"]),
+                action_draft_id=row["action_draft_id"],
+                event_at=row["event_at"],
+                event_type=row["event_type"],
+                before_state_json=(
+                    dict(row["before_state_json"])
+                    if row["before_state_json"] is not None
+                    else None
+                ),
+                after_state_json=(
+                    dict(row["after_state_json"])
+                    if row["after_state_json"] is not None
+                    else None
+                ),
+                actor=row["actor"],
+            )
+            for row in rows
+        )
+
+
+_STATUS_TO_EVENT_TYPE: dict[str, str] = {
+    "edited": "edited",
+    "user_approved": "approved",
+    "dismissed": "dismissed",
+    "deleted": "deleted",
+    "superseded": "superseded",
+}
+
+
+def _action_draft_to_payload(record: ActionDraftEntry) -> dict[str, Any]:
+    return {
+        "action_draft_id": record.action_draft_id,
+        "decision_package_id": record.decision_package_id,
+        "forecast_run_id": record.forecast_run_id,
+        "created_at": record.created_at,
+        "created_by": record.created_by,
+        "ibkr_account_id": record.ibkr_account_id,
+        "conid": record.conid,
+        "symbol": record.symbol,
+        "exchange": record.exchange,
+        "currency_local": record.currency_local,
+        "side": record.side,
+        "quantity": record.quantity,
+        "order_type": record.order_type,
+        "limit_price_local": record.limit_price_local,
+        "time_in_force": record.time_in_force,
+        "notional_local": record.notional_local,
+        "notional_eur": record.notional_eur,
+        "fx_rate_at_creation": record.fx_rate_at_creation,
+        "usable_cash_eur_at_creation": record.usable_cash_eur_at_creation,
+        "held_quantity_at_creation": record.held_quantity_at_creation,
+        "status": record.status,
+        "last_edited_at": record.last_edited_at,
+        "user_approved_at": record.user_approved_at,
+        "dismissed_at": record.dismissed_at,
+        "deleted_at": record.deleted_at,
+        "dismissed_reason": record.dismissed_reason,
+        "user_note": record.user_note,
+        "superseded_by_decision_package_id": (
+            record.superseded_by_decision_package_id
+        ),
+        "audit_trail_hash": record.audit_trail_hash,
+        "previous_draft_hash": record.previous_draft_hash,
+        "safe_for_submission": record.safe_for_submission,
+    }
+
+
+def _action_draft_from_row(row: Any) -> ActionDraftEntry:
+    return ActionDraftEntry(
+        action_draft_id=row["action_draft_id"],
+        decision_package_id=row["decision_package_id"],
+        forecast_run_id=row["forecast_run_id"],
+        created_at=row["created_at"],
+        created_by=row["created_by"],
+        ibkr_account_id=row["ibkr_account_id"],
+        conid=row["conid"],
+        symbol=row["symbol"],
+        exchange=row["exchange"],
+        currency_local=row["currency_local"],
+        side=row["side"],
+        quantity=_to_decimal(row["quantity"]) or Decimal("0"),
+        order_type=row["order_type"],
+        limit_price_local=(
+            _to_decimal(row["limit_price_local"]) or Decimal("0")
+        ),
+        time_in_force=row["time_in_force"],
+        notional_local=_to_decimal(row["notional_local"]) or Decimal("0"),
+        notional_eur=_to_decimal(row["notional_eur"]) or Decimal("0"),
+        fx_rate_at_creation=(
+            _to_decimal(row["fx_rate_at_creation"]) or Decimal("0")
+        ),
+        usable_cash_eur_at_creation=(
+            _to_decimal(row["usable_cash_eur_at_creation"]) or Decimal("0")
+        ),
+        held_quantity_at_creation=_to_decimal(
+            row["held_quantity_at_creation"]
+        ),
+        status=row["status"],
+        last_edited_at=row["last_edited_at"],
+        user_approved_at=row["user_approved_at"],
+        dismissed_at=row["dismissed_at"],
+        deleted_at=row["deleted_at"],
+        dismissed_reason=row["dismissed_reason"],
+        user_note=row["user_note"],
+        superseded_by_decision_package_id=row[
+            "superseded_by_decision_package_id"
+        ],
+        audit_trail_hash=row["audit_trail_hash"],
+        previous_draft_hash=row["previous_draft_hash"],
+        safe_for_submission=bool(row["safe_for_submission"]),
+    )
+
+
+def _action_draft_state_snapshot(
+    record: ActionDraftEntry,
+) -> dict[str, object]:
+    """Canonical JSON-friendly snapshot for the audit table.
+
+    Decimals → strings (full precision); datetimes → ISO 8601. Used as
+    both ``before_state_json`` and ``after_state_json``.
+    """
+
+    def _dec(value: Decimal | None) -> str | None:
+        return None if value is None else str(value)
+
+    def _ts(value: datetime | None) -> str | None:
+        return None if value is None else value.isoformat()
+
+    return {
+        "action_draft_id": record.action_draft_id,
+        "decision_package_id": record.decision_package_id,
+        "forecast_run_id": record.forecast_run_id,
+        "created_at": _ts(record.created_at),
+        "created_by": record.created_by,
+        "ibkr_account_id": record.ibkr_account_id,
+        "conid": record.conid,
+        "symbol": record.symbol,
+        "exchange": record.exchange,
+        "currency_local": record.currency_local,
+        "side": record.side,
+        "quantity": _dec(record.quantity),
+        "order_type": record.order_type,
+        "limit_price_local": _dec(record.limit_price_local),
+        "time_in_force": record.time_in_force,
+        "notional_local": _dec(record.notional_local),
+        "notional_eur": _dec(record.notional_eur),
+        "fx_rate_at_creation": _dec(record.fx_rate_at_creation),
+        "usable_cash_eur_at_creation": _dec(
+            record.usable_cash_eur_at_creation
+        ),
+        "held_quantity_at_creation": _dec(record.held_quantity_at_creation),
+        "status": record.status,
+        "last_edited_at": _ts(record.last_edited_at),
+        "user_approved_at": _ts(record.user_approved_at),
+        "dismissed_at": _ts(record.dismissed_at),
+        "deleted_at": _ts(record.deleted_at),
+        "dismissed_reason": record.dismissed_reason,
+        "user_note": record.user_note,
+        "superseded_by_decision_package_id": (
+            record.superseded_by_decision_package_id
+        ),
+        "audit_trail_hash": record.audit_trail_hash,
+        "previous_draft_hash": record.previous_draft_hash,
+    }
