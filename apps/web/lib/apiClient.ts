@@ -905,12 +905,23 @@ export type DecisionPackageChainResponse = {
 // ---------------------------------------------------------------------
 
 export type ActionDraftStatus =
+  // Task 133 user-facing statuses.
   | "proposed"
   | "edited"
   | "user_approved"
   | "dismissed"
   | "deleted"
-  | "superseded";
+  | "superseded"
+  // Task 134 IBKR lifecycle statuses.
+  | "submitted"
+  | "accepted"
+  | "working"
+  | "filled"
+  | "partially_filled"
+  | "cancelled"
+  | "rejected"
+  | "pending_cancellation"
+  | "awaiting_reply_timeout";
 
 export type ActionDraftResponse = {
   action_draft_id: string;
@@ -944,6 +955,92 @@ export type ActionDraftResponse = {
   audit_trail_hash: string;
   previous_draft_hash: string | null;
   safe_for_submission: false;
+  // Task 134 lifecycle fields.
+  submission_block_reason: string | null;
+  submission_started_at: string | null;
+  terminal_state_at: string | null;
+};
+
+// ---------------------------------------------------------------------
+// Task 134c — IBKR submission lifecycle responses.
+// ---------------------------------------------------------------------
+
+export type IbkrSubmissionAuditRow = {
+  id: number | null;
+  action_draft_id: string;
+  submitted_at: string;
+  sent_to_account_id: string;
+  sent_account_mode: "paper" | "live";
+  ibkr_perm_id: number | null;
+  ibkr_order_id: number | null;
+  contract_json: Record<string, unknown>;
+  order_json: Record<string, unknown>;
+  gateway_session_id: string;
+  result: "placed" | "rejected_at_send" | "connection_lost";
+  error_class: string | null;
+  error_message_dutch: string | null;
+};
+
+export type IbkrSubmissionAuditListResponse = {
+  ibkr_account_id: string;
+  rows: IbkrSubmissionAuditRow[];
+};
+
+export type IbkrSubmissionLifecycleEvent = {
+  id: number | null;
+  action_draft_id: string;
+  event_at: string;
+  ibkr_perm_id: number;
+  event_type:
+    | "status_change"
+    | "fill"
+    | "commission_report"
+    | "cancellation_request";
+  from_status: string | null;
+  to_status: string | null;
+  ibkr_raw_status: string | null;
+  fill_price_local: string | null;
+  fill_quantity: string | null;
+  commission: string | null;
+  commission_currency: string | null;
+  raw_callback_json: Record<string, unknown>;
+};
+
+export type IbkrSubmissionLifecycleListResponse = {
+  action_draft_id: string;
+  events: IbkrSubmissionLifecycleEvent[];
+};
+
+export type IbkrExecutionRow = {
+  id: number | null;
+  ibkr_exec_id: string;
+  ibkr_perm_id: number;
+  action_draft_id: string;
+  account_id: string;
+  conid: string;
+  side: "BUY" | "SELL";
+  fill_price_local: string;
+  fill_quantity: string;
+  fill_time: string;
+  commission: string;
+  commission_currency: string;
+  exchange: string;
+};
+
+export type IbkrExecutionListResponse = {
+  account_id: string;
+  conid: string;
+  executions: IbkrExecutionRow[];
+};
+
+export type ActiveDraftListResponse = {
+  ibkr_account_id: string;
+  drafts: ActionDraftResponse[];
+};
+
+export type HistoriekDraftListResponse = {
+  ibkr_account_id: string;
+  drafts: ActionDraftResponse[];
 };
 
 export type ActionDraftListResponse = {
@@ -1383,6 +1480,56 @@ export const apiClient = {
       `/action-draft/${encodeURIComponent(id)}/delete`,
       "POST",
     ),
+  // -------------------------------------------------------------------
+  // Task 134c — IBKR submission read API + cancel-submitted write.
+  // -------------------------------------------------------------------
+  cancelSubmittedActionDraft: (id: string) =>
+    requestJson<ActionDraftResponse>(
+      `/action-draft/${encodeURIComponent(id)}/cancel-submitted`,
+      "POST",
+    ),
+  getIbkrSubmissionAudit: (accountId?: string, limit = 50) => {
+    const search = new URLSearchParams();
+    if (accountId) search.set("account_id", accountId);
+    search.set("limit", String(limit));
+    return getJson<IbkrSubmissionAuditListResponse>(
+      `/ibkr-submission/audit?${search.toString()}`,
+    );
+  },
+  getIbkrSubmissionLifecycle: (actionDraftId: string) =>
+    getJson<IbkrSubmissionLifecycleListResponse>(
+      `/ibkr-submission/lifecycle/${encodeURIComponent(actionDraftId)}`,
+    ),
+  getIbkrSubmissionActive: (accountId?: string) => {
+    const qs = accountId
+      ? `?account_id=${encodeURIComponent(accountId)}`
+      : "";
+    return getJson<ActiveDraftListResponse>(
+      `/ibkr-submission/active${qs}`,
+    );
+  },
+  getIbkrSubmissionHistoriek: (accountId?: string, limit = 50) => {
+    const search = new URLSearchParams();
+    if (accountId) search.set("account_id", accountId);
+    search.set("limit", String(limit));
+    return getJson<HistoriekDraftListResponse>(
+      `/ibkr-submission/historiek?${search.toString()}`,
+    );
+  },
+  // Task 134c — per-asset execution history (`GET /ibkr-executions`).
+  // Renamed to avoid collision with the legacy ``getIbkrExecutions()``
+  // (no-args, hits ``/ibkr/executions`` — Portefeuille's snapshot grid).
+  getIbkrExecutionsForAsset: (params: {
+    accountId?: string;
+    conid: string;
+  }) => {
+    const search = new URLSearchParams();
+    if (params.accountId) search.set("account_id", params.accountId);
+    search.set("conid", params.conid);
+    return getJson<IbkrExecutionListResponse>(
+      `/ibkr-executions?${search.toString()}`,
+    );
+  },
   getSchedulerV127Status: () =>
     getJson<SchedulerV127StatusResponse>("/scheduler/v127/status"),
   getSchedulerV127Runs: (limit = 20) =>

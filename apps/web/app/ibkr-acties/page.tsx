@@ -1,22 +1,27 @@
 "use client";
 
 /**
- * Task 133: IBKR Acties (Action Center) page.
+ * Task 133 + 134c: IBKR Acties (Action Center) page.
  *
  * Three tabs locked by the brainstorm decision (2026-05-25):
- *   1. Te keuren — pending + approved drafts (this task).
- *   2. Actief bij IBKR — submitted-and-working orders (Task 134+).
- *   3. Historiek — completed / cancelled orders (Task 135+).
+ *   1. Te keuren — pending + approved drafts (Task 133).
+ *   2. Actief bij IBKR — submitted/accepted/working/partially_filled/
+ *      pending_cancellation drafts (Task 134c).
+ *   3. Historiek — filled/cancelled/rejected/dismissed/deleted/
+ *      superseded/awaiting_reply_timeout drafts (Task 134c).
  *
- * For now only Te keuren has real data; the other two render a
- * placeholder ``EmptyState`` so the tab structure is visible from
- * day one without lying about the runtime state.
+ * All three tabs now show real data. The lifecycle drawer opens on
+ * any row click in Actief or Historiek.
  */
 
 import { useCallback, useEffect, useState } from "react";
 
-import { EmptyState } from "@/components/EmptyState";
 import { ActionDraftGrid } from "@/components/ActionDraftGrid";
+import {
+  ActiefBijIbkrGrid,
+  HistoriekGrid,
+} from "@/components/IbkrSubmissionGrids";
+import { SubmissionLifecycleDrawer } from "@/components/SubmissionLifecycleDrawer";
 import {
   apiClient,
   type ActionDraftResponse,
@@ -32,37 +37,85 @@ const TABS: { key: TabKey; label_nl: string }[] = [
 
 export default function Page() {
   const [tab, setTab] = useState<TabKey>("te-keuren");
-  const [drafts, setDrafts] = useState<ActionDraftResponse[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setError(null);
+  // Te keuren tab data.
+  const [teKeurenDrafts, setTeKeurenDrafts] = useState<
+    ActionDraftResponse[] | null
+  >(null);
+  const [teKeurenError, setTeKeurenError] = useState<string | null>(null);
+
+  // Actief bij IBKR tab data.
+  const [actiefDrafts, setActiefDrafts] = useState<
+    ActionDraftResponse[] | null
+  >(null);
+  const [actiefError, setActiefError] = useState<string | null>(null);
+
+  // Historiek tab data.
+  const [historiekDrafts, setHistoriekDrafts] = useState<
+    ActionDraftResponse[] | null
+  >(null);
+  const [historiekError, setHistoriekError] = useState<string | null>(null);
+
+  // Drawer.
+  const [drawerDraftId, setDrawerDraftId] = useState<string | null>(null);
+
+  const refreshTeKeuren = useCallback(async () => {
+    setTeKeurenError(null);
     const result = await apiClient.getActionDraftsTeKeuren();
     if (!result.ok) {
-      setError(
+      setTeKeurenError(
         "Actiedrafts konden niet worden geladen. Controleer of de API draait.",
       );
-      setDrafts([]);
+      setTeKeurenDrafts([]);
       return;
     }
-    setDrafts(result.data.drafts);
+    setTeKeurenDrafts(result.data.drafts);
+  }, []);
+
+  const refreshActief = useCallback(async () => {
+    setActiefError(null);
+    const result = await apiClient.getIbkrSubmissionActive();
+    if (!result.ok) {
+      setActiefError(
+        "Actieve orders konden niet worden geladen. Controleer of de API draait.",
+      );
+      setActiefDrafts([]);
+      return;
+    }
+    setActiefDrafts(result.data.drafts);
+  }, []);
+
+  const refreshHistoriek = useCallback(async () => {
+    setHistoriekError(null);
+    const result = await apiClient.getIbkrSubmissionHistoriek();
+    if (!result.ok) {
+      setHistoriekError(
+        "Historiek kon niet worden geladen. Controleer of de API draait.",
+      );
+      setHistoriekDrafts([]);
+      return;
+    }
+    setHistoriekDrafts(result.data.drafts);
   }, []);
 
   useEffect(() => {
     if (tab === "te-keuren") {
-      void refresh();
+      void refreshTeKeuren();
+    } else if (tab === "actief") {
+      void refreshActief();
+    } else if (tab === "historiek") {
+      void refreshHistoriek();
     }
-  }, [tab, refresh]);
+  }, [tab, refreshTeKeuren, refreshActief, refreshHistoriek]);
 
   return (
     <main className="page-wrap" data-testid="ibkr-acties-page">
       <h2>IBKR Acties</h2>
       <p style={{ color: "#6b7280", marginTop: 4 }}>
         De drie-fase actieflow: <b>Te keuren</b> is jouw to-do laag —
-        Decision Packages worden hier voorbereid als IBKR-orders. Pas
-        bij goedkeuring gaat er iets naar IBKR; in deze release stopt de
-        flow bij <i>Goedgekeurd</i> (echte verzending volgt in een
-        toekomstige update).
+        Decision Packages worden hier voorbereid als IBKR-orders.{" "}
+        <b>Actief bij IBKR</b> toont lopende orders en{" "}
+        <b>Historiek</b> de afgeronde orders.
       </p>
 
       <nav
@@ -101,7 +154,7 @@ export default function Page() {
       <section style={{ marginTop: 16 }}>
         {tab === "te-keuren" ? (
           <div data-testid="ibkr-acties-te-keuren">
-            {error ? (
+            {teKeurenError ? (
               <div
                 style={{
                   color: "#7f1d1d",
@@ -111,31 +164,79 @@ export default function Page() {
                   marginBottom: 12,
                 }}
               >
-                {error}
+                {teKeurenError}
               </div>
             ) : null}
-            {drafts === null ? (
+            {teKeurenDrafts === null ? (
               <p>Bezig met laden…</p>
             ) : (
-              <ActionDraftGrid drafts={drafts} onChange={refresh} />
+              <ActionDraftGrid
+                drafts={teKeurenDrafts}
+                onChange={refreshTeKeuren}
+              />
             )}
           </div>
         ) : null}
 
         {tab === "actief" ? (
-          <EmptyState
-            title="Module in opbouw"
-            message="De Actief-bij-IBKR weergave verschijnt wanneer de IBKR-orderverzending live staat (toekomstige update)."
-          />
+          <div data-testid="ibkr-acties-actief">
+            {actiefError ? (
+              <div
+                style={{
+                  color: "#7f1d1d",
+                  background: "#fee2e2",
+                  padding: 12,
+                  borderRadius: 6,
+                  marginBottom: 12,
+                }}
+              >
+                {actiefError}
+              </div>
+            ) : null}
+            {actiefDrafts === null ? (
+              <p>Bezig met laden…</p>
+            ) : (
+              <ActiefBijIbkrGrid
+                drafts={actiefDrafts}
+                onChange={refreshActief}
+                onOpenLifecycle={setDrawerDraftId}
+              />
+            )}
+          </div>
         ) : null}
 
         {tab === "historiek" ? (
-          <EmptyState
-            title="Module in opbouw"
-            message="De Historiek-weergave verschijnt wanneer er echte voltooide/geannuleerde orders binnenkomen."
-          />
+          <div data-testid="ibkr-acties-historiek">
+            {historiekError ? (
+              <div
+                style={{
+                  color: "#7f1d1d",
+                  background: "#fee2e2",
+                  padding: 12,
+                  borderRadius: 6,
+                  marginBottom: 12,
+                }}
+              >
+                {historiekError}
+              </div>
+            ) : null}
+            {historiekDrafts === null ? (
+              <p>Bezig met laden…</p>
+            ) : (
+              <HistoriekGrid
+                drafts={historiekDrafts}
+                onOpenLifecycle={setDrawerDraftId}
+              />
+            )}
+          </div>
         ) : null}
       </section>
+
+      <SubmissionLifecycleDrawer
+        actionDraftId={drawerDraftId}
+        open={drawerDraftId !== null}
+        onClose={() => setDrawerDraftId(null)}
+      />
     </main>
   );
 }

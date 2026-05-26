@@ -4822,10 +4822,22 @@ _ACTION_DRAFT_TRANSITIONS: dict[str, frozenset[str]] = {
     # ``submitted → accepted → working`` and then either fills,
     # cancels, or rejects. ``awaiting_reply_timeout`` is the safety
     # bucket when no callback arrives within 60s (Task 135 reconciles).
+    # User-initiated cancellation can fire at any in-flight status:
+    # the Task 134c ``cancel-submitted`` API route transitions to
+    # ``pending_cancellation`` from ``submitted``, ``accepted``,
+    # ``working``, or ``partially_filled``.
     "submitted": frozenset(
-        {"accepted", "rejected", "cancelled", "awaiting_reply_timeout"}
+        {
+            "accepted",
+            "rejected",
+            "cancelled",
+            "pending_cancellation",
+            "awaiting_reply_timeout",
+        }
     ),
-    "accepted": frozenset({"working", "cancelled", "rejected"}),
+    "accepted": frozenset(
+        {"working", "cancelled", "rejected", "pending_cancellation"}
+    ),
     "working": frozenset(
         {
             "filled",
@@ -5282,6 +5294,82 @@ class SqlAlchemyActionDraftRepository(_Base):
                 .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
                 .where(action_drafts.c.status == "user_approved")
                 .order_by(action_drafts.c.user_approved_at.asc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_new_action_draft_from_row(row) for row in rows)
+
+    def list_active_for_account(
+        self, *, ibkr_account_id: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """Task 134c — drafts shown in the "Actief bij IBKR" tab.
+
+        Returns drafts in any in-flight status:
+        ``submitted`` / ``accepted`` / ``working`` / ``partially_filled``
+        / ``pending_cancellation``. Newest-first by
+        ``submission_started_at`` so the most recent submission sits at
+        the top of the grid.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(
+                    action_drafts.c.status.in_(
+                        (
+                            "submitted",
+                            "accepted",
+                            "working",
+                            "partially_filled",
+                            "pending_cancellation",
+                        )
+                    )
+                )
+                .order_by(
+                    action_drafts.c.submission_started_at.desc().nullslast()
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_new_action_draft_from_row(row) for row in rows)
+
+    def list_terminal_for_account(
+        self, *, ibkr_account_id: str, limit: int = 50
+    ) -> tuple[ActionDraftEntry, ...]:
+        """Task 134c — drafts shown in the "Historiek" tab.
+
+        Returns drafts in any terminal status (filled / cancelled /
+        rejected / awaiting_reply_timeout / dismissed / deleted /
+        superseded), newest-first by ``terminal_state_at`` falling back
+        to ``created_at`` for the legacy user-terminal rows that
+        pre-date the lifecycle columns.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(
+                    action_drafts.c.status.in_(
+                        (
+                            "filled",
+                            "cancelled",
+                            "rejected",
+                            "awaiting_reply_timeout",
+                            "dismissed",
+                            "deleted",
+                            "superseded",
+                        )
+                    )
+                )
+                .order_by(
+                    action_drafts.c.terminal_state_at.desc().nullslast(),
+                    action_drafts.c.created_at.desc(),
+                )
+                .limit(_ibkr_audit_bounded_limit(limit, upper=200))
             )
             .mappings()
             .all()
