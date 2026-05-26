@@ -2,14 +2,22 @@
 id: T-003
 title: Write reality doc for `packages/storage` and its Alembic chain
 phase: P1
-status: locked
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/438
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the touch scope is one new file under `docs/reality/components/`; it does not exist yet. The source modules to read (8 files under `packages/storage/src/ai_trading_agent_storage/`, ~15.6k lines total, with `repository_contracts.py` at ~4.3k lines and `sql_repositories.py` at ~6.6k lines) plus the 53-migration chain in `packages/storage/alembic/versions/` plus `alembic.ini` and `env.py` are inventoried below; a single subagent is launched to read them in full and return structured content.
+- **Step 2 (one-line per touched file):** the one target file does not exist; it will hold the reality doc covering: storage modules (`__init__`, `metadata`, `settings`, `alembic_helpers`, `connection_provider`, `migration_readiness`, `repository_contracts`, `sql_repositories`) + Alembic chain overview (count, naming convention, slice categories, bookends).
+- **Step 3 (one-line change):** write one cited reality doc describing what the existing `packages/storage` package exports + how its 53-migration Alembic chain is shaped, with `path/to/file.py:NNN` cites on every claim.
+- **Step 4 (criteria measurable):** yes — six acceptance criteria are observable (file exists at locked path; "Modules covered" lists the 8 storage modules; "Alembic chain" cites count/convention/latest revision + role of `migration_readiness.py` + ADR 0001 + `docs/storage-architecture.md`; per-Sql-repo catalogue; Decimal + CHECK policies cited; Open questions section present).
+- **Step 5 (out-of-scope does not block goal):** confirmed. Per-migration deep dive is excluded; no coverage of `apps/api` or `apps/worker` wiring (those are T-005 / T-007); no source or migration file modified.
 
 ## Goal
 
