@@ -15,4 +15,4 @@ Conventions:
 
 | ID | Date | Phase | Status | Title | Supersedes | Superseded by | Tasks |
 |----|------|-------|--------|-------|------------|---------------|-------|
-| _–_ | _–_ | _–_ | _–_ | _No entries yet._ | _–_ | _–_ | _–_ |
+| 0001 | 2026-05-26 | P1 | accepted | [Run four-track Phase 1 audit before any code changes](0001-phase-1-charter.md) | — | — | T-001 … T-060 |
