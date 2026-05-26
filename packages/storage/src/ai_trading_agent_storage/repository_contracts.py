@@ -3784,6 +3784,11 @@ class ActionDraftEntry:
     audit_trail_hash: str
     previous_draft_hash: str | None
     safe_for_submission: bool = False
+    # Task 134 lifecycle columns. Optional with safe defaults so
+    # existing Task 133 call sites + factories keep working.
+    submission_block_reason: str | None = None
+    submission_started_at: datetime | None = None
+    terminal_state_at: datetime | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty(self.action_draft_id, "action_draft_id")
@@ -3841,6 +3846,16 @@ class ActionDraftEntry:
             raise ValueError(
                 "safe_for_submission must be False until the "
                 "submission workflow ships (Task 133 product lock §3)"
+            )
+        if (
+            self.submission_block_reason is not None
+            and self.submission_block_reason
+            not in _LOCKED_SUBMISSION_BLOCK_REASONS
+        ):
+            raise ValueError(
+                f"submission_block_reason "
+                f"{self.submission_block_reason!r} not in "
+                f"{sorted(_LOCKED_SUBMISSION_BLOCK_REASONS)}"
             )
 
 
