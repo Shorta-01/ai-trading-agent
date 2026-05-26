@@ -202,19 +202,30 @@ test.describe("Decision Package navigation from Volglijst", () => {
       "**/forecast/day-summary**",
       fulfillJson(DAY_SUMMARY),
     );
-    // Task 132 hot-fix: use regex patterns instead of glob — Playwright
-    // glob's ``?`` is a single-character wildcard which is ambiguous
-    // when matching against URLs that contain literal query separators.
+    // Task 132 hot-fix v3: scope route patterns to the API host
+    // (localhost:8000) so the mocks do NOT intercept the Next.js
+    // page navigation (127.0.0.1:3100). Previously the regex
+    // ``/\/decision-package\/dp-e2e-1$/`` matched both:
+    //   * API call:        http://localhost:8000/decision-package/dp-e2e-1
+    //   * Page navigation: http://127.0.0.1:3100/decision-package/dp-e2e-1
+    // The click on "Bekijk Decision Package" got the JSON response
+    // back instead of the Next.js page HTML — the browser rendered
+    // the JSON as text content. Anchoring to the API host fixes it.
+    const API_HOST = "localhost:8000";
     await context.route(
-      /\/forecast\/latest\?conid=ASML\.AS/,
+      new RegExp(`^https?://${API_HOST}/forecast/latest\\?conid=ASML\\.AS`),
       fulfillJson(FORECAST_LATEST),
     );
     await context.route(
-      /\/decision-package\/latest\?conid=ASML\.AS/,
+      new RegExp(
+        `^https?://${API_HOST}/decision-package/latest\\?conid=ASML\\.AS`,
+      ),
       fulfillJson(DECISION_PACKAGE),
     );
     await context.route(
-      new RegExp(`/decision-package/${DECISION_PACKAGE.decision_package_id}$`),
+      new RegExp(
+        `^https?://${API_HOST}/decision-package/${DECISION_PACKAGE.decision_package_id}$`,
+      ),
       fulfillJson(DECISION_PACKAGE),
     );
   });
