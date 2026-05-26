@@ -2,14 +2,24 @@
 id: T-050
 title: Run `ruff` baseline and emit FIND entries
 phase: P1
-status: locked
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: (set on push)
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the touch scope is the three append-able docs under `docs/code-health/` plus a read-only ruff run. All three target files were read and confirmed at their Phase 0 stub state (`02-anti-patterns.md` and `03-outdated-patterns.md` are single-header placeholders; `_dismissed.md` is a single-header file). Per-package ruff config in each `pyproject.toml` was read to confirm `select = ["E", "F", "I", "UP", "B"]`, `line-length = 100`, `target-version = "py312"`.
+- **Step 2 (one-line per touched file):**
+  - `docs/code-health/_dismissed.md` — pre-edit: single-header stub; post-edit: holds the T-050 baseline summary + per-file-ignore rows + grouped `# noqa` inventory.
+  - `docs/code-health/02-anti-patterns.md`, `docs/code-health/03-outdated-patterns.md` — pre-edit: stub headers; post-edit: unchanged (ruff produced zero findings, nothing to add).
+- **Step 3 (one-line change):** run ruff against the full Python codebase, confirm zero findings, record the pre-existing suppressions (per-file-ignores + noqa lines) in `_dismissed.md` so future widenings start from a complete map.
+- **Step 4 (criteria measurable):** yes — raw output captured at `/tmp/ruff-baseline.json` (size 2 bytes, `[]`); `grep -c "^- FIND-" docs/code-health/0[1-4]-*.md` returns 0 (no FINDs because zero findings); per-file-ignore rows in `_dismissed.md` are independently verifiable against `pyproject.toml`.
+- **Step 5 (out-of-scope does not block goal):** confirmed. The out-of-scope list (no fixes; no select widening; no other tools' triage) is fully observed — only `_dismissed.md` is appended; no source or config file is modified.
 
 ## Goal
 
