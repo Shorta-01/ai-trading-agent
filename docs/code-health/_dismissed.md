@@ -283,3 +283,52 @@ Phase 4 / Phase 5 consideration: the CI workflow could pin a known-good pip via 
 ### Not applicable: local editable installs (×5)
 
 pip-audit emits "Dependency not found on PyPI and could not be audited" for each of the five project packages (`ai-trading-agent-storage 0.1.0`, `portfolio-outlook-api 0.1.0`, `portfolio-outlook-domain 0.1.0`, `portfolio-outlook-portfolio 0.1.0`, `portfolio-outlook-worker 0.1.0`). These are local-only packages installed via `pip install -e .` — they have no PyPI release and no advisory database coverage. Not vulnerabilities; recorded here so the baseline accounting is complete.
+
+## T-055 — radon baseline (2026-05-26)
+
+**Tool:** `radon 6.0.1`
+**Commands:** `radon cc -s -a apps packages` and `radon mi -s apps packages`
+**Findings (CC):** 5729 blocks analysed → 4976 rank A (default-acceptable), 541 rank B (watch — dismissed below), 182 rank C, 20 rank D, 6 rank E, 4 rank F.
+**Findings (MI):** 490 modules analysed → 473 rank A, 8 rank B, 9 rank C.
+**Triage:** 4 → `FIND-RADON-001..004` in `docs/code-health/02-anti-patterns.md` (10 high CC + 202 medium CC + 9 high MI + 8 medium MI). 541 CC rank-B → dismissed below as "watch".
+**Raw outputs:** `/tmp/radon-cc-baseline.txt` (6217 lines), `/tmp/radon-mi-baseline.txt` (498 lines). Average CC across the analysed 5729 blocks: **A (3.07)**.
+
+### Dismissed: CC rank B (×541, watch list)
+
+Pattern: every site is a function or method at radon's rank B (`CC 6–10`). The locked T-055 threshold dismisses rank B by default but records the per-file count below so a future Phase 4 brainstorm can decide whether to tighten the threshold to B+.
+
+#### Files with the highest rank-B counts
+
+| File | Rank-B count |
+|---|---:|
+| `apps/api/src/portfolio_outlook_api/status_routes.py` | 20 |
+| `packages/storage/tests/test_sql_repositories.py` | 14 |
+| `packages/domain/src/portfolio_outlook_domain/settings.py` | 13 |
+| `packages/storage/src/ai_trading_agent_storage/sql_repositories.py` | 12 |
+| `apps/api/tests/test_ibkr_status_endpoint.py` | 10 |
+| `packages/domain/src/portfolio_outlook_domain/storage.py` | 9 |
+| `apps/api/tests/test_ibkr_sync_endpoints.py` | 9 |
+| `packages/domain/src/portfolio_outlook_domain/suggestion_engine.py` | 8 |
+| `packages/domain/src/portfolio_outlook_domain/runtime.py` | 8 |
+| `packages/domain/src/portfolio_outlook_domain/broker_reconciliation.py` | 8 |
+| `apps/api/tests/test_portfolio_valuation_readiness_endpoint.py` | 8 |
+| `apps/api/tests/test_research_source_archive_endpoints.py` | 7 |
+| `apps/api/tests/test_market_data_readiness_endpoint.py` | 6 |
+| `apps/api/src/portfolio_outlook_api/eodhd_client.py` | 6 |
+| `packages/domain/src/portfolio_outlook_domain/data_sources.py` | 5 |
+| `apps/api/tests/test_watchlist_endpoints.py` | 5 |
+| `apps/api/tests/test_decision_package_sync.py` | 5 |
+| `apps/api/src/portfolio_outlook_api/ibkr_ibapi_sync_client.py` | 5 |
+| _(other files, ≤4 rank-B sites each)_ | 393 (total) |
+
+Sum: 152 in the top 18 files + 393 in the long tail = 541.
+
+Reason for dismissal: **threshold-locked**. The T-055 task spec explicitly dismisses rank B by default ("Rank `B` (CC 6–10) is dismissed by default but listed as 'watch' in `_dismissed.md`"). The per-file counts above are recorded so the same five "hottest" files (`status_routes.py`, `sql_repositories.py`, `settings.py`, both `test_sql_repositories.py` and `test_ibkr_status_endpoint.py`) line up exactly with the high-severity MI list in `FIND-RADON-003` — a future threshold tightening would compound those findings rather than discover new ones.
+
+### Not applicable: MI rank A (×473)
+
+473 modules score MI ≥ 20 (rank A). No further triage needed; recorded here so the baseline accounting is complete.
+
+### Not applicable: CC rank A (×4976)
+
+4976 functions/methods at radon's rank A (`CC 1–5`). No further triage needed; recorded here so the baseline accounting is complete.
