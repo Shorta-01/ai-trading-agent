@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-003** — Reality doc for the `packages/storage` package + Alembic migration chain. *Branch:* `task/T-003-reality-storage-package`.
+_None._
 
 ## Locked
 
