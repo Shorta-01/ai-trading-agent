@@ -87,3 +87,14 @@ sweep writes a dated report into `docs/code-health/` (e.g.
 | `docs/functional/` | Phase 2 |
 | `docs/decisions/` | Phase 4 onward |
 | `docs/tasks/` | Phase 4 onward |
+
+## Legacy artifacts
+
+`docs/product/task-queue.md` and `docs/product/task-history.md`
+predate this workflow. They are **FROZEN** as of 2026-05-26 — no new
+entries are added to either file. All new audit-workflow tasks live
+in `docs/tasks/queue.md` exclusively. The legacy files remain
+readable for historical reference and feed into Phase 1 as input to
+the reality and intent corpora, but they are not part of the
+go-forward task pipeline. The full reconciliation note is at
+`docs/product/_RECONCILIATION.md`.
