@@ -2,14 +2,24 @@
 id: T-052
 title: Run `vulture` baseline (dead Python code) and emit FIND entries
 phase: P1
-status: locked
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/439
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** `docs/code-health/01-dead-code.md` and `docs/code-health/_dismissed.md` read at their current state (`01-dead-code.md` was the Phase 0 stub header; `_dismissed.md` carried T-050 + T-051 sections). Repo-root `pyproject.toml` `[tool.vulture]` block read to confirm `min_confidence = 80` and the five `*/src` paths.
+- **Step 2 (one-line per touched file):**
+  - `docs/code-health/01-dead-code.md` — pre-edit: stub header; post-edit: header + one `FIND-VULTURE-001` entry.
+  - `docs/code-health/_dismissed.md` — pre-edit: T-050 + T-051 sections; post-edit: T-052 section appended with 15 dismissed findings grouped into three categories.
+- **Step 3 (one-line change):** run vulture, file 1 finding under `FIND-VULTURE-001` (unsatisfiable `if False else` ternary), dismiss 15 framework-callback / Protocol-signature / backward-compat suppressions.
+- **Step 4 (criteria measurable):** yes — raw log at `/tmp/vulture-baseline.log`; 1 FIND + 15 `_dismissed.md` rows = 16 distinct findings; FIND schema honoured.
+- **Step 5 (out-of-scope does not block goal):** confirmed — no `# noqa: vulture` comments added; no whitelist file generated; no source modification.
 
 ## Goal
 
