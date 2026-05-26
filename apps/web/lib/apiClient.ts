@@ -1033,6 +1033,115 @@ export type IbkrExecutionListResponse = {
   executions: IbkrExecutionRow[];
 };
 
+// Task 135b — IBKR reconciliation API types.
+
+export type ReconciliationPassName =
+  | "orphaned_execution"
+  | "stale_in_flight"
+  | "timeout_recovery";
+
+export type ReconciliationMode =
+  | "completed"
+  | "skipped_locked"
+  | "skipped_disconnected"
+  | "error";
+
+export type ManualReviewReason =
+  | "timeout_24h_no_data"
+  | "terminal_state_divergence"
+  | "unmatched_execution_no_draft";
+
+export type ManualReviewResolutionStatus =
+  | "pending"
+  | "resolved"
+  | "acknowledged";
+
+export type UnmatchedExecutionResolutionStatus =
+  | "unresolved"
+  | "manually_matched"
+  | "ignored";
+
+export type ReconciliationRunResponse = {
+  id: number | null;
+  reconciliation_run_id: string;
+  started_at: string;
+  completed_at: string | null;
+  account_id: string;
+  pass_a_orphaned_count: number;
+  pass_b_stale_count: number;
+  pass_c_timeout_count: number;
+  divergences_found: number;
+  mode_detected: ReconciliationMode;
+  error_details_json: Record<string, unknown> | null;
+};
+
+export type ReconciliationRunListResponse = {
+  ibkr_account_id: string;
+  runs: ReconciliationRunResponse[];
+};
+
+export type ReconciliationStatusResponse = {
+  ibkr_account_id: string;
+  latest_run: ReconciliationRunResponse | null;
+  drafts_healed_last_24h: number;
+  pending_manual_review_count: number;
+  unresolved_unmatched_count: number;
+};
+
+export type ReconciliationAuditRow = {
+  id: number | null;
+  reconciliation_run_id: string;
+  action_draft_id: string | null;
+  event_at: string;
+  pass_name: ReconciliationPassName;
+  divergence_type: string;
+  before_status: string | null;
+  after_status: string | null;
+  ibkr_evidence_json: Record<string, unknown>;
+  notes_dutch: string | null;
+};
+
+export type ReconciliationAuditListResponse = {
+  ibkr_account_id: string;
+  rows: ReconciliationAuditRow[];
+};
+
+export type ManualReviewResponse = {
+  id: number | null;
+  flagged_at: string;
+  action_draft_id: string;
+  reason: ManualReviewReason;
+  details_dutch: string;
+  resolution_status: ManualReviewResolutionStatus;
+  resolved_at: string | null;
+  resolution_note: string | null;
+};
+
+export type ManualReviewListResponse = {
+  ibkr_account_id: string;
+  rows: ManualReviewResponse[];
+};
+
+export type UnmatchedExecutionRow = {
+  id: number | null;
+  event_at: string;
+  ibkr_perm_id: number;
+  ibkr_exec_id: string;
+  account_id: string;
+  conid: string;
+  side: "BUY" | "SELL";
+  fill_price_local: string;
+  fill_quantity: string;
+  fill_time: string;
+  raw_execution_json: Record<string, unknown>;
+  resolution_status: UnmatchedExecutionResolutionStatus;
+};
+
+export type UnmatchedExecutionListResponse = {
+  ibkr_account_id: string;
+  rows: UnmatchedExecutionRow[];
+};
+
 export type ActiveDraftListResponse = {
   ibkr_account_id: string;
   drafts: ActionDraftResponse[];
@@ -1528,6 +1637,55 @@ export const apiClient = {
     search.set("conid", params.conid);
     return getJson<IbkrExecutionListResponse>(
       `/ibkr-executions?${search.toString()}`,
+    );
+  },
+  // -------------------------------------------------------------------
+  // Task 135b — IBKR reconciliation read API + manual-review acknowledge.
+  // -------------------------------------------------------------------
+  getReconciliationStatus: (accountId?: string) => {
+    const qs = accountId
+      ? `?account_id=${encodeURIComponent(accountId)}`
+      : "";
+    return getJson<ReconciliationStatusResponse>(
+      `/reconciliation/status${qs}`,
+    );
+  },
+  getReconciliationRuns: (accountId?: string, limit = 50) => {
+    const search = new URLSearchParams();
+    if (accountId) search.set("account_id", accountId);
+    search.set("limit", String(limit));
+    return getJson<ReconciliationRunListResponse>(
+      `/reconciliation/runs?${search.toString()}`,
+    );
+  },
+  getReconciliationAudit: (accountId?: string, limit = 50) => {
+    const search = new URLSearchParams();
+    if (accountId) search.set("account_id", accountId);
+    search.set("limit", String(limit));
+    return getJson<ReconciliationAuditListResponse>(
+      `/reconciliation/audit?${search.toString()}`,
+    );
+  },
+  getReconciliationManualReview: (accountId?: string) => {
+    const qs = accountId
+      ? `?account_id=${encodeURIComponent(accountId)}`
+      : "";
+    return getJson<ManualReviewListResponse>(
+      `/reconciliation/manual-review${qs}`,
+    );
+  },
+  acknowledgeManualReview: (queueId: number, note?: string) => {
+    const qs = note ? `?note=${encodeURIComponent(note)}` : "";
+    return postJson<ManualReviewResponse>(
+      `/reconciliation/manual-review/${queueId}/acknowledge${qs}`,
+    );
+  },
+  getReconciliationUnmatchedExecutions: (accountId?: string) => {
+    const qs = accountId
+      ? `?account_id=${encodeURIComponent(accountId)}`
+      : "";
+    return getJson<UnmatchedExecutionListResponse>(
+      `/reconciliation/unmatched-executions${qs}`,
     );
   },
   getSchedulerV127Status: () =>
