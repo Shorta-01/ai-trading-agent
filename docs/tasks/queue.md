@@ -194,3 +194,4 @@ _None._
 
 - **T-001** — Reality docs for `packages/domain` (4 files, 35 modules cited). PR: https://github.com/Shorta-01/ai-trading-agent/pull/434 — merged 2026-05-26.
 - **T-050** — `ruff` baseline (0 findings; per-file-ignores + noqa inventory in `_dismissed.md`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/435 — merged 2026-05-26.
+- **T-002** — Reality docs for `packages/portfolio` (4 files, 38 modules cited; Kelly + A-K guard observations in Open Questions). PR: https://github.com/Shorta-01/ai-trading-agent/pull/436 — merged 2026-05-26.
