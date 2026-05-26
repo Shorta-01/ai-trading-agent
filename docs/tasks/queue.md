@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-_None._
+- **T-002** — Write reality docs for the `packages/portfolio` package. *Branch:* `task/T-002-reality-portfolio-package`.
 
 ## Locked
 
@@ -192,4 +192,5 @@ _None._
 
 ## Done
 
-_None._
+- **T-001** — Reality docs for `packages/domain` (4 files, 35 modules cited). PR: https://github.com/Shorta-01/ai-trading-agent/pull/434 — merged 2026-05-26.
+- **T-050** — `ruff` baseline (0 findings; per-file-ignores + noqa inventory in `_dismissed.md`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/435 — merged 2026-05-26.
