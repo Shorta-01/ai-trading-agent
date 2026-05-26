@@ -36,6 +36,9 @@ from portfolio_outlook_api.ibkr_submission import (
 from portfolio_outlook_api.market_data_runtime_routes import (
     router as market_data_runtime_router,
 )
+from portfolio_outlook_api.reconciliation import (
+    router as reconciliation_router,
+)
 from portfolio_outlook_api.request_audit import router as request_audit_router
 from portfolio_outlook_api.research_sources import router as research_sources_router
 from portfolio_outlook_api.scheduler import build_scheduler, install_default_jobs
@@ -124,3 +127,4 @@ app.include_router(forecast_routes_router)
 app.include_router(decision_package_routes_router)
 app.include_router(action_draft_router)
 app.include_router(ibkr_submission_router)
+app.include_router(reconciliation_router)

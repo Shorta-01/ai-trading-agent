@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge";
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
+import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
@@ -69,6 +70,9 @@ export default function HomePage() {
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <ForecastDaySummaryWidget />
+      </section>
+      <section style={{ marginBottom: "0.75rem" }}>
+        <ReconciliationStatusWidget />
       </section>
       <section className="metrics-grid">
         <MetricCard
