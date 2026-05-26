@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-005** — Reality docs for the API forecasting + actions clusters (2 files). *Branch:* `task/T-005-reality-api-forecasting-and-actions`.
+_None._
 
 ## Locked
 
