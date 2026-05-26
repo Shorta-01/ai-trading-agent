@@ -1,14 +1,20 @@
 # AI Trading Agent
 
-## Doel van het project
-AI Trading Agent is een professionele **AI-ondersteunde paper portfolio research- en beslissingsomgeving**. Het systeem helpt een gebruiker bij het analyseren van toegelaten ETF's, aandelen en valuta's, en geeft duidelijke actiesuggesties in eenvoudige Nederlandse taal.
+> **Top-level doctrine:** `docs/decisions/0002-trading-system-doctrine.md` (locked, 2026-05-26).
+> Deze README is samenvattend; bij conflict wint de doctrine.
 
-## Belangrijke waarschuwing: versie 1 is paper-only
-- Versie 1 werkt **uitsluitend** met papergeld.
-- Geen live trading.
-- Geen real-money orders.
-- Geen broker execution.
-- Geen automatische orderplaatsing.
+## Doel van het project
+AI Trading Agent is een **volledig handelssysteem**. Het analyseert markten, genereert orderssuggesties en stuurt door de gebruiker goedgekeurde orders naar Interactive Brokers voor echte uitvoering. Het systeem is geen onderzoekstool en geen paper-only zandbak — het plaatst echte orders op echte accounts wanneer de gebruiker ze goedkeurt (doctrine §1).
+
+## Account-modus: paper en real-money zijn gelijkwaardig
+- De software werkt tegen één IBKR-account tegelijk. Of dat een paper-account of een real-money-account is, wordt door de gebruiker in IBKR bepaald.
+- Beide modi delen dezelfde codepaden, berekeningen, suggestielogica, orderflow en audittrail (doctrine §3).
+- Paper-modus dient uitsluitend om correct gedrag te verifiëren voordat het systeem op een real-money-account wordt aangesloten.
+- Het dashboard toont permanent een onmiskenbare badge met de actieve modus (PAPER = geel, REAL MONEY = rood; doctrine §3.1).
+
+## Orderflow: twee grids, twee goedkeuringen
+- Elke order doorloopt twee grids met elk een eigen goedkeuring: de **suggested orders grid** (systeemvoorstel → IBKR parked) en de **IBKR todo grid** (parked → markt). Zie doctrine §4.
+- Het systeem plaatst nooit een order zonder expliciete user-goedkeuring.
 
 ## Kernprincipes
 - **Complexe backend, eenvoudige Nederlandse frontend.**
@@ -59,8 +65,8 @@ cd infra/docker
 docker compose up --build
 ```
 
-## No-live-trading principe
-De applicatie mag in versie 1 geen echte broker-orders uitvoeren, geen live-accounts aansturen en geen real-money transacties automatiseren.
+## Geen automatische orderplaatsing
+De applicatie plaatst nooit een order zonder expliciete user-goedkeuring. De twee-grids-twee-goedkeuringen-flow (doctrine §4) is verplicht; het systeem heeft geen auto-submit pad.
 
 ## Product-governance documentatie
 - Version 1 scope register: `docs/product/version-1-scope-register.md`

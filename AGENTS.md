@@ -1,10 +1,12 @@
 # Development Guardrails
 
+> **Top-level doctrine:** `docs/decisions/0002-trading-system-doctrine.md` (locked, 2026-05-26).
+> Where this file conflicts with the doctrine, the doctrine wins.
+
 ## Product safety boundaries
-- AI Trading Agent is account-mode-aware; implementation slices may be paper-gated where safety requires it.
-- Do not implement live trading.
-- Do not add broker execution in version 1.
-- Do not add IBKR live order flow.
+- AI Trading Agent is a full trading system that submits user-approved orders to IBKR (paper or real-money account, treated identically). See doctrine §1–§3.
+- The system never submits an order without explicit user approval. The two-grid / two-approval lifecycle (suggested grid → IBKR parked → market) defined in doctrine §4 is mandatory.
+- IBKR is the single source of truth for positions, cash, orders, and fills (doctrine §2). The system never holds an authoritative state that contradicts IBKR.
 
 ## Architecture and implementation rules
 - No business logic in UI.
