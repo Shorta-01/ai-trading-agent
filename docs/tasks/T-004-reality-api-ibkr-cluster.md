@@ -2,7 +2,7 @@
 id: T-004
 title: Write reality docs for the API IBKR cluster
 phase: P1
-status: locked
+status: in-progress
 source: brainstorm
 owner: claude
 created: 2026-05-26
@@ -10,6 +10,17 @@ intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
 pr_url:
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the touch scope is creation of three new docs under `docs/reality/components/`; none exist. The 26 source modules at `apps/api/src/portfolio_outlook_api/ibkr_*.py` (~5.9k lines) plus ADR 0002 + 0003 + `docs/integrations/ibkr-api-research.md` + the `AGENTS.md` boundary are read by three parallel subagents (one per output file).
+- **Step 2 (one-line per touched file):** the three target files do not exist; each holds the reality doc for one sub-cluster:
+  - `api-ibkr-connection-and-status.md` — connection / status / session adapters + TWS read-only runtime + ibapi facade + contracts (9 modules)
+  - `api-ibkr-sync-and-snapshot.md` — sync orchestrator + sync-readiness/validation/persistence + account-snapshot persistence + preflight + market data + ibapi sync clients (12 modules)
+  - `api-ibkr-submission-and-watchlists.md` — submission orchestrator + order-submission factory + ibapi order-submission/manual-status clients + watchlists (5 modules)
+- **Step 3 (one-line change):** write three cited reality docs describing what the existing API IBKR cluster modules export, the read-only safety boundary (explicit `placeOrder`/`cancelOrder` call-site citation per doc), and the storage / state-machine ties.
+- **Step 4 (criteria measurable):** yes — seven acceptance criteria: three files exist; each lists modules; safety boundary cited per file with `placeOrder`/`cancelOrder` refs (or "none in this sub-cluster"); account-mode detection cited in connection doc; storage write paths in sync doc; submission state machine in submission doc; no source file modified.
+- **Step 5 (out-of-scope does not block goal):** confirmed — worker IBKR gateway and reconciliation are T-007 territory; frontend IBKR pages are T-008; no verdicts / gaps / findings.
 
 ## Goal
 
