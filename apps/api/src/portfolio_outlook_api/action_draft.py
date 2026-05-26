@@ -36,8 +36,11 @@ from ai_trading_agent_storage import (
     DecisionPackageEntry,
     IbkrAccountCashSnapshotRecord,
     IbkrPositionSnapshotRecord,
+    IbkrSubmissionLifecycleEntry,
     SqlAlchemyActionDraftRepository,
     SqlAlchemyDecisionPackageRepository,
+    SqlAlchemyIbkrSubmissionAuditRepository,
+    SqlAlchemyIbkrSubmissionLifecycleRepository,
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyTradingSettingsRepository,
     StorageConnectionError,
@@ -90,7 +93,23 @@ class ActionDraftResponse(BaseModel):
     usable_cash_eur_at_creation: str
     held_quantity_at_creation: str | None
     status: Literal[
-        "proposed", "edited", "user_approved", "dismissed", "deleted", "superseded"
+        # Task 133 user-facing statuses.
+        "proposed",
+        "edited",
+        "user_approved",
+        "dismissed",
+        "deleted",
+        "superseded",
+        # Task 134 IBKR lifecycle statuses.
+        "submitted",
+        "accepted",
+        "working",
+        "filled",
+        "partially_filled",
+        "cancelled",
+        "rejected",
+        "pending_cancellation",
+        "awaiting_reply_timeout",
     ]
     last_edited_at: str | None
     user_approved_at: str | None
@@ -102,6 +121,10 @@ class ActionDraftResponse(BaseModel):
     audit_trail_hash: str
     previous_draft_hash: str | None
     safe_for_submission: Literal[False] = False
+    # Task 134 lifecycle fields surfaced through the API.
+    submission_block_reason: str | None = None
+    submission_started_at: str | None = None
+    terminal_state_at: str | None = None
 
 
 class ActionDraftListResponse(BaseModel):
@@ -211,6 +234,9 @@ def _serialize_draft(entry: ActionDraftEntry) -> dict[str, object]:
         "audit_trail_hash": entry.audit_trail_hash,
         "previous_draft_hash": entry.previous_draft_hash,
         "safe_for_submission": False,
+        "submission_block_reason": entry.submission_block_reason,
+        "submission_started_at": _ts(entry.submission_started_at),
+        "terminal_state_at": _ts(entry.terminal_state_at),
     }
 
 
@@ -739,6 +765,126 @@ def delete_action_draft(action_draft_id: str) -> dict[str, object]:
     except StorageConnectionError:
         _raise_storage_unavailable()
     raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_DETAIL)
+
+
+# Statuses for which a user-initiated cancellation is legal (Task 134
+# product lock §8). ``pending_cancellation`` itself is excluded — a
+# second cancel click on an already-pending row is a no-op the UI
+# should disable.
+_CANCELLABLE_STATUSES = frozenset(
+    {"submitted", "accepted", "working", "partially_filled"}
+)
+
+
+@router.post(
+    "/action-draft/{action_draft_id}/cancel-submitted",
+    response_model=ActionDraftResponse,
+)
+def cancel_submitted_action_draft(
+    action_draft_id: str,
+) -> dict[str, object]:
+    """Task 134 product lock §8 — one-way user-initiated cancellation.
+
+    Valid only for in-flight statuses. Transitions the draft to
+    ``pending_cancellation`` and writes one ``ibkr_submission_lifecycle``
+    row tagged ``event_type='cancellation_request'``. **Does not call
+    IBKR** — the worker picks the row up from the database on its
+    next sweep tick and issues ``ib.cancelOrder()`` from the
+    long-lived TWS session (locked: only the worker owns the socket).
+    The actual ``cancelled`` status comes from the IBKR callback the
+    worker's lifecycle handler processes.
+    """
+
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyActionDraftRepository(
+                checked.connection, checked.readiness
+            )
+            lifecycle_repo = SqlAlchemyIbkrSubmissionLifecycleRepository(
+                checked.connection, checked.readiness
+            )
+            audit_repo = SqlAlchemyIbkrSubmissionAuditRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get_by_id(action_draft_id)
+            if current is None:
+                raise HTTPException(
+                    status_code=404, detail="Actiedraft niet gevonden."
+                )
+            if current.status not in _CANCELLABLE_STATUSES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        "Cancel niet toegestaan: draft is niet in een "
+                        f"actief IBKR-status (status={current.status!r})."
+                    ),
+                )
+
+            now = datetime.now(UTC)
+            try:
+                updated = repo.apply_lifecycle_transition(
+                    action_draft_id=action_draft_id,
+                    new_status="pending_cancellation",
+                    transitioned_at=now,
+                )
+            except ActionDraftStateTransitionError as exc:
+                raise HTTPException(
+                    status_code=422, detail=str(exc)
+                ) from exc
+
+            # Look up the perm_id from the most recent placed audit
+            # row so the lifecycle entry references the right IBKR
+            # order. The worker uses this perm_id when issuing the
+            # actual ``cancelOrder``.
+            perm_id = _lookup_perm_id_for_draft(
+                audit_repo=audit_repo,
+                action_draft_id=action_draft_id,
+            )
+            lifecycle_repo.append(
+                IbkrSubmissionLifecycleEntry(
+                    action_draft_id=action_draft_id,
+                    event_at=now,
+                    ibkr_perm_id=perm_id,
+                    event_type="cancellation_request",
+                    from_status=current.status,
+                    to_status=updated.status,
+                    ibkr_raw_status=None,
+                    fill_price_local=None,
+                    fill_quantity=None,
+                    commission=None,
+                    commission_currency=None,
+                    raw_callback_json={
+                        "source": "user_api_cancel",
+                        "from_status": current.status,
+                    },
+                )
+            )
+            checked.connection.commit()
+            return _serialize_draft(updated)
+    except StorageConnectionError:
+        _raise_storage_unavailable()
+    raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_DETAIL)
+
+
+def _lookup_perm_id_for_draft(
+    *,
+    audit_repo: SqlAlchemyIbkrSubmissionAuditRepository,
+    action_draft_id: str,
+) -> int:
+    """Look up the perm_id from the most recent placed submission row.
+
+    The cancel route needs it for the lifecycle audit row. If no placed
+    submission exists yet (shouldn't happen because the draft was at
+    submitted+), we return 0 as a sentinel — the worker will reconcile
+    on its next tick.
+    """
+
+    rows = audit_repo.list_for_draft(action_draft_id)
+    for row in reversed(rows):
+        if row.result == "placed" and row.ibkr_perm_id is not None:
+            return row.ibkr_perm_id
+    return 0
 
 
 __all__ = [

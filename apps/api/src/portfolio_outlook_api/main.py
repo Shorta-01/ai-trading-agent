@@ -30,6 +30,9 @@ from portfolio_outlook_api.health import HealthResponse, get_health_response
 from portfolio_outlook_api.ibkr_connection_routes import (
     router as ibkr_connection_router,
 )
+from portfolio_outlook_api.ibkr_submission import (
+    router as ibkr_submission_router,
+)
 from portfolio_outlook_api.market_data_runtime_routes import (
     router as market_data_runtime_router,
 )
@@ -120,3 +123,4 @@ app.include_router(market_data_runtime_router)
 app.include_router(forecast_routes_router)
 app.include_router(decision_package_routes_router)
 app.include_router(action_draft_router)
+app.include_router(ibkr_submission_router)

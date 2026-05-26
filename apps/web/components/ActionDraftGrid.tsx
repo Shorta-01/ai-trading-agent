@@ -40,12 +40,39 @@ const STATUS_COLOR: Record<
   ActionDraftResponse["status"],
   { bg: string; fg: string; label_nl: string }
 > = {
+  // Task 133 user-facing statuses (the only ones this grid renders;
+  // the lifecycle statuses live in the Actief bij IBKR + Historiek
+  // tabs via IbkrSubmissionGrids, but the record needs all 15 entries
+  // to satisfy TypeScript's exhaustive Record check).
   proposed: { bg: "#dbeafe", fg: "#1e40af", label_nl: "Voorgesteld" },
   edited: { bg: "#fef3c7", fg: "#854d0e", label_nl: "Bewerkt" },
   user_approved: { bg: "#dcfce7", fg: "#166534", label_nl: "Goedgekeurd" },
   dismissed: { bg: "#fee2e2", fg: "#7f1d1d", label_nl: "Genegeerd" },
   deleted: { bg: "#e5e7eb", fg: "#374151", label_nl: "Verwijderd" },
   superseded: { bg: "#fde68a", fg: "#92400e", label_nl: "Verouderd" },
+  // Task 134 lifecycle statuses — present for the typecheck even
+  // though Te keuren never lists drafts in these states.
+  submitted: { bg: "#dbeafe", fg: "#1e3a8a", label_nl: "Verstuurd" },
+  accepted: { bg: "#bfdbfe", fg: "#1e40af", label_nl: "Geaccepteerd" },
+  working: { bg: "#bae6fd", fg: "#075985", label_nl: "Actief" },
+  partially_filled: {
+    bg: "#fde68a",
+    fg: "#92400e",
+    label_nl: "Gedeeltelijk uitgevoerd",
+  },
+  filled: { bg: "#dcfce7", fg: "#166534", label_nl: "Uitgevoerd" },
+  cancelled: { bg: "#e5e7eb", fg: "#374151", label_nl: "Geannuleerd" },
+  rejected: { bg: "#fecaca", fg: "#7f1d1d", label_nl: "Geweigerd" },
+  pending_cancellation: {
+    bg: "#fef3c7",
+    fg: "#854d0e",
+    label_nl: "Annulering aangevraagd",
+  },
+  awaiting_reply_timeout: {
+    bg: "#fde68a",
+    fg: "#92400e",
+    label_nl: "Wacht op IBKR-bevestiging",
+  },
 };
 
 const SIDE_COLOR: Record<
@@ -229,6 +256,22 @@ function ActionDraftRow({
               title="Advies gewijzigd — er is een nieuwere Decision Package voor dit asset."
             >
               Advies gewijzigd
+            </span>
+          ) : null}
+          {draft.submission_block_reason !== null ? (
+            <span
+              data-testid={`action-draft-block-reason-${draft.action_draft_id}`}
+              style={{
+                background: "#fecaca",
+                color: "#7f1d1d",
+                padding: "2px 10px",
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+              title={`Submission geblokkeerd: ${draft.submission_block_reason}`}
+            >
+              Blokkering: {draft.submission_block_reason}
             </span>
           ) : null}
         </div>
