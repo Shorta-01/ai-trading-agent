@@ -132,7 +132,9 @@ test.describe("Task 135b — /admin/reconciliation page", () => {
 
   test("renders all four sections with seed data", async ({ page }) => {
     await page.goto("/admin/reconciliation");
-    await expect(page.locator("h1")).toContainText("IBKR-reconciliatie");
+    await expect(
+      page.getByRole("heading", { name: "IBKR-reconciliatie", level: 1 }),
+    ).toBeVisible();
     await expect(page.getByTestId("reconciliation-status-card")).toContainText(
       "Voltooid",
     );
