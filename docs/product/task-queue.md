@@ -1,3 +1,8 @@
+> **FROZEN — see `_RECONCILIATION.md`.**
+> No new entries. As of 2026-05-26, new audit-workflow tasks live in
+> `docs/tasks/queue.md`. The content below remains for historical
+> reference only.
+
 # Version 1 Task Queue (milestone-gericht)
 
 ## Current pivot
