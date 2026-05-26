@@ -23,7 +23,35 @@ jobs:
     # Never fail the build on findings during Phase 0.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout (attempt 1)
+        id: checkout1
+        continue-on-error: true
+        uses: actions/checkout@v4
+      - name: Wait 10s before attempt 2
+        if: steps.checkout1.outcome == 'failure'
+        working-directory: .
+        run: sleep 10
+      - name: Checkout (attempt 2)
+        if: steps.checkout1.outcome == 'failure'
+        id: checkout2
+        continue-on-error: true
+        uses: actions/checkout@v4
+      - name: Wait 30s before attempt 3
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure'
+        working-directory: .
+        run: sleep 30
+      - name: Checkout (attempt 3)
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure'
+        id: checkout3
+        continue-on-error: true
+        uses: actions/checkout@v4
+      - name: Wait 60s before attempt 4
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure' && steps.checkout3.outcome == 'failure'
+        working-directory: .
+        run: sleep 60
+      - name: Checkout (attempt 4)
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure' && steps.checkout3.outcome == 'failure'
+        uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
@@ -108,7 +136,35 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout (attempt 1)
+        id: checkout1
+        continue-on-error: true
+        uses: actions/checkout@v4
+      - name: Wait 10s before attempt 2
+        if: steps.checkout1.outcome == 'failure'
+        working-directory: .
+        run: sleep 10
+      - name: Checkout (attempt 2)
+        if: steps.checkout1.outcome == 'failure'
+        id: checkout2
+        continue-on-error: true
+        uses: actions/checkout@v4
+      - name: Wait 30s before attempt 3
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure'
+        working-directory: .
+        run: sleep 30
+      - name: Checkout (attempt 3)
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure'
+        id: checkout3
+        continue-on-error: true
+        uses: actions/checkout@v4
+      - name: Wait 60s before attempt 4
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure' && steps.checkout3.outcome == 'failure'
+        working-directory: .
+        run: sleep 60
+      - name: Checkout (attempt 4)
+        if: steps.checkout1.outcome == 'failure' && steps.checkout2.outcome == 'failure' && steps.checkout3.outcome == 'failure'
+        uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
