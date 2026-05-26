@@ -12,11 +12,9 @@
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import type {
-  DecisionPackageResponse,
-  ForecastConfidenceLevel,
-} from "@/lib/apiClient";
+import { apiClient, type DecisionPackageResponse, type ForecastConfidenceLevel } from "@/lib/apiClient";
 
 const LABEL_COLOR: Record<
   DecisionPackageResponse["suggested_action_label"],
@@ -64,14 +62,44 @@ function fmtPct(value: string, decimals = 0): string {
 }
 
 
+// Task 133 product lock §2: "Maak actie" is only shown for the three
+// actionable labels. Houden / Bekijken aren't action-worthy and the
+// underlying CHECK constraint already excludes Geblokkeerd from
+// Decision Packages, so the gate is conservative — defense in depth.
+const ACTIONABLE_LABELS: ReadonlySet<DecisionPackageResponse["suggested_action_label"]> = new Set([
+  "Kopen",
+  "Verminderen",
+  "Verkopen",
+]);
+
 export function DecisionPackageDetail({
   package: pkg,
 }: {
   package: DecisionPackageResponse;
 }) {
+  const router = useRouter();
   const [hashExpanded, setHashExpanded] = useState(false);
+  const [creatingDraft, setCreatingDraft] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const labelColor = LABEL_COLOR[pkg.suggested_action_label];
   const shortHash = pkg.audit_trail_hash.slice(0, 12);
+  const canCreateDraft = ACTIONABLE_LABELS.has(pkg.suggested_action_label);
+
+  async function handleMaakActie() {
+    setCreatingDraft(true);
+    setDraftError(null);
+    const result = await apiClient.createActionDraft({
+      decision_package_id: pkg.decision_package_id,
+    });
+    setCreatingDraft(false);
+    if (!result.ok) {
+      setDraftError(result.message || "Aanmaken van actiedraft mislukt.");
+      return;
+    }
+    router.push(
+      `/ibkr-acties?new=${encodeURIComponent(result.data.action_draft_id)}`,
+    );
+  }
 
   return (
     <article
@@ -357,6 +385,56 @@ export function DecisionPackageDetail({
           )}
         </dl>
       </section>
+
+      {canCreateDraft ? (
+        <section
+          data-testid="dp-section-maak-actie"
+          style={{
+            marginTop: 24,
+            paddingTop: 16,
+            borderTop: "1px solid #e5e7eb",
+          }}
+        >
+          <h2 style={{ fontSize: 16, margin: "0 0 8px" }}>Actie</h2>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#6b7280" }}>
+            Maak een actiedraft aan in het IBKR Acties scherm. De
+            voorgestelde hoeveelheid wordt berekend uit je beschikbare
+            cash; je kunt nog bewerken voordat je goedkeurt.
+          </p>
+          <button
+            type="button"
+            data-testid="dp-maak-actie-button"
+            onClick={handleMaakActie}
+            disabled={creatingDraft}
+            style={{
+              padding: "10px 20px",
+              background: "#15803d",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 6,
+              cursor: creatingDraft ? "wait" : "pointer",
+              fontWeight: 700,
+            }}
+          >
+            {creatingDraft ? "Bezig…" : "Maak actie"}
+          </button>
+          {draftError ? (
+            <div
+              data-testid="dp-maak-actie-error"
+              style={{
+                marginTop: 12,
+                color: "#7f1d1d",
+                background: "#fee2e2",
+                padding: 8,
+                borderRadius: 4,
+                fontSize: 13,
+              }}
+            >
+              {draftError}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </article>
   );
 }

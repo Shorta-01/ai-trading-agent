@@ -1,7 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import type { DecisionPackageResponse } from "@/lib/apiClient";
+
+// Task 133: the DecisionPackageDetail now reads useRouter() for the
+// "Maak actie" button. Mock next/navigation so the existing render
+// tests don't trip the "app router not mounted" invariant.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
 
 import { DecisionPackageDetail } from "./DecisionPackageDetail";
 
