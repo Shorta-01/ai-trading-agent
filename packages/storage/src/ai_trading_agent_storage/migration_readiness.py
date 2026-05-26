@@ -575,6 +575,32 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "False tot Task 134 echte IBKR-submission ship."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id=(
+            "0052_ibkr_submission_lifecycle_audit_and_executions"
+        ),
+        previous_revision_id="0051_action_drafts_and_audit",
+        filename=(
+            "0052_ibkr_submission_lifecycle_audit_and_executions.py"
+        ),
+        label_nl=(
+            "Task 134a IBKR submission lifecycle + audit + executions"
+        ),
+        description_nl=(
+            "Verbreedt action_drafts.status met de in-flight + "
+            "terminal IBKR statuses (submitted/accepted/working/"
+            "filled/partially_filled/cancelled/rejected/"
+            "pending_cancellation/awaiting_reply_timeout) en voegt "
+            "submission_block_reason + submission_started_at + "
+            "terminal_state_at kolommen toe. Maakt append-only "
+            "ibkr_submission_audit, ibkr_submission_lifecycle, "
+            "ibkr_executions (UNIQUE op ibkr_exec_id) en "
+            "behavioural_guardrail_settings met brainstorm-locked "
+            "defaults. Hard-False safe_for_submission blijft op "
+            "CHECK; Task 134b's submitter is het enige code-pad dat "
+            "via de lifecycle-statemachine status mag veranderen."
+        ),
+    ),
 )
 
 

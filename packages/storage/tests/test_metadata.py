@@ -85,6 +85,10 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "decision_packages",
         "action_drafts",
         "action_draft_audit",
+        "ibkr_submission_audit",
+        "ibkr_submission_lifecycle",
+        "ibkr_executions",
+        "behavioural_guardrail_settings",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

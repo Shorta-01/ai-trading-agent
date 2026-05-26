@@ -2568,6 +2568,17 @@ action_drafts = Table(
         nullable=False,
         server_default="false",
     ),
+    # Task 134 lifecycle columns. ``submission_block_reason`` is the
+    # locked enum surfaced to the UI when a safety gate refuses a
+    # ``user_approved`` draft at sweep time; ``submission_started_at``
+    # marks the moment the worker called ``placeOrder()``;
+    # ``terminal_state_at`` marks the moment the lifecycle handler
+    # transitioned the draft to a terminal status.
+    Column("submission_block_reason", Text, nullable=True),
+    Column(
+        "submission_started_at", DateTime(timezone=True), nullable=True
+    ),
+    Column("terminal_state_at", DateTime(timezone=True), nullable=True),
     CheckConstraint(
         "created_by IN ('user', 'system')",
         name="ck_action_drafts_created_by",
@@ -2584,10 +2595,25 @@ action_drafts = Table(
         "time_in_force IN ('DAY')",
         name="ck_action_drafts_time_in_force",
     ),
+    # Task 134 widens the Task 133 enum with nine in-flight + terminal
+    # statuses. Geblokkeerd-style block reasons live in the separate
+    # ``submission_block_reason`` column; the status enum stays clean.
     CheckConstraint(
         "status IN ('proposed', 'edited', 'user_approved', "
-        "'dismissed', 'deleted', 'superseded')",
+        "'dismissed', 'deleted', 'superseded', 'submitted', "
+        "'accepted', 'working', 'filled', 'partially_filled', "
+        "'cancelled', 'rejected', 'pending_cancellation', "
+        "'awaiting_reply_timeout')",
         name="ck_action_drafts_status",
+    ),
+    CheckConstraint(
+        "submission_block_reason IS NULL OR submission_block_reason IN ("
+        "'cash_insufficient', 'mode_mismatch', 'connection_down', "
+        "'account_id_mismatch', 'duplicate_in_flight', "
+        "'market_closed', 'cooldown', 'daily_limit', "
+        "'soft_drawdown', 'hard_drawdown', 'fomo', "
+        "'tick_size_invalid', 'unknown')",
+        name="ck_action_drafts_submission_block_reason",
     ),
     CheckConstraint(
         "quantity > 0",
@@ -2649,4 +2675,237 @@ Index(
     "ix_action_draft_audit_draft_id_event_at",
     action_draft_audit.c.action_draft_id,
     action_draft_audit.c.event_at,
+)
+
+
+# ---------------------------------------------------------------------------
+# Task 134 — IBKR submission lifecycle, audit, executions, and the
+# per-account behavioural guardrail thresholds. Every new table is
+# append-only at the storage layer; the only mutation path for a draft's
+# in-flight state is the natural status transition on ``action_drafts``.
+# ---------------------------------------------------------------------------
+
+ibkr_submission_audit = Table(
+    "ibkr_submission_audit",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "action_draft_id",
+        Text,
+        ForeignKey("action_drafts.action_draft_id"),
+        nullable=False,
+    ),
+    Column("submitted_at", DateTime(timezone=True), nullable=False),
+    Column("sent_to_account_id", Text, nullable=False),
+    Column("sent_account_mode", Text, nullable=False),
+    Column("ibkr_perm_id", BigInteger, nullable=True),
+    Column("ibkr_order_id", Integer, nullable=True),
+    Column("contract_json", JSON, nullable=False),
+    Column("order_json", JSON, nullable=False),
+    Column("gateway_session_id", Text, nullable=False),
+    Column("result", Text, nullable=False),
+    Column("error_class", Text, nullable=True),
+    Column("error_message_dutch", Text, nullable=True),
+    CheckConstraint(
+        "sent_account_mode IN ('paper', 'live')",
+        name="ck_ibkr_submission_audit_sent_account_mode",
+    ),
+    CheckConstraint(
+        "result IN ('placed', 'rejected_at_send', 'connection_lost')",
+        name="ck_ibkr_submission_audit_result",
+    ),
+)
+Index(
+    "ix_ibkr_submission_audit_draft_submitted",
+    ibkr_submission_audit.c.action_draft_id,
+    ibkr_submission_audit.c.submitted_at,
+)
+Index(
+    "ix_ibkr_submission_audit_account_submitted",
+    ibkr_submission_audit.c.sent_to_account_id,
+    ibkr_submission_audit.c.submitted_at,
+)
+
+
+ibkr_submission_lifecycle = Table(
+    "ibkr_submission_lifecycle",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column(
+        "action_draft_id",
+        Text,
+        ForeignKey("action_drafts.action_draft_id"),
+        nullable=False,
+    ),
+    Column("event_at", DateTime(timezone=True), nullable=False),
+    Column("ibkr_perm_id", BigInteger, nullable=False),
+    Column("event_type", Text, nullable=False),
+    Column("from_status", Text, nullable=True),
+    Column("to_status", Text, nullable=True),
+    Column("ibkr_raw_status", Text, nullable=True),
+    Column(
+        "fill_price_local", Numeric(precision=20, scale=8), nullable=True
+    ),
+    Column("fill_quantity", Numeric(precision=20, scale=8), nullable=True),
+    Column("commission", Numeric(precision=20, scale=8), nullable=True),
+    Column("commission_currency", Text, nullable=True),
+    Column("raw_callback_json", JSON, nullable=False),
+    CheckConstraint(
+        "event_type IN ('status_change', 'fill', "
+        "'commission_report', 'cancellation_request')",
+        name="ck_ibkr_submission_lifecycle_event_type",
+    ),
+)
+Index(
+    "ix_ibkr_submission_lifecycle_draft_event_at",
+    ibkr_submission_lifecycle.c.action_draft_id,
+    ibkr_submission_lifecycle.c.event_at,
+)
+Index(
+    "ix_ibkr_submission_lifecycle_perm_id",
+    ibkr_submission_lifecycle.c.ibkr_perm_id,
+)
+
+
+ibkr_executions = Table(
+    "ibkr_executions",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("ibkr_exec_id", Text, nullable=False, unique=True),
+    Column("ibkr_perm_id", BigInteger, nullable=False),
+    Column(
+        "action_draft_id",
+        Text,
+        ForeignKey("action_drafts.action_draft_id"),
+        nullable=False,
+    ),
+    Column("account_id", Text, nullable=False),
+    Column("conid", Text, nullable=False),
+    Column("side", Text, nullable=False),
+    Column(
+        "fill_price_local",
+        Numeric(precision=20, scale=8),
+        nullable=False,
+    ),
+    Column("fill_quantity", Numeric(precision=20, scale=8), nullable=False),
+    Column("fill_time", DateTime(timezone=True), nullable=False),
+    Column("commission", Numeric(precision=20, scale=8), nullable=False),
+    Column("commission_currency", Text, nullable=False),
+    Column("exchange", Text, nullable=False),
+    CheckConstraint(
+        "side IN ('BUY', 'SELL')",
+        name="ck_ibkr_executions_side",
+    ),
+    CheckConstraint(
+        "fill_price_local > 0",
+        name="ck_ibkr_executions_fill_price_positive",
+    ),
+    CheckConstraint(
+        "fill_quantity > 0",
+        name="ck_ibkr_executions_fill_quantity_positive",
+    ),
+    CheckConstraint(
+        "commission >= 0",
+        name="ck_ibkr_executions_commission_non_negative",
+    ),
+)
+Index(
+    "ix_ibkr_executions_account_conid_time",
+    ibkr_executions.c.account_id,
+    ibkr_executions.c.conid,
+    ibkr_executions.c.fill_time,
+)
+Index(
+    "ix_ibkr_executions_action_draft_id",
+    ibkr_executions.c.action_draft_id,
+)
+Index(
+    "ix_ibkr_executions_perm_id",
+    ibkr_executions.c.ibkr_perm_id,
+)
+
+
+behavioural_guardrail_settings = Table(
+    "behavioural_guardrail_settings",
+    metadata,
+    Column("ibkr_account_id", Text, primary_key=True),
+    Column(
+        "daily_max_approvals",
+        Integer,
+        nullable=False,
+        server_default="5",
+    ),
+    Column(
+        "cooldown_seconds",
+        Integer,
+        nullable=False,
+        server_default="60",
+    ),
+    Column(
+        "anti_revenge_window_hours",
+        Integer,
+        nullable=False,
+        server_default="72",
+    ),
+    Column(
+        "anti_revenge_loss_threshold_pct",
+        Numeric(precision=8, scale=4),
+        nullable=False,
+        server_default="1.0",
+    ),
+    Column(
+        "soft_drawdown_pct",
+        Numeric(precision=8, scale=4),
+        nullable=False,
+        server_default="5.0",
+    ),
+    Column(
+        "soft_drawdown_window_days",
+        Integer,
+        nullable=False,
+        server_default="5",
+    ),
+    Column(
+        "hard_drawdown_pct",
+        Numeric(precision=8, scale=4),
+        nullable=False,
+        server_default="10.0",
+    ),
+    Column(
+        "hard_drawdown_window_days",
+        Integer,
+        nullable=False,
+        server_default="20",
+    ),
+    Column(
+        "fomo_drift_pct",
+        Numeric(precision=8, scale=4),
+        nullable=False,
+        server_default="1.5",
+    ),
+    Column("last_updated_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "daily_max_approvals > 0",
+        name="ck_behavioural_guardrail_daily_max_positive",
+    ),
+    CheckConstraint(
+        "cooldown_seconds >= 0",
+        name="ck_behavioural_guardrail_cooldown_non_negative",
+    ),
+    CheckConstraint(
+        "anti_revenge_loss_threshold_pct >= 0",
+        name="ck_behavioural_guardrail_anti_revenge_non_negative",
+    ),
+    CheckConstraint(
+        "soft_drawdown_pct >= 0",
+        name="ck_behavioural_guardrail_soft_drawdown_non_negative",
+    ),
+    CheckConstraint(
+        "hard_drawdown_pct >= 0",
+        name="ck_behavioural_guardrail_hard_drawdown_non_negative",
+    ),
+    CheckConstraint(
+        "fomo_drift_pct >= 0",
+        name="ck_behavioural_guardrail_fomo_non_negative",
+    ),
 )
