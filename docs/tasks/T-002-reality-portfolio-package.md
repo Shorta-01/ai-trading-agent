@@ -2,14 +2,26 @@
 id: T-002
 title: Write reality docs for the `packages/portfolio` package
 phase: P1
-status: locked
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/436
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the touch scope is creation of four new docs under `docs/reality/components/`; none exist yet, so there are no files to read in the *target* path. The *source* modules to read (38 files under `packages/portfolio/src/portfolio_outlook_portfolio/*.py` plus tests) are inventoried below — organised into four groups per the locked file plan.
+- **Step 2 (one-line per touched file):** the four target files do not exist; each will hold a reality doc for one module group:
+  - `portfolio-money-and-accounting.md` — covers `money`, `accounting`, `lots`, `snapshot`, `performance`, `valuation_conversion_totals`, `valuation_cost_basis_pl`, `term_deposits`, `ledger_services`.
+  - `portfolio-predictors.md` — covers the 14 predictor / ensemble / sizing / diary-eval modules.
+  - `portfolio-guards-and-state-machines.md` — covers the 11 guards + state-machine + errors modules.
+  - `portfolio-daily-briefing-and-tax.md` — covers `daily_briefing`, `research_evidence_summary`, `belgian_tax`, `capabilities`.
+- **Step 3 (one-line change):** write four cited reality docs describing what the existing `packages/portfolio` modules actually export, what invariants they encode, and what depends on what — with Decimal-precision / ROUND_HALF_EVEN / money-boundary calls cited where applied.
+- **Step 4 (criteria measurable):** yes — the seven acceptance criteria are observable (file existence, locked filenames, `## Modules covered` section, `path/to/file.py:NNN` cites, 3-10 line excerpts on non-trivial claims, `## Open questions / uncertainty` section per file, no source file modified).
+- **Step 5 (out-of-scope does not block goal):** confirmed. No fixes, no refactors, no test changes, no Phase 1b/1c/1d artefacts, no API/worker wiring (those are T-005 / T-007).
 
 ## Goal
 

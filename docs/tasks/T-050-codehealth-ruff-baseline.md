@@ -2,7 +2,7 @@
 id: T-050
 title: Run `ruff` baseline and emit FIND entries
 phase: P1
-status: pr-open
+status: pr-merged
 source: brainstorm
 owner: claude
 created: 2026-05-26

@@ -2,7 +2,7 @@
 id: T-001
 title: Write reality docs for the `packages/domain` package
 phase: P1
-status: pr-open
+status: pr-merged
 source: brainstorm
 owner: claude
 created: 2026-05-26
