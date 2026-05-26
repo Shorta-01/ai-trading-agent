@@ -14,6 +14,9 @@ from ai_trading_agent_storage import (
 )
 from fastapi import FastAPI
 
+from portfolio_outlook_api.action_draft import (
+    router as action_draft_router,
+)
 from portfolio_outlook_api.asset_listings import router as asset_listings_router
 from portfolio_outlook_api.asset_master import router as asset_master_router
 from portfolio_outlook_api.config import settings
@@ -116,3 +119,4 @@ app.include_router(watchlist_confirmation_router)
 app.include_router(market_data_runtime_router)
 app.include_router(forecast_routes_router)
 app.include_router(decision_package_routes_router)
+app.include_router(action_draft_router)

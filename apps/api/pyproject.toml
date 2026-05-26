@@ -8,6 +8,11 @@ dependencies = [
   "ai-trading-agent-storage>=0.1.0",
   "portfolio-outlook-domain>=0.1.0",
   "portfolio-outlook-portfolio>=0.1.0",
+  # Task 133 — the API surfaces the Action Draft composer that lives
+  # in the worker package (the composer is a pure function with no
+  # network/IO; the worker is the natural home and the API consumes
+  # it). No reverse dependency exists.
+  "portfolio-outlook-worker>=0.1.0",
   "pydantic-settings>=2.6.0",
   "python-multipart>=0.0.20",
   "uvicorn>=0.30.0",

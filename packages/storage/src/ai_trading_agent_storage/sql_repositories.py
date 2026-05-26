@@ -920,6 +920,55 @@ class SqlAlchemyIbkrSyncSnapshotRepository(_Base):
         )
         return [IbkrPositionSnapshotRecord(**dict(row)) for row in rows]
 
+    def get_latest_account_cash_snapshot(
+        self, *, ibkr_account_id: str
+    ) -> IbkrAccountCashSnapshotRecord | None:
+        """Task 133: latest cash row for the (account) across all runs."""
+
+        row = (
+            self._connection.execute(
+                select(ibkr_account_cash_snapshots)
+                .where(
+                    ibkr_account_cash_snapshots.c.ibkr_account_id
+                    == ibkr_account_id
+                )
+                .order_by(ibkr_account_cash_snapshots.c.stored_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        return (
+            None
+            if row is None
+            else IbkrAccountCashSnapshotRecord(**dict(row))
+        )
+
+    def get_latest_position_snapshot_for_conid(
+        self, *, ibkr_account_id: str, conid: str
+    ) -> IbkrPositionSnapshotRecord | None:
+        """Task 133: latest position row for (account, conid)."""
+
+        row = (
+            self._connection.execute(
+                select(ibkr_position_snapshots)
+                .where(
+                    ibkr_position_snapshots.c.ibkr_account_id
+                    == ibkr_account_id
+                )
+                .where(ibkr_position_snapshots.c.conid == conid)
+                .order_by(ibkr_position_snapshots.c.stored_at.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        return (
+            None
+            if row is None
+            else IbkrPositionSnapshotRecord(**dict(row))
+        )
+
     def save_ibkr_open_order_snapshots(
         self, sync_run_id: str, records: list[IbkrOpenOrderSnapshotRecord]
     ) -> None:
@@ -4780,14 +4829,14 @@ class SqlAlchemyActionDraftRepository(_Base):
             raise ValueError(
                 "safe_for_submission must be False (Task 133 product lock §3)"
             )
-        self._insert(action_drafts, _action_draft_to_payload(record))
+        self._insert(action_drafts, _new_action_draft_to_payload(record))
         self._connection.execute(
             action_draft_audit.insert().values(
                 action_draft_id=record.action_draft_id,
                 event_at=record.created_at,
                 event_type="created",
                 before_state_json=None,
-                after_state_json=_action_draft_state_snapshot(record),
+                after_state_json=_new_action_draft_state_snapshot(record),
                 actor=record.created_by,
             )
         )
@@ -4807,7 +4856,7 @@ class SqlAlchemyActionDraftRepository(_Base):
         )
         if row is None:
             return None
-        return _action_draft_from_row(row)
+        return _new_action_draft_from_row(row)
 
     def list_te_keuren_for_account(
         self, ibkr_account_id: str
@@ -4828,7 +4877,7 @@ class SqlAlchemyActionDraftRepository(_Base):
             .mappings()
             .all()
         )
-        return tuple(_action_draft_from_row(row) for row in rows)
+        return tuple(_new_action_draft_from_row(row) for row in rows)
 
     def list_by_status(
         self, ibkr_account_id: str, status: str
@@ -4843,7 +4892,7 @@ class SqlAlchemyActionDraftRepository(_Base):
             .mappings()
             .all()
         )
-        return tuple(_action_draft_from_row(row) for row in rows)
+        return tuple(_new_action_draft_from_row(row) for row in rows)
 
     def list_pending_for_conid(
         self, *, ibkr_account_id: str, conid: str
@@ -4865,7 +4914,7 @@ class SqlAlchemyActionDraftRepository(_Base):
             .mappings()
             .all()
         )
-        return tuple(_action_draft_from_row(row) for row in rows)
+        return tuple(_new_action_draft_from_row(row) for row in rows)
 
     def update_status(
         self,
@@ -4919,8 +4968,8 @@ class SqlAlchemyActionDraftRepository(_Base):
                 action_draft_id=action_draft_id,
                 event_at=transition_at,
                 event_type=event_type,
-                before_state_json=_action_draft_state_snapshot(current),
-                after_state_json=_action_draft_state_snapshot(updated),
+                before_state_json=_new_action_draft_state_snapshot(current),
+                after_state_json=_new_action_draft_state_snapshot(updated),
                 actor=transition_actor,
             )
         )
@@ -4975,8 +5024,8 @@ class SqlAlchemyActionDraftRepository(_Base):
                 action_draft_id=action_draft_id,
                 event_at=edited_at,
                 event_type="edited",
-                before_state_json=_action_draft_state_snapshot(current),
-                after_state_json=_action_draft_state_snapshot(updated),
+                before_state_json=_new_action_draft_state_snapshot(current),
+                after_state_json=_new_action_draft_state_snapshot(updated),
                 actor=actor,
             )
         )
@@ -5022,8 +5071,8 @@ class SqlAlchemyActionDraftRepository(_Base):
                 action_draft_id=action_draft_id,
                 event_at=marked_at,
                 event_type="superseded",
-                before_state_json=_action_draft_state_snapshot(current),
-                after_state_json=_action_draft_state_snapshot(updated),
+                before_state_json=_new_action_draft_state_snapshot(current),
+                after_state_json=_new_action_draft_state_snapshot(updated),
                 actor="system",
             )
         )
@@ -5105,7 +5154,7 @@ _STATUS_TO_EVENT_TYPE: dict[str, str] = {
 }
 
 
-def _action_draft_to_payload(record: ActionDraftEntry) -> dict[str, Any]:
+def _new_action_draft_to_payload(record: ActionDraftEntry) -> dict[str, Any]:
     return {
         "action_draft_id": record.action_draft_id,
         "decision_package_id": record.decision_package_id,
@@ -5143,7 +5192,7 @@ def _action_draft_to_payload(record: ActionDraftEntry) -> dict[str, Any]:
     }
 
 
-def _action_draft_from_row(row: Any) -> ActionDraftEntry:
+def _new_action_draft_from_row(row: Any) -> ActionDraftEntry:
     return ActionDraftEntry(
         action_draft_id=row["action_draft_id"],
         decision_package_id=row["decision_package_id"],
@@ -5189,7 +5238,7 @@ def _action_draft_from_row(row: Any) -> ActionDraftEntry:
     )
 
 
-def _action_draft_state_snapshot(
+def _new_action_draft_state_snapshot(
     record: ActionDraftEntry,
 ) -> dict[str, object]:
     """Canonical JSON-friendly snapshot for the audit table.

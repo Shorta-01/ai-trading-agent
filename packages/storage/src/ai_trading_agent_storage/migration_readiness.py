@@ -544,6 +544,37 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "evaluatie 20 dagen later. Safety booleans blijven False."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0050_decision_packages",
+        previous_revision_id="0049_forecasts_and_calibration_diary",
+        filename="0050_decision_packages.py",
+        label_nl="Task 132 Decision Package datamodel",
+        description_nl=(
+            "Maakt decision_packages (append-only, per-asset hash-chain "
+            "via previous_package_hash, locked CHECK op "
+            "suggested_action_label zonder Geblokkeerd, hard-False "
+            "safe_for_action_drafts en safe_for_orders). Bewaart het "
+            "deterministische Dutch explanation veld en gate_outcomes "
+            "+ evidence_references als JSON. Safety booleans blijven "
+            "False tot Action Center workflows shippen."
+        ),
+    ),
+    MigrationRevisionInfo(
+        revision_id="0051_action_drafts_and_audit",
+        previous_revision_id="0050_decision_packages",
+        filename="0051_action_drafts_and_audit.py",
+        label_nl="Task 133 Action Drafts (User To-Do laag)",
+        description_nl=(
+            "Maakt action_drafts (user-promotable IBKR-format order "
+            "voorstel afgeleid van een non-Geblokkeerde Decision "
+            "Package, FK naar decision_packages, status enum "
+            "{proposed,edited,user_approved,dismissed,deleted,"
+            "superseded}, hard-False safe_for_submission) en "
+            "action_draft_audit (append-only met before/after JSON "
+            "snapshots per status-transitie). Safety boolean blijft "
+            "False tot Task 134 echte IBKR-submission ship."
+        ),
+    ),
 )
 
 
