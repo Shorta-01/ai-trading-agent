@@ -14,15 +14,14 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-
 from ai_trading_agent_storage import (
     DecisionPackageEntry,
     EvidenceReference,
     FxRateRecord,
     GateOutcome,
     IbkrAccountCashSnapshotRecord,
-    IbkrPositionSnapshotRecord,
 )
+
 from portfolio_outlook_worker.action_draft.composer import (
     InsufficientCashError,
     compose_action_draft_from_decision_package,

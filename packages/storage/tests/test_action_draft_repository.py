@@ -15,8 +15,6 @@ from ai_trading_agent_storage import (
     SqlAlchemyActionDraftRepository,
 )
 from ai_trading_agent_storage.metadata import (
-    action_draft_audit,
-    action_drafts,
     metadata,
 )
 from ai_trading_agent_storage.migration_readiness import (

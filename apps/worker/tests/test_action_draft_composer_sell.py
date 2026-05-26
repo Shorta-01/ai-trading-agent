@@ -13,7 +13,6 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-
 from ai_trading_agent_storage import (
     DecisionPackageEntry,
     EvidenceReference,
@@ -21,6 +20,7 @@ from ai_trading_agent_storage import (
     IbkrAccountCashSnapshotRecord,
     IbkrPositionSnapshotRecord,
 )
+
 from portfolio_outlook_worker.action_draft.composer import (
     NoPositionToSellError,
     compose_action_draft_from_decision_package,

@@ -541,7 +541,8 @@ def test_post_blocks_houden_package(tmp_path) -> None:  # type: ignore[no-untype
         "/action-draft", json={"decision_package_id": "dp-1"}
     )
     assert r.status_code == 422
-    assert "niet actionable" in r.json()["detail"].lower() or "not actionable" in r.json()["detail"].lower()
+    detail = r.json()["detail"].lower()
+    assert "niet actionable" in detail or "not actionable" in detail
 
 
 # ---- SELL flow (Verkopen) -------------------------------------------

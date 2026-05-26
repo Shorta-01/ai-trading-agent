@@ -11,8 +11,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import create_engine
-
 from ai_trading_agent_storage import (
     ActionDraftEntry,
     DecisionPackageEntry,
@@ -25,6 +23,7 @@ from ai_trading_agent_storage.migration_readiness import (
     MigrationReadinessReport,
     MigrationReadinessStatus,
 )
+from sqlalchemy import create_engine
 
 from portfolio_outlook_worker.action_draft.supersede_check import (
     mark_superseded_drafts,

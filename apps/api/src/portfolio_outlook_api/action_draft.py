@@ -45,9 +45,6 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
-
-from portfolio_outlook_api.config import settings
 from portfolio_outlook_worker.action_draft.composer import (
     InsufficientCashError,
     NoPositionToSellError,
@@ -55,6 +52,9 @@ from portfolio_outlook_worker.action_draft.composer import (
     compose_action_draft_from_decision_package,
     compose_action_draft_user_supplied,
 )
+from pydantic import BaseModel, ConfigDict, Field
+
+from portfolio_outlook_api.config import settings
 
 router = APIRouter()
 
