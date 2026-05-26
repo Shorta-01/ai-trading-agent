@@ -1,0 +1,143 @@
+name: code-health
+
+# Phase 0 scaffolding (audit workflow): run code-health tools in
+# report-only mode on every PR and on pushes to main. Findings do not
+# fail the build until Phase 1d baselines them and we tighten gates.
+#
+# This workflow is additive to `ci.yml`; it does not replace any
+# existing job and does not change behaviour of the green CI.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+
+  python-health:
+    name: python health (report-only)
+    runs-on: ubuntu-latest
+    # Never fail the build on findings during Phase 0.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install code-health tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            "ruff>=0.6.0" \
+            "mypy>=1.11.0" \
+            vulture \
+            bandit \
+            pip-audit \
+            radon
+
+      - name: Install project packages (editable) for type-checking
+        run: |
+          pip install -e ./packages/domain
+          pip install -e ./packages/storage
+          pip install -e ./packages/portfolio
+          pip install -e ./apps/worker
+          pip install -e ./apps/api
+
+      - name: ruff (report-only)
+        if: always()
+        run: |
+          for pkg in packages/domain packages/portfolio packages/storage apps/api apps/worker; do
+            echo "::group::ruff $pkg"
+            ruff check "$pkg" || true
+            echo "::endgroup::"
+          done
+
+      - name: mypy --strict (report-only)
+        if: always()
+        run: |
+          for pkg in packages/domain packages/portfolio packages/storage apps/api apps/worker; do
+            echo "::group::mypy $pkg"
+            (cd "$pkg" && mypy --strict src) || true
+            echo "::endgroup::"
+          done
+
+      - name: vulture (dead code, report-only)
+        if: always()
+        run: |
+          echo "::group::vulture"
+          vulture --min-confidence 80 \
+            apps/api/src apps/worker/src \
+            packages/domain/src packages/portfolio/src packages/storage/src \
+            || true
+          echo "::endgroup::"
+
+      - name: bandit (security smells, report-only)
+        if: always()
+        run: |
+          echo "::group::bandit"
+          bandit -r apps packages -x tests -ll || true
+          echo "::endgroup::"
+
+      - name: pip-audit (dependency CVEs, report-only)
+        if: always()
+        run: |
+          echo "::group::pip-audit"
+          pip-audit || true
+          echo "::endgroup::"
+
+      - name: radon (complexity + maintainability, report-only)
+        if: always()
+        run: |
+          echo "::group::radon cc"
+          radon cc -s -a apps packages || true
+          echo "::endgroup::"
+          echo "::group::radon mi"
+          radon mi -s apps packages || true
+          echo "::endgroup::"
+
+  web-health:
+    name: web health (report-only)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install audit-only dev tools
+        # Installed as ephemeral dev tools — not added to package.json so
+        # we do not perturb the existing dependency lock during Phase 0.
+        run: npm install --no-save --legacy-peer-deps knip ts-prune
+
+      - name: eslint (report-only)
+        if: always()
+        run: npm run lint -- --max-warnings=9999 || true
+
+      - name: tsc --noEmit (report-only)
+        if: always()
+        run: npx tsc --noEmit || true
+
+      - name: knip (unused files/exports, report-only)
+        if: always()
+        run: npx knip || true
+
+      - name: ts-prune (unused exports, report-only)
+        if: always()
+        run: npx ts-prune || true
+
+      - name: npm audit (dependency CVEs, report-only)
+        if: always()
+        run: npm audit --omit=dev || true
