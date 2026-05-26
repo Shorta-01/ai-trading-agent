@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-004** — Reality docs for the API IBKR cluster (3 files; connection, sync, submission). *Branch:* `task/T-004-reality-api-ibkr-cluster`.
+_None._
 
 ## Locked
 
