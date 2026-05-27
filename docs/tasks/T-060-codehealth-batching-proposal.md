@@ -2,14 +2,24 @@
 id: T-060
 title: Produce batching proposal in `05-fix-batches.md`
 phase: P1
-status: locked
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/455
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** `docs/code-health/00-findings.md` (T-059 master, 19 FINDs across 4 categories) read; the four per-category files (`01-dead-code.md`, `02-anti-patterns.md`, `03-outdated-patterns.md`, `04-bugs.md`) already familiar from T-050…T-059; `05-fix-batches.md` (1-line stub) is the target file. No source files in touch scope.
+- **Step 2 (one-line per touched file):**
+  - `05-fix-batches.md` — pre-edit: 1-line stub; post-edit: full batching proposal with 15 batches covering all 19 FINDs, per-batch severity/complexity rollup, closing summary table, FIND→BATCH coverage proof.
+  - No queue.md modification per task spec ("**No fix-task rows added to `docs/tasks/queue.md`**").
+- **Step 3 (one-line change):** group the 19 master FINDs into 15 proposed batches per the locked rules (high gets solo; same file + same category bundles up to complexity-bounded limits).
+- **Step 4 (measurable):** yes — six acceptance criteria: locked batching rule restated verbatim; every FIND in `00-findings.md` appears in exactly one batch (set-diff verifiable, 19 in → 19 out); each batch carries proposed title + severity + complexity + FIND IDs + count + scope summary; closing table with batch ID → severity → complexity → count → proposed task slug; no fix-task rows added to `queue.md`.
+- **Step 5 (out-of-scope does not block goal):** confirmed — no fixing of any finding; no queue rows added; no adjustment of batching rules (locked).
 
 ## Goal
 
