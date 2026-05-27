@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-017** — `decision-package-composition.md` workflow doc (per-asset compose: 5 locked gates + SHA-256 content-addressed hash + previous_package_hash chain + deterministic Dutch template). *Branch:* `task/T-017-reality-decision-package-composition`.
+- **T-018** — `action-draft-composition-and-approval.md` workflow doc (composer + 11 A-K dry-run gates + two state-vocabulary islands + frontend approval flow with JA confirmation). *Branch:* `task/T-018-reality-action-draft-composition-and-approval`.
 
 ## Locked
 
@@ -220,3 +220,4 @@ _None._
 - **T-014** — `market-data-pipeline.md` Track 1a workflow doc (360 lines; two paths — EODHD research + IBKR execution; convergence at `market_data_latest_snapshots`; 15/30min freshness policy + 5-state enum + price-basis fallback; 8 Phase 1c surface items incl. ADR-0003 "All-In-One" gap re-confirmed). PR: https://github.com/Shorta-01/ai-trading-agent/pull/459 — merged 2026-05-26.
 - **T-015** — `forecast-generation-and-labelling.md` Track 1a workflow doc (395 lines; per-asset block-bootstrap + 5 block reasons + 6-label decision tree + two-volatility-thresholds clarified; ADR-0003 1-of-7-predictors gap re-confirmed for 4th time). PR: https://github.com/Shorta-01/ai-trading-agent/pull/460 — merged 2026-05-26.
 - **T-016** — `forecast-calibration-and-prediction-diary.md` Track 1a workflow doc (318 lines; two evaluation flows — worker 06:00 calibration + API on-demand prediction-diary; 4 hit_status + 5 outcomes + 3 horizons; ADR-0003 calibration-correction-layer gap half-built). PR: https://github.com/Shorta-01/ai-trading-agent/pull/461 — merged 2026-05-26.
+- **T-017** — `decision-package-composition.md` Track 1a workflow doc (401 lines; per-asset compose with 5 locked gates + SHA-256 content-addressed hash + previous_package_hash chain + deterministic Dutch template + hard order-safety floor; idempotency intent-vs-reality gap surfaced). PR: https://github.com/Shorta-01/ai-trading-agent/pull/462 — merged 2026-05-26.
