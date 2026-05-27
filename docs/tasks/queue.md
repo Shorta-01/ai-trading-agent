@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-009** — Reality docs for the frontend client/text + infra/docker + build/CI/scripts layers (3 files; 19 source files ~3 kLoC + 2 intent docs). *Branch:* `task/T-009-reality-frontend-client-and-infra-build`.
+- **T-058** — `npm audit` baseline on `apps/web` — 9 vulnerable packages (1 HIGH next + 1 MEDIUM postcss in prod; 7 dev-only across eslint/vitest chains); 22 distinct GHSA advisories rolled up under `next`. *Branch:* `task/T-058-codehealth-npm-audit-baseline`.
 
 ## Locked
 
@@ -208,3 +208,4 @@ _None._
 - **T-056** — `tsc --noEmit` baseline on `apps/web` (1 LOW `FIND-TSC-001` for `ActionDraftGrid.test.tsx:14` test-fixture drift; production build unaffected since `next build` excludes `*.test.tsx`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/447 — merged 2026-05-26.
 - **T-008** — Reality docs for the frontend (3 files; 16 pages + 30 non-test components / ~6493 LoC cited; Dutch UI invariant verified, client-first vs server-first noted, 9 Decimal-as-string display-rounding sites flagged). PR: https://github.com/Shorta-01/ai-trading-agent/pull/448 — merged 2026-05-26.
 - **T-057** — `knip` + `ts-prune` baseline (7 LOW dead-code FINDs: 3 dual-source unused + 4 knip-only; 24 unused types in apiClient.ts as Phase-4 pruning candidates; 81 ts-prune over-reports dismissed in 3 categories). PR: https://github.com/Shorta-01/ai-trading-agent/pull/449 — merged 2026-05-26.
+- **T-009** — Reality docs for web client/text + infra/docker + build/CI/scripts (3 files; ~3 kLoC + 2 intent docs cited; MAJOR Phase 1c gap surfaced — `.env.example` bare keys silently dropped by Pydantic `extra="ignore"`; T-057's `eslint-config-next` false positive corrected). PR: https://github.com/Shorta-01/ai-trading-agent/pull/450 — merged 2026-05-26.

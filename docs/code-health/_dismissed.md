@@ -411,3 +411,35 @@ Two of the entries that look similar but are **genuinely unused** (NOT marked `(
 Reason for dismissal across all 60: **ts-prune limitation** — the tool over-reports any export whose only references are inside the same file. knip's deeper analysis disambiguates the genuinely-unused (FIND-KNIP-004) from the internally-chained. No action: either accept the chain or let `FIND-KNIP-004` Phase 4 pruning shrink the set.
 
 The current `apps/web` CI step does not run `knip` or `ts-prune`. A Phase 4 CI brainstorm could decide to add `npm run dead-code` (running both with the dismissals above wired into knip's config) so the same class of drift surfaces at PR time. Per the T-057 spec, "Adding either tool to `package.json` permanently — that decision goes through Phase 4 brainstorming" — explicitly out of scope here.
+
+## T-058 — npm audit baseline (2026-05-26)
+
+**Tool:** `npm audit 10.x` (built into npm 10.9.7).
+**Commands:** `npm audit --omit=dev --json > /tmp/npm-audit-prod.json` + `npm audit --omit=dev > /tmp/npm-audit-prod.txt` + `npm audit --json > /tmp/npm-audit-full.json` + `npm audit > /tmp/npm-audit-full.txt` (all exit 1).
+**Findings:** 9 vulnerable packages, 26 distinct GHSAs total (22 next + 1 postcss + 1 @eslint/plugin-kit + 2 esbuild/vite). Prod-only run: 2 packages (1 high, 1 moderate). Full run: 9 packages (1 high, 6 moderate, 2 low).
+**Triage:** 4 FINDs in `docs/code-health/04-bugs.md` cover every reported package and every distinct GHSA. **No dismissals** — every package is in a FIND.
+**Raw outputs:** `/tmp/npm-audit-prod.json` (434 lines), `/tmp/npm-audit-prod.txt` (42 lines), `/tmp/npm-audit-full.json` (621 lines), `/tmp/npm-audit-full.txt` (73 lines).
+
+### Accounting (every reported package mapped to a FIND)
+
+| Package | Prod/Dev | npm-audit severity | FIND | FIND severity |
+|---|---|---|---|---|
+| `next` | prod | high | FIND-NPMAUDIT-001 | HIGH (prod follows npm-audit) |
+| `postcss` | prod (transitive via `next`) | moderate | FIND-NPMAUDIT-002 | MEDIUM (prod follows npm-audit) |
+| `@eslint/plugin-kit` | dev | low | FIND-NPMAUDIT-003 | LOW (dev: low → low) |
+| `eslint` | dev (transitive via `@eslint/plugin-kit`) | low | FIND-NPMAUDIT-003 | LOW (covered by same FIND) |
+| `esbuild` | dev | moderate | FIND-NPMAUDIT-004 | LOW (dev: moderate → low, downgraded) |
+| `vite` | dev (own advisory + transitive via `esbuild`) | moderate | FIND-NPMAUDIT-004 | LOW (covered) |
+| `@vitest/mocker` | dev (transitive via `vite`) | moderate | FIND-NPMAUDIT-004 | LOW (covered) |
+| `vite-node` | dev (transitive via `vite`) | moderate | FIND-NPMAUDIT-004 | LOW (covered) |
+| `vitest` | dev (transitive via all three above) | moderate | FIND-NPMAUDIT-004 | LOW (covered) |
+
+Sum: **9 packages → 4 FINDs, 0 dismissals.** Per task spec ("Every distinct CVE becomes a FIND-XXX or `_dismissed.md` row") satisfied — every npm-audit-reported advisory is covered by a FIND (umbrella pattern matches T-054's `FIND-PIPAUDIT-001` and T-055's `FIND-RADON-*` precedents).
+
+### Note: dev-only CVE downgrade
+
+Per the locked T-058 severity mapping ("dev-only CVEs downgraded one rank: critical→high, high→medium, medium→low, low→low"), the 5 dev-only `moderate` packages in the vitest + esbuild chain are surfaced as **LOW** in FIND-NPMAUDIT-004. The two dev-only `low` packages stay at LOW per the floor rule. This matches the spirit of "dev tooling never reaches production" — both advisories require an active HTTP dev server (esbuild's, vite's) which only runs during `npm run dev` or `vitest watch`, never during `next build`/`next start` or one-shot `npm test`.
+
+### CI cross-reference
+
+`code-health.yml:197-199` already runs `npm audit --omit=dev || true` report-only on every PR. The `|| true` swallows findings, so this baseline did not previously surface in PR feedback. A Phase 4 CI brainstorm could remove `|| true` for HIGH-severity prod advisories (FIND-NPMAUDIT-001's class). Per the T-058 spec, "No `package.json` / `package-lock.json` modification" — even the obvious `next@15.5.18` bump is explicitly out of scope here.
