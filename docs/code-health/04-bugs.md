@@ -1,6 +1,6 @@
 # Bugs — populated in Phase 1d
 
-## FIND-PIPAUDIT-001 — `fastapi==0.136.3` is a malicious release injecting an undocumented `fastar` dependency (MAL-2026-4750)
+## FIND-015 (was FIND-PIPAUDIT-001) — `fastapi==0.136.3` is a malicious release injecting an undocumented `fastar` dependency (MAL-2026-4750)
 
 - **Tool:** `pip-audit 2.10.0`, raw output `/tmp/pip-audit-baseline.json` (T-054).
 - **Package:** `fastapi`
@@ -26,7 +26,7 @@
 - **Severity:** **high**. (Per the task spec, CVSS-missing defaults to medium; this finding is bumped to high because (a) the advisory is a confirmed malicious release rather than a regular CVE, (b) the project is actively running it, and (c) AGENTS.md's "No external API calls without documented adapter and test strategy" doesn't directly cover supply-chain but the spirit of the project's safety posture argues for prompt remediation.)
 - **Related findings:** none — this is the only supply-chain advisory in the baseline. The four pip CVEs in the dismissed list are build-time-tool-only.
 
-## FIND-NPMAUDIT-001 — `next@15.2.6` is exposed to 22 distinct GHSA advisories (high-severity umbrella, production dependency)
+## FIND-016 (was FIND-NPMAUDIT-001) — `next@15.2.6` is exposed to 22 distinct GHSA advisories (high-severity umbrella, production dependency)
 
 - **Tool:** `npm audit 10.x`, raw outputs `/tmp/npm-audit-prod.json` + `/tmp/npm-audit-prod.txt` + `/tmp/npm-audit-full.json` + `/tmp/npm-audit-full.txt` (T-058).
 - **Package:** `next`.
@@ -96,7 +96,7 @@ Several of the high-severity advisories require specific runtime conditions to b
 - `FIND-NPMAUDIT-002` (`postcss` transitive via `next` → also resolves when `next` is bumped).
 - `FIND-PIPAUDIT-001` is the Python parallel: a single advisory cluster on a runtime dependency with a clean upgrade path. The pattern across both: the project's "no upper bound on direct deps" approach (`apps/api/pyproject.toml:7` for fastapi, `apps/web/package.json:7` for next) lets the resolver pick versions that later land in the advisory database. Phase 4 brainstorm candidate: lockfile-only pinning policy with `pip-audit` + `npm audit` running against the lock at merge time.
 
-## FIND-NPMAUDIT-002 — `postcss@8.4.31` XSS via unescaped `</style>` in CSS stringify output (moderate, transitive via `next`)
+## FIND-017 (was FIND-NPMAUDIT-002) — `postcss@8.4.31` XSS via unescaped `</style>` in CSS stringify output (moderate, transitive via `next`)
 
 - **Tool:** `npm audit 10.x`, raw outputs same as FIND-NPMAUDIT-001 (T-058).
 - **Package:** `postcss`.
@@ -124,7 +124,7 @@ PostCSS is the CSS pipeline transformer used by Next.js's build system. The Next
 
 - `FIND-NPMAUDIT-001` (parent dependency).
 
-## FIND-NPMAUDIT-003 — `@eslint/plugin-kit@0.2.8` + `eslint@9.17.0` ReDoS in `ConfigCommentParser` (low → low, dev-only)
+## FIND-018 (was FIND-NPMAUDIT-003) — `@eslint/plugin-kit@0.2.8` + `eslint@9.17.0` ReDoS in `ConfigCommentParser` (low → low, dev-only)
 
 - **Tool:** `npm audit 10.x`, raw outputs same as FIND-NPMAUDIT-001 (T-058).
 - **Packages:**
@@ -156,7 +156,7 @@ The package is also reachable through `eslint-config-next` (per T-009 `web-api-c
 
 - `FIND-KNIP-001` in `docs/code-health/01-dead-code.md` flagged `eslint-config-next` as unused; T-009 `web-api-client-and-text.md` §8 corrected that as a false positive. The eslint chain documented here is the same dep tree.
 
-## FIND-NPMAUDIT-004 — esbuild dev-server CSRF + vite path-traversal + 3 transitive vitest packages (moderate → low, dev-only)
+## FIND-019 (was FIND-NPMAUDIT-004) — esbuild dev-server CSRF + vite path-traversal + 3 transitive vitest packages (moderate → low, dev-only)
 
 - **Tool:** `npm audit 10.x`, raw outputs same as FIND-NPMAUDIT-001 (T-058).
 - **Packages (all dev-only):**

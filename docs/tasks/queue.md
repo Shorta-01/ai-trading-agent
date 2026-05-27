@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-010** — Reality doc for the six README-only stub packages under `packages/` (`ai`, `analytics`, `audit`, `data_providers`, `risk`, `tax`). *Branch:* `task/T-010-reality-stub-packages`.
+- **T-059** — Consolidate all FIND entries into `docs/code-health/00-findings.md` master list (19 FINDs across 4 per-category files: 8 dead-code + 6 anti-patterns + 0 outdated + 5 bugs; re-key per-tool IDs to unified `FIND-NNN`). *Branch:* `task/T-059-codehealth-findings-consolidation`.
 
 ## Locked
 
@@ -210,3 +210,4 @@ _None._
 - **T-057** — `knip` + `ts-prune` baseline (7 LOW dead-code FINDs: 3 dual-source unused + 4 knip-only; 24 unused types in apiClient.ts as Phase-4 pruning candidates; 81 ts-prune over-reports dismissed in 3 categories). PR: https://github.com/Shorta-01/ai-trading-agent/pull/449 — merged 2026-05-26.
 - **T-009** — Reality docs for web client/text + infra/docker + build/CI/scripts (3 files; ~3 kLoC + 2 intent docs cited; MAJOR Phase 1c gap surfaced — `.env.example` bare keys silently dropped by Pydantic `extra="ignore"`; T-057's `eslint-config-next` false positive corrected). PR: https://github.com/Shorta-01/ai-trading-agent/pull/450 — merged 2026-05-26.
 - **T-058** — `npm audit` baseline (4 FINDs: 1 HIGH next umbrella with 22 GHSAs + 1 MEDIUM postcss prod + 2 LOW dev chains; 9 packages / 26 advisories covered; 0 dismissals; T-008 + T-009 cross-ref shows most next exposure paths latent — no middleware, no `next/image`, no Server Actions). PR: https://github.com/Shorta-01/ai-trading-agent/pull/451 — merged 2026-05-26.
+- **T-010** — Reality doc for 6 README-only stub packages (`ai`, `analytics`, `audit`, `data_providers`, `risk`, `tax`); each mapped to actual implementation locations; no "fully unimplemented" bucket; named-stub-without-source pattern recorded as architectural signal). PR: https://github.com/Shorta-01/ai-trading-agent/pull/452 — merged 2026-05-26.

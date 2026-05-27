@@ -1,6 +1,6 @@
 # Dead Code — populated in Phase 1d
 
-## FIND-VULTURE-001 — unsatisfiable `if False else` ternary in research-source reference validator
+## FIND-001 (was FIND-VULTURE-001) — unsatisfiable `if False else` ternary in research-source reference validator
 
 - **File:** `packages/domain/src/portfolio_outlook_domain/research_suggestions.py:281`
 - **Tool:** `vulture 2.16`, raw output `/tmp/vulture-baseline.log` (T-052)
@@ -24,7 +24,7 @@
 - **Severity:** low. The validator's `pass` body means the dead branch has no observable effect today — but it's a typed-enum red flag that will mislead future readers.
 - **Related findings:** none yet; this is the only `unsatisfiable` finding emitted by vulture in this baseline.
 
-## FIND-UNUSED-001 — three unused source files in `apps/web` (knip + ts-prune)
+## FIND-002 (was FIND-UNUSED-001) — three unused source files in `apps/web` (knip + ts-prune)
 
 - **Tool:** `knip 5.x` + `ts-prune 0.10.x` — both flag the same three files. Raw outputs `/tmp/knip-baseline.txt` (lines 2-4) + `/tmp/ts-prune-baseline.txt` (lines 7, 69, 87) (T-057).
 - **Files:**
@@ -40,7 +40,7 @@
 - **Severity:** **low** — dead code that doesn't ship to the runtime bundle (Next.js tree-shakes), but it accumulates technical debt and confuses readers ("which is the canonical fallback?").
 - **Related findings:** T-052 `FIND-VULTURE-001` is a similar dead-code pattern in Python; the project has no centralised dead-code policy yet.
 
-## FIND-UNUSED-002 — seven unused exports in `app/audit/auditFormatting.ts` (knip + ts-prune)
+## FIND-003 (was FIND-UNUSED-002) — seven unused exports in `app/audit/auditFormatting.ts` (knip + ts-prune)
 
 - **Tool:** `knip` (lines 9-16) + `ts-prune` (lines 70-77). Raw outputs `/tmp/knip-baseline.txt` + `/tmp/ts-prune-baseline.txt` (T-057).
 - **Unused exports:**
@@ -62,7 +62,7 @@
 - **Severity:** **low** — dead code only, no runtime impact (Next.js tree-shakes unused exports out of the bundle).
 - **Related findings:** `FIND-KNIP-003` (duplicate export in the same file).
 
-## FIND-UNUSED-003 — two unused exports in `lib/apiClient.ts` (knip + ts-prune)
+## FIND-004 (was FIND-UNUSED-003) — two unused exports in `lib/apiClient.ts` (knip + ts-prune)
 
 - **Tool:** `knip` (lines 17-18, 28) + `ts-prune` (lines 8, 33). Raw outputs `/tmp/knip-baseline.txt` + `/tmp/ts-prune-baseline.txt` (T-057).
 - **Unused exports:**
@@ -79,7 +79,7 @@
 - **Severity:** **low** — dead code, no runtime impact.
 - **Related findings:** `FIND-KNIP-002` (`searchAssetMasterIdentities` is a sibling case but flagged only by knip — ts-prune sees it referenced internally inside `apiClient.ts`).
 
-## FIND-KNIP-001 — two unused devDependencies in `apps/web/package.json` (knip only)
+## FIND-005 (was FIND-KNIP-001) — two unused devDependencies in `apps/web/package.json` (knip only)
 
 - **Tool:** `knip 5.x`, raw output `/tmp/knip-baseline.txt:5-7` (T-057).
 - **Unused devDependencies:**
@@ -91,7 +91,7 @@
 - **Severity:** **low** — installed bytes only, no shipped impact.
 - **Related findings:** complements the per-file-ignore inventory in T-050 `_dismissed.md` (ruff baseline) — both are "dead config" patterns.
 
-## FIND-KNIP-002 — one unused export `searchAssetMasterIdentities` in `lib/apiClient.ts` (knip only)
+## FIND-006 (was FIND-KNIP-002) — one unused export `searchAssetMasterIdentities` in `lib/apiClient.ts` (knip only)
 
 - **Tool:** `knip` (`/tmp/knip-baseline.txt:17`). ts-prune marks the same export as `(used in module)` — meaning ts-prune sees an internal reference but no external import. **knip is correct**: the internal reference is from a comment-style example or an unused helper.
 - **Site:** `apps/web/lib/apiClient.ts:1782` — `function searchAssetMasterIdentities`.
@@ -101,7 +101,7 @@
 - **Severity:** **low**.
 - **Related findings:** `FIND-KNIP-004` covers `AssetMasterSearchRecord` (the response-type sibling).
 
-## FIND-KNIP-003 — duplicate export `missingLinksLabel | missingMetadataFieldsLabel` in `app/audit/auditFormatting.ts` (knip only)
+## FIND-007 (was FIND-KNIP-003) — duplicate export `missingLinksLabel | missingMetadataFieldsLabel` in `app/audit/auditFormatting.ts` (knip only)
 
 - **Tool:** `knip` (`/tmp/knip-baseline.txt:45-46`). ts-prune marks `missingLinksLabel:28` as `(used in module)` precisely because of the duplicate-export shadowing — interesting cross-tool disagreement that **knip resolves correctly**.
 - **Site:** `apps/web/app/audit/auditFormatting.ts:28-29` — `missingLinksLabel` and `missingMetadataFieldsLabel` are both exported, but knip's "Duplicate exports" check flags them together. The most likely cause is a re-export collision: either both names point at the same function body (true duplicate), or the file mistakenly re-exports both under one alias somewhere.
@@ -111,7 +111,7 @@
 - **Severity:** **low**.
 - **Related findings:** `FIND-UNUSED-002` (the audit-formatting helper cluster as a whole is dead-coded).
 
-## FIND-KNIP-004 — 24 unused exported types in `lib/apiClient.ts` (knip only)
+## FIND-008 (was FIND-KNIP-004) — 24 unused exported types in `lib/apiClient.ts` (knip only)
 
 - **Tool:** `knip` (`/tmp/knip-baseline.txt:19-44`, minus `MarketDataLatestSnapshotResponse` which is in `FIND-UNUSED-003`). ts-prune marks all 24 of these as `(used in module)` — meaning the type is referenced by *another* (also-exported) type or function inside `apiClient.ts`, but the chain ultimately has no external consumer.
 - **Pattern:** these are the response-shape types for endpoints that the frontend either doesn't call, or calls but doesn't import the response type for (using inferred `Result<T>` instead).

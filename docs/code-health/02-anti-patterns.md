@@ -1,6 +1,6 @@
 # Anti-Patterns — populated in Phase 1d
 
-## FIND-BANDIT-001 — `assert` used for type-narrowing in production paths (20 occurrences across 8 files)
+## FIND-009 (was FIND-BANDIT-001) — `assert` used for type-narrowing in production paths (20 occurrences across 8 files)
 
 - **Tool:** `bandit 1.9.4`, test `B101 assert_used`, severity LOW (bandit's rating). Raw output `/tmp/bandit-low-and-up.json` (T-053).
 - **Pattern:** every B101 site is a post-validation type-narrowing `assert x is not None` that follows an explicit `if x is None: _raise_*(...)` or framework-raise. The assert exists to satisfy mypy's narrowing in strict mode, not as an invariant guard.
@@ -62,7 +62,7 @@ The choice per-site depends on whether the assertion is documenting an internal 
 
 None directly; the B110/B112 `try/except/pass(continue)` patterns inventoried in `_dismissed.md` under T-053 are documented boundary catches, not the same family.
 
-## FIND-RADON-001 — High-severity cyclomatic complexity (rank E/F, 10 functions across 9 files)
+## FIND-010 (was FIND-RADON-001) — High-severity cyclomatic complexity (rank E/F, 10 functions across 9 files)
 
 - **Tool:** `radon 6.0.1`, command `radon cc -s -a apps packages`. Raw output `/tmp/radon-cc-baseline.txt` (T-055).
 - **Pattern:** ten functions exceed Radon's "moderate" complexity threshold (CC ≥ 21 → rank D, ≥ 31 → rank E, ≥ 41 → rank F). Six are E (`CC 31–40`) and four are F (`CC ≥ 41`); the worst two tie at CC 58. All ten are in production source — none in tests.
@@ -108,7 +108,7 @@ The remaining three (`_apply_clip_with_water_filling`, `_append_per_order_type_f
 - The medium-severity CC cluster `FIND-RADON-002` covers the same anti-pattern at a lower threshold (CC 11–20).
 - Five of the ten functions are in modules also flagged by `FIND-RADON-003` for low maintainability index (`status_routes.py`, `portfolio_valuation_readiness.py`, `sql_repositories.py`).
 
-## FIND-RADON-002 — Medium-severity cyclomatic complexity (rank C/D, 202 functions)
+## FIND-011 (was FIND-RADON-002) — Medium-severity cyclomatic complexity (rank C/D, 202 functions)
 
 - **Tool:** `radon 6.0.1`, raw output `/tmp/radon-cc-baseline.txt` (T-055).
 - **Pattern:** 202 functions/methods at CC 11–30 (182 rank C, 20 rank D). Split: 113 in production source (98 C + 15 D), 89 in test files (84 C + 5 D).
@@ -345,7 +345,7 @@ The remaining three (`_apply_clip_with_water_filling`, `_append_per_order_type_f
 - 541 rank-B "watch" sites dismissed under T-055 in `_dismissed.md` — recorded as documentation only, not in the FIND list.
 - `status_routes.py` and `portfolio_valuation_readiness.py` also appear in `FIND-RADON-003` (high-severity maintainability).
 
-## FIND-RADON-003 — High-severity maintainability hotspots (MI rank C, 9 modules)
+## FIND-012 (was FIND-RADON-003) — High-severity maintainability hotspots (MI rank C, 9 modules)
 
 - **Tool:** `radon 6.0.1`, command `radon mi -s apps packages`. Raw output `/tmp/radon-mi-baseline.txt` (T-055).
 - **Pattern:** nine modules with maintainability index (MI) < 10 — Radon's rank C threshold. Six modules score MI = 0.00 (Radon's floor — typically reached by `wc -l > 1500` files with heavy comment density).
@@ -392,7 +392,7 @@ Note: Radon does not emit line-precise findings for MI; the `:1` anchor is the l
 - `FIND-RADON-001` (high CC) names functions inside three of the nine modules.
 - `FIND-RADON-002` (medium CC) lists 49 functions across these nine modules (the bulk of the count).
 
-## FIND-RADON-004 — Medium-severity maintainability hotspots (MI rank B, 8 modules)
+## FIND-013 (was FIND-RADON-004) — Medium-severity maintainability hotspots (MI rank B, 8 modules)
 
 - **Tool:** `radon 6.0.1`, raw output `/tmp/radon-mi-baseline.txt` (T-055).
 - **Pattern:** eight modules with MI 10 ≤ score < 20 — Radon's rank B threshold.
@@ -425,7 +425,7 @@ Same as `FIND-RADON-003`, but lower urgency. The five `packages/domain/` modules
 - `FIND-RADON-002` (medium CC) lists 8 functions inside these eight modules.
 - T-052's `FIND-VULTURE-001` (in `research_suggestions.py`) is in one of these eight modules.
 
-## FIND-TSC-001 — `ActionDraftGrid.test.tsx` `HAPPY` fixture drifts from the `ActionDraftResponse` type (TS2739; 3 missing Task-134 lifecycle fields)
+## FIND-014 (was FIND-TSC-001) — `ActionDraftGrid.test.tsx` `HAPPY` fixture drifts from the `ActionDraftResponse` type (TS2739; 3 missing Task-134 lifecycle fields)
 
 - **Tool:** `tsc` from `typescript` (versioned in `apps/web/package.json`). Raw output `/tmp/tsc-baseline.log` (T-056).
 - **Command:** `cd apps/web && npx tsc --noEmit` (exit code 1, 1 error line).
