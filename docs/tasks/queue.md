@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-012** — `cold-start-seeding-and-watchlist-confirmation.md` workflow doc (synthesis of T-005/T-007/T-008/T-009; cold-start mode → 12-row starter seed → BEVESTIG confirmation → normalisation). *Branch:* `task/T-012-reality-cold-start-seeding-and-watchlist-confirmation`.
+- **T-061** — Reality doc for the settings + credentials infrastructure as it stands in HEAD, mapped against the five-category intent in `docs/intent/settings-and-credentials.md`. *Branch:* `task/T-061-reality-settings-and-credentials`.
 
 ## Locked
 
@@ -214,3 +214,4 @@ _None._
 - **T-059** — Consolidate 19 FINDs into master `docs/code-health/00-findings.md` (re-keyed to FIND-001..019 with per-tool IDs preserved inline; severity reconciliation rule documented; 3 totals blocks; discovery→master mapping table; wholesale-dismissal pattern map appended to `_dismissed.md`; 4 HIGH-severity FINDs identified as Phase 4 batching candidates). PR: https://github.com/Shorta-01/ai-trading-agent/pull/453 — merged 2026-05-26.
 - **T-011** — `morning-chain-orchestration.md` first Track 1a workflow doc (281 lines; synthesis of T-005/T-006/T-007 covering 06:00 pre_briefing + 07:00 morning_briefing end-to-end; 6 mode_detected modes + 5 step gates documented; explicit out-of-scope for action drafts/submission/reconciliation). PR: https://github.com/Shorta-01/ai-trading-agent/pull/454 — merged 2026-05-26.
 - **T-060** — Batching proposal `05-fix-batches.md` grouping the 19 master FINDs from T-059 into 15 batches (4 high solo + 3 medium solo + 8 low — 3 bundled by same file+category; FIND→BATCH coverage proof table; 3 false-positive annotations preserved; no queue rows added per spec). PR: https://github.com/Shorta-01/ai-trading-agent/pull/455 — merged 2026-05-26.
+- **T-012** — `cold-start-seeding-and-watchlist-confirmation.md` Track 1a workflow doc (383 lines; synthesis of T-005/T-007/T-008/T-009; 12-row v1 starter set + 4-table write pattern + BEVESTIG confirmation + 3-step mode_detected sequence documented). PR: https://github.com/Shorta-01/ai-trading-agent/pull/456 — merged 2026-05-26.
