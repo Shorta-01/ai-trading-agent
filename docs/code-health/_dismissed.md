@@ -443,3 +443,46 @@ Per the locked T-058 severity mapping ("dev-only CVEs downgraded one rank: criti
 ### CI cross-reference
 
 `code-health.yml:197-199` already runs `npm audit --omit=dev || true` report-only on every PR. The `|| true` swallows findings, so this baseline did not previously surface in PR feedback. A Phase 4 CI brainstorm could remove `|| true` for HIGH-severity prod advisories (FIND-NPMAUDIT-001's class). Per the T-058 spec, "No `package.json` / `package-lock.json` modification" — even the obvious `next@15.5.18` bump is explicitly out of scope here.
+
+## T-059 — consolidation note (2026-05-26)
+
+This dismissal dossier was **not re-keyed** by T-059 because every entry here is by definition NOT a finding — it's a dismissal of a tool-reported item that did not warrant a FIND row. The per-tool IDs referenced inside each T-NNN section (e.g. `B101`, `BLE001`, `ARG002`, `GHSA-*`) remain the canonical addressing scheme for dismissed items.
+
+### Wholesale-dismissal pattern map (which tools dismissed which categories wholesale)
+
+| Tool | T-NNN | Wholesale-dismissed category | Reason class |
+|---|---|---|---|
+| ruff | T-050 | 6 per-file-ignores in `pyproject.toml`; 163 `# noqa` source suppressions across 8 rule codes | Out-of-current-`select` rules, deliberately pre-emptive |
+| ruff | T-050 | 59 `BLE001` blind-except occurrences (26 files) | Documented boundary catches at process edges |
+| ruff | T-050 | 50 `N802` IBKR `ibapi` callback names (8 files) | Framework-imposed camelCase API names |
+| ruff | T-050 | 48 `ARG001/ARG002` unused IBKR callback args (17 files) | Framework-imposed callback signature |
+| mypy | T-051 | 7 `ignore_missing_imports` overrides in 5 `pyproject.toml` files; 191 `# type: ignore` source suppressions across 9 error codes | Cross-package boundaries without installed stubs; framework callback shapes |
+| vulture | T-052 | 10 IBKR `ibapi` callback signatures + 3 provider Protocol signatures + 2 backward-compat parameters | Framework-callback / Protocol-conformance / deliberate-signature |
+| bandit | T-053 | 5 B105 enum-value false positives in `domain/enums.py` | StrEnum members classifying *absence* of a secret, not credentials |
+| bandit | T-053 | 10 B106 kwarg-name false positives (reconciliation `pass_name=` literals + `secret_reference_id=` typed FKs) | Reconciliation pass labels + typed `SecretReference` FK strings, not secrets |
+| bandit | T-053 | 3 B110 try/except/pass + 1 B112 try/except/continue documented boundary catches | Already inventoried under ruff `BLE001` |
+| bandit | T-053 | 1 B310 urllib audit warning on `eodhd_client.py` | Config-derived URL, not user-controllable |
+| pip-audit | T-054 | 4 pip CVEs (`CVE-2025-8869`, `CVE-2026-1703`, `CVE-2026-3219`, `CVE-2026-6357`) | Build-time tool only, not deployed; pip not declared in any pyproject |
+| pip-audit | T-054 | 5 local-editable installs ("Dependency not found on PyPI") | Project's own packages, not vulnerabilities |
+| radon | T-055 | 541 CC rank-B "watch" entries | Locked task threshold dismisses rank B by default |
+| radon | T-055 | 4976 CC rank-A + 473 MI rank-A entries | Not applicable; recorded for full accounting |
+| tsc | T-056 | (none) | T-056 baseline produced 1 FIND, 0 dismissals |
+| knip + ts-prune | T-057 | 18 Next.js framework convention defaults (page.tsx, layout.tsx, metadata) | Framework discovers by file convention, not import graph |
+| knip + ts-prune | T-057 | 3 top-level config-file defaults (`next.config.ts`, `playwright.config.ts`, `vitest.config.ts`) | Tool CLIs load by filename, not by import |
+| knip + ts-prune | T-057 | 60 ts-prune `(used in module)` over-reports in `apiClient.ts` | ts-prune over-reports any export whose only references are inside the same file; ~24 of these confirmed unused by knip (covered in FIND-008) |
+| npm audit | T-058 | (none) | All 9 reported packages were placed in FINDs |
+
+### Dismissal totals per category
+
+- **False positives** (tool flagged but not a real issue): 5 B105 + 10 B106 + 1 B310 + 18 Next.js framework + 3 config files + 60 ts-prune `(used in module)` = **97 entries**.
+- **Documented boundary catches** (intentional code patterns the tool can't recognise): 59 `BLE001` + 3 B110 + 1 B112 = **63 entries**.
+- **Framework-imposed signatures** (callback / Protocol conformance the tool can't model): 50 `N802` + 48 `ARG*` + 10 vulture callbacks + 3 vulture Protocols + 2 vulture backward-compat = **113 entries**.
+- **Threshold-locked dismissals** (per-task severity policy): 541 radon rank-B watch + 4976 radon rank-A + 473 MI rank-A = **5990 entries**.
+- **Build-time-only / not-applicable**: 4 pip CVEs + 5 local-editable installs = **9 entries**.
+- **Cross-package mypy/ruff conventions**: 7 `ignore_missing_imports` + 191 `# type: ignore` + 6 per-file-ignores + 163 `# noqa` = **367 entries**.
+
+**Grand total of dismissed-but-recorded items: ~6 639**. The vast majority (5 990) is radon's expected statistical distribution of "rank A" entries — not vulnerabilities, just accounting. The actionable dismissal corpus is **~649 entries** (everything except the radon ranks A/B), all of which are documented either in this file or in the originating reality docs.
+
+### Cross-reference with the 19 master FINDs
+
+The 19 master FINDs in `00-findings.md` are the **complement** of this dismissal set: every tool-reported item that warranted action sits in `00-findings.md`; everything else sits here. No item appears in both files. Per the T-059 verification rule: `grep -c "^| FIND-" docs/code-health/00-findings.md` returns 19, which equals the count of distinct findings after deduplication across the per-category files.
