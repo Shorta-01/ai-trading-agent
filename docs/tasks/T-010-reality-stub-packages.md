@@ -2,7 +2,7 @@
 id: T-010
 title: Write reality doc for the six README-only stub packages
 phase: P1
-status: locked
+status: in-progress
 source: brainstorm
 owner: claude
 created: 2026-05-26
@@ -10,6 +10,15 @@ intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
 pr_url:
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the one target file under `docs/reality/components/` does not exist (verified). All 6 stub READMEs read inline (~3 lines each, identical Dutch placeholder text). Cross-references discovered via grep + directory listing across `apps/api`, `apps/worker`, `packages/{domain,portfolio,storage}`: AI cluster (10+ files, T-006), analytics/calibration (6+ files across T-002/T-005/T-007/T-008/T-009), audit (13 storage repos + 1 API router + system-event triad), data_providers (EODHD ×2 + 4 IBKR ibapi clients + Anthropic ×2), risk (10 guard files + safety_recheck + release_readiness), tax (`belgian_tax.py` in portfolio package).
+- **Step 2 (one-line per touched file):** the one target file does not exist; it will hold the consolidated reality doc for all six stub packages:
+  - `stub-packages.md` — six per-package sections + closing summary table mapping each stub to its actual implementation location(s) elsewhere in the tree.
+- **Step 3 (one-line change):** write one cited reality doc that catalogues the six README-only stubs and records where each concept is implemented today, no source / README modified.
+- **Step 4 (criteria measurable):** yes — three acceptance criteria: file exists; one section per stub package (6 sections); closing summary table with equivalent-code locations (or "no equivalent — fully unimplemented"); no source / README modification.
+- **Step 5 (out-of-scope does not block goal):** confirmed — no proposals for where the stubs should be filled (Phase 1c gap analysis); no code movement into the stubs.
 
 ## Goal
 
