@@ -8,7 +8,7 @@ owner: claude
 created: 2026-05-27
 intent_ref: docs/intent/belgian-tax.md
 decision_ref: docs/decisions/0012-belgian-tax-architecture.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/467
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
