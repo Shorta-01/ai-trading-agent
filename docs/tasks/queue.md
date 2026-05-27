@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-020** — `ibkr-reconciliation-passes-a-b-c.md` workflow doc (periodic reconciler tick: lock + connection gate + strict Pass A → B → C ordering + 4 audit tables + API surface + production-wiring gap). *Branch:* `task/T-020-reality-ibkr-reconciliation-passes`.
+- **T-021** — `portfolio-valuation-and-cost-basis.md` workflow doc (sync snapshot → cost-basis derivation → market value + freshness gate → unrealized P&L → FX conversion + validation gates → API readiness + frontend 30s polling; intent §1 per-lot storage gap surfaced). *Branch:* `task/T-021-reality-portfolio-valuation-and-cost-basis`.
 
 ## Locked
 
@@ -223,3 +223,4 @@ _None._
 - **T-017** — `decision-package-composition.md` Track 1a workflow doc (401 lines; per-asset compose with 5 locked gates + SHA-256 content-addressed hash + previous_package_hash chain + deterministic Dutch template + hard order-safety floor; idempotency intent-vs-reality gap surfaced). PR: https://github.com/Shorta-01/ai-trading-agent/pull/462 — merged 2026-05-26.
 - **T-018** — `action-draft-composition-and-approval.md` Track 1a workflow doc (373 lines; two composer paths + 11 A-K dry-run gates + two state-vocabulary islands mapped side-by-side + JA confirmation token + `safe_for_submission=False` hard floor; portfolio↔storage vocabulary unification gap re-confirmed for 5th time). PR: https://github.com/Shorta-01/ai-trading-agent/pull/463 — merged 2026-05-26.
 - **T-019** — `ibkr-order-submission-lifecycle.md` Track 1a workflow doc (445 lines; APScheduler sweep + 12 Tier-1 safety gates + Decimal→float boundary + Tier-2 account re-read + single `place_order` call + 4 IBKR callback families + 3 audit tables; doctrine drift re-confirmed — worker submitter.py:240 + API ibkr_ibapi_order_submission_client.py:525; 10 Phase 1c findings). PR: https://github.com/Shorta-01/ai-trading-agent/pull/464 — merged 2026-05-27.
+- **T-020** — `ibkr-reconciliation-passes-a-b-c.md` Track 1a workflow doc (471 lines; reconciler tick + shared single-flight lock + connection gate + strict Pass A → B → C + 4 audit tables + 7 API routes; 10 Phase 1c findings incl. no APScheduler wiring for `IbkrReconciler.tick` + 4-tier B/C/D/E classification absent from code + legacy `reconciliation_sync.py` doctrine drift + Pass C 24h cut-off hard-coded + `skipped_locked` ticks produce no audit row). PR: https://github.com/Shorta-01/ai-trading-agent/pull/465 — merged 2026-05-27.
