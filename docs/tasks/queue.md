@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-014** — `market-data-pipeline.md` workflow doc (synthesis of T-003/T-005/T-007; two paths — EODHD research + IBKR execution — convergence in `market_data_latest_snapshots`, 15min/30min freshness policy). *Branch:* `task/T-014-reality-market-data-pipeline`.
+- **T-015** — `forecast-generation-and-labelling.md` workflow doc (synthesis of T-002/T-007; single-predictor reality vs ADR-0003 7-predictor intent; block-bootstrap math; 5 block reasons; 6-label decision tree). *Branch:* `task/T-015-reality-forecast-generation-and-labelling`.
 
 ## Locked
 
@@ -217,3 +217,4 @@ _None._
 - **T-012** — `cold-start-seeding-and-watchlist-confirmation.md` Track 1a workflow doc (383 lines; synthesis of T-005/T-007/T-008/T-009; 12-row v1 starter set + 4-table write pattern + BEVESTIG confirmation + 3-step mode_detected sequence documented). PR: https://github.com/Shorta-01/ai-trading-agent/pull/456 — merged 2026-05-26.
 - **T-061** — Settings + credentials infrastructure reality doc (336 lines; 5-category intent mapping; 8 secret-read sites + 153 DB-URL sites inventoried; 11 Phase 1c gaps surfaced — Kelly 0.5-vs-0.25 collision re-confirmed, OpenAI vocab-only, Anthropic SDK auto-reads `ANTHROPIC_API_KEY`, PAPER→REAL architecturally forbidden at 3 layers). PR: https://github.com/Shorta-01/ai-trading-agent/pull/457 — merged 2026-05-26.
 - **T-013** — `ibkr-readonly-sync-positions-cash.md` Track 1a workflow doc (295 lines; synthesis of T-004/T-007/T-008/T-009; 9-step connect lifecycle with tier-two paper-account guard; 5 storage tables; 12 apiClient methods; 30s polling; 8 Phase 1c surface items — sync trigger is manual-only). PR: https://github.com/Shorta-01/ai-trading-agent/pull/458 — merged 2026-05-26.
+- **T-014** — `market-data-pipeline.md` Track 1a workflow doc (360 lines; two paths — EODHD research + IBKR execution; convergence at `market_data_latest_snapshots`; 15/30min freshness policy + 5-state enum + price-basis fallback; 8 Phase 1c surface items incl. ADR-0003 "All-In-One" gap re-confirmed). PR: https://github.com/Shorta-01/ai-trading-agent/pull/459 — merged 2026-05-26.
