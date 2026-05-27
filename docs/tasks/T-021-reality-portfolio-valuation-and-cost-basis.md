@@ -8,7 +8,7 @@ owner: claude
 created: 2026-05-27
 intent_ref: docs/intent/portfolio-valuation.md
 decision_ref: docs/decisions/0011-portfolio-valuation-architecture.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/466
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
