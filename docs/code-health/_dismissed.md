@@ -332,3 +332,15 @@ Reason for dismissal: **threshold-locked**. The T-055 task spec explicitly dismi
 ### Not applicable: CC rank A (×4976)
 
 4976 functions/methods at radon's rank A (`CC 1–5`). No further triage needed; recorded here so the baseline accounting is complete.
+
+## T-056 — tsc --noEmit baseline (2026-05-26)
+
+**Tool:** `tsc` from `typescript` (versioned in `apps/web/package.json`).
+**Commands:** `cd apps/web && npm install --legacy-peer-deps` (clean install), then `npx tsc --noEmit > /tmp/tsc-baseline.log 2>&1` (exit code 1).
+**Findings:** 1 distinct error line.
+**Triage:** 1 → `FIND-TSC-001` in `docs/code-health/02-anti-patterns.md` (test-fixture drift in `ActionDraftGrid.test.tsx`). 0 dismissals.
+**Raw output:** `/tmp/tsc-baseline.log` (1 line).
+
+No false positives, no boundary-pattern catches, no framework-imposed signatures to dismiss. The baseline accounting is `1 FIND + 0 dismissed = 1 distinct error line`.
+
+The current `apps/web` CI step runs `next build` rather than an explicit `tsc --noEmit`, which is why the test-file drift could land. A Phase 4 CI brainstorm could decide to add `npm run typecheck` (or wire `tsc --noEmit` into the existing `npm run build` chain) to surface the same class of drift at PR time.

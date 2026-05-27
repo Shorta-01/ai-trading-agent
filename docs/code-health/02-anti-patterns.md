@@ -424,3 +424,43 @@ Same as `FIND-RADON-003`, but lower urgency. The five `packages/domain/` modules
 
 - `FIND-RADON-002` (medium CC) lists 8 functions inside these eight modules.
 - T-052's `FIND-VULTURE-001` (in `research_suggestions.py`) is in one of these eight modules.
+
+## FIND-TSC-001 — `ActionDraftGrid.test.tsx` `HAPPY` fixture drifts from the `ActionDraftResponse` type (TS2739; 3 missing Task-134 lifecycle fields)
+
+- **Tool:** `tsc` from `typescript` (versioned in `apps/web/package.json`). Raw output `/tmp/tsc-baseline.log` (T-056).
+- **Command:** `cd apps/web && npx tsc --noEmit` (exit code 1, 1 error line).
+- **Error line (verbatim):**
+
+  ```
+  components/ActionDraftGrid.test.tsx(14,7): error TS2739: Type '{ action_draft_id: string; ...
+    21 more ...; safe_for_submission: false; }' is missing the following properties from type
+    'ActionDraftResponse': submission_block_reason, submission_started_at, terminal_state_at
+  ```
+
+- **Site:** `apps/web/components/ActionDraftGrid.test.tsx:14` — the `HAPPY: ActionDraftResponse = { … }` test fixture declaration.
+- **Type source:** `apps/web/lib/apiClient.ts:926-962` — the `ActionDraftResponse` type. The three missing fields were appended at the bottom of the type under the "Task 134 lifecycle fields" comment (`apiClient.ts:958-961`):
+
+  ```ts
+  // Task 134 lifecycle fields.
+  submission_block_reason: string | null;
+  submission_started_at: string | null;
+  terminal_state_at: string | null;
+  ```
+
+- **Why it matters (plain English):** `apiClient.ts:ActionDraftResponse` was extended with three lifecycle fields (Task 134) but the `HAPPY` test fixture in `ActionDraftGrid.test.tsx` was not updated. `next build` (which CI runs) only type-checks files in the production bundle — test files under `*.test.tsx` are excluded by `tsconfig.json`'s build config, so the drift never blocked merge. An explicit `tsc --noEmit` (this task) catches it.
+- **Production impact:** **none**. `next build` continues to pass; the test compiles under `vitest` because vitest uses esbuild and is permissive about extra-property checks. The fixture renders correctly because `ActionDraftGrid` doesn't access the three missing fields. The risk is purely future-test-fragility: if `ActionDraftGrid` is later extended to render `submission_block_reason`, the test would not catch a missing fixture field because the existing assertion has already drifted.
+- **Fix approach:** add the three fields to the fixture with `null` placeholders. One-line patch:
+
+  ```ts
+  const HAPPY: ActionDraftResponse = {
+    // … existing fields …
+    safe_for_submission: false,
+    submission_block_reason: null,
+    submission_started_at: null,
+    terminal_state_at: null,
+  };
+  ```
+
+- **Complexity:** **small** (3-line addition).
+- **Severity:** **low** — per the locked T-056 severity mapping for `*.test.tsx` files. The bug is test-fixture drift, not a production defect; `next build` is unaffected.
+- **Related findings:** none directly. The drift exists because the `apps/web` CI step runs `next build` rather than `tsc --noEmit`, which the T-056 baseline now makes visible. A Phase 4 CI brainstorm could decide to add an explicit `npm run typecheck` step that runs `tsc --noEmit` on the full tree.
