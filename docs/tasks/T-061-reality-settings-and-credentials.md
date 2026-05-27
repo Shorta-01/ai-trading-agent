@@ -2,13 +2,13 @@
 id: T-061
 title: reality-settings-and-credentials
 phase: P1
-status: in-progress
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/settings-and-credentials.md
 decision_ref: docs/decisions/0004-settings-and-credentials-structure.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/457
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
