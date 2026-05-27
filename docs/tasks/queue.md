@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-059** — Consolidate all FIND entries into `docs/code-health/00-findings.md` master list (19 FINDs across 4 per-category files: 8 dead-code + 6 anti-patterns + 0 outdated + 5 bugs; re-key per-tool IDs to unified `FIND-NNN`). *Branch:* `task/T-059-codehealth-findings-consolidation`.
+- **T-011** — `morning-chain-orchestration.md` end-to-end workflow doc (synthesis of T-005/T-006/T-007 reality docs; 06:00 pre_briefing + 07:00 morning_briefing chain). *Branch:* `task/T-011-reality-morning-chain-orchestration`.
 
 ## Locked
 
@@ -211,3 +211,4 @@ _None._
 - **T-009** — Reality docs for web client/text + infra/docker + build/CI/scripts (3 files; ~3 kLoC + 2 intent docs cited; MAJOR Phase 1c gap surfaced — `.env.example` bare keys silently dropped by Pydantic `extra="ignore"`; T-057's `eslint-config-next` false positive corrected). PR: https://github.com/Shorta-01/ai-trading-agent/pull/450 — merged 2026-05-26.
 - **T-058** — `npm audit` baseline (4 FINDs: 1 HIGH next umbrella with 22 GHSAs + 1 MEDIUM postcss prod + 2 LOW dev chains; 9 packages / 26 advisories covered; 0 dismissals; T-008 + T-009 cross-ref shows most next exposure paths latent — no middleware, no `next/image`, no Server Actions). PR: https://github.com/Shorta-01/ai-trading-agent/pull/451 — merged 2026-05-26.
 - **T-010** — Reality doc for 6 README-only stub packages (`ai`, `analytics`, `audit`, `data_providers`, `risk`, `tax`); each mapped to actual implementation locations; no "fully unimplemented" bucket; named-stub-without-source pattern recorded as architectural signal). PR: https://github.com/Shorta-01/ai-trading-agent/pull/452 — merged 2026-05-26.
+- **T-059** — Consolidate 19 FINDs into master `docs/code-health/00-findings.md` (re-keyed to FIND-001..019 with per-tool IDs preserved inline; severity reconciliation rule documented; 3 totals blocks; discovery→master mapping table; wholesale-dismissal pattern map appended to `_dismissed.md`; 4 HIGH-severity FINDs identified as Phase 4 batching candidates). PR: https://github.com/Shorta-01/ai-trading-agent/pull/453 — merged 2026-05-26.
