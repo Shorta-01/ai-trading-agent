@@ -2,13 +2,13 @@
 id: T-060
 title: Produce batching proposal in `05-fix-batches.md`
 phase: P1
-status: in-progress
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/_phase-1-charter.md
 decision_ref: docs/decisions/0001-phase-1-charter.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/455
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
