@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-013** — `ibkr-readonly-sync-positions-cash.md` workflow doc (synthesis of T-004/T-007/T-008; trigger → connect → tier-two guard → snapshot persistence → frontend display). *Branch:* `task/T-013-reality-ibkr-readonly-sync-positions-cash`.
+- **T-014** — `market-data-pipeline.md` workflow doc (synthesis of T-003/T-005/T-007; two paths — EODHD research + IBKR execution — convergence in `market_data_latest_snapshots`, 15min/30min freshness policy). *Branch:* `task/T-014-reality-market-data-pipeline`.
 
 ## Locked
 
@@ -216,3 +216,4 @@ _None._
 - **T-060** — Batching proposal `05-fix-batches.md` grouping the 19 master FINDs from T-059 into 15 batches (4 high solo + 3 medium solo + 8 low — 3 bundled by same file+category; FIND→BATCH coverage proof table; 3 false-positive annotations preserved; no queue rows added per spec). PR: https://github.com/Shorta-01/ai-trading-agent/pull/455 — merged 2026-05-26.
 - **T-012** — `cold-start-seeding-and-watchlist-confirmation.md` Track 1a workflow doc (383 lines; synthesis of T-005/T-007/T-008/T-009; 12-row v1 starter set + 4-table write pattern + BEVESTIG confirmation + 3-step mode_detected sequence documented). PR: https://github.com/Shorta-01/ai-trading-agent/pull/456 — merged 2026-05-26.
 - **T-061** — Settings + credentials infrastructure reality doc (336 lines; 5-category intent mapping; 8 secret-read sites + 153 DB-URL sites inventoried; 11 Phase 1c gaps surfaced — Kelly 0.5-vs-0.25 collision re-confirmed, OpenAI vocab-only, Anthropic SDK auto-reads `ANTHROPIC_API_KEY`, PAPER→REAL architecturally forbidden at 3 layers). PR: https://github.com/Shorta-01/ai-trading-agent/pull/457 — merged 2026-05-26.
+- **T-013** — `ibkr-readonly-sync-positions-cash.md` Track 1a workflow doc (295 lines; synthesis of T-004/T-007/T-008/T-009; 9-step connect lifecycle with tier-two paper-account guard; 5 storage tables; 12 apiClient methods; 30s polling; 8 Phase 1c surface items — sync trigger is manual-only). PR: https://github.com/Shorta-01/ai-trading-agent/pull/458 — merged 2026-05-26.
