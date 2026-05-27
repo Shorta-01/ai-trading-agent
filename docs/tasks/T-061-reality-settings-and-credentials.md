@@ -2,14 +2,23 @@
 id: T-061
 title: reality-settings-and-credentials
 phase: P1
-status: locked
+status: pr-open
 source: brainstorm
 owner: claude
 created: 2026-05-26
 intent_ref: docs/intent/settings-and-credentials.md
 decision_ref: docs/decisions/0004-settings-and-credentials-structure.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/457
 ```
+
+## Audit (steps 1–5; recorded per `_audit-discipline.md`)
+
+- **Step 1 (read all files in touch scope before editing any of them):** the new file under `docs/reality/components/` does not exist (verified). Two intent docs read: `docs/intent/settings-and-credentials.md` (127 lines, 5-category model + 7 UX rules + 7 open questions) and `docs/decisions/0004-settings-and-credentials-structure.md` (36 lines — accepted ADR). Settings code inventoried: `apps/api/src/portfolio_outlook_api/config.py` + `apps/worker/src/portfolio_outlook_worker/config.py` already covered by T-006 §2 and T-007 §3 respectively. New files for this task (delegated to subagent): `packages/domain/src/portfolio_outlook_domain/settings.py` (large — flagged at T-055 FIND-RADON-012 as MI=0.00), `packages/storage/src/ai_trading_agent_storage/settings.py`, `packages/domain/src/portfolio_outlook_domain/paper_setup.py`, `apps/api/src/portfolio_outlook_api/paper_setup.py`, `apps/api/src/portfolio_outlook_api/paper_setup_persistence.py`, `apps/api/src/portfolio_outlook_api/claude_ai_budget.py` (already covered T-006 §11e; will re-cite).
+- **Step 2 (one-line per touched file):** the one target file does not exist; it will hold the reality doc mapping current code against the five-category intent.
+  - `settings-and-credentials-infrastructure.md` — five-category map + secrets-read inventory + UX-rules-vs-reality table + Phase 1c gap surface.
+- **Step 3 (one-line change):** write one cited reality doc mapping the existing settings/credentials infrastructure against the locked five-category intent; surface gaps for Phase 1c.
+- **Step 4 (measurable):** yes — four acceptance criteria: one file in `docs/reality/components/`; every claim cites `path:line`; mapping each existing settings module to the 5 categories (notes categories with no implementation yet); inventory of every place secrets are read at runtime; no source modification.
+- **Step 5 (out-of-scope does not block goal):** confirmed — no settings-code changes; no new-backend design (Doctrine §15 open question stays open).
 
 ## Goal
 
