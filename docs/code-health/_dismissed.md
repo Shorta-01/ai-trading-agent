@@ -344,3 +344,70 @@ Reason for dismissal: **threshold-locked**. The T-055 task spec explicitly dismi
 No false positives, no boundary-pattern catches, no framework-imposed signatures to dismiss. The baseline accounting is `1 FIND + 0 dismissed = 1 distinct error line`.
 
 The current `apps/web` CI step runs `next build` rather than an explicit `tsc --noEmit`, which is why the test-file drift could land. A Phase 4 CI brainstorm could decide to add `npm run typecheck` (or wire `tsc --noEmit` into the existing `npm run build` chain) to surface the same class of drift at PR time.
+
+## T-057 — knip + ts-prune baseline (2026-05-26)
+
+**Tools:** `knip 5.x` + `ts-prune 0.10.x` (both installed via `npm install --no-save --legacy-peer-deps knip ts-prune`).
+**Commands:** `npx knip --reporter json > /tmp/knip-baseline.json` (exit 1), `npx knip > /tmp/knip-baseline.txt` (exit 1), `npx ts-prune > /tmp/ts-prune-baseline.txt` (exit 0).
+**Findings:** knip 41 reportables (3 files + 2 devDeps + 10 exports + 25 types + 1 duplicate); ts-prune 93 entries.
+**Triage:** 7 FINDs in `docs/code-health/01-dead-code.md` covering all 41 knip reportables (the 12 ts-prune real findings overlap with the dual-source FINDs); 3 dismissal categories below covering the remaining 81 ts-prune entries.
+**Raw outputs:** `/tmp/knip-baseline.json`, `/tmp/knip-baseline.txt`, `/tmp/ts-prune-baseline.txt`.
+
+ts-prune accounting:
+
+- 93 total entries reported.
+- 12 are real findings (file-level deletions + auditFormatting helpers + 2 apiClient exports + ApiUnavailableNotice + uiText.ts + AssetIdentityPicker.tsx) — all covered by the FIND-UNUSED-001..003 entries.
+- 81 are over-reports broken down into the three dismissal categories below.
+
+### Dismissed: Next.js framework convention defaults (×18)
+
+Pattern: Next.js App Router uses `page.tsx default export`, `layout.tsx default export + metadata named export` as **framework-driven entry points**. They are not imported by any user code; the Next.js compiler discovers them by file convention. ts-prune cannot model the Next.js file-to-route mapping, so it reports each `default` (and the layout's `metadata`) as "unused".
+
+Specific entries dismissed (all `apps/web/`):
+
+- `app/layout.tsx:27 - default` + `app/layout.tsx:10 - metadata` (the root layout — see T-008 `web-pages.md` §2).
+- `app/page.tsx:34 - default` (the root Dashboard page — T-008 §3.1).
+- `app/audit/page.tsx:7 - default` (T-008 §3.10).
+- `app/historiek/page.tsx:3 - default` (T-008 §3.16).
+- `app/ibkr-acties/page.tsx:38 - default` (T-008 §3.5).
+- `app/instellingen/page.tsx:23 - default` (T-008 §3.7).
+- `app/onderzoek/page.tsx:3 - default` (T-008 §3.15).
+- `app/portefeuille/page.tsx:59 - default` (T-008 §3.2).
+- `app/research-sources/page.tsx:25 - default` (T-008 §3.4).
+- `app/suggesties/page.tsx:10 - default` (T-008 §3.11).
+- `app/systeemmeldingen/page.tsx:37 - default` (T-008 §3.8).
+- `app/volglijst/page.tsx:34 - default` (T-008 §3.6).
+- `app/admin/reconciliation/page.tsx:44 - default` (T-008 §3.3).
+- `app/decision-package/[id]/page.tsx:29 - default` (T-008 §3.9).
+- `app/audit/freshness-audits/[freshnessAuditId]/page.tsx:10 - default` (T-008 §3.13).
+- `app/audit/provider-sources/[providerSourceId]/page.tsx:8 - default` (T-008 §3.14).
+- `app/audit/request-logs/[requestLogId]/page.tsx:10 - default` (T-008 §3.12).
+
+Reason for dismissal: **framework convention** — Next.js discovers these by `app/**/page.tsx` + `layout.tsx` file naming, not by import graph. knip is configured to understand Next.js conventions (`apps/web/knip.config` is implicit / default Next.js plugin) so it correctly does NOT flag these.
+
+### Dismissed: top-level config-file defaults (×3)
+
+Pattern: tool config files use `export default { ... }` and are loaded by their respective CLI tools (Next.js, Playwright, Vitest) by filename convention. ts-prune cannot model these.
+
+- `next.config.ts:7 - default` — Next.js config.
+- `playwright.config.ts:11 - default` — Playwright config.
+- `vitest.config.ts:6 - default` — Vitest config.
+
+Reason for dismissal: **framework convention** — tool CLIs load these by filename, not by import.
+
+### Dismissed: ts-prune `(used in module)` over-reporting (×60)
+
+Pattern: ts-prune marks every `export` declaration that has at least one internal reference within the same module file but no external import as `(used in module)`. In `apps/web/lib/apiClient.ts`, ~60 type aliases and constants follow this pattern — they're chained internally (e.g. a `WatchlistConfirmResponse` type referenced by another `*ListResponse` envelope type which is itself exported) but the outer envelope's external use does not propagate through the chain in ts-prune's analysis.
+
+Two of the entries that look similar but are **genuinely unused** (NOT marked `(used in module)`) are surfaced in `FIND-UNUSED-003` (`MarketDataLatestSnapshotResponse:746`, `updateWatchlistItem:1807`). The remaining 60 `(used in module)` entries split roughly:
+
+- **~24 are also flagged by knip as "Unused exported types"** — these are the genuine-but-internal-only types, covered by `FIND-KNIP-004`.
+- **~36 are correctly internally-referenced** — they're consumed by other exports in the same file that *do* have external consumers; ts-prune just can't trace the chain through TypeScript's type-system. Examples (line refs are in `apps/web/lib/apiClient.ts`):
+  - `FetchState:1`, `ApiResult:5` — base discriminated-union types used everywhere via `Result<T>`.
+  - `SettingsSummary:34`, `AiUsageSummary:56`, `StorageStatusSummary:57`, `IntegrationsSummary:59` — composed into nested response shapes.
+  - `LatestForecastsResponse:391`, `LatestSuggestionsResponse:428`, `LatestDecisionPackagesResponse:501`, `LatestActionDraftsResponse:1316` — wrappers for "latest" endpoints whose responses are consumed via the `Result<T>` discriminated union.
+  - 30+ other inner-chain response types.
+
+Reason for dismissal across all 60: **ts-prune limitation** — the tool over-reports any export whose only references are inside the same file. knip's deeper analysis disambiguates the genuinely-unused (FIND-KNIP-004) from the internally-chained. No action: either accept the chain or let `FIND-KNIP-004` Phase 4 pruning shrink the set.
+
+The current `apps/web` CI step does not run `knip` or `ts-prune`. A Phase 4 CI brainstorm could decide to add `npm run dead-code` (running both with the dismissals above wired into knip's config) so the same class of drift surfaces at PR time. Per the T-057 spec, "Adding either tool to `package.json` permanently — that decision goes through Phase 4 brainstorming" — explicitly out of scope here.
