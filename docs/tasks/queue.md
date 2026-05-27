@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-056** — `tsc --noEmit` baseline — 1 type error (TS2739 in `ActionDraftGrid.test.tsx:14`; test-fixture drift from Task 134 lifecycle fields). *Branch:* `task/T-056-codehealth-tsc-baseline`.
+- **T-008** — Reality docs for the frontend pages + components (3 files; 16 pages + 30 components ~6493 LoC). *Branch:* `task/T-008-reality-frontend-pages-and-components`.
 
 ## Locked
 
@@ -205,3 +205,4 @@ _None._
 - **T-006** — Reality doc for the API infrastructure + AI cluster (1 file; 20 modules ~8985 LoC cited; 15 `include_router` registrations + 20 release-readiness blocker codes + Anthropic Claude provider call shape + monthly EUR budget cap + Case C AI classification documented). PR: https://github.com/Shorta-01/ai-trading-agent/pull/444 — merged 2026-05-26.
 - **T-055** — `radon` baseline (4 FINDs: 10 high-CC + 202 medium-CC + 9 high-MI + 8 medium-MI; 541 rank-B "watch" entries dismissed per locked threshold; hottest module status_routes.py — 14 CC C+ + 20 CC B + MI 0.00). PR: https://github.com/Shorta-01/ai-trading-agent/pull/445 — merged 2026-05-26.
 - **T-007** — Reality docs for the worker (3 files; 30 non-`__init__` source files / ~8871 LoC cited; 3 intent-vs-reality gaps surfaced — 1-of-7 predictors shipped, 6 labels not 8, place_order authority split across API+worker). PR: https://github.com/Shorta-01/ai-trading-agent/pull/446 — merged 2026-05-26.
+- **T-056** — `tsc --noEmit` baseline on `apps/web` (1 LOW `FIND-TSC-001` for `ActionDraftGrid.test.tsx:14` test-fixture drift; production build unaffected since `next build` excludes `*.test.tsx`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/447 — merged 2026-05-26.
