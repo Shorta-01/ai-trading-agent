@@ -8,7 +8,7 @@ owner: claude
 created: 2026-05-27
 intent_ref: docs/intent/ai-usage.md
 decision_ref: docs/decisions/0013-ai-usage-architecture.md
-pr_url:
+pr_url: https://github.com/Shorta-01/ai-trading-agent/pull/468
 ```
 
 ## Audit (steps 1–5; recorded per `_audit-discipline.md`)
