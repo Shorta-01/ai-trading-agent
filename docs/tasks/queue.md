@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-008** — Reality docs for the frontend pages + components (3 files; 16 pages + 30 components ~6493 LoC). *Branch:* `task/T-008-reality-frontend-pages-and-components`.
+- **T-057** — `knip` + `ts-prune` baseline on `apps/web` — 41 knip findings (3 unused files + 2 unused devDeps + 10 unused exports + 25 unused types + 1 duplicate export) + 33 ts-prune real findings (after stripping framework + "used in module" over-reports). *Branch:* `task/T-057-codehealth-knip-tsprune-baseline`.
 
 ## Locked
 
@@ -206,3 +206,4 @@ _None._
 - **T-055** — `radon` baseline (4 FINDs: 10 high-CC + 202 medium-CC + 9 high-MI + 8 medium-MI; 541 rank-B "watch" entries dismissed per locked threshold; hottest module status_routes.py — 14 CC C+ + 20 CC B + MI 0.00). PR: https://github.com/Shorta-01/ai-trading-agent/pull/445 — merged 2026-05-26.
 - **T-007** — Reality docs for the worker (3 files; 30 non-`__init__` source files / ~8871 LoC cited; 3 intent-vs-reality gaps surfaced — 1-of-7 predictors shipped, 6 labels not 8, place_order authority split across API+worker). PR: https://github.com/Shorta-01/ai-trading-agent/pull/446 — merged 2026-05-26.
 - **T-056** — `tsc --noEmit` baseline on `apps/web` (1 LOW `FIND-TSC-001` for `ActionDraftGrid.test.tsx:14` test-fixture drift; production build unaffected since `next build` excludes `*.test.tsx`). PR: https://github.com/Shorta-01/ai-trading-agent/pull/447 — merged 2026-05-26.
+- **T-008** — Reality docs for the frontend (3 files; 16 pages + 30 non-test components / ~6493 LoC cited; Dutch UI invariant verified, client-first vs server-first noted, 9 Decimal-as-string display-rounding sites flagged). PR: https://github.com/Shorta-01/ai-trading-agent/pull/448 — merged 2026-05-26.
