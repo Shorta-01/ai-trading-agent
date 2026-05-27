@@ -18,7 +18,7 @@ written here once, not repeated per row.
 
 ## In Progress
 
-- **T-061** — Reality doc for the settings + credentials infrastructure as it stands in HEAD, mapped against the five-category intent in `docs/intent/settings-and-credentials.md`. *Branch:* `task/T-061-reality-settings-and-credentials`.
+- **T-013** — `ibkr-readonly-sync-positions-cash.md` workflow doc (synthesis of T-004/T-007/T-008; trigger → connect → tier-two guard → snapshot persistence → frontend display). *Branch:* `task/T-013-reality-ibkr-readonly-sync-positions-cash`.
 
 ## Locked
 
@@ -215,3 +215,4 @@ _None._
 - **T-011** — `morning-chain-orchestration.md` first Track 1a workflow doc (281 lines; synthesis of T-005/T-006/T-007 covering 06:00 pre_briefing + 07:00 morning_briefing end-to-end; 6 mode_detected modes + 5 step gates documented; explicit out-of-scope for action drafts/submission/reconciliation). PR: https://github.com/Shorta-01/ai-trading-agent/pull/454 — merged 2026-05-26.
 - **T-060** — Batching proposal `05-fix-batches.md` grouping the 19 master FINDs from T-059 into 15 batches (4 high solo + 3 medium solo + 8 low — 3 bundled by same file+category; FIND→BATCH coverage proof table; 3 false-positive annotations preserved; no queue rows added per spec). PR: https://github.com/Shorta-01/ai-trading-agent/pull/455 — merged 2026-05-26.
 - **T-012** — `cold-start-seeding-and-watchlist-confirmation.md` Track 1a workflow doc (383 lines; synthesis of T-005/T-007/T-008/T-009; 12-row v1 starter set + 4-table write pattern + BEVESTIG confirmation + 3-step mode_detected sequence documented). PR: https://github.com/Shorta-01/ai-trading-agent/pull/456 — merged 2026-05-26.
+- **T-061** — Settings + credentials infrastructure reality doc (336 lines; 5-category intent mapping; 8 secret-read sites + 153 DB-URL sites inventoried; 11 Phase 1c gaps surfaced — Kelly 0.5-vs-0.25 collision re-confirmed, OpenAI vocab-only, Anthropic SDK auto-reads `ANTHROPIC_API_KEY`, PAPER→REAL architecturally forbidden at 3 layers). PR: https://github.com/Shorta-01/ai-trading-agent/pull/457 — merged 2026-05-26.
