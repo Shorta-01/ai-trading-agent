@@ -62,14 +62,25 @@ class _FakeIB:
         min_tick: float = 0.005,
         open_trades: list[_FakeTrade] | None = None,
         place_perm_id: int = 100200,
+        qualify_raises: bool = False,
+        qualify_empty: bool = False,
     ) -> None:
         self._connected = connected
         self._managed = managed if managed is not None else ["DU1234567"]
         self._min_tick = min_tick
         self._open_trades = open_trades or []
         self._place_perm_id = place_perm_id
+        self._qualify_raises = qualify_raises
+        self._qualify_empty = qualify_empty
+        self.qualified: list[object] = []
         self.canceled: list[_FakeOrder] = []
         self.disconnected = False
+
+    def qualifyContracts(self, *contracts: object) -> list[object]:
+        if self._qualify_raises:
+            raise RuntimeError("connection dropped during qualify")
+        self.qualified.extend(contracts)
+        return [] if self._qualify_empty else list(contracts)
 
     def isConnected(self) -> bool:
         return self._connected
@@ -174,6 +185,28 @@ def test_place_order_raises_when_perm_id_never_assigned() -> None:
 def test_place_order_raises_when_disconnected() -> None:
     with pytest.raises(IbkrConnectionLostError):
         _adapter(_FakeIB(connected=False)).place_order(_FakeContract(), _FakeOrder())
+
+
+def test_place_order_sets_account_and_qualifies_contract() -> None:
+    ib = _FakeIB(place_perm_id=100200)
+    order = _FakeOrder()
+    contract = _FakeContract()
+    _adapter(ib).place_order(contract, order)
+    # Explicit account targeting + contract qualification before transmit.
+    assert order.account == "DU1234567"
+    assert contract in ib.qualified
+
+
+def test_place_order_rejects_unqualifiable_contract() -> None:
+    ib = _FakeIB(qualify_empty=True)
+    with pytest.raises(ValueError):
+        _adapter(ib).place_order(_FakeContract(), _FakeOrder())
+
+
+def test_place_order_qualify_connection_error_is_connection_lost() -> None:
+    ib = _FakeIB(qualify_raises=True)
+    with pytest.raises(IbkrConnectionLostError):
+        _adapter(ib).place_order(_FakeContract(), _FakeOrder())
 
 
 # ---- cancel order -------------------------------------------------------
