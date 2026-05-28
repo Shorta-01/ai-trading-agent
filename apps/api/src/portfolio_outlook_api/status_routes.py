@@ -35,7 +35,7 @@ from ai_trading_agent_storage import (
     StorageConnectionProvider,
     build_database_connection_settings,
 )
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request, Response
 from portfolio_outlook_domain.market_data_foundation import (
     MarketDataFetchStatus,
     MarketDataIdentity,
@@ -66,6 +66,10 @@ from portfolio_outlook_api.config import Settings, settings
 from portfolio_outlook_api.daily_briefing_sync import (
     generate_daily_briefing,
     serialize_briefing_for_response,
+)
+from portfolio_outlook_api.decision_package_export import (
+    export_filename,
+    render_decision_packages_markdown,
 )
 from portfolio_outlook_api.decision_package_sync import (
     build_research_summary_by_symbol,
@@ -1628,6 +1632,74 @@ def read_latest_decision_packages() -> dict[str, object]:
             "status": "storage_unavailable",
             "status_nl": "Opslag niet bereikbaar",
         }
+
+
+@router.get("/decision-packages/export")
+def export_latest_decision_packages() -> Response:
+    """Download the latest Decision Packages as a Markdown document.
+
+    Bundles every current buy/sell suggestion with its full rationale, AI
+    explanation, forecast numbers and content hash into one self-contained
+    ``.md`` file the user can save or forward. Read-only; no orders. Every
+    terminal state still returns a valid (if near-empty) downloadable file.
+    """
+
+    generated_at = datetime.now(UTC)
+    risk_profile = settings.suggestions_risk_profile
+
+    def _md_response(
+        packages: list[dict[str, object]], *, status_nl: str | None
+    ) -> Response:
+        markdown = render_decision_packages_markdown(
+            packages,
+            generated_at=generated_at,
+            risk_profile=risk_profile,
+            status_nl=status_nl,
+        )
+        return Response(
+            content=markdown,
+            media_type="text/markdown; charset=utf-8",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{export_filename(generated_at)}"'
+                )
+            },
+        )
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return _md_response([], status_nl="Opslag niet geconfigureerd")
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            ibkr_repo = SqlAlchemyIbkrSyncSnapshotRepository(
+                checked.connection, checked.readiness
+            )
+            package_repo = SqlAlchemyAssetDecisionPackageRepository(
+                checked.connection, checked.readiness
+            )
+            latest_run = ibkr_repo.get_latest_ibkr_sync_run()
+            if latest_run is None:
+                return _md_response([], status_nl="Geen IBKR-sync gevonden")
+            positions = list(
+                ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id)
+            )
+            conids = tuple(p.conid for p in positions if p.conid)
+            if not conids:
+                return _md_response([], status_nl="Geen posities")
+            result = package_repo.list_latest_asset_decision_packages_by_conids(conids)
+            packages = [
+                serialize_decision_package_for_response(r) for r in result.records
+            ]
+            return _md_response(
+                packages,
+                status_nl=None if packages else "Nog geen Decision Packages",
+            )
+    except StorageConnectionError:
+        return _md_response([], status_nl="Opslag niet bereikbaar")
 
 
 @router.get("/decision-packages/{ibkr_conid}/latest")
