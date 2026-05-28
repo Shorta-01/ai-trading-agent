@@ -17,7 +17,7 @@
  * Mounted on the Dashboard only — not the global layout.
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { apiClient, SchedulerV127StatusResponse } from "@/lib/apiClient";
 
@@ -73,36 +73,18 @@ function labelFor(
 }
 
 export function SchedulerStatusBadge() {
-  const [status, setStatus] = useState<SchedulerV127StatusResponse | null>(
-    null,
-  );
-  const [apiError, setApiError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const query = useQuery({
+    queryKey: ["scheduler-v127-status"],
+    queryFn: async (): Promise<SchedulerV127StatusResponse> => {
       const result = await apiClient.getSchedulerV127Status();
-      if (cancelled) return;
-      if (result.ok) {
-        setStatus(result.data);
-        setApiError(false);
-      } else {
-        setStatus(null);
-        setApiError(true);
-      }
-    }
+      if (!result.ok) throw new Error("scheduler_status_unreachable");
+      return result.data;
+    },
+    refetchInterval: POLL_INTERVAL_MS,
+  });
 
-    void load();
-    const handle = window.setInterval(() => {
-      void load();
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(handle);
-    };
-  }, []);
+  const status = query.data ?? null;
+  const apiError = query.isError;
 
   const state = deriveState(status, apiError);
   const visuals = STATE_VISUALS[state];
