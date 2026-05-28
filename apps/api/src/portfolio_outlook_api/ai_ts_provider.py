@@ -177,18 +177,18 @@ def build_ts_model_provider(
     - ``ai_ts_predictor_enabled``
     - ``ai_ts_predictor_provider_code == "stub"``
 
-    V1.1 Slice 30: when ``provider_code="anthropic_claude"`` AND
-    ``ai_ts_predictor_real_client_enabled=True`` AND the API key is
-    set AND ``budget_repo`` is supplied AND either
-    ``ai_ts_predictor_daily_only=False`` or
-    ``invoked_from_scheduler=True``, the factory returns the real
-    :class:`AnthropicTsModelProvider`. Missing any of these gates
-    surfaces a stable ``TsModelProviderUnavailable`` reason so the
-    orchestrator can fall back cleanly.
+    ``provider_code="anthropic_claude"`` (an LLM directly producing forecasts —
+    "case B") is **forbidden** by doctrine (``ai-usage.md`` §5 +
+    ``forecast-engine.md`` §7) and always returns ``case_b_forbidden``. The
+    path is removed, not flag-gated: no combination of API key / budget /
+    feature flags can reach an LLM forecaster.
 
     Real TimesFM / Chronos / Lag-Llama providers still return
     ``real_client_not_implemented``; the operator surface is
     declared via the existing provider-code setting.
+
+    ``budget_repo`` / ``invoked_from_scheduler`` are retained for signature
+    stability (a future case-C feature-generator path would consume them).
     """
 
     if not runtime_settings.ai_ts_predictor_enabled:
@@ -202,6 +202,21 @@ def build_ts_model_provider(
     code = (runtime_settings.ai_ts_predictor_provider_code or "").strip().lower()
     if code == STUB_PROVIDER_CODE:
         return StubTsModelProvider()
+    if code == "anthropic_claude":
+        # Case B — an LLM directly producing forecasts — is forbidden by
+        # doctrine (ai-usage.md §5 + forecast-engine.md §7): "LLMs hallucinate
+        # numbers; calibration is unreliable; risk is unbounded." The provider
+        # is removed, not flag-gated: this return is reached before any
+        # key/budget/flag check, so no configuration can instantiate an LLM
+        # forecaster.
+        return TsModelProviderUnavailable(
+            reason="case_b_forbidden",
+            detail_nl=(
+                "LLM-als-voorspeller (case B) is verboden door de doctrine "
+                "(ai-usage.md §5: LLMs hallucineren getallen, risico is "
+                "onbegrensd). Gebruik `AI_TS_PREDICTOR_PROVIDER_CODE=stub`."
+            ),
+        )
     if not runtime_settings.ai_ts_predictor_real_client_enabled:
         return TsModelProviderUnavailable(
             reason="real_client_not_enabled",
@@ -210,49 +225,6 @@ def build_ts_model_provider(
                 "`AI_TS_PREDICTOR_PROVIDER_CODE=stub` voor de deterministische "
                 "fallback, of zet `AI_TS_PREDICTOR_REAL_CLIENT_ENABLED=true`."
             ),
-        )
-    if code == "anthropic_claude":
-        api_key = (runtime_settings.claude_ai_api_key or "").strip()
-        if not api_key:
-            return TsModelProviderUnavailable(
-                reason="claude_ai_api_key_missing",
-                detail_nl=(
-                    "Anthropic Claude TS-provider vereist `CLAUDE_AI_API_KEY` "
-                    "in de env. Zonder de sleutel valt de provider terug "
-                    "op de stub."
-                ),
-            )
-        if budget_repo is None:
-            return TsModelProviderUnavailable(
-                reason="claude_ai_budget_repo_missing",
-                detail_nl=(
-                    "Anthropic Claude TS-provider vereist een budget-repo "
-                    "(usage audit). Roep `build_ts_model_provider(..., "
-                    "budget_repo=repo)` aan."
-                ),
-            )
-        if (
-            runtime_settings.ai_ts_predictor_daily_only
-            and not invoked_from_scheduler
-        ):
-            return TsModelProviderUnavailable(
-                reason="daily_only_invocation_required",
-                detail_nl=(
-                    "AI TS-provider draait alleen via de scheduler-gestuurde "
-                    "morning chain (`AI_TS_PREDICTOR_DAILY_ONLY=true`). "
-                    "Roep aan met `invoked_from_scheduler=True` of zet de "
-                    "vlag uit voor ad-hoc oproepen."
-                ),
-            )
-        from portfolio_outlook_api.anthropic_ts_provider import (
-            AnthropicTsModelProvider,
-        )
-
-        return AnthropicTsModelProvider(
-            budget_repo=budget_repo,  # type: ignore[arg-type]
-            monthly_cap_eur=runtime_settings.claude_ai_budget_monthly_eur,
-            model_name=runtime_settings.claude_ai_explanation_model,
-            max_tokens=runtime_settings.ai_ts_predictor_max_tokens,
         )
     if code == "timesfm":
         # V1.1 §22 placeholder — TimesFM HTTP wiring lands in a post-V1.1

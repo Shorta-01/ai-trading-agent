@@ -93,6 +93,24 @@ def test_factory_returns_unavailable_for_unimplemented_real_provider() -> None:
     assert result.reason == "real_client_not_implemented"
 
 
+def test_factory_forbids_anthropic_claude_case_b_forecaster() -> None:
+    # Case B (LLM-as-forecaster) is forbidden by ai-usage.md §5 — unreachable
+    # even with every flag/key/budget set in the most permissive way.
+    result = build_ts_model_provider(
+        _settings(
+            ai_ts_predictor_enabled=True,
+            ai_ts_predictor_provider_code="anthropic_claude",
+            ai_ts_predictor_real_client_enabled=True,
+            ai_ts_predictor_daily_only=False,
+            claude_ai_api_key="sk-should-not-matter",
+        ),
+        budget_repo=object(),
+        invoked_from_scheduler=True,
+    )
+    assert isinstance(result, TsModelProviderUnavailable)
+    assert result.reason == "case_b_forbidden"
+
+
 # ---- stub provider --------------------------------------------------
 
 
