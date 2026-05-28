@@ -380,6 +380,12 @@ class IbkrGateway:
         except Exception:  # noqa: BLE001 — boundary
             return False
 
+    @property
+    def account_id(self) -> str | None:
+        """The account verified at connect time (``None`` until connected)."""
+
+        return self._account_id
+
     def get_account_mode(self) -> AccountMode:
         """Live read of the connected mode (no caching of stale state).
 
