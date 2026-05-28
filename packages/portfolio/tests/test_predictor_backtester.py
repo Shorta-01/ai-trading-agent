@@ -9,14 +9,17 @@ from decimal import Decimal
 import pytest
 
 from portfolio_outlook_portfolio import HistoricalBar, PredictorInputs
+from portfolio_outlook_portfolio.belgian_tax import TobSecurityClass
 from portfolio_outlook_portfolio.gbm_predictor import GbmPredictor
 from portfolio_outlook_portfolio.mean_reversion_predictor import (
     MeanReversionPredictor,
 )
 from portfolio_outlook_portfolio.momentum_predictor import MomentumPredictor
 from portfolio_outlook_portfolio.predictor_backtester import (
+    BacktestCostModel,
     aggregate_window_score,
     backtest_window_score_for_predictor,
+    cost_model_for,
     new_backtest_run_id,
     run_predictor_backtest,
     walk_forward_backtest,
@@ -299,3 +302,81 @@ def test_each_predictor_implements_backtest_window_score() -> None:
         assert isinstance(score, BacktestWindowScore)
         assert score.window_days == 250
         assert score.model_code == predictor.model_code
+
+
+# ---- transaction costs (predictor-lifecycle.md §1) ----------------------
+
+
+def test_cost_model_round_trip_doubles_per_leg() -> None:
+    model = BacktestCostModel(
+        tob_rate_pct=0.35, commission_bps_per_fill=5.0, half_spread_bps=20.0
+    )
+    # 2 * (0.35 + 0.05 + 0.20) = 1.20
+    assert model.round_trip_cost_pct() == pytest.approx(1.20)
+
+
+def test_cost_model_for_liquid_etf_uses_5bps_half_spread() -> None:
+    model = cost_model_for(
+        security_class=TobSecurityClass.DISTRIBUTING_ETF, liquid=True
+    )
+    assert model.tob_rate_pct == pytest.approx(0.35)  # TOB_RATE_STANDARD
+    assert model.half_spread_bps == pytest.approx(5.0)
+    # 2 * (0.35 + 0.05 + 0.05) = 0.90
+    assert model.round_trip_cost_pct() == pytest.approx(0.90)
+
+
+def test_walk_forward_deducts_round_trip_costs() -> None:
+    closes = [100.0 * math.exp(0.001 * i) for i in range(500)]
+    outcomes = walk_forward_backtest(
+        GbmPredictor(), _bars(closes), window_days=250, step_days=10
+    )
+    assert outcomes
+    expected_cost = cost_model_for().round_trip_cost_pct()  # default stock model
+    for fold in outcomes:
+        assert fold.round_trip_cost_pct == pytest.approx(expected_cost)
+        assert fold.realised_net_return_pct == pytest.approx(
+            fold.realised_return_pct - expected_cost
+        )
+        assert fold.realised_net_return_pct < fold.realised_return_pct
+
+
+def test_zero_cost_model_leaves_net_equal_gross() -> None:
+    closes = [100.0 * math.exp(0.001 * i) for i in range(500)]
+    zero = BacktestCostModel(
+        tob_rate_pct=0.0, commission_bps_per_fill=0.0, half_spread_bps=0.0
+    )
+    outcomes = walk_forward_backtest(
+        GbmPredictor(), _bars(closes), window_days=250, step_days=10, cost_model=zero
+    )
+    assert outcomes
+    for fold in outcomes:
+        assert fold.round_trip_cost_pct == pytest.approx(0.0)
+        assert fold.realised_net_return_pct == pytest.approx(fold.realised_return_pct)
+
+
+def test_costs_lower_net_sharpe_on_a_profitable_uptrend() -> None:
+    closes = [100.0 * math.exp(0.001 * i) for i in range(500)]
+    bars = _bars(closes)
+    zero = BacktestCostModel(
+        tob_rate_pct=0.0, commission_bps_per_fill=0.0, half_spread_bps=0.0
+    )
+    gross = aggregate_window_score(
+        predictor=GbmPredictor(),
+        outcomes=walk_forward_backtest(
+            GbmPredictor(), bars, window_days=250, step_days=10, cost_model=zero
+        ),
+        window_days=250,
+    )
+    net = aggregate_window_score(
+        predictor=GbmPredictor(),
+        outcomes=walk_forward_backtest(
+            GbmPredictor(), bars, window_days=250, step_days=10
+        ),
+        window_days=250,
+    )
+    assert gross.sharpe_ratio is not None
+    assert net.sharpe_ratio is not None
+    # Costs shift the mean return down without changing dispersion → lower Sharpe.
+    assert net.sharpe_ratio < gross.sharpe_ratio
+    # Brier is cost-independent (gross direction).
+    assert net.brier_score == pytest.approx(gross.brier_score)
