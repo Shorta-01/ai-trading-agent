@@ -17,6 +17,8 @@ from portfolio_outlook_api.anthropic_explanation_provider import (
     SYSTEM_PROMPT_NL,
     AnthropicExplanationProvider,
     ClaudeAiBudgetExceededError,
+    ExplanationPromptError,
+    load_explanation_system_prompt,
 )
 
 # ---- Fake Anthropic client ---------------------------------------------
@@ -256,3 +258,48 @@ def test_factory_returns_real_provider_when_all_gates_open() -> None:
     s.claude_ai_api_key = "sk-test"
     provider = build_explanation_provider(s, budget_repo=_FakeBudgetRepo())
     assert isinstance(provider, AnthropicExplanationProvider)
+
+
+# ---- prompt-as-data loader (T-047 §2) ----------------------------------
+
+
+def test_loader_returns_locked_default_when_no_path() -> None:
+    assert load_explanation_system_prompt(None) == SYSTEM_PROMPT_NL
+
+
+def test_loader_reads_external_prompt_file(tmp_path) -> None:
+    body = "Aangepaste Nederlandse system prompt voor de uitleg-assistent."
+    f = tmp_path / "prompt.txt"
+    f.write_text(body + "\n", encoding="utf-8")
+    assert load_explanation_system_prompt(str(f)) == body
+
+
+def test_loader_raises_on_missing_file(tmp_path) -> None:
+    missing = tmp_path / "nope.txt"
+    with pytest.raises(ExplanationPromptError):
+        load_explanation_system_prompt(str(missing))
+
+
+def test_loader_raises_on_empty_file(tmp_path) -> None:
+    f = tmp_path / "empty.txt"
+    f.write_text("   \n", encoding="utf-8")
+    with pytest.raises(ExplanationPromptError):
+        load_explanation_system_prompt(str(f))
+
+
+def test_provider_sends_configured_system_prompt() -> None:
+    custom = "Volledig aangepaste system prompt geladen uit een bestand (>40)."
+    repo = _FakeBudgetRepo()
+    fake_client = _FakeAnthropicClient(text="x")
+    provider = AnthropicExplanationProvider(
+        budget_repo=repo,
+        monthly_cap_eur=Decimal("50"),
+        client_factory=lambda: fake_client,
+        system_prompt=custom,
+    )
+    provider.generate(_inputs())
+    payload = fake_client.messages.last_payload
+    assert payload is not None
+    system_blocks = payload["system"]
+    assert any(block["text"] == custom for block in system_blocks)
+    assert all(block["text"] != SYSTEM_PROMPT_NL for block in system_blocks)

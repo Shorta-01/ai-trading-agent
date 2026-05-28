@@ -179,6 +179,7 @@ def build_explanation_provider(
             )
         from portfolio_outlook_api.anthropic_explanation_provider import (
             AnthropicExplanationProvider,
+            load_explanation_system_prompt,
         )
 
         return AnthropicExplanationProvider(
@@ -186,6 +187,9 @@ def build_explanation_provider(
             monthly_cap_eur=runtime_settings.claude_ai_budget_monthly_eur,
             max_output_chars=runtime_settings.claude_ai_explanation_max_output_chars,
             model_name=runtime_settings.claude_ai_explanation_model,
+            system_prompt=load_explanation_system_prompt(
+                runtime_settings.ai_explanation_prompt_path
+            ),
         )
     # Other real-provider codes (OpenAI, ...) are out of scope.
     return ExplanationProviderUnavailable(
