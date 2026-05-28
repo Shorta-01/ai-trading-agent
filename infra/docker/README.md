@@ -62,6 +62,19 @@ docker compose down -v
 
 ⚠️ `down -v` removes the `postgres_data` volume and deletes local development database data.
 
+## Backups & restore-test
+
+Encrypted PostgreSQL backups (see `docs/deployment.md` for the full runbook):
+
+```bash
+# Configure BACKUP_DIR + BACKUP_GPG_PASSPHRASE_FILE in infra/docker/.env first.
+make backup        # pg_dump → gzip → AES256 (GPG) → $BACKUP_DIR, prunes old files
+make restore-test  # restores the latest backup into a throwaway container + verifies
+```
+
+A backup is only TRUSTED once `restore-test` passes against it. The scripts
+live in `infra/docker/scripts/`.
+
 ## Grenzen van deze fase
 - Geen live trading
 - Geen brokerkoppeling

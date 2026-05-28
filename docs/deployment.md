@@ -15,6 +15,43 @@ Latere migratie naar mini PC/zwaardere server zonder code rewrite.
 
 ## Backups en restore
 Dagelijkse backups + periodieke restore-tests; een backup geldt pas als betrouwbaar na geslaagde restore-test.
+
+### Tooling
+
+Two scripts implement the mandate (run from the repo root, or via `make`):
+
+- **`infra/docker/scripts/backup-postgres.sh`** (`make backup`) — `pg_dump`
+  of the compose Postgres → `gzip` → **AES256-encrypted with GPG** → a
+  timestamped file in `BACKUP_DIR`, then prunes files older than
+  `BACKUP_RETENTION_DAYS`. Encryption is mandatory: the script aborts if
+  `BACKUP_GPG_PASSPHRASE_FILE` is unset/unreadable.
+- **`infra/docker/scripts/restore-test.sh`** (`make restore-test`) — restores
+  the latest (or a given) backup into a **throwaway Postgres container**,
+  verifies `alembic_version` and the public-table count, then tears it down.
+  It never touches the production database. A backup is only TRUSTED once
+  this passes.
+
+### Configuration (`infra/docker/.env`)
+
+- `BACKUP_DIR` — off-Pi destination (mount an external disk / NFS share;
+  keep it off the boot media).
+- `BACKUP_RETENTION_DAYS` — prune window (default 14).
+- `BACKUP_GPG_PASSPHRASE_FILE` — path to a `chmod 600`, never-committed file
+  holding the symmetric passphrase.
+
+### Schedule (host cron example)
+
+```cron
+# Daily encrypted backup at 02:00
+0 2 * * *  cd /path/to/ai-trading-agent && make backup   >> /var/log/ai-trading-backup.log 2>&1
+# Weekly restore-test (Sunday 03:00) — proves the backups are restorable
+0 3 * * 0  cd /path/to/ai-trading-agent && make restore-test >> /var/log/ai-trading-restore-test.log 2>&1
+```
+
+> The dump is pulled through `docker compose exec postgres pg_dump`, so the
+> pinned `postgres:16.4` server + client versions always match. Combine with
+> a UPS so a power cut triggers a clean shutdown rather than mid-write
+> corruption.
 \n\n## Runtime update\nContract-only update for backend runtime/service topology added in domain models for coordinated startup, health gating, and queue-first heavy workloads (no runtime implementation in this PR).
 \n## Scheduler and background job planning\nContracts define planning only: plan -> eligibility -> skip/block/run status -> audit trace. Suggestion jobs require gezonde services en verse data; geen job voert trades uit. Zware AI/research taken horen in queue of externe worker, niet als onbeperkte Raspberry Pi scan.
 
