@@ -201,6 +201,34 @@ export type ActiveSystemEventsResponse = {
   summary_nl?: string;
 };
 
+export type ErrorLogItem = {
+  system_event_id: string;
+  created_at: string;
+  severity: string;
+  category: string;
+  source_service: string;
+  source_component: string;
+  event_code: string;
+  title_nl: string;
+  message_nl: string;
+  technical_summary: string | null;
+  stack_trace_redacted: string | null;
+  redacted_details_json: Record<string, string> | null;
+  status: string;
+};
+
+export type ErrorLogResponse = {
+  open_count: number;
+  errors: ErrorLogItem[];
+};
+
+export type ReportErrorInput = {
+  message: string;
+  component?: string | null;
+  stack?: string | null;
+  context?: Record<string, string> | null;
+};
+
 export type ResearchSourceRecord = {
   library_source_id: string;
   title: string;
@@ -1728,6 +1756,18 @@ export const apiClient = {
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
   archiveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/archive`, payload),
+  getErrors: () => getJson<ErrorLogResponse>("/errors"),
+  reportError: (payload: ReportErrorInput) =>
+    postJson<{ system_event_id: string }>("/errors/report", payload),
+  resolveError: (systemEventId: string) =>
+    postJson<{ message_nl: string }>(
+      `/errors/${encodeURIComponent(systemEventId)}/resolve`,
+    ),
+  deleteError: (systemEventId: string) =>
+    requestJson<{ message_nl: string }>(
+      `/errors/${encodeURIComponent(systemEventId)}`,
+      "DELETE",
+    ),
   listResearchSources: () => requestJson<{ records: ResearchSourceRecord[] }>("/research/sources", "GET"),
   getResearchSource: (librarySourceId: string) => requestJson<{ record: ResearchSourceRecord }>(`/research/sources/${librarySourceId}`, "GET"),
   createResearchSource: (payload: Record<string, unknown>) => requestJson<{ message_nl: string }>("/research/sources", "POST", payload),

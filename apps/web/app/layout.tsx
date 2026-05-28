@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { AccountModeBadge } from "@/components/AccountModeBadge";
 import { ColdStartBanner } from "@/components/ColdStartBanner";
+import { ErrorLogBadge } from "@/components/ErrorLogBadge";
+import { FrontendErrorReporter } from "@/components/FrontendErrorReporter";
 import { Providers } from "@/components/Providers";
 import { SystemEventsIndicator } from "@/components/SystemEventsIndicator";
 
@@ -47,10 +49,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <div className="top-actions">
                 <AccountModeBadge />
+                <ErrorLogBadge />
                 <SystemEventsIndicator />
               </div>
             </header>
             <ColdStartBanner />
+            <FrontendErrorReporter />
             {children}
           </div>
         </div>
