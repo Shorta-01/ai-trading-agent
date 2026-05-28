@@ -89,6 +89,36 @@ export type TradingSettingsUpdateInput = {
   reason_nl?: string;
 };
 
+// Risk-limits (behavioural guardrail) settings — Task 138. Hand-defined to
+// mirror ``RiskLimitsResponse``/``UpdateRiskLimitsRequest`` in
+// ``apps/api/src/portfolio_outlook_api/risk_limits_routes.py``. Decimal
+// fields are strings on the wire (no float rounding).
+export type RiskLimitsResponse = {
+  ibkr_account_id: string;
+  daily_max_approvals: number;
+  cooldown_seconds: number;
+  anti_revenge_window_hours: number;
+  anti_revenge_loss_threshold_pct: string;
+  soft_drawdown_pct: string;
+  soft_drawdown_window_days: number;
+  hard_drawdown_pct: string;
+  hard_drawdown_window_days: number;
+  fomo_drift_pct: string;
+  last_updated_at: string;
+};
+
+export type RiskLimitsUpdateInput = {
+  daily_max_approvals: number;
+  cooldown_seconds: number;
+  anti_revenge_window_hours: number;
+  anti_revenge_loss_threshold_pct: string;
+  soft_drawdown_pct: string;
+  soft_drawdown_window_days: number;
+  hard_drawdown_pct: string;
+  hard_drawdown_window_days: number;
+  fomo_drift_pct: string;
+};
+
 
 export type IbkrSyncStatusResponse = {
   configured: boolean;
@@ -1751,6 +1781,9 @@ export const apiClient = {
     ),
   runIbkrSync: () => postJson<{ status: string }>("/ibkr/sync/run"),
   updateTradingSettings: (payload: TradingSettingsUpdateInput) => putJson<TradingSettingsResponse>("/settings/trading", payload),
+  getRiskLimits: () => getJson<RiskLimitsResponse>("/settings/risk-limits"),
+  updateRiskLimits: (payload: RiskLimitsUpdateInput) =>
+    putJson<RiskLimitsResponse>("/settings/risk-limits", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
