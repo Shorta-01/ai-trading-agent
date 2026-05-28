@@ -26,8 +26,11 @@ Design notes
   locked five-bucket label set; we collapse `slight_up` /
   `strong_up` to "up" and the mirrored downs to "down" for
   scoring so a slightly-off direction call still earns credit.
-- **Sharpe-ratio**: mean realised-return ÷ standard deviation of
-  realised returns across folds (unitless; not annualised).
+- **Sharpe-ratio**: mean **net** realised-return ÷ standard deviation of
+  net realised returns across folds (unitless; not annualised). Net =
+  gross minus round-trip transaction costs (TOB on both legs + IBKR
+  commission per fill + half-spread on entry and exit), per
+  predictor-lifecycle.md §1. Brier + hit-rate use the gross direction.
 - Failure handling: a blocked predict at a fold is skipped silently
   (it counts as zero folds for that predictor). When ``< 2`` folds
   fit, the metrics return ``None`` rather than fake values.
@@ -44,6 +47,7 @@ from uuid import uuid4
 import numpy as np
 
 from .baseline_forecast import HistoricalBar
+from .belgian_tax import TobSecurityClass, tob_rate_info
 from .predictor_protocol import (
     DIRECTION_FLAT,
     DIRECTION_SLIGHT_DOWN,
@@ -61,9 +65,62 @@ DEFAULT_HORIZON_DAYS: Final[int] = 21  # ~1 trading month
 DEFAULT_STEP_DAYS: Final[int] = 5  # one fold per trading week
 MIN_FOLDS_FOR_METRICS: Final[int] = 2
 
+# Transaction-cost defaults (intent: predictor-lifecycle.md §1 — "a backtest
+# that doesn't simulate transaction costs is not a backtest, it's marketing").
+# Half-spread defaults: 5 bps for liquid ETFs, 20 bps for less-liquid stocks.
+DEFAULT_COMMISSION_BPS_PER_FILL: Final[float] = 5.0
+DEFAULT_HALF_SPREAD_BPS_STOCK: Final[float] = 20.0
+DEFAULT_HALF_SPREAD_BPS_LIQUID_ETF: Final[float] = 5.0
+
 # Scoring constants — see module docstring.
 _UP_DIRECTIONS = frozenset({DIRECTION_SLIGHT_UP, DIRECTION_STRONG_UP})
 _DOWN_DIRECTIONS = frozenset({DIRECTION_SLIGHT_DOWN, DIRECTION_STRONG_DOWN})
+
+
+@dataclass(frozen=True)
+class BacktestCostModel:
+    """Round-trip transaction-cost model for honest backtest returns.
+
+    All fields are **per leg**. Costs apply to both legs of a round-trip:
+    Belgian TOB is levied on the purchase *and* the sale, IBKR commission is
+    charged per fill, and half the bid-ask spread is crossed on entry and again
+    on exit. :meth:`round_trip_cost_pct` therefore doubles the per-leg total.
+    Caps on TOB are per-transaction EUR amounts and are not modelled here (a
+    return-percentage backtest has no notional); ignoring them slightly
+    overstates cost for very large trades, which is the safe direction.
+    """
+
+    tob_rate_pct: float  # per leg, e.g. 0.35 for a STANDARD_STOCK
+    commission_bps_per_fill: float = DEFAULT_COMMISSION_BPS_PER_FILL
+    half_spread_bps: float = DEFAULT_HALF_SPREAD_BPS_STOCK
+
+    def round_trip_cost_pct(self) -> float:
+        per_leg = (
+            self.tob_rate_pct
+            + self.commission_bps_per_fill / 100.0
+            + self.half_spread_bps / 100.0
+        )
+        return 2.0 * per_leg
+
+
+def cost_model_for(
+    *,
+    security_class: TobSecurityClass = TobSecurityClass.STANDARD_STOCK,
+    liquid: bool = False,
+    commission_bps_per_fill: float = DEFAULT_COMMISSION_BPS_PER_FILL,
+) -> BacktestCostModel:
+    """Build a cost model from the Belgian TOB rate for ``security_class`` and
+    a liquidity bucket (``liquid`` → 5 bps half-spread, else 20 bps)."""
+
+    tob_pct = float(tob_rate_info(security_class).rate) * 100.0
+    half_spread = (
+        DEFAULT_HALF_SPREAD_BPS_LIQUID_ETF if liquid else DEFAULT_HALF_SPREAD_BPS_STOCK
+    )
+    return BacktestCostModel(
+        tob_rate_pct=tob_pct,
+        commission_bps_per_fill=commission_bps_per_fill,
+        half_spread_bps=half_spread,
+    )
 
 
 @dataclass(frozen=True)
@@ -75,8 +132,10 @@ class FoldOutcome:
     predicted_prob_gain: float
     predicted_direction: str
     predicted_return_pct: float
-    realised_return_pct: float
-    realised_indicator: int  # 1 if realised return > 0 else 0
+    realised_return_pct: float  # gross — raw round-trip price return
+    realised_net_return_pct: float  # gross minus round-trip transaction costs
+    round_trip_cost_pct: float
+    realised_indicator: int  # 1 if gross realised return > 0 else 0
     realised_direction: str
     direction_match: bool
 
@@ -118,6 +177,7 @@ def walk_forward_backtest(
     horizon_trading_days: int = DEFAULT_HORIZON_DAYS,
     step_days: int = DEFAULT_STEP_DAYS,
     asset_metadata: dict[str, str] | None = None,
+    cost_model: BacktestCostModel | None = None,
 ) -> tuple[FoldOutcome, ...]:
     """Slide a ``window_days``-wide fitting/prediction window across
     ``bars`` and score each fold against the realised
@@ -143,6 +203,8 @@ def walk_forward_backtest(
         return ()
 
     metadata = dict(asset_metadata) if asset_metadata else {}
+    model = cost_model if cost_model is not None else cost_model_for()
+    round_trip_cost_pct = model.round_trip_cost_pct()
     outcomes: list[FoldOutcome] = []
     last_fold_end = len(bars) - horizon_trading_days
     fold_index = 0
@@ -181,6 +243,8 @@ def walk_forward_backtest(
                 predicted_direction=prediction.direction,
                 predicted_return_pct=float(prediction.expected_return_pct),
                 realised_return_pct=realised_return_pct,
+                realised_net_return_pct=realised_return_pct - round_trip_cost_pct,
+                round_trip_cost_pct=round_trip_cost_pct,
                 realised_indicator=1 if realised_return_pct > 0 else 0,
                 realised_direction=realised_direction,
                 direction_match=_direction_match(
@@ -232,17 +296,22 @@ def aggregate_window_score(
     )
     hit_rate = float(matches.mean())
 
-    realised = np.asarray([fold.realised_return_pct for fold in outcomes])
-    if realised.size < 2 or float(realised.std(ddof=1)) == 0.0:
+    # Sharpe is computed on NET returns (after round-trip transaction costs):
+    # the intent treats a costless backtest as marketing. Brier + hit-rate
+    # stay on the gross realised direction — they measure forecast accuracy,
+    # which is independent of execution friction.
+    net_realised = np.asarray([fold.realised_net_return_pct for fold in outcomes])
+    if net_realised.size < 2 or float(net_realised.std(ddof=1)) == 0.0:
         sharpe_ratio: float | None = None
     else:
-        sharpe_ratio = float(realised.mean() / realised.std(ddof=1))
+        sharpe_ratio = float(net_realised.mean() / net_realised.std(ddof=1))
 
+    round_trip_cost_pct = outcomes[0].round_trip_cost_pct
     explanation = (
         f"Walk-forward: {len(outcomes)} folds, {window_days}d-venster, "
         f"Brier {brier_score:.3f}, hit {hit_rate:.0%}"
-        + (f", Sharpe {sharpe_ratio:.2f}" if sharpe_ratio is not None else "")
-        + f" ({predictor.model_code})."
+        + (f", Sharpe(netto) {sharpe_ratio:.2f}" if sharpe_ratio is not None else "")
+        + f", kosten {round_trip_cost_pct:.2f}%/round-trip ({predictor.model_code})."
     )
 
     return BacktestWindowScore(
