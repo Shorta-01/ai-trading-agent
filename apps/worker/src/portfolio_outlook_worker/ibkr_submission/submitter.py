@@ -115,6 +115,32 @@ class SubmissionResult:
     error_message_dutch: str | None
 
 
+@dataclass(frozen=True)
+class CancelResult:
+    """Outcome of one ``IbkrSubmitter.cancel(...)`` call.
+
+    Cancels are fire-and-forget: ``ok=True`` means the cancel was sent to
+    IBKR (the reconciler's Pass B converges the draft to ``cancelled`` once
+    IBKR confirms). ``ok=False`` carries a Dutch message for the UI."""
+
+    ok: bool
+    perm_id: int | None
+    error_class: str | None
+    error_message_dutch: str | None
+
+
+_CANCEL_DUTCH_MESSAGES: dict[str, str] = {
+    "missing_perm_id": (
+        "Geen IBKR order-id bekend voor deze draft; er is niets om te "
+        "annuleren. De reconciler ruimt verweesde drafts op."
+    ),
+    "connection_down": (
+        "Verbinding met IBKR verbroken tijdens annuleren. De annulering "
+        "wordt op de volgende sweep opnieuw geprobeerd."
+    ),
+}
+
+
 # Locked Dutch messages per submitter-side failure path. The Tier 1
 # safety_recheck reasons live in safety_recheck._DUTCH_EXPLANATIONS;
 # the submitter has its own set because Tier 2 is a different
@@ -295,6 +321,55 @@ class IbkrSubmitter:
             error_class=None,
             error_message_dutch=None,
         )
+
+    def cancel(self, draft: ActionDraftEntry) -> CancelResult:
+        """Send a fire-and-forget cancel for a ``pending_cancellation`` draft.
+
+        The cancel is routed through the submitter so the IBKR adapter stays
+        the single broker-write path. Status convergence to ``cancelled`` is
+        the reconciler's job (Pass B); this method only sends the request."""
+
+        if draft.status != "pending_cancellation":
+            raise ValueError(
+                f"IbkrSubmitter.cancel expects pending_cancellation drafts; "
+                f"got {draft.status!r}"
+            )
+        # The draft → live perm_id mapping lives in the submission audit
+        # (latest ``placed`` row), same resolution Pass B uses.
+        perm_id = self._resolve_perm_id(draft.action_draft_id)
+        if perm_id is None:
+            return CancelResult(
+                ok=False,
+                perm_id=None,
+                error_class="MissingPermId",
+                error_message_dutch=_CANCEL_DUTCH_MESSAGES["missing_perm_id"],
+            )
+        try:
+            self._submit_adapter.cancel_order(perm_id)
+        except IbkrConnectionLostError as exc:
+            logger.warning(
+                "cancel_order connection lost for draft %s: %s",
+                draft.action_draft_id,
+                exc,
+            )
+            return CancelResult(
+                ok=False,
+                perm_id=perm_id,
+                error_class=type(exc).__name__,
+                error_message_dutch=_CANCEL_DUTCH_MESSAGES["connection_down"],
+            )
+        return CancelResult(
+            ok=True, perm_id=perm_id, error_class=None, error_message_dutch=None
+        )
+
+    def _resolve_perm_id(self, action_draft_id: str) -> int | None:
+        """Latest ``placed`` perm_id for the draft from the submission audit."""
+
+        rows = self._audit_repo.list_for_draft(action_draft_id)
+        for row in reversed(rows):
+            if row.result == "placed" and row.ibkr_perm_id is not None:
+                return int(row.ibkr_perm_id)
+        return None
 
     def _record_block_and_mark_draft(
         self,

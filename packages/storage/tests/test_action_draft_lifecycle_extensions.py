@@ -233,3 +233,20 @@ def test_list_in_flight_for_conid_filters_by_lifecycle_states() -> None:
         )
         ids = {d.action_draft_id for d in rows}
         assert ids == {"d-sub", "d-acc", "d-work", "d-pf", "d-pc"}
+
+
+def test_list_pending_cancellation_filters_status() -> None:
+    with _conn() as conn:
+        repo = SqlAlchemyActionDraftRepository(conn, _report())
+        repo.append(
+            _draft(draft_id="d-pc1", status="pending_cancellation", audit_trail_hash="hp1")
+        )
+        repo.append(
+            _draft(draft_id="d-pc2", status="pending_cancellation", audit_trail_hash="hp2")
+        )
+        repo.append(_draft(draft_id="d-sub", status="submitted", audit_trail_hash="hp3"))
+        repo.append(
+            _draft(draft_id="d-ua", status="user_approved", audit_trail_hash="hp4")
+        )
+        rows = repo.list_pending_cancellation(ibkr_account_id="DU1234567")
+        assert {d.action_draft_id for d in rows} == {"d-pc1", "d-pc2"}

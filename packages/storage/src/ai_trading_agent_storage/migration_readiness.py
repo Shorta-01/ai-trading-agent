@@ -625,6 +625,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "draait op zijn eigen APScheduler job in 135b."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0054_ibkr_nav_snapshots",
+        previous_revision_id="0053_reconciliation_audit_and_manual_review",
+        filename="0054_ibkr_nav_snapshots.py",
+        label_nl="T-045 §2 portfolio NAV-historie voor de drawdown-gate",
+        description_nl=(
+            "Maakt ibkr_nav_snapshots: een per-account tijdreeks van de "
+            "IBKR NetLiquidationValue. De submission drawdown-gate leest "
+            "deze om de daling-vanaf-piek over de lookback-vensters te "
+            "berekenen. Elke rij draagt ibkr_account_id zodat de reeks per "
+            "account opvraagbaar is."
+        ),
+    ),
 )
 
 

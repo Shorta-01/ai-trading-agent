@@ -35,6 +35,14 @@ class IbkrSettings(BaseModel):
     port: int = 7497
     client_id: int = 1
     account_id: str | None = None
+    # Execution-layer activation (T-045 §1-3). Both default off: the order
+    # sweeps only run when explicitly enabled AND a writable, paper-gated
+    # order session has been opened. Turning these on is the deliberate
+    # "go live on paper" switch. The order session uses its own client id so
+    # it doesn't collide with the read-only sync session.
+    submission_sweep_enabled: bool = False
+    cancel_sweep_enabled: bool = False
+    order_session_client_id: int = 2
 
 
 class EodhdSettings(BaseModel):

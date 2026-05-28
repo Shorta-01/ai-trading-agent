@@ -33,6 +33,7 @@ from ai_trading_agent_storage.metadata import (
     broker_sync_runs,
     external_broker_activities,
     ibkr_account_cash_snapshots,
+    ibkr_nav_snapshots,
     ibkr_connection_audit,
     ibkr_execution_snapshots,
     ibkr_open_order_snapshots,
@@ -150,6 +151,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ProviderSourceRecord,
     FreshnessAuditRecord,
     IbkrAccountCashSnapshotRecord,
+    IbkrNavSnapshotRecord,
     IbkrConnectionAuditRecord,
     IbkrExecutionSnapshotRecord,
     IbkrOpenOrderSnapshotRecord,
@@ -984,6 +986,28 @@ class SqlAlchemyIbkrSyncSnapshotRepository(_Base):
             if row is None
             else IbkrPositionSnapshotRecord(**dict(row))
         )
+
+    def save_ibkr_nav_snapshot(self, record: IbkrNavSnapshotRecord) -> None:
+        """Append one portfolio NAV point (T-045 §2 drawdown history)."""
+
+        self._insert(ibkr_nav_snapshots, asdict(record))
+
+    def list_ibkr_nav_snapshots_since(
+        self, *, ibkr_account_id: str, since: datetime
+    ) -> list[IbkrNavSnapshotRecord]:
+        """NAV points for an account recorded at/after ``since``, oldest first."""
+
+        rows = (
+            self._connection.execute(
+                select(ibkr_nav_snapshots)
+                .where(ibkr_nav_snapshots.c.ibkr_account_id == ibkr_account_id)
+                .where(ibkr_nav_snapshots.c.recorded_at >= since)
+                .order_by(ibkr_nav_snapshots.c.recorded_at.asc())
+            )
+            .mappings()
+            .all()
+        )
+        return [IbkrNavSnapshotRecord(**dict(row)) for row in rows]
 
     def save_ibkr_open_order_snapshots(
         self, sync_run_id: str, records: list[IbkrOpenOrderSnapshotRecord]
@@ -5338,6 +5362,29 @@ class SqlAlchemyActionDraftRepository(_Base):
                 .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
                 .where(action_drafts.c.status == "user_approved")
                 .order_by(action_drafts.c.user_approved_at.asc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_new_action_draft_from_row(row) for row in rows)
+
+    def list_pending_cancellation(
+        self, *, ibkr_account_id: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """FIFO list of ``pending_cancellation`` drafts for the cancel sweep.
+
+        Ordered by ``terminal_state_at`` (when the cancel was requested)
+        ascending so the oldest cancellation request is sent first. The
+        cancel is fire-and-forget; the reconciler's Pass B converges the
+        draft to ``cancelled`` once IBKR confirms.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(action_drafts.c.status == "pending_cancellation")
+                .order_by(action_drafts.c.terminal_state_at.asc())
             )
             .mappings()
             .all()
