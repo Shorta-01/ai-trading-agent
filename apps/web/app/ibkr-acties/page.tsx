@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ActionDraftGrid } from "@/components/ActionDraftGrid";
+import { ExportSuggestionsButton } from "@/components/ExportSuggestionsButton";
 import {
   ActiefBijIbkrGrid,
   HistoriekGrid,
@@ -117,6 +118,10 @@ export default function Page() {
         <b>Actief bij IBKR</b> toont lopende orders en{" "}
         <b>Historiek</b> de afgeronde orders.
       </p>
+
+      <div style={{ marginTop: 8 }}>
+        <ExportSuggestionsButton />
+      </div>
 
       <nav
         data-testid="ibkr-acties-tabs"

@@ -18,6 +18,7 @@ import {
   type WatchlistConfirmationStateResponse,
   type WatchlistItemResponse,
 } from "@/lib/apiClient";
+import { ExportSuggestionsButton } from "@/components/ExportSuggestionsButton";
 import { ForecastExplanationPanel } from "@/components/ForecastExplanationPanel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { VolglijstColdStartFlow } from "@/components/VolglijstColdStartFlow";
@@ -164,7 +165,9 @@ function VolglijstConfirmedView() {
       })
     : items;
 
-  return <main className="page-wrap"><h2>Volglijst</h2><p>Geen actief Volglijst-item zonder IBKR-contract.</p>
+  return <main className="page-wrap"><h2>Volglijst</h2>
+    <div style={{ marginBottom: 8 }}><ExportSuggestionsButton /></div>
+    <p>Geen actief Volglijst-item zonder IBKR-contract.</p>
     <h3>Importeren uit IBKR-watchlist</h3>
     <p>Eerst kandidaten ophalen. Geen automatische verwijdering.</p>
     <button type="button" onClick={async()=>{const r=await listIbkrWatchlists(); if(!r.ok){setIbkrStatus("Niet geconfigureerd"); return;} setIbkrStatus(r.data.message_nl); setIbkrWatchlists(r.data.items);}}>IBKR-watchlists ophalen</button>

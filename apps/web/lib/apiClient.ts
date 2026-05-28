@@ -1353,6 +1353,13 @@ export type ProviderSourceListResponse = { items: ProviderSourceResponse[]; tota
 export type FreshnessAuditListResponse = { items: FreshnessAuditResponse[]; total_count:number; chain_complete_count:number; chain_partial_count:number; chain_missing_links_count:number; chain_metadata_only_count:number; safe_for_analysis_count:number; safe_for_suggestions_count:number; safe_for_action_drafts_count:number; blocked_for_analysis_count:number; blocked_for_suggestions_count:number; blocked_for_action_drafts_count:number; freshness_status_counts:Record<string,number>; reason_code_counts:Record<string,number>; provider_code_counts:Record<string,number>; data_domain_counts:Record<string,number>; audit_help_nl:string; status_nl: string; help_nl: string };
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+// Direct download URL for the suggestions Markdown export. The backend sets
+// Content-Disposition: attachment, so a plain anchor navigation downloads the
+// file (and is not subject to CORS, unlike a fetch + Blob read).
+export function decisionPackagesExportUrl(): string {
+  return `${API_BASE_URL}/decision-packages/export`;
+}
+
 async function getJson<T>(path: string): Promise<FetchState<T>> { /* unchanged */
   try { const response = await fetch(`${API_BASE_URL}${path}`, { method: "GET", headers: { "Content-Type": "application/json" }, cache: "no-store" });
     if (!response.ok) return { ok: false, reason: "not_reachable" };
