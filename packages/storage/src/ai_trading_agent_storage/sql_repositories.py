@@ -5368,6 +5368,29 @@ class SqlAlchemyActionDraftRepository(_Base):
         )
         return tuple(_new_action_draft_from_row(row) for row in rows)
 
+    def list_pending_cancellation(
+        self, *, ibkr_account_id: str
+    ) -> tuple[ActionDraftEntry, ...]:
+        """FIFO list of ``pending_cancellation`` drafts for the cancel sweep.
+
+        Ordered by ``terminal_state_at`` (when the cancel was requested)
+        ascending so the oldest cancellation request is sent first. The
+        cancel is fire-and-forget; the reconciler's Pass B converges the
+        draft to ``cancelled`` once IBKR confirms.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(action_drafts)
+                .where(action_drafts.c.ibkr_account_id == ibkr_account_id)
+                .where(action_drafts.c.status == "pending_cancellation")
+                .order_by(action_drafts.c.terminal_state_at.asc())
+            )
+            .mappings()
+            .all()
+        )
+        return tuple(_new_action_draft_from_row(row) for row in rows)
+
     def list_active_for_account(
         self, *, ibkr_account_id: str
     ) -> tuple[ActionDraftEntry, ...]:
