@@ -52,6 +52,8 @@ class OrderCapableIbClientProtocol(Protocol):
 
     def reqContractDetails(self, contract: Any) -> list[Any]: ...  # noqa: N802
 
+    def qualifyContracts(self, *contracts: Any) -> list[Any]: ...  # noqa: N802
+
     def placeOrder(self, contract: Any, order: Any) -> Any: ...  # noqa: N802
 
     def cancelOrder(self, order: Any) -> Any: ...  # noqa: N802
@@ -179,6 +181,13 @@ class IbkrOrderAdapter:
     def place_order(self, contract: Any, order: Any) -> SubmittedTrade:
         if not self._ib.isConnected():
             raise IbkrConnectionLostError("IBKR session is niet verbonden.")
+        # IBKR best practice: qualify the order contract before placing — fills
+        # conId/primaryExchange in-place and rejects an unknown/ambiguous
+        # contract before any order is transmitted.
+        self._qualify_contract(contract)
+        # Explicit account targeting — never rely on IBKR's default account.
+        # The submitter has already re-verified this id matches the draft.
+        order.account = self._account_id
         trade = self._ib.placeOrder(contract, order)
         perm_id = self._await_perm_id(trade)
         order_id = int(getattr(getattr(trade, "order", None), "orderId", 0) or 0)
@@ -205,6 +214,29 @@ class IbkrOrderAdapter:
         logger.info(
             "cancel_order: perm_id %s not found among open trades (no-op)", perm_id
         )
+
+    def _qualify_contract(self, contract: Any) -> None:
+        """Resolve + validate the contract in-place before placing an order.
+
+        A dropped connection surfaces as :class:`IbkrConnectionLostError`
+        (the submitter retries); an unknown/ambiguous contract — where
+        ``qualifyContracts`` returns no match — raises ``ValueError`` so the
+        submitter records ``rejected_at_send`` instead of looping."""
+
+        try:
+            qualified = self._ib.qualifyContracts(contract)
+        except IbkrConnectionLostError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — boundary (treat as conn loss)
+            raise IbkrConnectionLostError(
+                f"Contract-kwalificatie faalde (verbinding?): {exc}"
+            ) from exc
+        if not qualified:
+            raise ValueError(
+                f"IBKR kon het contract niet kwalificeren: "
+                f"{getattr(contract, 'symbol', '?')}."
+                f"{getattr(contract, 'exchange', '?')}"
+            )
 
     def _await_perm_id(self, trade: Any) -> int:
         """Wait for IBKR to assign the async ``permId`` after placeOrder."""
