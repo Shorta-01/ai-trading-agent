@@ -139,3 +139,54 @@ def test_delete_error_removes_and_404_when_missing(tmp_path) -> None:  # type: i
     assert client.get("/errors").json()["open_count"] == 0
     # Second delete: already gone.
     assert client.delete("/errors/err-open").status_code == 404
+
+
+def test_record_error_event_persists(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from portfolio_outlook_api.error_routes import record_error_event
+
+    _seed(tmp_path)
+    record_error_event(
+        source_service="api",
+        source_component="/action-draft",
+        event_code="unhandled_exception",
+        message="ValueError: boom",
+        technical_summary="ValueError: boom",
+        stack_trace="Traceback ... ValueError: boom",
+    )
+    body = client.get("/errors").json()
+    # Seeded err-open + the auto-recorded one.
+    assert body["open_count"] == 2
+    assert any(e["event_code"] == "unhandled_exception" for e in body["errors"])
+
+
+def test_record_error_event_noop_when_storage_disabled() -> None:
+    from portfolio_outlook_api.error_routes import record_error_event
+
+    _reset()  # storage disabled
+    # Must not raise even though there is nowhere to persist.
+    record_error_event(
+        source_service="api",
+        source_component="/x",
+        event_code="unhandled_exception",
+        message="boom",
+    )
+
+
+def test_unhandled_exception_handler_records_and_returns_500(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    import asyncio
+
+    from fastapi import Request
+
+    from portfolio_outlook_api.error_routes import unhandled_exception_handler
+
+    _seed(tmp_path)
+    request = Request(
+        {"type": "http", "path": "/boom", "method": "GET", "headers": []}
+    )
+    response = asyncio.run(
+        unhandled_exception_handler(request, ValueError("kaboom"))
+    )
+    assert response.status_code == 500
+    body = client.get("/errors").json()
+    assert body["open_count"] == 2
+    assert any(e["event_code"] == "unhandled_exception" for e in body["errors"])

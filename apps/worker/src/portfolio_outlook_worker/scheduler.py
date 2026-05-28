@@ -34,6 +34,7 @@ from portfolio_outlook_worker.config import (
     SchedulerSettings,
     StorageSettings,
 )
+from portfolio_outlook_worker.error_capture import record_worker_error
 from portfolio_outlook_worker.orchestrator import (
     RunType,
     run_orchestrator,
@@ -172,6 +173,10 @@ class PortfolioScheduler:
             replace_existing=True,
         )
         self._register_order_sweeps()
+        # Auto-capture: any job that raises lands in the central error log.
+        from apscheduler.events import EVENT_JOB_ERROR
+
+        self._scheduler.add_listener(self._on_job_error, EVENT_JOB_ERROR)
         self._scheduler.start()
         self._started = True
         logger.info(
@@ -206,6 +211,20 @@ class PortfolioScheduler:
         return runs
 
     # ---- job callbacks --------------------------------------------
+
+    def _on_job_error(self, event: Any) -> None:
+        """APScheduler EVENT_JOB_ERROR listener — record any job exception."""
+
+        exc = getattr(event, "exception", None)
+        job_id = getattr(event, "job_id", "unknown")
+        record_worker_error(
+            storage_settings=self._storage_settings,
+            source_component=f"scheduler:{job_id}",
+            event_code="scheduler_job_error",
+            message=(f"{type(exc).__name__}: {exc}" if exc else "Onbekende job-fout"),
+            technical_summary=(f"{type(exc).__name__}: {exc}" if exc else None),
+            stack_trace=getattr(event, "traceback", None),
+        )
 
     def _on_pre_briefing(self) -> None:
         self._run("pre_briefing")

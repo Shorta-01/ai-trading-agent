@@ -9,6 +9,8 @@ read shape and the delete action.
 
 from __future__ import annotations
 
+import logging
+import traceback
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -19,10 +21,13 @@ from ai_trading_agent_storage import (
     StorageConnectionProvider,
     build_database_connection_settings,
 )
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from portfolio_outlook_api.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -187,3 +192,79 @@ def delete_error(system_event_id: str) -> dict[str, object]:
         "system_event_id": system_event_id,
         "message_nl": result.explanation_nl,
     }
+
+
+def record_error_event(
+    *,
+    source_service: str,
+    source_component: str,
+    event_code: str,
+    message: str,
+    technical_summary: str | None = None,
+    stack_trace: str | None = None,
+    context: dict[str, str] | None = None,
+) -> None:
+    """Best-effort: persist an error as an open system_event. Never raises.
+
+    Used by the auto-capture exception handler so an unhandled error is logged
+    centrally without masking the original failure."""
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return
+    request = CreateSystemEventRequest(
+        system_event_id=f"system-event-{uuid4()}",
+        created_at=datetime.now(UTC),
+        severity="error",
+        category="runtime_error",
+        source_service=source_service,
+        source_component=source_component[:200],
+        event_code=event_code,
+        title_nl="Onverwachte serverfout",
+        message_nl=(message[:500] or "Onbekende fout"),
+        help_nl="Kopieer de details en plak ze in Claude Code voor een fix.",
+        technical_summary=(technical_summary[:2000] if technical_summary else None),
+        redacted_details_json=context,
+        stack_trace_redacted=(stack_trace[-4000:] if stack_trace else None),
+        related_entity_type=None,
+        related_entity_id=None,
+        blocks_suggestions=False,
+        blocks_writes=False,
+        blocks_ai_explanation=False,
+        status="open",
+        explanation_nl="Automatisch vastgelegd door de centrale foutlogging.",
+    )
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemySystemEventRepository(
+                checked.connection, checked.readiness
+            )
+            repo.create_event(request)
+            checked.connection.commit()
+    except Exception:  # noqa: BLE001 — recording must never raise
+        logger.exception("Kon onverwachte fout niet vastleggen in de foutlog.")
+
+
+async def unhandled_exception_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Auto-capture: record any unhandled API exception, then return 500.
+
+    HTTPException + validation errors are handled by FastAPI's own handlers and
+    never reach here — only genuine 500s do."""
+
+    path = getattr(getattr(request, "url", None), "path", "unknown")
+    record_error_event(
+        source_service="api",
+        source_component=str(path),
+        event_code="unhandled_exception",
+        message=f"{type(exc).__name__}: {exc}",
+        technical_summary=f"{type(exc).__name__}: {exc}",
+        stack_trace="".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        ),
+    )
+    return JSONResponse(status_code=500, content={"detail": "Interne serverfout."})

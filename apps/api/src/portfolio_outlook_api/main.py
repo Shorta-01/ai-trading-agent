@@ -23,7 +23,12 @@ from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.decision_package_routes import (
     router as decision_package_routes_router,
 )
-from portfolio_outlook_api.error_routes import router as error_log_router
+from portfolio_outlook_api.error_routes import (
+    router as error_log_router,
+)
+from portfolio_outlook_api.error_routes import (
+    unhandled_exception_handler,
+)
 from portfolio_outlook_api.forecast_routes import (
     router as forecast_routes_router,
 )
@@ -130,3 +135,6 @@ app.include_router(action_draft_router)
 app.include_router(ibkr_submission_router)
 app.include_router(reconciliation_router)
 app.include_router(error_log_router)
+
+# Auto-capture: record any unhandled exception in the central error log.
+app.add_exception_handler(Exception, unhandled_exception_handler)
