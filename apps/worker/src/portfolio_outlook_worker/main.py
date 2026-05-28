@@ -98,6 +98,44 @@ def _try_connect_ibkr() -> None:
         )
 
 
+def _maybe_open_order_adapter() -> Any | None:
+    """Open the writable IBKR order session iff a sweep is enabled (T-045).
+
+    Fails closed: returns None (so no order sweeps register) unless IBKR is
+    enabled, an account id is configured, a sweep flag is on, AND
+    ``open_order_adapter`` accepts the account under ``paper_only_mode``. Any
+    failure returns None — the worker still runs, just without order sweeps.
+    """
+
+    ibkr = settings.ibkr
+    if not ibkr.enabled or ibkr.account_id is None:
+        return None
+    if not (ibkr.submission_sweep_enabled or ibkr.cancel_sweep_enabled):
+        return None
+    from portfolio_outlook_worker.ibkr_submission.ibkr_order_adapter import (
+        OrderSessionRefusedError,
+        open_order_adapter,
+    )
+
+    try:
+        adapter = open_order_adapter(
+            host=ibkr.host,
+            port=ibkr.port,
+            client_id=ibkr.order_session_client_id,
+            account_id=ibkr.account_id,
+            session_id=f"order-{ibkr.account_id}",
+            paper_only_mode=settings.paper_only_mode,
+        )
+    except OrderSessionRefusedError as exc:
+        logger.error("Order-sessie geweigerd; sweeps blijven uit: %s", exc)
+        return None
+    except Exception:  # noqa: BLE001 — boundary
+        logger.exception("Order-sessie kon niet openen; sweeps blijven uit.")
+        return None
+    logger.info("Writable IBKR order-sessie geopend (paper-gated).")
+    return adapter
+
+
 def _start_scheduler() -> None:
     global _active_scheduler
 
@@ -105,11 +143,13 @@ def _start_scheduler() -> None:
         logger.info("Scheduler is uitgeschakeld.")
         return
     gateway = IbkrGateway()
+    order_adapter = _maybe_open_order_adapter()
     scheduler = PortfolioScheduler(
         gateway=gateway,
         storage_settings=settings.storage,
         ibkr_settings=settings.ibkr,
         scheduler_settings=settings.scheduler,
+        order_adapter=order_adapter,
     )
     try:
         scheduler.start()

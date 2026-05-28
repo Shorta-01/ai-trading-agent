@@ -20,9 +20,9 @@ then the drawdown gate fails closed by design.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
-from ai_trading_agent_storage import MarketDataLatestSnapshotRecord
+from ai_trading_agent_storage import ActionDraftEntry
 
 from portfolio_outlook_worker.ibkr_submission.safety_recheck import (
     FomoContext,
@@ -39,19 +39,13 @@ class _GatewayProtocol(Protocol):
     def account_id(self) -> str | None: ...
 
 
-class _DraftProtocol(Protocol):
-    conid: str
-    currency_local: str
-
-
-class _MarketReadResultProtocol(Protocol):
-    record: MarketDataLatestSnapshotRecord | None
-
-
 class _LatestPriceRepoProtocol(Protocol):
+    # Returns a StorageReadResult-shaped object exposing ``.record`` (the
+    # latest snapshot or None). Typed loosely so the concrete SqlAlchemy repo
+    # — whose StorageReadResult is generic — satisfies it structurally.
     def get_latest_market_data_snapshot_by_conid(
         self, ibkr_conid: str
-    ) -> _MarketReadResultProtocol: ...
+    ) -> Any: ...
 
 
 class GatewaySnapshotProvider:
@@ -78,7 +72,7 @@ class FomoPriceProvider:
     def __init__(self, *, market_repo: _LatestPriceRepoProtocol) -> None:
         self._market_repo = market_repo
 
-    def for_draft(self, *, draft: _DraftProtocol) -> FomoContext:
+    def for_draft(self, *, draft: ActionDraftEntry) -> FomoContext:
         conid = (draft.conid or "").strip()
         if not conid:
             return FomoContext(current_price_local=None)

@@ -49,6 +49,9 @@ logger = logging.getLogger(__name__)
 
 _PRE_BRIEFING_JOB_ID = "pre_briefing"
 _HOURLY_JOB_ID = "hourly"
+_SUBMISSION_SWEEP_JOB_ID = "submission_sweep"
+_CANCEL_SWEEP_JOB_ID = "cancel_sweep"
+_SWEEP_INTERVAL_SECONDS = 60
 
 
 class _PositionSnapshotCounts:
@@ -117,6 +120,7 @@ class PortfolioScheduler:
         scheduler_settings: SchedulerSettings,
         worker_id: str | None = None,
         scheduler_factory: Callable[..., Any] | None = None,
+        order_adapter: Any | None = None,
     ) -> None:
         self._gateway = gateway
         self._storage_settings = storage_settings
@@ -124,6 +128,10 @@ class PortfolioScheduler:
         self._scheduler_settings = scheduler_settings
         self._worker_id = worker_id or f"worker_{uuid4().hex[:12]}"
         self._scheduler_factory = scheduler_factory or _build_scheduler
+        # Writable IBKR order session (opened by main() only when enabled +
+        # paper). When None the order sweeps are never registered — the
+        # default. This is the activation switch for T-045 §1-3.
+        self._order_adapter = order_adapter
         self._scheduler: Any | None = None
         self._started: bool = False
 
@@ -163,6 +171,7 @@ class PortfolioScheduler:
             id="heartbeat",
             replace_existing=True,
         )
+        self._register_order_sweeps()
         self._scheduler.start()
         self._started = True
         logger.info(
@@ -203,6 +212,80 @@ class PortfolioScheduler:
 
     def _on_hourly(self) -> None:
         self._run("hourly_delta")
+
+    # ---- order sweeps (T-045 §1-3, gated + default-off) -----------
+
+    def _register_order_sweeps(self) -> None:
+        """Register the submission + cancel sweep jobs, gated.
+
+        Only registers when a writable order session is present AND the
+        per-sweep flag is on AND an account id is configured. Default-off:
+        with no order adapter (the default) nothing is registered."""
+
+        if self._scheduler is None or self._order_adapter is None:
+            return
+        if self._ibkr_settings.account_id is None:
+            return
+        if self._ibkr_settings.submission_sweep_enabled:
+            self._scheduler.add_job(
+                self._on_submission_sweep,
+                "interval",
+                seconds=_SWEEP_INTERVAL_SECONDS,
+                id=_SUBMISSION_SWEEP_JOB_ID,
+                replace_existing=True,
+            )
+        if self._ibkr_settings.cancel_sweep_enabled:
+            self._scheduler.add_job(
+                self._on_cancel_sweep,
+                "interval",
+                seconds=_SWEEP_INTERVAL_SECONDS,
+                id=_CANCEL_SWEEP_JOB_ID,
+                replace_existing=True,
+            )
+
+    def _on_submission_sweep(self) -> None:
+        self._run_order_sweep(kind="submission")
+
+    def _on_cancel_sweep(self) -> None:
+        self._run_order_sweep(kind="cancel")
+
+    def _run_order_sweep(self, *, kind: str) -> None:
+        if not self._storage_settings.enabled or not self._storage_settings.database_url:
+            return
+        account_id = self._ibkr_settings.account_id
+        if self._order_adapter is None or account_id is None:
+            return
+        from portfolio_outlook_worker.ibkr_submission.ibkr_order_sweeps import (
+            build_cancel_sweep,
+            build_submission_sweep,
+        )
+
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(self._storage_settings.database_url)
+        )
+        try:
+            with provider.checked_connection(require_writable=True) as checked:
+                lock = _build_lock(checked.connection)
+                if kind == "submission":
+                    mode = build_submission_sweep(
+                        connection=checked.connection,
+                        readiness=checked.readiness,
+                        gateway=self._gateway,
+                        order_adapter=self._order_adapter,
+                        ibkr_account_id=account_id,
+                        lock=lock,
+                    ).tick().mode
+                else:
+                    mode = build_cancel_sweep(
+                        connection=checked.connection,
+                        readiness=checked.readiness,
+                        order_adapter=self._order_adapter,
+                        ibkr_account_id=account_id,
+                        lock=lock,
+                    ).tick().mode
+                logger.info("%s sweep tick: mode=%s", kind, mode)
+        except StorageConnectionError as exc:
+            logger.warning("%s sweep could not open storage: %s", kind, exc)
 
     def _run(self, run_type: RunType) -> None:
         if not self._storage_settings.enabled or not self._storage_settings.database_url:

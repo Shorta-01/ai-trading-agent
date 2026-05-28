@@ -20,10 +20,81 @@ from portfolio_outlook_worker.config import (
     StorageSettings,
 )
 from portfolio_outlook_worker.scheduler import (
+    _CANCEL_SWEEP_JOB_ID,
     _HOURLY_JOB_ID,
     _PRE_BRIEFING_JOB_ID,
+    _SUBMISSION_SWEEP_JOB_ID,
     PortfolioScheduler,
 )
+
+
+def _build_with_sweeps(
+    *, order_adapter: object | None, ibkr_settings: IbkrSettings
+) -> PortfolioScheduler:
+    return PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=ibkr_settings,
+        scheduler_settings=SchedulerSettings(
+            enabled=True, timezone="Europe/Brussels", heartbeat_interval_seconds=60
+        ),
+        worker_id="worker-test",
+        scheduler_factory=_scheduler_factory,
+        order_adapter=order_adapter,
+    )
+
+
+def test_order_sweeps_not_registered_by_default() -> None:
+    scheduler = _build()  # no order adapter -> no order jobs
+    try:
+        scheduler.start()
+        assert scheduler._scheduler.get_job(_SUBMISSION_SWEEP_JOB_ID) is None
+        assert scheduler._scheduler.get_job(_CANCEL_SWEEP_JOB_ID) is None
+    finally:
+        scheduler.stop()
+
+
+def test_submission_sweep_registered_when_enabled_with_adapter() -> None:
+    scheduler = _build_with_sweeps(
+        order_adapter=object(),
+        ibkr_settings=IbkrSettings(
+            account_id="DU1234567", submission_sweep_enabled=True
+        ),
+    )
+    try:
+        scheduler.start()
+        assert scheduler._scheduler.get_job(_SUBMISSION_SWEEP_JOB_ID) is not None
+        assert scheduler._scheduler.get_job(_CANCEL_SWEEP_JOB_ID) is None
+    finally:
+        scheduler.stop()
+
+
+def test_cancel_sweep_registered_when_enabled_with_adapter() -> None:
+    scheduler = _build_with_sweeps(
+        order_adapter=object(),
+        ibkr_settings=IbkrSettings(account_id="DU1234567", cancel_sweep_enabled=True),
+    )
+    try:
+        scheduler.start()
+        assert scheduler._scheduler.get_job(_CANCEL_SWEEP_JOB_ID) is not None
+    finally:
+        scheduler.stop()
+
+
+def test_sweeps_not_registered_without_adapter_even_if_enabled() -> None:
+    scheduler = _build_with_sweeps(
+        order_adapter=None,
+        ibkr_settings=IbkrSettings(
+            account_id="DU1234567", submission_sweep_enabled=True
+        ),
+    )
+    try:
+        scheduler.start()
+        assert scheduler._scheduler.get_job(_SUBMISSION_SWEEP_JOB_ID) is None
+    finally:
+        scheduler.stop()
 
 
 class _StubGateway:
