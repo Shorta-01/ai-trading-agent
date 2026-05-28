@@ -47,6 +47,9 @@ from portfolio_outlook_api.reconciliation import (
 )
 from portfolio_outlook_api.request_audit import router as request_audit_router
 from portfolio_outlook_api.research_sources import router as research_sources_router
+from portfolio_outlook_api.risk_limits_routes import (
+    router as risk_limits_router,
+)
 from portfolio_outlook_api.scheduler import build_scheduler, install_default_jobs
 from portfolio_outlook_api.scheduler_routes import (
     router as scheduler_v127_router,
@@ -135,6 +138,7 @@ app.include_router(action_draft_router)
 app.include_router(ibkr_submission_router)
 app.include_router(reconciliation_router)
 app.include_router(error_log_router)
+app.include_router(risk_limits_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

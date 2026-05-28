@@ -8339,6 +8339,69 @@
         "title": "ResearchUserNoteInput",
         "type": "object"
       },
+      "RiskLimitsResponse": {
+        "properties": {
+          "anti_revenge_loss_threshold_pct": {
+            "title": "Anti Revenge Loss Threshold Pct",
+            "type": "string"
+          },
+          "anti_revenge_window_hours": {
+            "title": "Anti Revenge Window Hours",
+            "type": "integer"
+          },
+          "cooldown_seconds": {
+            "title": "Cooldown Seconds",
+            "type": "integer"
+          },
+          "daily_max_approvals": {
+            "title": "Daily Max Approvals",
+            "type": "integer"
+          },
+          "fomo_drift_pct": {
+            "title": "Fomo Drift Pct",
+            "type": "string"
+          },
+          "hard_drawdown_pct": {
+            "title": "Hard Drawdown Pct",
+            "type": "string"
+          },
+          "hard_drawdown_window_days": {
+            "title": "Hard Drawdown Window Days",
+            "type": "integer"
+          },
+          "ibkr_account_id": {
+            "title": "Ibkr Account Id",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "Last Updated At",
+            "type": "string"
+          },
+          "soft_drawdown_pct": {
+            "title": "Soft Drawdown Pct",
+            "type": "string"
+          },
+          "soft_drawdown_window_days": {
+            "title": "Soft Drawdown Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ibkr_account_id",
+          "daily_max_approvals",
+          "cooldown_seconds",
+          "anti_revenge_window_hours",
+          "anti_revenge_loss_threshold_pct",
+          "soft_drawdown_pct",
+          "soft_drawdown_window_days",
+          "hard_drawdown_pct",
+          "hard_drawdown_window_days",
+          "fomo_drift_pct",
+          "last_updated_at"
+        ],
+        "title": "RiskLimitsResponse",
+        "type": "object"
+      },
       "ScheduledRunAuditRow": {
         "additionalProperties": false,
         "properties": {
@@ -9230,6 +9293,91 @@
           "resolution_status"
         ],
         "title": "UnmatchedExecutionResponse",
+        "type": "object"
+      },
+      "UpdateRiskLimitsRequest": {
+        "properties": {
+          "anti_revenge_loss_threshold_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Anti Revenge Loss Threshold Pct"
+          },
+          "anti_revenge_window_hours": {
+            "title": "Anti Revenge Window Hours",
+            "type": "integer"
+          },
+          "cooldown_seconds": {
+            "title": "Cooldown Seconds",
+            "type": "integer"
+          },
+          "daily_max_approvals": {
+            "title": "Daily Max Approvals",
+            "type": "integer"
+          },
+          "fomo_drift_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Fomo Drift Pct"
+          },
+          "hard_drawdown_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hard Drawdown Pct"
+          },
+          "hard_drawdown_window_days": {
+            "title": "Hard Drawdown Window Days",
+            "type": "integer"
+          },
+          "soft_drawdown_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Soft Drawdown Pct"
+          },
+          "soft_drawdown_window_days": {
+            "title": "Soft Drawdown Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "daily_max_approvals",
+          "cooldown_seconds",
+          "anti_revenge_window_hours",
+          "anti_revenge_loss_threshold_pct",
+          "soft_drawdown_pct",
+          "soft_drawdown_window_days",
+          "hard_drawdown_pct",
+          "hard_drawdown_window_days",
+          "fomo_drift_pct"
+        ],
+        "title": "UpdateRiskLimitsRequest",
         "type": "object"
       },
       "UserStrategySettings": {
@@ -15421,6 +15569,60 @@
           }
         },
         "summary": "Read Scheduler V127 Status"
+      }
+    },
+    "/settings/risk-limits": {
+      "get": {
+        "operationId": "get_risk_limits_settings_risk_limits_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskLimitsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Risk Limits"
+      },
+      "put": {
+        "operationId": "update_risk_limits_settings_risk_limits_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRiskLimitsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskLimitsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Risk Limits"
       }
     },
     "/settings/summary": {
