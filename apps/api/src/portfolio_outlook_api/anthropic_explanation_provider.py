@@ -32,6 +32,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Protocol
 
 from portfolio_outlook_portfolio import LOCKED_RISK_DISCLAIMER_NL
@@ -51,7 +53,8 @@ from portfolio_outlook_api.claude_ai_budget import (
 PROVIDER_CODE = "anthropic_claude"
 DEFAULT_MODEL_NAME = "claude-haiku-4-5-20251001"
 
-# Locked Dutch system prompt. Cached on every call.
+# Locked Dutch system prompt — the in-code default used when no external
+# prompt file is configured.
 SYSTEM_PROMPT_NL = (
     "Je bent een paraphrase-assistent voor een Nederlandstalig "
     "trading-dashboard. Vat het Decision Package samen in twee tot drie "
@@ -60,6 +63,43 @@ SYSTEM_PROMPT_NL = (
     "Sluit altijd af met de wettelijke disclaimer die in de input wordt "
     "meegegeven."
 )
+
+# A configured prompt file must carry at least this many characters — guards
+# against an empty/truncated file silently degrading the explanation voice.
+_MIN_PROMPT_CHARS = 40
+
+
+class ExplanationPromptError(ValueError):
+    """Raised when a configured explanation-prompt file is missing or empty."""
+
+
+@lru_cache(maxsize=8)
+def load_explanation_system_prompt(path: str | None) -> str:
+    """Resolve the Dutch explanation system prompt (intent ai-usage.md §2
+    Layer 1: prompt-as-data).
+
+    With no ``path`` configured, returns the locked in-code default
+    (:data:`SYSTEM_PROMPT_NL`) — behaviour is unchanged. When
+    ``AI_EXPLANATION_PROMPT_PATH`` is set, the prompt is loaded from that file
+    so operators can edit the voice without a code change. A missing or empty
+    file raises :class:`ExplanationPromptError` rather than silently falling
+    back — a misconfigured deployment fails loudly.
+    """
+
+    if path is None:
+        return SYSTEM_PROMPT_NL
+    try:
+        text = Path(path).read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise ExplanationPromptError(
+            f"AI_EXPLANATION_PROMPT_PATH={path!r} kon niet worden gelezen: {exc}"
+        ) from exc
+    if len(text) < _MIN_PROMPT_CHARS:
+        raise ExplanationPromptError(
+            f"AI_EXPLANATION_PROMPT_PATH={path!r} is leeg of te kort "
+            f"(minimaal {_MIN_PROMPT_CHARS} tekens vereist)."
+        )
+    return text
 
 
 class _BudgetRepoProtocol(Protocol):
@@ -137,6 +177,7 @@ def _build_messages_payload(
     inputs: ExplanationProviderInputs,
     model_name: str,
     max_output_chars: int,
+    system_prompt: str,
 ) -> dict[str, Any]:
     """Construct the Anthropic messages-create payload with the
     locked system prompt cached and the input-text payload sent
@@ -147,7 +188,7 @@ def _build_messages_payload(
     system_blocks = [
         {
             "type": "text",
-            "text": SYSTEM_PROMPT_NL,
+            "text": system_prompt,
             "cache_control": {"type": "ephemeral"},
         },
         {
@@ -196,12 +237,14 @@ class AnthropicExplanationProvider:
         max_output_chars: int = 2000,
         model_name: str = DEFAULT_MODEL_NAME,
         client_factory: Callable[[], _AnthropicClientProtocol] | None = None,
+        system_prompt: str | None = None,
     ) -> None:
         self._budget_repo = budget_repo
         self._monthly_cap_eur = monthly_cap_eur
         self._max_output_chars = max_output_chars
         self._model_name = model_name
         self._client_factory = client_factory
+        self._system_prompt = system_prompt or SYSTEM_PROMPT_NL
 
     @property
     def model_name(self) -> str:
@@ -233,6 +276,7 @@ class AnthropicExplanationProvider:
             inputs=inputs,
             model_name=self._model_name,
             max_output_chars=self._max_output_chars,
+            system_prompt=self._system_prompt,
         )
         client = self._build_client()
         message = client.messages.create(**payload)
@@ -277,4 +321,6 @@ __all__ = [
     "SYSTEM_PROMPT_NL",
     "AnthropicExplanationProvider",
     "ClaudeAiBudgetExceededError",
+    "ExplanationPromptError",
+    "load_explanation_system_prompt",
 ]

@@ -162,6 +162,11 @@ class Settings(BaseSettings):
     ai_explanation_real_client_enabled: bool = False
     ai_explanation_provider_code: str = "stub"
     ai_explanation_max_output_chars: int = 2000
+    # Optional path to an external Dutch system-prompt file (intent
+    # ai-usage.md §2 Layer 1: prompt-as-data). When unset, the locked in-code
+    # default is used and behaviour is unchanged; when set, the file is loaded
+    # at provider-build time and a missing/empty file fails loudly.
+    ai_explanation_prompt_path: str | None = None
     daily_briefing_sync_enabled: bool = False
     daily_briefing_lookback_hours: int = 24
     scheduler_enabled: bool = False
