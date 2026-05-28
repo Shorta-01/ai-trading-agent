@@ -1367,6 +1367,9 @@ class SystemEventRepositoryProtocol(Protocol):
         self, system_event_id: str, *, reason_nl: str | None = None
     ) -> StorageWriteResult:
         ...
+
+    def delete_event(self, system_event_id: str) -> StorageWriteResult:
+        ...
 class BrokerAccountRepository(Protocol):
     def get_by_id(self, broker_account_id: str) -> StorageReadResult[BrokerAccountRecord]:
         ...
