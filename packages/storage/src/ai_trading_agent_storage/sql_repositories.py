@@ -34,6 +34,7 @@ from ai_trading_agent_storage.metadata import (
     external_broker_activities,
     ibkr_account_cash_snapshots,
     ibkr_nav_snapshots,
+    runtime_config,
     ibkr_connection_audit,
     ibkr_execution_snapshots,
     ibkr_open_order_snapshots,
@@ -105,6 +106,7 @@ from ai_trading_agent_storage.repository_contracts import (
     ActionDraftAuditEntry,
     ActionDraftEntry,
     BehaviouralGuardrailSettings,
+    RuntimeConfigRecord,
     IbkrExecutionEntry,
     IbkrSubmissionAuditEntry,
     IbkrSubmissionLifecycleEntry,
@@ -6068,6 +6070,85 @@ class SqlAlchemyBehaviouralGuardrailSettingsRepository(_Base):
         return BehaviouralGuardrailSettings.default_for_account(
             ibkr_account_id=ibkr_account_id, last_updated_at=now
         )
+
+
+class SqlAlchemyRuntimeConfigRepository(_Base):
+    """The single ``runtime_config`` row (``config_id="default"``).
+
+    Lets the operator edit the IBKR connection and the Claude AI explanation
+    settings from the dashboard. ``upsert`` mirrors the guardrail-settings
+    pattern (select existing, then insert or update); the caller commits.
+    """
+
+    def get(self) -> RuntimeConfigRecord | None:
+        row = (
+            self._connection.execute(
+                select(runtime_config).where(
+                    runtime_config.c.config_id == "default"
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return _runtime_config_from_row(row)
+
+    def upsert(self, record: RuntimeConfigRecord) -> None:
+        payload = {
+            "config_id": record.config_id,
+            "ibkr_enabled": record.ibkr_enabled,
+            "ibkr_account_id": record.ibkr_account_id,
+            "ibkr_host": record.ibkr_host,
+            "ibkr_port": record.ibkr_port,
+            "ibkr_client_id": record.ibkr_client_id,
+            "ai_explanation_enabled": record.ai_explanation_enabled,
+            "claude_ai_explanation_model": record.claude_ai_explanation_model,
+            "claude_ai_budget_monthly_eur": record.claude_ai_budget_monthly_eur,
+            "claude_ai_api_key": record.claude_ai_api_key,
+            "updated_at": record.updated_at,
+        }
+        existing = (
+            self._connection.execute(
+                select(runtime_config.c.config_id).where(
+                    runtime_config.c.config_id == record.config_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if existing is None:
+            self._insert(runtime_config, payload)
+        else:
+            self._connection.execute(
+                runtime_config.update()
+                .where(runtime_config.c.config_id == record.config_id)
+                .values(**payload)
+            )
+
+
+def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
+    return RuntimeConfigRecord(
+        config_id=row["config_id"],
+        ibkr_enabled=bool(row["ibkr_enabled"]),
+        ibkr_account_id=row["ibkr_account_id"],
+        ibkr_host=row["ibkr_host"],
+        ibkr_port=(
+            int(row["ibkr_port"]) if row["ibkr_port"] is not None else None
+        ),
+        ibkr_client_id=(
+            int(row["ibkr_client_id"])
+            if row["ibkr_client_id"] is not None
+            else None
+        ),
+        ai_explanation_enabled=bool(row["ai_explanation_enabled"]),
+        claude_ai_explanation_model=row["claude_ai_explanation_model"],
+        claude_ai_budget_monthly_eur=_to_decimal(
+            row["claude_ai_budget_monthly_eur"]
+        ),
+        claude_ai_api_key=row["claude_ai_api_key"],
+        updated_at=row["updated_at"],
+    )
 
 
 def _ibkr_submission_audit_from_row(row: Any) -> IbkrSubmissionAuditEntry:

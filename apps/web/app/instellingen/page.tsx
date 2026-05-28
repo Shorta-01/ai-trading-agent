@@ -13,8 +13,12 @@
  * spread the full existing object and override only the edited fields so no
  * unrendered field is dropped (the backend re-validates the whole object).
  *
- * IBKR connection + the AI monthly budget are intentionally NOT editable here
- * (they are set via config/env); a read-only note explains this.
+ * The IBKR connection + Claude AI settings are now editable too
+ *   4. Verbinding & AI — the IBKR connection and Claude AI explanation
+ *      settings (GET/PUT /settings/connection), persisted in runtime_config and
+ *      overlaid onto the API settings at startup. The Claude API key is
+ *      write-only: the response only reports whether a key is set, and a blank
+ *      key input is omitted from the payload so the stored key is preserved.
  *
  * NOTE: a Next.js page module may export ONLY the default component, so any
  * shared option metadata lives in ``@/lib/instellingenOptions``.
@@ -25,6 +29,7 @@ import { useCallback, useEffect, useState } from "react";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import {
   apiClient,
+  type ConnectionSettingsResponse,
   type RiskLimitsResponse,
   type RiskLimitsUpdateInput,
   type TradingSettingsResponse,
@@ -249,6 +254,47 @@ const EMPTY_RISK_LIMITS: RiskLimitsUpdateInput = {
   fomo_drift_pct: "1.5",
 };
 
+// Section 4 — connection + AI. Number/text inputs are held as strings so the
+// form round-trips cleanly; they are coerced on save. The API key is never
+// loaded into the form (write-only); ``keySet`` tracks whether one is stored.
+type ConnectionState = {
+  ibkr_enabled: boolean;
+  ibkr_account_id: string;
+  ibkr_host: string;
+  ibkr_port: string;
+  ibkr_client_id: string;
+  ai_explanation_enabled: boolean;
+  claude_ai_explanation_model: string;
+  claude_ai_budget_monthly_eur: string;
+};
+
+const EMPTY_CONNECTION: ConnectionState = {
+  ibkr_enabled: false,
+  ibkr_account_id: "",
+  ibkr_host: "",
+  ibkr_port: "",
+  ibkr_client_id: "",
+  ai_explanation_enabled: false,
+  claude_ai_explanation_model: "",
+  claude_ai_budget_monthly_eur: "",
+};
+
+function connectionStateFromResponse(
+  data: ConnectionSettingsResponse,
+): ConnectionState {
+  return {
+    ibkr_enabled: data.ibkr_enabled,
+    ibkr_account_id: data.ibkr_account_id ?? "",
+    ibkr_host: data.ibkr_host ?? "",
+    ibkr_port: data.ibkr_port === null ? "" : String(data.ibkr_port),
+    ibkr_client_id:
+      data.ibkr_client_id === null ? "" : String(data.ibkr_client_id),
+    ai_explanation_enabled: data.ai_explanation_enabled,
+    claude_ai_explanation_model: data.claude_ai_explanation_model ?? "",
+    claude_ai_budget_monthly_eur: data.claude_ai_budget_monthly_eur ?? "",
+  };
+}
+
 export default function Page() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -272,6 +318,15 @@ export default function Page() {
   const [universeSaving, setUniverseSaving] = useState(false);
   const [universeSaved, setUniverseSaved] = useState<string | null>(null);
   const [universeError, setUniverseError] = useState<string | null>(null);
+
+  // Section 4 — connection + AI.
+  const [connection, setConnection] =
+    useState<ConnectionState>(EMPTY_CONNECTION);
+  const [connectionKeySet, setConnectionKeySet] = useState(false);
+  const [connectionKeyInput, setConnectionKeyInput] = useState<string>("");
+  const [connectionSaving, setConnectionSaving] = useState(false);
+  const [connectionSaved, setConnectionSaved] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const loadRiskLimits = useCallback(async () => {
     const result = await apiClient.getRiskLimits();
@@ -328,18 +383,34 @@ export default function Page() {
     );
   }
 
+  const loadConnection = useCallback(async () => {
+    const result = await apiClient.getConnectionSettings();
+    if (!result.ok) return false;
+    applyConnection(result.data);
+    return true;
+  }, []);
+
+  function applyConnection(data: ConnectionSettingsResponse) {
+    setConnection(connectionStateFromResponse(data));
+    setConnectionKeySet(data.claude_ai_api_key_set);
+    // Never reflect the (masked) key back into the input — keep it blank so a
+    // save without typing omits the field and preserves the stored key.
+    setConnectionKeyInput("");
+  }
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
-    const [riskOk, tradingOk] = await Promise.all([
+    const [riskOk, tradingOk, connectionOk] = await Promise.all([
       loadRiskLimits(),
       loadTrading(),
+      loadConnection(),
     ]);
     setLoading(false);
-    if (!riskOk && !tradingOk) {
+    if (!riskOk && !tradingOk && !connectionOk) {
       setLoadError("Instellingen konden niet worden geladen.");
     }
-  }, [loadRiskLimits, loadTrading]);
+  }, [loadRiskLimits, loadTrading, loadConnection]);
 
   useEffect(() => {
     void refresh();
@@ -441,6 +512,50 @@ export default function Page() {
       return current.includes(value) ? current : [...current, value];
     }
     return current.filter((v) => v !== value);
+  }
+
+  function setConnectionField<K extends keyof ConnectionState>(
+    key: K,
+    value: ConnectionState[K],
+  ) {
+    setConnection((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleSaveConnection() {
+    setConnectionSaving(true);
+    setConnectionError(null);
+    setConnectionSaved(null);
+    const trimmedKey = connectionKeyInput.trim();
+    const result = await apiClient.updateConnectionSettings({
+      ibkr_enabled: connection.ibkr_enabled,
+      ibkr_account_id: connection.ibkr_account_id.trim() || null,
+      ibkr_host: connection.ibkr_host.trim() || null,
+      ibkr_port:
+        connection.ibkr_port.trim() === ""
+          ? null
+          : Number(connection.ibkr_port),
+      ibkr_client_id:
+        connection.ibkr_client_id.trim() === ""
+          ? null
+          : Number(connection.ibkr_client_id),
+      ai_explanation_enabled: connection.ai_explanation_enabled,
+      claude_ai_explanation_model:
+        connection.claude_ai_explanation_model.trim() || null,
+      claude_ai_budget_monthly_eur:
+        connection.claude_ai_budget_monthly_eur.trim() || null,
+      // Only send the key when the operator typed one; omit it otherwise so
+      // the previously-stored key is preserved.
+      ...(trimmedKey ? { claude_ai_api_key: trimmedKey } : {}),
+    });
+    setConnectionSaving(false);
+    if (!result.ok) {
+      setConnectionError(
+        "Opslaan mislukt. Controleer de waarden en of de API beschikbaar is.",
+      );
+      return;
+    }
+    applyConnection(result.data);
+    setConnectionSaved("Verbinding & AI opgeslagen.");
   }
 
   return (
@@ -802,18 +917,205 @@ export default function Page() {
             />
           </section>
 
-          {/* Read-only note: connection + AI budget are env/config-based. */}
+          {/* Section 4 — Connection + AI (editable). */}
           <section
-            style={{ ...SECTION_STYLE, background: "#f9fafb" }}
-            data-testid="instellingen-config-note"
+            style={SECTION_STYLE}
+            data-testid="instellingen-connection-section"
           >
-            <h3 style={{ marginTop: 0 }}>Verbinding &amp; AI (via configuratie)</h3>
+            <h3 style={{ marginTop: 0 }}>Verbinding &amp; AI</h3>
             <p style={HELP_STYLE}>
-              De IBKR-verbinding (rekening, host en poort) en het maandelijkse
-              AI-budget worden ingesteld via de configuratie en
-              omgevingsvariabelen, niet via dit scherm. Pas deze aan in de
-              server-configuratie en herstart de applicatie om ze te wijzigen.
+              De IBKR-verbinding en de Claude AI-uitleginstellingen. Wijzigingen
+              worden bewaard in de database en bij het opstarten van de API
+              toegepast.
             </p>
+
+            <label
+              style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: 8 }}
+              htmlFor="connection-ibkr_enabled"
+            >
+              <input
+                id="connection-ibkr_enabled"
+                data-testid="instellingen-connection-ibkr_enabled"
+                type="checkbox"
+                checked={connection.ibkr_enabled}
+                onChange={(event) =>
+                  setConnectionField("ibkr_enabled", event.target.checked)
+                }
+              />
+              <FieldLabel
+                label_nl="IBKR-verbinding ingeschakeld"
+                help_nl="Zet de verbinding met Interactive Brokers aan of uit."
+              />
+            </label>
+
+            <label style={LABEL_STYLE} htmlFor="connection-ibkr_account_id">
+              <FieldLabel
+                label_nl="IBKR-rekening"
+                help_nl="De account-id (bv. DU1234567 voor paper, U1234567 voor live)."
+              />
+              <input
+                id="connection-ibkr_account_id"
+                data-testid="instellingen-connection-ibkr_account_id"
+                type="text"
+                value={connection.ibkr_account_id}
+                onChange={(event) =>
+                  setConnectionField("ibkr_account_id", event.target.value)
+                }
+              />
+            </label>
+
+            <label style={LABEL_STYLE} htmlFor="connection-ibkr_host">
+              <FieldLabel
+                label_nl="IBKR-host"
+                help_nl="Het adres van de TWS/Gateway (standaard 127.0.0.1)."
+              />
+              <input
+                id="connection-ibkr_host"
+                data-testid="instellingen-connection-ibkr_host"
+                type="text"
+                value={connection.ibkr_host}
+                onChange={(event) =>
+                  setConnectionField("ibkr_host", event.target.value)
+                }
+              />
+            </label>
+
+            <label style={LABEL_STYLE} htmlFor="connection-ibkr_port">
+              <FieldLabel
+                label_nl="IBKR-poort"
+                help_nl="De poort van de TWS/Gateway (paper 7497, live 7496)."
+              />
+              <input
+                id="connection-ibkr_port"
+                data-testid="instellingen-connection-ibkr_port"
+                type="number"
+                step="1"
+                value={connection.ibkr_port}
+                onChange={(event) =>
+                  setConnectionField("ibkr_port", event.target.value)
+                }
+              />
+            </label>
+
+            <label style={LABEL_STYLE} htmlFor="connection-ibkr_client_id">
+              <FieldLabel
+                label_nl="IBKR-client-id"
+                help_nl="Het client-id van de API-sessie (standaard 1)."
+              />
+              <input
+                id="connection-ibkr_client_id"
+                data-testid="instellingen-connection-ibkr_client_id"
+                type="number"
+                step="1"
+                value={connection.ibkr_client_id}
+                onChange={(event) =>
+                  setConnectionField("ibkr_client_id", event.target.value)
+                }
+              />
+            </label>
+
+            <label
+              style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: 8 }}
+              htmlFor="connection-ai_explanation_enabled"
+            >
+              <input
+                id="connection-ai_explanation_enabled"
+                data-testid="instellingen-connection-ai_explanation_enabled"
+                type="checkbox"
+                checked={connection.ai_explanation_enabled}
+                onChange={(event) =>
+                  setConnectionField(
+                    "ai_explanation_enabled",
+                    event.target.checked,
+                  )
+                }
+              />
+              <FieldLabel
+                label_nl="AI-uitleg ingeschakeld"
+                help_nl="Laat Claude een Nederlandstalige uitleg bij beslissingen genereren."
+              />
+            </label>
+
+            <label
+              style={LABEL_STYLE}
+              htmlFor="connection-claude_ai_explanation_model"
+            >
+              <FieldLabel
+                label_nl="Claude AI-model"
+                help_nl="Het model dat voor de AI-uitleg wordt gebruikt."
+              />
+              <input
+                id="connection-claude_ai_explanation_model"
+                data-testid="instellingen-connection-claude_ai_explanation_model"
+                type="text"
+                value={connection.claude_ai_explanation_model}
+                onChange={(event) =>
+                  setConnectionField(
+                    "claude_ai_explanation_model",
+                    event.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label
+              style={LABEL_STYLE}
+              htmlFor="connection-claude_ai_budget_monthly_eur"
+            >
+              <FieldLabel
+                label_nl="Maandelijks AI-budget (EUR)"
+                help_nl="De maximale maandelijkse uitgave aan Claude AI-oproepen."
+              />
+              <input
+                id="connection-claude_ai_budget_monthly_eur"
+                data-testid="instellingen-connection-claude_ai_budget_monthly_eur"
+                type="number"
+                step="0.01"
+                min="0"
+                value={connection.claude_ai_budget_monthly_eur}
+                onChange={(event) =>
+                  setConnectionField(
+                    "claude_ai_budget_monthly_eur",
+                    event.target.value,
+                  )
+                }
+              />
+            </label>
+
+            <label style={LABEL_STYLE} htmlFor="connection-claude_ai_api_key">
+              <FieldLabel
+                label_nl="Claude API-sleutel"
+                help_nl="Laat leeg om de bestaande sleutel te behouden. Wordt nooit getoond."
+              />
+              <input
+                id="connection-claude_ai_api_key"
+                data-testid="instellingen-connection-claude_ai_api_key"
+                type="password"
+                autoComplete="off"
+                placeholder="••••••••"
+                value={connectionKeyInput}
+                onChange={(event) => setConnectionKeyInput(event.target.value)}
+              />
+              <span
+                data-testid="instellingen-connection-key-state"
+                style={HELP_STYLE}
+              >
+                {connectionKeySet ? "Sleutel is ingesteld" : "Nog geen sleutel"}
+              </span>
+            </label>
+
+            <p style={{ ...HELP_STYLE, marginTop: 12 }}>
+              Wijzigingen aan de IBKR-verbinding worden actief na herstart van
+              de worker.
+            </p>
+
+            <SaveBar
+              testId="instellingen-connection"
+              saving={connectionSaving}
+              savedMessage={connectionSaved}
+              error={connectionError}
+              onSave={() => void handleSaveConnection()}
+            />
           </section>
         </>
       )}

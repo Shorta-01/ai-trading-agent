@@ -264,6 +264,30 @@ class IbkrNavSnapshotRecord:
 
 
 @dataclass(frozen=True)
+class RuntimeConfigRecord:
+    """The single ``runtime_config`` row (``config_id="default"``).
+
+    Lets the operator edit the IBKR connection and the Claude AI explanation
+    settings from the dashboard Settings page instead of only via environment
+    variables. The API reads it at startup and overlays the non-null values
+    onto the settings singleton. ``claude_ai_api_key`` is the secret value and
+    must never be returned by the API or logged.
+    """
+
+    config_id: str
+    ibkr_enabled: bool
+    ibkr_account_id: str | None
+    ibkr_host: str | None
+    ibkr_port: int | None
+    ibkr_client_id: int | None
+    ai_explanation_enabled: bool
+    claude_ai_explanation_model: str | None
+    claude_ai_budget_monthly_eur: Decimal | None
+    claude_ai_api_key: str | None
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
 class IbkrPositionSnapshotRecord:
     snapshot_id: str
     sync_run_id: str

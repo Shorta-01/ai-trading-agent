@@ -1326,6 +1326,24 @@ ibkr_account_cash_snapshots = Table(
     Column("ibkr_account_id", Text, nullable=True),
 )
 
+# Editable IBKR connection + Claude AI settings from the dashboard. A single
+# row (config_id="default"). Mirrors alembic/versions/0055_runtime_config.py.
+runtime_config = Table(
+    "runtime_config",
+    metadata,
+    Column("config_id", Text, primary_key=True),
+    Column("ibkr_enabled", Boolean, nullable=False),
+    Column("ibkr_account_id", Text, nullable=True),
+    Column("ibkr_host", Text, nullable=True),
+    Column("ibkr_port", Integer, nullable=True),
+    Column("ibkr_client_id", Integer, nullable=True),
+    Column("ai_explanation_enabled", Boolean, nullable=False),
+    Column("claude_ai_explanation_model", Text, nullable=True),
+    Column("claude_ai_budget_monthly_eur", MONEY_NUMERIC, nullable=True),
+    Column("claude_ai_api_key", Text, nullable=True),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
 # Portfolio net-liquidation (NAV) time series for the submission drawdown
 # circuit-breaker. Mirrors alembic/versions/0054_ibkr_nav_snapshots.py.
 ibkr_nav_snapshots = Table(
