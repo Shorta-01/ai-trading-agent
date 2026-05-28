@@ -197,6 +197,8 @@ def sync_forecasts(
     valid_minutes: int,
     ensemble_enabled: bool = False,
     qvm_universe: UniverseFundamentals | None = None,
+    weight_strategy: str = "equal_weight",
+    brier_history: dict[str, Decimal] | None = None,
 ) -> ForecastSyncReport:
     """Run one full forecast cycle and persist every successful row.
 
@@ -204,6 +206,9 @@ def sync_forecasts(
     predictor ensemble (GBM + Momentum + Mean-reversion, plus QVM when
     ``qvm_universe`` is supplied) instead of the single GBM baseline. AI-TS is
     excluded by doctrine (intent §7). Default off — behaviour is unchanged.
+
+    ``weight_strategy="auto"`` + ``brier_history`` switch the ensemble to
+    inverse-Brier weighting; default ``equal_weight`` keeps equal weights.
     """
 
     model_code = (
@@ -372,6 +377,8 @@ def sync_forecasts(
                 sector=None,
                 horizon_trading_days=horizon_trading_days,
                 qvm_universe=qvm_universe,
+                weight_strategy=weight_strategy,
+                brier_history=brier_history,
             )
             forecast_record = adapt_ensemble_to_forecast_record(
                 position=position,
