@@ -1070,6 +1070,22 @@ def run_forecast_sync() -> dict[str, object]:
             conids = tuple(p.conid for p in positions if p.conid)
             market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
             market_by_conid = {item.ibkr_conid: item for item in market_result.records}
+            qvm_universe = None
+            if settings.forecast_ensemble_enabled:
+                from portfolio_outlook_api.universe_scan_sync import (
+                    build_universe_fundamentals,
+                )
+
+                fundamentals_repo = SqlAlchemyAssetFundamentalsSnapshotRepository(
+                    checked.connection, checked.readiness
+                )
+                snapshots = list(
+                    fundamentals_repo.list_latest_universe_snapshots(
+                        min_factor_count=3
+                    ).records
+                )
+                if snapshots:
+                    qvm_universe = build_universe_fundamentals(snapshots)
             report = sync_forecasts(
                 provider=provider,
                 bar_repo=bar_repo,
@@ -1081,6 +1097,8 @@ def run_forecast_sync() -> dict[str, object]:
                 minimum_bars_required=settings.forecast_minimum_bars_required,
                 max_assets=settings.forecast_max_assets_per_run,
                 valid_minutes=settings.forecast_valid_minutes,
+                ensemble_enabled=settings.forecast_ensemble_enabled,
+                qvm_universe=qvm_universe,
             )
     except StorageConnectionError:
         return _build_blocked_forecast_response(
