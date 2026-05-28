@@ -1,8 +1,16 @@
-.PHONY: test lint typecheck web-build gen-api-types
+.PHONY: test lint typecheck web-build gen-api-types backup restore-test
 
 test:
 	cd apps/api && pytest
 	cd apps/worker && pytest
+
+# Encrypted PostgreSQL backup + restore-test (see docs/deployment.md).
+# A backup is only trusted once restore-test passes against it.
+backup:
+	bash infra/docker/scripts/backup-postgres.sh
+
+restore-test:
+	bash infra/docker/scripts/restore-test.sh
 
 # Refresh the OpenAPI snapshot + the frontend's generated TypeScript types.
 # Run after changing any API response model so the two stay in sync.
