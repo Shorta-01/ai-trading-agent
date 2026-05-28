@@ -148,6 +148,10 @@ def test_production_runtime_source_only_allows_ib_insync_in_worker_gateway() -> 
       pair for ``placeOrder()``. The import is lazy (inside the
       function body), but the source-scan looks for the text so the
       allowlist must include it.
+    * ``ibkr_submission/ibkr_order_adapter.py`` (T-045 §1/§3): the real
+      ``IbkrSubmitProtocol`` adapter that drives the order-capable TWS
+      session (place/cancel/tick). ib_insync is lazy-imported inside the
+      session factory + contract builder.
 
     Every other production file must stay free of the SDK.
     """
@@ -170,6 +174,15 @@ def test_production_runtime_source_only_allows_ib_insync_in_worker_gateway() -> 
             / "portfolio_outlook_worker"
             / "ibkr_submission"
             / "order_builder.py"
+        ).resolve(),
+        (
+            REPO_ROOT
+            / "apps"
+            / "worker"
+            / "src"
+            / "portfolio_outlook_worker"
+            / "ibkr_submission"
+            / "ibkr_order_adapter.py"
         ).resolve(),
     }
 
