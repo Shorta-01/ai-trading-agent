@@ -22,6 +22,7 @@ oracle, asserted in tests).
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -30,6 +31,7 @@ from uuid import uuid4
 from ai_trading_agent_storage import (
     AssetForecastRecord,
     IbkrPositionSnapshotRecord,
+    PredictorBacktestRunRecord,
 )
 from portfolio_outlook_portfolio import (
     EnsembleResult,
@@ -43,6 +45,9 @@ from portfolio_outlook_portfolio import (
     QvmFactorPredictor,
     UniverseFundamentals,
     compute_ensemble_forecast,
+)
+from portfolio_outlook_portfolio.ensemble_combiner import (
+    WEIGHT_STRATEGY_EQUAL,
 )
 
 ENSEMBLE_FORECAST_MODEL_CODE = "ensemble_v1"
@@ -185,8 +190,16 @@ def run_ensemble_forecast(
     sector: str | None,
     horizon_trading_days: int,
     qvm_universe: UniverseFundamentals | None = None,
+    weight_strategy: str = WEIGHT_STRATEGY_EQUAL,
+    brier_history: dict[str, Decimal] | None = None,
 ) -> EnsembleResult:
-    """Build the predictor set and combine it for one asset."""
+    """Build the predictor set and combine it for one asset.
+
+    ``weight_strategy="auto"`` consumes ``brier_history`` (per-predictor Brier
+    scores, lower = better) via the combiner's inverse-Brier weighting, clipped
+    to the doctrine's 10%/40% bounds. With no history it degrades to
+    equal-weight, so auto is always safe.
+    """
 
     predictors = build_ensemble_predictors(
         target_symbol=target_symbol, qvm_universe=qvm_universe
@@ -200,7 +213,35 @@ def run_ensemble_forecast(
         horizon_trading_days=horizon_trading_days,
         asset_metadata=metadata,
     )
-    return compute_ensemble_forecast(predictors, inputs)
+    return compute_ensemble_forecast(
+        predictors,
+        inputs,
+        weight_strategy=weight_strategy,
+        brier_history=brier_history,
+    )
+
+
+def latest_brier_by_model_code(
+    records: Sequence[PredictorBacktestRunRecord],
+) -> dict[str, Decimal]:
+    """Most-recent succeeded backtest Brier score per predictor.
+
+    ``records`` must be ordered most-recent-first. The newest run per
+    ``model_code`` wins; if that run is skipped or has no Brier score, the
+    predictor contributes no history (so it falls to the equal-weight floor).
+    This is the cold-start weight source until live per-predictor outcomes
+    accrue in the prediction diary.
+    """
+
+    latest: dict[str, Decimal] = {}
+    seen: set[str] = set()
+    for record in records:
+        if record.model_code in seen:
+            continue
+        seen.add(record.model_code)
+        if record.status == "succeeded" and record.brier_score is not None:
+            latest[record.model_code] = record.brier_score
+    return latest
 
 
 def adapt_ensemble_to_forecast_record(

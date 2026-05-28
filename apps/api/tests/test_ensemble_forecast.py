@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 
+from ai_trading_agent_storage import PredictorBacktestRunRecord
 from portfolio_outlook_portfolio import (
     GbmPredictor,
     HistoricalBar,
@@ -23,6 +24,7 @@ from portfolio_outlook_api.ensemble_forecast import (
     build_ensemble_predictors,
     derive_lognormal_metrics,
     ensemble_direction_label,
+    latest_brier_by_model_code,
     run_ensemble_forecast,
 )
 
@@ -144,6 +146,88 @@ def test_adapt_ready_produces_ensemble_record() -> None:
     assert record.p50_price == ensemble.forecast.p50_price
     assert Decimal("0") <= record.prob_gain <= Decimal("1")
     assert record.data_points_used == len(bars)
+
+
+# ---- weighting ----------------------------------------------------------
+
+
+def test_equal_weight_default_splits_evenly() -> None:
+    bars = _synthetic_bars()
+    current = bars[-1].close_price
+    ensemble = run_ensemble_forecast(
+        bars=bars,
+        current_price=current,
+        target_symbol="AAPL",
+        sector=None,
+        horizon_trading_days=_H,
+    )
+    weights = {c.model_code: c.weight_normalised for c in ensemble.contributions}
+    assert len(weights) == 3
+    for w in weights.values():
+        assert abs(float(w) - 1 / 3) < 0.02
+
+
+def test_auto_weighting_favours_lower_brier_predictor() -> None:
+    bars = _synthetic_bars()
+    current = bars[-1].close_price
+    brier = {
+        "baseline_gbm": Decimal("0.10"),  # best (lowest Brier)
+        "momentum_v1": Decimal("0.25"),
+        "mean_reversion_v1": Decimal("0.25"),
+    }
+    ensemble = run_ensemble_forecast(
+        bars=bars,
+        current_price=current,
+        target_symbol="AAPL",
+        sector=None,
+        horizon_trading_days=_H,
+        weight_strategy="auto",
+        brier_history=brier,
+    )
+    weights = {c.model_code: c.weight_normalised for c in ensemble.contributions}
+    assert len(weights) == 3
+    # The best predictor gets the most weight; the 10%/40% bounds hold.
+    assert weights["baseline_gbm"] > weights["momentum_v1"]
+    assert weights["baseline_gbm"] > weights["mean_reversion_v1"]
+    for w in weights.values():
+        assert Decimal("0.10") <= w <= Decimal("0.40")
+    assert abs(float(sum(weights.values())) - 1.0) < 1e-6
+
+
+def _backtest_run(model_code: str, status: str, brier: str | None) -> PredictorBacktestRunRecord:
+    return PredictorBacktestRunRecord(
+        run_id=f"bt_{model_code}_{status}",
+        model_code=model_code,
+        model_version="v1.0.0",
+        asset_symbol="AAPL",
+        started_at=datetime(2026, 5, 28, tzinfo=UTC),
+        finished_at=datetime(2026, 5, 28, tzinfo=UTC),
+        status=status,
+        window_days=252,
+        bars_used=300,
+        brier_score=Decimal(brier) if brier is not None else None,
+        hit_rate=None,
+        sharpe_ratio=None,
+        blocking_reason=None,
+        explanation_nl=None,
+    )
+
+
+def test_latest_brier_by_model_code_picks_newest_succeeded() -> None:
+    # Records arrive most-recent-first. gbm: newest succeeded wins over older.
+    # momentum: newest run is skipped → no history. mean_reversion: succeeded.
+    records = [
+        _backtest_run("baseline_gbm", "succeeded", "0.12"),
+        _backtest_run("baseline_gbm", "succeeded", "0.30"),  # older, ignored
+        _backtest_run("momentum_v1", "skipped", None),  # newest skipped → drop
+        _backtest_run("momentum_v1", "succeeded", "0.20"),  # older, blocked by skip
+        _backtest_run("mean_reversion_v1", "succeeded", "0.18"),
+    ]
+    brier = latest_brier_by_model_code(records)
+    assert brier == {
+        "baseline_gbm": Decimal("0.12"),
+        "mean_reversion_v1": Decimal("0.18"),
+    }
 
 
 def test_adapt_blocked_ensemble_produces_blocked_record() -> None:

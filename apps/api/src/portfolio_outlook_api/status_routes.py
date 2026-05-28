@@ -1071,7 +1071,12 @@ def run_forecast_sync() -> dict[str, object]:
             market_result = market_repo.list_latest_market_data_snapshots_by_conids(conids)
             market_by_conid = {item.ibkr_conid: item for item in market_result.records}
             qvm_universe = None
+            weight_strategy = "equal_weight"
+            brier_history = None
             if settings.forecast_ensemble_enabled:
+                from portfolio_outlook_api.ensemble_forecast import (
+                    latest_brier_by_model_code,
+                )
                 from portfolio_outlook_api.universe_scan_sync import (
                     build_universe_fundamentals,
                 )
@@ -1086,6 +1091,14 @@ def run_forecast_sync() -> dict[str, object]:
                 )
                 if snapshots:
                     qvm_universe = build_universe_fundamentals(snapshots)
+                if settings.ensemble_weight_strategy == "auto":
+                    weight_strategy = "auto"
+                    backtest_repo = SqlAlchemyPredictorBacktestRunRepository(
+                        checked.connection, checked.readiness
+                    )
+                    brier_history = latest_brier_by_model_code(
+                        backtest_repo.list_recent_backtest_runs(limit=200).records
+                    )
             report = sync_forecasts(
                 provider=provider,
                 bar_repo=bar_repo,
@@ -1099,6 +1112,8 @@ def run_forecast_sync() -> dict[str, object]:
                 valid_minutes=settings.forecast_valid_minutes,
                 ensemble_enabled=settings.forecast_ensemble_enabled,
                 qvm_universe=qvm_universe,
+                weight_strategy=weight_strategy,
+                brier_history=brier_history,
             )
     except StorageConnectionError:
         return _build_blocked_forecast_response(
@@ -3809,6 +3824,10 @@ def read_predictor_leaderboard(asset_symbol: str | None = None) -> dict[str, obj
         compute_inverse_brier_weights,
     )
 
+    from portfolio_outlook_api.ensemble_forecast import (
+        latest_brier_by_model_code,
+    )
+
     base: dict[str, object] = {
         "items": [],
         "auto_weights": {},
@@ -3847,15 +3866,12 @@ def read_predictor_leaderboard(asset_symbol: str | None = None) -> dict[str, obj
 
     # Keep the most-recent succeeded row per model_code with a Brier
     # score. Skipped rows surface in the items list but don't feed the
-    # auto-weight history.
-    latest_brier: dict[str, Decimal] = {}
+    # auto-weight history (shared with the live ensemble path).
+    latest_brier = latest_brier_by_model_code(result.records)
     latest_records: dict[str, PredictorBacktestRunRecord] = {}
     for record in result.records:
-        if record.model_code in latest_records:
-            continue
-        latest_records[record.model_code] = record
-        if record.status == "succeeded" and record.brier_score is not None:
-            latest_brier[record.model_code] = record.brier_score
+        if record.model_code not in latest_records:
+            latest_records[record.model_code] = record
     auto_weights = compute_inverse_brier_weights(latest_brier)
 
     items: list[dict[str, object]] = []
