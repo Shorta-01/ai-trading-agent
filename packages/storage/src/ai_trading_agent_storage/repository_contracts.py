@@ -247,6 +247,23 @@ class IbkrAccountCashSnapshotRecord:
 
 
 @dataclass(frozen=True)
+class IbkrNavSnapshotRecord:
+    """One portfolio net-liquidation (NAV) point, for the drawdown gate.
+
+    Persisted over time so the submission drawdown circuit-breaker can compute
+    the decline-from-peak over a lookback window. Always carries the account id
+    (unlike the cash-snapshot path) so the per-account NAV series is queryable.
+    """
+
+    snapshot_id: str
+    ibkr_account_id: str
+    base_currency: str
+    nav_value: Decimal
+    recorded_at: datetime
+    stored_at: datetime
+
+
+@dataclass(frozen=True)
 class IbkrPositionSnapshotRecord:
     snapshot_id: str
     sync_run_id: str

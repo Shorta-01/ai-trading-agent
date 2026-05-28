@@ -48,6 +48,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "market_data_latest_snapshots",
         "ibkr_sync_runs",
         "ibkr_account_cash_snapshots",
+        "ibkr_nav_snapshots",
         "ibkr_position_snapshots",
         "ibkr_open_order_snapshots",
         "ibkr_execution_snapshots",

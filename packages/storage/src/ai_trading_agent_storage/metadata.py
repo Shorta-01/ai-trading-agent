@@ -1326,6 +1326,19 @@ ibkr_account_cash_snapshots = Table(
     Column("ibkr_account_id", Text, nullable=True),
 )
 
+# Portfolio net-liquidation (NAV) time series for the submission drawdown
+# circuit-breaker. Mirrors alembic/versions/0054_ibkr_nav_snapshots.py.
+ibkr_nav_snapshots = Table(
+    "ibkr_nav_snapshots",
+    metadata,
+    Column("snapshot_id", Text, primary_key=True),
+    Column("ibkr_account_id", Text, nullable=False),
+    Column("base_currency", Text, nullable=False),
+    Column("nav_value", MONEY_NUMERIC, nullable=False),
+    Column("recorded_at", DateTime(timezone=True), nullable=False),
+    Column("stored_at", DateTime(timezone=True), nullable=False),
+)
+
 ibkr_position_snapshots = Table(
     "ibkr_position_snapshots",
     metadata,
@@ -1418,6 +1431,11 @@ Index(
 Index(
     "ix_ibkr_account_cash_snapshots_ibkr_account_id",
     ibkr_account_cash_snapshots.c.ibkr_account_id,
+)
+Index(
+    "ix_ibkr_nav_snapshots_account_time",
+    ibkr_nav_snapshots.c.ibkr_account_id,
+    ibkr_nav_snapshots.c.recorded_at,
 )
 Index(
     "ix_ibkr_position_snapshots_ibkr_account_id",
