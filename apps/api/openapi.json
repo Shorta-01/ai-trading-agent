@@ -1674,6 +1674,124 @@
         "title": "DutchLabelsSummary",
         "type": "object"
       },
+      "ErrorLogItem": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_code": {
+            "title": "Event Code",
+            "type": "string"
+          },
+          "message_nl": {
+            "title": "Message Nl",
+            "type": "string"
+          },
+          "redacted_details_json": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redacted Details Json"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "source_component": {
+            "title": "Source Component",
+            "type": "string"
+          },
+          "source_service": {
+            "title": "Source Service",
+            "type": "string"
+          },
+          "stack_trace_redacted": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack Trace Redacted"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "system_event_id": {
+            "title": "System Event Id",
+            "type": "string"
+          },
+          "technical_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Technical Summary"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system_event_id",
+          "created_at",
+          "severity",
+          "category",
+          "source_service",
+          "source_component",
+          "event_code",
+          "title_nl",
+          "message_nl",
+          "technical_summary",
+          "stack_trace_redacted",
+          "redacted_details_json",
+          "status"
+        ],
+        "title": "ErrorLogItem",
+        "type": "object"
+      },
+      "ErrorLogResponse": {
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorLogItem"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "open_count": {
+            "title": "Open Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "open_count",
+          "errors"
+        ],
+        "title": "ErrorLogResponse",
+        "type": "object"
+      },
       "EvidenceReferenceResponse": {
         "additionalProperties": false,
         "properties": {
@@ -6402,6 +6520,55 @@
         "title": "RegionPreference",
         "type": "string"
       },
+      "ReportFrontendErrorRequest": {
+        "properties": {
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "stack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ReportFrontendErrorRequest",
+        "type": "object"
+      },
       "RequestLogListResponse": {
         "properties": {
           "audit_help_nl": {
@@ -11095,6 +11262,146 @@
           }
         },
         "summary": "Read Latest Decision Package For Conid"
+      }
+    },
+    "/errors": {
+      "get": {
+        "operationId": "list_errors_errors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorLogResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Errors"
+      }
+    },
+    "/errors/report": {
+      "post": {
+        "operationId": "report_frontend_error_errors_report_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportFrontendErrorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Report Frontend Error Errors Report Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Frontend Error"
+      }
+    },
+    "/errors/{system_event_id}": {
+      "delete": {
+        "operationId": "delete_error_errors__system_event_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system_event_id",
+            "required": true,
+            "schema": {
+              "title": "System Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Error Errors  System Event Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Error"
+      }
+    },
+    "/errors/{system_event_id}/resolve": {
+      "post": {
+        "operationId": "resolve_error_errors__system_event_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system_event_id",
+            "required": true,
+            "schema": {
+              "title": "System Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolve Error Errors  System Event Id  Resolve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Error"
       }
     },
     "/forecast/by-account": {

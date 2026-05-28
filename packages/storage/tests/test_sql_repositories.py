@@ -277,7 +277,7 @@ def test_system_event_create_read_list_and_flags() -> None:
         assert [item.system_event_id for item in open_events.records] == ["se-1"]
 
 
-def test_system_event_write_blocked_and_missing_and_no_delete() -> None:
+def test_system_event_write_blocked_and_missing_and_delete() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     with engine.connect() as conn:
         metadata.create_all(conn)
@@ -311,7 +311,42 @@ def test_system_event_write_blocked_and_missing_and_no_delete() -> None:
         assert allowed_repo.get_by_id("missing").found is False
         assert allowed_repo.mark_resolved("missing").accepted is False
         assert allowed_repo.mark_archived("missing").accepted is False
-        assert hasattr(allowed_repo, "delete") is False
+        # Error-log delete: missing id is a clean no-op (not accepted).
+        assert allowed_repo.delete_event("missing").accepted is False
+
+
+def test_system_event_delete_removes_row() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemySystemEventRepository(conn, _report(True))
+        request = CreateSystemEventRequest(
+            system_event_id="se-del",
+            created_at=datetime.now(UTC),
+            severity="error",
+            category="runtime_error",
+            source_service="api",
+            source_component="route",
+            event_code="unhandled_exception",
+            title_nl="Fout",
+            message_nl="Er ging iets mis.",
+            help_nl="Bekijk de details.",
+            technical_summary="ValueError: boom",
+            redacted_details_json={"path": "/x"},
+            stack_trace_redacted="trace",
+            related_entity_type=None,
+            related_entity_id=None,
+            blocks_suggestions=False,
+            blocks_writes=False,
+            blocks_ai_explanation=False,
+            status="open",
+            explanation_nl="Auto-recorded.",
+        )
+        repo.create_event(request)
+        assert repo.get_by_id("se-del").found is True
+        result = repo.delete_event("se-del")
+        assert result.accepted is True
+        assert repo.get_by_id("se-del").found is False
 
 
 def test_system_event_resolve_and_archive_hide_from_open_list() -> None:

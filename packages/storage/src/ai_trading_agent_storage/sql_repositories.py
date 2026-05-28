@@ -1942,6 +1942,37 @@ class SqlAlchemySystemEventRepository(_Base):
             explanation_nl="Systeemmelding gearchiveerd.",
         )
 
+    def delete_event(self, system_event_id: str) -> StorageWriteResult:
+        """Permanently remove a system event (error-log delete action)."""
+
+        ensure_persistence_allowed(self._readiness_report)
+        row = _read_one_by_column(
+            self._connection,
+            system_events,
+            "system_event_id",
+            system_event_id,
+        )
+        if row is None:
+            return StorageWriteResult(
+                accepted=False,
+                record_id=None,
+                table_name=system_events.name,
+                audit_required=True,
+                explanation_nl="Systeemmelding niet gevonden.",
+            )
+        self._connection.execute(
+            system_events.delete().where(
+                system_events.c.system_event_id == system_event_id
+            )
+        )
+        return StorageWriteResult(
+            accepted=True,
+            record_id=system_event_id,
+            table_name=system_events.name,
+            audit_required=True,
+            explanation_nl="Systeemmelding verwijderd.",
+        )
+
     def _mark_event_status(
         self,
         *,
