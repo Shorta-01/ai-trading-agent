@@ -29,9 +29,16 @@ from portfolio_outlook_portfolio import (
     BASELINE_FORECAST_MODEL_VERSION,
     BaselineForecast,
     HistoricalBar,
+    UniverseFundamentals,
     compute_baseline_forecast,
 )
 
+from portfolio_outlook_api.ensemble_forecast import (
+    ENSEMBLE_FORECAST_MODEL_CODE,
+    ENSEMBLE_FORECAST_MODEL_VERSION,
+    adapt_ensemble_to_forecast_record,
+    run_ensemble_forecast,
+)
 from portfolio_outlook_api.eodhd_client import (
     EodhdAuthError,
     EodhdBar,
@@ -188,8 +195,25 @@ def sync_forecasts(
     minimum_bars_required: int,
     max_assets: int,
     valid_minutes: int,
+    ensemble_enabled: bool = False,
+    qvm_universe: UniverseFundamentals | None = None,
 ) -> ForecastSyncReport:
-    """Run one full forecast cycle and persist every successful row."""
+    """Run one full forecast cycle and persist every successful row.
+
+    When ``ensemble_enabled`` is set, each asset is forecast by the classical
+    predictor ensemble (GBM + Momentum + Mean-reversion, plus QVM when
+    ``qvm_universe`` is supplied) instead of the single GBM baseline. AI-TS is
+    excluded by doctrine (intent §7). Default off — behaviour is unchanged.
+    """
+
+    model_code = (
+        ENSEMBLE_FORECAST_MODEL_CODE if ensemble_enabled else BASELINE_FORECAST_MODEL_CODE
+    )
+    model_version = (
+        ENSEMBLE_FORECAST_MODEL_VERSION
+        if ensemble_enabled
+        else BASELINE_FORECAST_MODEL_VERSION
+    )
 
     requested_at = datetime.now(UTC)
     asset_success = 0
@@ -338,24 +362,47 @@ def sync_forecasts(
             for record in bar_records
         ]
 
-        forecast = compute_baseline_forecast(
-            bars=historical_bars,
-            current_price=current_price,
-            horizon_trading_days=horizon_trading_days,
-            minimum_bars_required=minimum_bars_required,
-        )
-
         generated_at = datetime.now(UTC)
         valid_until = generated_at + timedelta(minutes=valid_minutes)
-        forecast_record = _build_forecast_record(
-            position=position,
-            forecast=forecast,
-            generated_at=generated_at,
-            valid_until=valid_until,
-        )
+        if ensemble_enabled:
+            ensemble = run_ensemble_forecast(
+                bars=historical_bars,
+                current_price=current_price,
+                target_symbol=symbol,
+                sector=None,
+                horizon_trading_days=horizon_trading_days,
+                qvm_universe=qvm_universe,
+            )
+            forecast_record = adapt_ensemble_to_forecast_record(
+                position=position,
+                ensemble=ensemble,
+                current_price=current_price,
+                bars=historical_bars,
+                horizon_trading_days=horizon_trading_days,
+                generated_at=generated_at,
+                valid_until=valid_until,
+            )
+            forecast_status = ensemble.forecast.status
+            forecast_blocking_reason = ensemble.forecast.blocking_reason
+        else:
+            forecast = compute_baseline_forecast(
+                bars=historical_bars,
+                current_price=current_price,
+                horizon_trading_days=horizon_trading_days,
+                minimum_bars_required=minimum_bars_required,
+            )
+            forecast_record = _build_forecast_record(
+                position=position,
+                forecast=forecast,
+                generated_at=generated_at,
+                valid_until=valid_until,
+            )
+            forecast_status = forecast.status
+            forecast_blocking_reason = forecast.blocking_reason
+
         forecast_repo.save_asset_forecast(forecast_record)
         forecasts_persisted += 1
-        if forecast.status == "ready":
+        if forecast_status == "ready":
             asset_success += 1
         else:
             asset_failed += 1
@@ -364,7 +411,7 @@ def sync_forecasts(
                     "kind": "forecast",
                     "conid": conid,
                     "symbol": eodhd_symbol,
-                    "reason": forecast.blocking_reason or "forecast_blocked",
+                    "reason": forecast_blocking_reason or "forecast_blocked",
                 }
             )
 
@@ -385,8 +432,8 @@ def sync_forecasts(
     return ForecastSyncReport(
         requested_at=requested_at,
         completed_at=completed_at,
-        model_code=BASELINE_FORECAST_MODEL_CODE,
-        model_version=BASELINE_FORECAST_MODEL_VERSION,
+        model_code=model_code,
+        model_version=model_version,
         horizon_trading_days=horizon_trading_days,
         asset_total=len(unique_positions),
         asset_success=asset_success,

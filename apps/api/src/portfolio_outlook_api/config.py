@@ -124,6 +124,10 @@ class Settings(BaseSettings):
     fx_provider: str = "none"
     fx_sync_enabled: bool = False
     forecast_sync_enabled: bool = False
+    # Opt-in: combine the classical predictor ensemble (GBM + Momentum +
+    # Mean-reversion, plus QVM when fundamentals are available) instead of the
+    # single GBM baseline. Default off — flipping it changes live suggestions.
+    forecast_ensemble_enabled: bool = False
     forecast_history_lookback_days: int = 400
     forecast_horizon_trading_days: int = 21
     forecast_minimum_bars_required: int = 60

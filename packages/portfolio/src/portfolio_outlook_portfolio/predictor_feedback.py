@@ -42,9 +42,11 @@ OUTCOME_WRONG: Final[str] = "wrong"
 OUTCOME_NO_DATA: Final[str] = "no_data"
 
 
-# Per-predictor clip band — locked by §22.5: lower 5%, upper 40% so no
-# single predictor dominates and no predictor falls fully silent.
-DEFAULT_WEIGHT_CLIP_LOW: Final[Decimal] = Decimal("0.05")
+# Per-predictor clip band — floor 10%, ceiling 40% per the locked forecast
+# engine (forecast-engine.md §3 + predictor-lifecycle.md §6 + ADR-0003): no
+# single predictor dominates and no active predictor falls below the floor
+# (below-floor signals push toward retirement, not silent zeroing).
+DEFAULT_WEIGHT_CLIP_LOW: Final[Decimal] = Decimal("0.10")
 DEFAULT_WEIGHT_CLIP_HIGH: Final[Decimal] = Decimal("0.40")
 
 
