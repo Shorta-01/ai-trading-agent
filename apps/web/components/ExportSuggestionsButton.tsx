@@ -1,29 +1,27 @@
 "use client";
 
 import { decisionPackagesExportUrl } from "@/lib/apiClient";
+import { cn } from "@/lib/cn";
 
 /**
  * Downloads the latest system suggestions (buy/sell actions + full "why")
  * as a structured Markdown file. The backend serves the document with a
  * Content-Disposition: attachment header, so a plain anchor navigation
  * triggers a download the user can save or forward.
+ *
+ * Styled with Tailwind utilities — the first component on the new design
+ * system (the rest still use inline styles until migrated).
  */
-export function ExportSuggestionsButton() {
+export function ExportSuggestionsButton({ className }: { className?: string }) {
   return (
     <a
       data-testid="export-suggestions-button"
       href={decisionPackagesExportUrl()}
       download
-      style={{
-        display: "inline-block",
-        padding: "8px 16px",
-        background: "#1d4ed8",
-        color: "#ffffff",
-        borderRadius: 6,
-        fontWeight: 600,
-        textDecoration: "none",
-        fontSize: 14,
-      }}
+      className={cn(
+        "inline-block rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white no-underline hover:bg-blue-800",
+        className,
+      )}
       title="Download alle actuele suggesties (koop/verkoop + volledige uitleg) als .md-bestand"
     >
       Exporteer suggesties (.md)

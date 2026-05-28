@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AccountModeBadge } from "@/components/AccountModeBadge";
 import { ColdStartBanner } from "@/components/ColdStartBanner";
+import { Providers } from "@/components/Providers";
 import { SystemEventsIndicator } from "@/components/SystemEventsIndicator";
 
 import "./globals.css";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="nl">
       <body>
+        <Providers>
         <div className="app-shell">
           <aside className="side-nav">
             <h1>Portfolio Outlook Manager</h1>
@@ -52,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
         </div>
+        </Providers>
       </body>
     </html>
   );

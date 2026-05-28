@@ -1,3 +1,14 @@
+import type { components } from "./api-types";
+
+/**
+ * Reference a backend response shape generated from the FastAPI OpenAPI
+ * schema (`lib/api-types.ts`, regenerated with `npm run gen:api-types`).
+ * Prefer this over hand-written response types — it is the single source
+ * of truth and surfaces backend/frontend drift at compile time.
+ */
+export type ApiSchema<K extends keyof components["schemas"]> =
+  components["schemas"][K];
+
 export type FetchState<T> =
   | { ok: true; data: T }
   | { ok: false; reason: "not_reachable" };
@@ -1222,16 +1233,10 @@ export type ProviderCallsResponse = {
   safe_for_orders: boolean;
 };
 
-export type SchedulerV127StatusResponse = {
-  enabled: boolean;
-  last_run_at: string | null;
-  last_run_type: string | null;
-  last_mode_detected: string | null;
-  last_outcome: string | null;
-  next_runs: string[];
-  safe_for_action_drafts: boolean;
-  safe_for_orders: boolean;
-};
+// Generated from the OpenAPI schema (single source of truth). The former
+// hand-written shape is now derived via ApiSchema — drift is caught by tsc.
+export type SchedulerV127StatusResponse =
+  ApiSchema<"SchedulerV127StatusResponse">;
 
 export type ScheduledRunAuditRow = {
   run_id: string;

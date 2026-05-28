@@ -1,3 +1,20 @@
+# Hardened for an unattended single-node home deployment (Raspberry Pi 5
+# + NVMe SSD + Docker Compose + wired LAN, per docs/deployment.md).
+# Every service now:
+#   - restarts after a crash, reboot or power blip (restart: unless-stopped),
+#   - has a bounded memory/CPU budget so one runaway container cannot OOM
+#     the whole Pi,
+#   - caps its logs so they cannot fill the disk,
+#   - has a healthcheck so `docker ps` status and depends_on gating are honest.
+# Resource limits target a Pi 5 / 8 GB board; halve them for a 4 GB board.
+# (deploy.resources.limits is honoured by `docker compose up` under Compose v2.)
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   api:
     build:
@@ -11,6 +28,9 @@ services:
       API_ENVIRONMENT: ${ENVIRONMENT:-development}
       API_PAPER_ONLY_MODE: ${PAPER_ONLY_MODE:-true}
     ports:
+      # The browser (on the laptop) fetches the API directly, so this port
+      # must stay reachable on the LAN. The trusted-LAN posture is the
+      # security boundary — see docs/deployment.md.
       - "${API_PORT:-8000}:8000"
     depends_on:
       postgres:
@@ -20,6 +40,13 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
 
   worker:
     build:
@@ -35,6 +62,22 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    # The worker has no HTTP surface; this is a liveness check that the
+    # worker is still PID 1's running command. Deeper health (scheduler
+    # tick freshness) is observable via GET /scheduler/runs/latest.
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q portfolio_outlook_worker /proc/1/cmdline"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          # numpy/scipy/statsmodels forecasting headroom.
+          memory: 1536M
+          cpus: "2.0"
 
   web:
     build:
@@ -47,6 +90,18 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.75"
 
   postgres:
     image: postgres:16.4
@@ -57,14 +112,26 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-ai_trading_agent}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/docker/.env (local only, never commit)}
     ports:
-      - "5432:5432"
+      # Bound to loopback: the API/worker reach Postgres over the compose
+      # network, so it never needs LAN exposure. Host tooling (psql,
+      # pg_dump) still works via 127.0.0.1.
+      - "127.0.0.1:5432:5432"
     volumes:
+      # Keep Docker's data-root on the NVMe SSD (not the SD card) so this
+      # volume inherits SSD durability — see docs/deployment.md.
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 30s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
 
 volumes:
   postgres_data:
