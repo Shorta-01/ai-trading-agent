@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge";
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
@@ -32,28 +33,40 @@ function getValuationDisplayStatus(readiness: PortfolioValuationReadinessRespons
 }
 
 export default function HomePage() {
-  const [systemStatus, setSystemStatus] = useState<SystemStatusSummary | null>(null);
-  const [ibkrStatus, setIbkrStatus] = useState<IbkrStatusResponse | null>(null);
-  const [ibkrSyncStatus, setIbkrSyncStatus] = useState<IbkrSyncStatusResponse | null>(null);
-  const [valuationReadiness, setValuationReadiness] = useState<PortfolioValuationReadinessResponse | null>(null);
-  const [valuationLoading, setValuationLoading] = useState(true);
+  const systemQuery = useQuery({
+    queryKey: ["system-status"],
+    queryFn: async (): Promise<SystemStatusSummary | null> => {
+      const result = await apiClient.getSystemStatus();
+      return result.ok ? result.data : null;
+    },
+  });
+  const ibkrQuery = useQuery({
+    queryKey: ["ibkr-status"],
+    queryFn: async (): Promise<IbkrStatusResponse | null> => {
+      const result = await apiClient.getIbkrStatus();
+      return result.ok ? result.data : null;
+    },
+  });
+  const ibkrSyncQuery = useQuery({
+    queryKey: ["ibkr-sync-status"],
+    queryFn: async (): Promise<IbkrSyncStatusResponse | null> => {
+      const result = await apiClient.getIbkrSyncStatus();
+      return result.ok ? result.data : null;
+    },
+  });
+  const valuationQuery = useQuery({
+    queryKey: ["portfolio-valuation-readiness"],
+    queryFn: async (): Promise<PortfolioValuationReadinessResponse | null> => {
+      const result = await apiClient.getPortfolioValuationReadiness();
+      return result.ok ? result.data : null;
+    },
+  });
 
-  useEffect(() => {
-    async function load() {
-      const [system, ibkr, ibkrSync, valuation] = await Promise.all([
-        apiClient.getSystemStatus(),
-        apiClient.getIbkrStatus(),
-        apiClient.getIbkrSyncStatus(),
-        apiClient.getPortfolioValuationReadiness(),
-      ]);
-      setSystemStatus(system.ok ? system.data : null);
-      setIbkrStatus(ibkr.ok ? ibkr.data : null);
-      setIbkrSyncStatus(ibkrSync.ok ? ibkrSync.data : null);
-      setValuationReadiness(valuation.ok ? valuation.data : null);
-      setValuationLoading(false);
-    }
-    void load();
-  }, []);
+  const systemStatus = systemQuery.data ?? null;
+  const ibkrStatus = ibkrQuery.data ?? null;
+  const ibkrSyncStatus = ibkrSyncQuery.data ?? null;
+  const valuationReadiness = valuationQuery.data ?? null;
+  const valuationLoading = valuationQuery.isLoading;
 
   const syncLabel = useMemo(() => {
     if (!ibkrStatus) return { label: "Niet beschikbaar", status: "niet-beschikbaar" as const, help: "IBKR-status nog niet bereikbaar." };
