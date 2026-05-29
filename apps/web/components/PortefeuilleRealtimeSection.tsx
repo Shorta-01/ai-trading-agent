@@ -17,12 +17,11 @@
  * surface as "Niet beschikbaar".
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   apiClient,
   IbkrCashLatestResponse,
-  IbkrConnectionStatusResponse,
   IbkrPositionsLatestResponse,
   MarketDataByAccountResponse,
   MarketDataByAccountRow,
@@ -62,21 +61,10 @@ function formatCashLabel(currency: string, raw: string | null): string {
 }
 
 export function PortefeuilleRealtimeSection() {
-  const [status, setStatus] = useState<IbkrConnectionStatusResponse | null>(
-    null,
-  );
-  const [positions, setPositions] =
-    useState<IbkrPositionsLatestResponse | null>(null);
-  const [cash, setCash] = useState<IbkrCashLatestResponse | null>(null);
-  const [marketData, setMarketData] =
-    useState<MarketDataByAccountResponse | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [hasStorageError, setHasStorageError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const query = useQuery({
+    queryKey: ["portefeuille-realtime"],
+    refetchInterval: POLL_INTERVAL_MS,
+    queryFn: async () => {
       const [statusResult, positionsResult, cashResult, marketDataResult] =
         await Promise.all([
           apiClient.getIbkrConnectionStatus(),
@@ -84,26 +72,23 @@ export function PortefeuilleRealtimeSection() {
           apiClient.getIbkrSyncCashLatest(),
           apiClient.getMarketDataByAccount(),
         ]);
-      if (cancelled) return;
-      setStatus(statusResult.ok ? statusResult.data : null);
-      setPositions(positionsResult.ok ? positionsResult.data : null);
-      setCash(cashResult.ok ? cashResult.data : null);
-      setMarketData(marketDataResult.ok ? marketDataResult.data : null);
-      setHasStorageError(
-        !statusResult.ok || !positionsResult.ok || !cashResult.ok,
-      );
-      setLoaded(true);
-    }
+      return {
+        status: statusResult.ok ? statusResult.data : null,
+        positions: positionsResult.ok ? positionsResult.data : null,
+        cash: cashResult.ok ? cashResult.data : null,
+        marketData: marketDataResult.ok ? marketDataResult.data : null,
+        hasStorageError:
+          !statusResult.ok || !positionsResult.ok || !cashResult.ok,
+      };
+    },
+  });
 
-    void load();
-    const handle = window.setInterval(() => {
-      void load();
-    }, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(handle);
-    };
-  }, []);
+  const status = query.data?.status ?? null;
+  const positions = query.data?.positions ?? null;
+  const cash = query.data?.cash ?? null;
+  const marketData = query.data?.marketData ?? null;
+  const hasStorageError = query.data?.hasStorageError ?? false;
+  const loaded = !query.isPending;
 
   if (!loaded) {
     return (
