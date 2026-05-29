@@ -126,6 +126,8 @@ def record_api_system_event(
                     explanation_nl="Systeemmelding vastgelegd via API-helper.",
                 )
             )
+            # checked_connection does not auto-commit; persist the event.
+            checked.connection.commit()
         return ApiSystemEventRecordingResult(
             attempted=True,
             recorded=True,
