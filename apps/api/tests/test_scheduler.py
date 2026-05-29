@@ -10,12 +10,14 @@ from ai_trading_agent_storage import SchedulerRunRecord
 from portfolio_outlook_api.config import Settings
 from portfolio_outlook_api.scheduler import (
     DAILY_BRIEFING_JOB_NAME,
+    IBKR_SYNC_JOB_NAME,
     STATUS_FAILED,
     STATUS_SUCCEEDED,
     build_scheduler,
     install_default_jobs,
     list_jobs,
     run_daily_briefing_job,
+    run_ibkr_sync_once,
 )
 
 
@@ -64,6 +66,37 @@ def test_install_default_jobs_registers_daily_briefing_job() -> None:
     jobs = list_jobs(scheduler)
     assert len(jobs) == 1
     assert jobs[0].job_name == DAILY_BRIEFING_JOB_NAME
+
+
+def test_ibkr_sync_job_not_registered_when_sync_disabled() -> None:
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    install_default_jobs(scheduler, _settings(scheduler_enabled=True))
+    assert {job.job_name for job in list_jobs(scheduler)} == {DAILY_BRIEFING_JOB_NAME}
+
+
+def test_ibkr_sync_job_registered_when_sync_enabled() -> None:
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    fired: list[bool] = []
+    install_default_jobs(
+        scheduler,
+        _settings(
+            scheduler_enabled=True,
+            ibkr_sync_enabled=True,
+            ibkr_sync_interval_minutes=5,
+        ),
+        ibkr_sync_callable=lambda: fired.append(True),
+    )
+    job = scheduler.get_job(IBKR_SYNC_JOB_NAME)
+    assert job is not None
+    job.func()  # the registered callable fires the injected sync
+    assert fired == [True]
+
+
+def test_run_ibkr_sync_once_is_safe_noop_when_unconfigured() -> None:
+    # Sync not enabled -> adapter is None + run_sync gates; must not raise.
+    run_ibkr_sync_once(_settings())
 
 
 def test_list_jobs_returns_empty_tuple_when_scheduler_is_none() -> None:
