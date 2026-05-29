@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PortefeuilleRealtimeSection } from "@/components/PortefeuilleRealtimeSection";
@@ -57,54 +58,92 @@ function formatMissingInputs(row: PortfolioValuationReadinessRow): string {
 }
 
 export default function PortfolioPage() {
-  const [syncStatus, setSyncStatus] = useState<IbkrSyncStatusResponse | null>(null);
-  const [valuationReadiness, setValuationReadiness] = useState<PortfolioValuationReadinessResponse | null>(null);
-  const [positions, setPositions] = useState<IbkrPositionSnapshot[]>([]);
-  const [cashItems, setCashItems] = useState<IbkrCashSnapshot[]>([]);
-  const [openOrders, setOpenOrders] = useState<IbkrOpenOrderSnapshot[]>([]);
-  const [executions, setExecutions] = useState<IbkrExecutionSnapshot[]>([]);
-  const [forecasts, setForecasts] = useState<AssetForecastResponse[]>([]);
-  const [suggestions, setSuggestions] = useState<AssetSuggestionResponse[]>([]);
-  const [decisionPackages, setDecisionPackages] = useState<AssetDecisionPackageResponse[]>([]);
-  const [actionDrafts, setActionDrafts] = useState<AssetActionDraftResponse[]>([]);
   const [explanations, setExplanations] = useState<Record<string, DecisionPackageExplanationResponse | null>>({});
   const [explanationStatuses, setExplanationStatuses] = useState<Record<string, string>>({});
-  const [dailyBriefing, setDailyBriefing] = useState<DailyBriefingResponse | null>(null);
-  const [accountMode, setAccountMode] = useState<IbkrAccountModeResponse | null>(null);
-  const [schedulerJobs, setSchedulerJobs] = useState<SchedulerJobsResponse | null>(null);
-  const [latestSchedulerRun, setLatestSchedulerRun] = useState<SchedulerRunResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  const loadData = async () => {
-    setLoading(true);
-    const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes, suggestionsRes, decisionPackagesRes, actionDraftsRes] = await Promise.all([
-      apiClient.getIbkrSyncStatus(),
-      apiClient.getPortfolioValuationReadiness(),
-      apiClient.getIbkrPositions(),
-      apiClient.getIbkrCash(),
-      apiClient.getIbkrOpenOrders(),
-      apiClient.getIbkrExecutions(),
-      apiClient.getLatestForecasts(),
-      apiClient.getLatestSuggestions(),
-      apiClient.getLatestDecisionPackages(),
-      apiClient.getLatestActionDrafts(),
-    ]);
+  const dataQuery = useQuery({
+    queryKey: ["portefeuille-data"],
+    queryFn: async () => {
+      const [statusRes, valuationRes, positionsRes, cashRes, ordersRes, executionsRes, forecastsRes, suggestionsRes, decisionPackagesRes, actionDraftsRes] = await Promise.all([
+        apiClient.getIbkrSyncStatus(),
+        apiClient.getPortfolioValuationReadiness(),
+        apiClient.getIbkrPositions(),
+        apiClient.getIbkrCash(),
+        apiClient.getIbkrOpenOrders(),
+        apiClient.getIbkrExecutions(),
+        apiClient.getLatestForecasts(),
+        apiClient.getLatestSuggestions(),
+        apiClient.getLatestDecisionPackages(),
+        apiClient.getLatestActionDrafts(),
+      ]);
+      return {
+        syncStatus: statusRes.ok ? statusRes.data : null,
+        valuationReadiness: valuationRes.ok ? valuationRes.data : null,
+        positions: positionsRes.ok ? (positionsRes.data.items ?? []) : [],
+        cashItems: cashRes.ok ? (cashRes.data.items ?? []) : [],
+        openOrders: ordersRes.ok ? (ordersRes.data.items ?? []) : [],
+        executions: executionsRes.ok ? (executionsRes.data.items ?? []) : [],
+        forecasts: forecastsRes.ok ? (forecastsRes.data.items ?? []) : [],
+        suggestions: suggestionsRes.ok ? (suggestionsRes.data.items ?? []) : [],
+        decisionPackages: decisionPackagesRes.ok ? (decisionPackagesRes.data.items ?? []) : [],
+        actionDrafts: actionDraftsRes.ok ? (actionDraftsRes.data.items ?? []) : [],
+        loadFailed: !statusRes.ok && !valuationRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok,
+      };
+    },
+  });
+  const syncStatus: IbkrSyncStatusResponse | null = dataQuery.data?.syncStatus ?? null;
+  const valuationReadiness: PortfolioValuationReadinessResponse | null = dataQuery.data?.valuationReadiness ?? null;
+  const positions: IbkrPositionSnapshot[] = dataQuery.data?.positions ?? [];
+  const cashItems: IbkrCashSnapshot[] = dataQuery.data?.cashItems ?? [];
+  const openOrders: IbkrOpenOrderSnapshot[] = dataQuery.data?.openOrders ?? [];
+  const executions: IbkrExecutionSnapshot[] = dataQuery.data?.executions ?? [];
+  const forecasts: AssetForecastResponse[] = useMemo(
+    () => dataQuery.data?.forecasts ?? [],
+    [dataQuery.data],
+  );
+  const suggestions: AssetSuggestionResponse[] = useMemo(
+    () => dataQuery.data?.suggestions ?? [],
+    [dataQuery.data],
+  );
+  const decisionPackages: AssetDecisionPackageResponse[] = dataQuery.data?.decisionPackages ?? [];
+  const actionDrafts: AssetActionDraftResponse[] = dataQuery.data?.actionDrafts ?? [];
+  const loading = dataQuery.isFetching;
+  const loadFailed = dataQuery.data?.loadFailed ?? false;
 
-    setLoadFailed(!statusRes.ok && !valuationRes.ok && !positionsRes.ok && !cashRes.ok && !ordersRes.ok && !executionsRes.ok);
-    if (statusRes.ok) setSyncStatus(statusRes.data);
-    if (valuationRes.ok) setValuationReadiness(valuationRes.data);
-    if (positionsRes.ok) setPositions(positionsRes.data.items ?? []);
-    if (cashRes.ok) setCashItems(cashRes.data.items ?? []);
-    if (ordersRes.ok) setOpenOrders(ordersRes.data.items ?? []);
-    if (executionsRes.ok) setExecutions(executionsRes.data.items ?? []);
-    if (forecastsRes.ok) setForecasts(forecastsRes.data.items ?? []);
-    if (suggestionsRes.ok) setSuggestions(suggestionsRes.data.items ?? []);
-    if (decisionPackagesRes.ok) setDecisionPackages(decisionPackagesRes.data.items ?? []);
-    if (actionDraftsRes.ok) setActionDrafts(actionDraftsRes.data.items ?? []);
-    setLoading(false);
-  };
+  const dailyBriefingQuery = useQuery({
+    queryKey: ["portefeuille-daily-briefing"],
+    queryFn: async (): Promise<DailyBriefingResponse | null> => {
+      const res = await apiClient.getLatestDailyBriefing();
+      return res.ok ? res.data.item : null;
+    },
+  });
+  const dailyBriefing = dailyBriefingQuery.data ?? null;
+
+  const accountModeQuery = useQuery({
+    queryKey: ["portefeuille-account-mode"],
+    queryFn: async (): Promise<IbkrAccountModeResponse | null> => {
+      const res = await apiClient.getIbkrAccountMode();
+      return res.ok ? res.data : null;
+    },
+  });
+  const accountMode = accountModeQuery.data ?? null;
+
+  const schedulerQuery = useQuery({
+    queryKey: ["portefeuille-scheduler"],
+    queryFn: async () => {
+      const [jobsRes, runRes] = await Promise.all([
+        apiClient.getSchedulerJobs(),
+        apiClient.getLatestSchedulerRun(),
+      ]);
+      return {
+        schedulerJobs: jobsRes.ok ? jobsRes.data : null,
+        latestSchedulerRun: runRes.ok ? runRes.data.item : null,
+      };
+    },
+  });
+  const schedulerJobs: SchedulerJobsResponse | null = schedulerQuery.data?.schedulerJobs ?? null;
+  const latestSchedulerRun: SchedulerRunResponse | null = schedulerQuery.data?.latestSchedulerRun ?? null;
 
   const loadExplanation = async (decisionPackageId: string) => {
     const res = await apiClient.getDecisionPackageExplanation(decisionPackageId);
@@ -114,33 +153,18 @@ export default function PortfolioPage() {
     }
   };
 
-  const loadDailyBriefing = async () => {
-    const res = await apiClient.getLatestDailyBriefing();
-    if (res.ok) {
-      setDailyBriefing(res.data.item);
-    }
+  const loadDailyBriefing = () => {
+    void dailyBriefingQuery.refetch();
   };
 
-  const loadAccountMode = async () => {
-    const res = await apiClient.getIbkrAccountMode();
-    if (res.ok) {
-      setAccountMode(res.data);
-    }
-  };
-
-  const loadSchedulerInfo = async () => {
-    const [jobsRes, runRes] = await Promise.all([
-      apiClient.getSchedulerJobs(),
-      apiClient.getLatestSchedulerRun(),
-    ]);
-    if (jobsRes.ok) setSchedulerJobs(jobsRes.data);
-    if (runRes.ok) setLatestSchedulerRun(runRes.data.item);
+  const loadSchedulerInfo = () => {
+    void schedulerQuery.refetch();
   };
 
   const runDailyBriefing = async () => {
     const res = await apiClient.runDailyBriefing();
     if (res.ok && res.data.briefing_id) {
-      await loadDailyBriefing();
+      await dailyBriefingQuery.refetch();
     }
   };
 
@@ -206,13 +230,6 @@ export default function PortfolioPage() {
     }
   };
 
-  useEffect(() => {
-    void loadData();
-    void loadDailyBriefing();
-    void loadAccountMode();
-    void loadSchedulerInfo();
-  }, []);
-
   const statusTone = useMemo(() => {
     if (!syncStatus?.configured) return "aandacht" as const;
     if (syncStatus.status_nl.toLowerCase().includes("mislukt")) return "geblokkeerd" as const;
@@ -232,7 +249,7 @@ export default function PortfolioPage() {
   const runSync = async () => {
     setSyncing(true);
     await apiClient.runIbkrSync();
-    await loadData();
+    await dataQuery.refetch();
     setSyncing(false);
   };
 
