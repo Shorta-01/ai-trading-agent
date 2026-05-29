@@ -129,6 +129,8 @@ def _mutate_system_event_status(
                     not_found=True,
                 )
 
+            # checked_connection does not auto-commit; persist the change.
+            checked.connection.commit()
             return SystemEventMutationResult(
                 response={'status_nl': 'Gelukt', 'updated': True, 'message_nl': ok_message},
                 blocked=False,

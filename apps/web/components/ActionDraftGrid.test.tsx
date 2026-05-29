@@ -43,6 +43,9 @@ const HAPPY: ActionDraftResponse = {
   audit_trail_hash: "h-1",
   previous_draft_hash: null,
   safe_for_submission: false,
+  submission_block_reason: null,
+  submission_started_at: null,
+  terminal_state_at: null,
 };
 
 vi.mock("@/lib/apiClient", async () => {

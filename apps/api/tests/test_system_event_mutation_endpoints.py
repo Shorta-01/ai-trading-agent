@@ -10,6 +10,13 @@ from portfolio_outlook_api.main import app
 client = TestClient(app)
 
 
+class _FakeConn:
+    """Fake connection exposing the no-op ``commit()`` the mutation calls."""
+
+    def commit(self) -> None:
+        return None
+
+
 def test_resolve_storage_disabled_no_provider(monkeypatch) -> None:
     called = {'provider': False}
 
@@ -90,7 +97,7 @@ def test_mutation_success_and_not_found(monkeypatch) -> None:
 
             class _Ctx:
                 def __enter__(self_inner):
-                    return type('Checked', (), {'connection': object(), 'readiness': object()})()
+                    return type('Checked', (), {'connection': _FakeConn(), 'readiness': object()})()
 
                 def __exit__(self_inner, exc_type, exc, tb):
                     captured['closed'] = True

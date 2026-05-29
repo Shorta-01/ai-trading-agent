@@ -15,6 +15,16 @@ from portfolio_outlook_api.system_event_recorder import (
 )
 
 
+class _FakeConn:
+    """Fake connection exposing the no-op ``commit()`` the recorder calls."""
+
+    def __init__(self) -> None:
+        self.committed = False
+
+    def commit(self) -> None:
+        self.committed = True
+
+
 def _payload() -> ApiSystemEventInput:
     return ApiSystemEventInput(
         severity='warning',
@@ -125,7 +135,7 @@ def test_record_event_success() -> None:
         @contextmanager
         def checked_connection(self, *, require_writable: bool):
             captured['require_writable'] = require_writable
-            checked = type('Checked', (), {'connection': object(), 'readiness': _readiness()})()
+            checked = type('Checked', (), {'connection': _FakeConn(), 'readiness': _readiness()})()
             yield checked
 
     class FakeRepository:
@@ -183,7 +193,7 @@ def test_record_event_redacted_details_pass_through() -> None:
     class FakeProvider:
         @contextmanager
         def checked_connection(self, *, require_writable: bool):
-            yield type('Checked', (), {'connection': object(), 'readiness': _readiness()})()
+            yield type('Checked', (), {'connection': _FakeConn(), 'readiness': _readiness()})()
 
     class FakeRepository:
         def __init__(self, _: object, __: MigrationReadinessReport) -> None:
@@ -216,3 +226,42 @@ def test_record_event_redacted_details_pass_through() -> None:
     assert request.redacted_details_json == payload.redacted_details_json
     assert 'super-secret-password' not in result.message_nl
     assert 'sk-live-123' not in result.message_nl
+
+
+def test_record_event_persists_to_real_db(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Regression: the recorder must COMMIT so the event survives the
+    connection closing (it previously did not, silently losing the row)."""
+
+    from ai_trading_agent_storage import SqlAlchemySystemEventRepository
+    from ai_trading_agent_storage.metadata import metadata
+    from sqlalchemy import create_engine, text
+
+    db_url = f"sqlite+pysqlite:///{tmp_path / 'events.sqlite'}"
+    with create_engine(db_url).begin() as conn:
+        metadata.create_all(conn)
+        conn.execute(
+            text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+        )
+        conn.execute(
+            text(
+                "INSERT INTO alembic_version (version_num) VALUES "
+                "('0055_runtime_config')"
+            )
+        )
+
+    result = record_api_system_event(
+        payload=_payload(),
+        storage_settings=StorageSettings(
+            enabled=True, database_url=db_url, writes_enabled=True
+        ),
+        id_provider=lambda: "system-event-persist-1",
+    )
+    assert result.recorded is True
+
+    # Fresh connection -> proves the row was committed, not rolled back.
+    with create_engine(db_url).connect() as conn:
+        repo = SqlAlchemySystemEventRepository(conn, _readiness())
+        found = repo.get_by_id("system-event-persist-1")
+    assert found.found is True
+    assert found.record is not None
+    assert found.record.event_code == "storage_blocked"
