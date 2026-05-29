@@ -15,12 +15,15 @@
  * with a Dutch detail; we surface it inline.
  */
 
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import {
   apiClient,
   ColdStartWatchlistItem,
 } from "@/lib/apiClient";
+
+const COLD_START_KEY = ["cold-start-watchlist-items"];
 
 
 type Props = {
@@ -31,27 +34,20 @@ type Props = {
 
 
 export function VolglijstColdStartFlow({ onConfirmed }: Props) {
-  const [items, setItems] = useState<ColdStartWatchlistItem[]>([]);
+  const queryClient = useQueryClient();
   const [phrase, setPhrase] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
+  const query = useQuery({
+    queryKey: COLD_START_KEY,
+    queryFn: async (): Promise<ColdStartWatchlistItem[]> => {
       const result = await apiClient.getColdStartWatchlistItems();
-      if (cancelled) return;
-      if (result.ok) {
-        setItems(result.data.items);
-      }
-      setLoaded(true);
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return result.ok ? result.data.items : [];
+    },
+  });
+  const items = query.data ?? [];
+  const loaded = !query.isPending;
 
   async function handleArchive(watchlistItemId: string) {
     setError(null);
@@ -62,8 +58,12 @@ export function VolglijstColdStartFlow({ onConfirmed }: Props) {
       setError(result.message);
       return;
     }
-    setItems((prev) =>
-      prev.filter((row) => row.watchlist_item_id !== watchlistItemId),
+    queryClient.setQueryData<ColdStartWatchlistItem[]>(
+      COLD_START_KEY,
+      (prev) =>
+        (prev ?? []).filter(
+          (row) => row.watchlist_item_id !== watchlistItemId,
+        ),
     );
   }
 
