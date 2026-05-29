@@ -1,5 +1,12 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
 
 import type { CalibrationCoverageResponse } from "@/lib/apiClient";
 
@@ -13,6 +20,11 @@ vi.mock("@/lib/apiClient", () => ({
 }));
 
 import { CalibrationCoverageBadge } from "./CalibrationCoverageBadge";
+
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return rtlRender(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 const HEALTHY: CalibrationCoverageResponse = {
   window_days: 90,

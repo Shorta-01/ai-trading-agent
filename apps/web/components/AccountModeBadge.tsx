@@ -11,6 +11,7 @@
  * full ID.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { apiClient, IbkrConnectionStatusResponse } from "@/lib/apiClient";
@@ -69,34 +70,16 @@ function visualsFor(mode: Mode): Visuals {
 }
 
 export function AccountModeBadge() {
-  const [status, setStatus] = useState<IbkrConnectionStatusResponse | null>(
-    null,
-  );
-  const [flashing, setFlashing] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const query = useQuery({
+    queryKey: ["ibkr-connection-status"],
+    queryFn: async (): Promise<IbkrConnectionStatusResponse | null> => {
       const result = await apiClient.getIbkrConnectionStatus();
-      if (cancelled) return;
-      if (result.ok) {
-        setStatus(result.data);
-      } else {
-        setStatus(null);
-      }
-    }
-
-    void load();
-    const handle = window.setInterval(() => {
-      void load();
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(handle);
-    };
-  }, []);
+      return result.ok ? result.data : null;
+    },
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+  const status = query.data ?? null;
+  const [flashing, setFlashing] = useState(true);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
