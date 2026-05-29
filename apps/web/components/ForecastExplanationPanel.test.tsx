@@ -1,11 +1,13 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 
 import type { ForecastLatestResponse } from "@/lib/apiClient";
 
@@ -21,6 +23,15 @@ vi.mock("@/lib/apiClient", () => ({
 }));
 
 import { ForecastExplanationPanel } from "./ForecastExplanationPanel";
+
+function render(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 const HAPPY: ForecastLatestResponse = {
   conid: "ASML.AS",

@@ -13,7 +13,7 @@
  * Closing the drawer is the only action.
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   apiClient,
@@ -70,41 +70,26 @@ export function SubmissionLifecycleDrawer({
   open: boolean;
   onClose: () => void;
 }) {
-  const [events, setEvents] = useState<
-    IbkrSubmissionLifecycleEvent[] | null
-  >(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open || actionDraftId === null) {
-      setEvents(null);
-      setError(null);
-      return;
-    }
-    let cancelled = false;
-    async function load() {
-      setError(null);
-      setEvents(null);
+  const query = useQuery({
+    queryKey: ["ibkr-submission-lifecycle", actionDraftId],
+    enabled: open && actionDraftId !== null,
+    queryFn: async (): Promise<IbkrSubmissionLifecycleEvent[]> => {
       const result = await apiClient.getIbkrSubmissionLifecycle(
         actionDraftId as string,
       );
-      if (cancelled) return;
-      if (!result.ok) {
-        setError(
-          "Lifecycle kon niet worden geladen. Controleer of de API draait.",
-        );
-        setEvents([]);
-        return;
-      }
-      setEvents(result.data.events);
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, actionDraftId]);
+      if (!result.ok) throw new Error("unreachable");
+      return result.data.events;
+    },
+  });
 
   if (!open || actionDraftId === null) return null;
+
+  const error = query.isError
+    ? "Lifecycle kon niet worden geladen. Controleer of de API draait."
+    : null;
+  // Mirror the original: a failed load shows the error banner plus the
+  // empty-state hint, so treat an error as an empty (non-null) result.
+  const events = query.isError ? [] : (query.data ?? null);
 
   return (
     <div
