@@ -1,5 +1,12 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ErrorLogItem } from "@/lib/apiClient";
@@ -19,6 +26,15 @@ vi.mock("@/lib/apiClient", () => ({
 import { toClaudeCodeText } from "@/lib/errorCopy";
 
 import ErrorsPage from "./page";
+
+function render(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 const _ITEM: ErrorLogItem = {
   system_event_id: "err-1",

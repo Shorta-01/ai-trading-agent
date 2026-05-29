@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { ActiveSystemEventsResponse, SystemEventSummary, apiClient } from "@/lib/apiClient";
 
@@ -35,29 +36,21 @@ function toCopyText(event: SystemEventSummary): string {
 }
 
 export default function SysteemmeldingenPage() {
-  const [eventsResponse, setEventsResponse] = useState<ActiveSystemEventsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
   const [actionStatus, setActionStatus] = useState<string>("");
 
-  const events = useMemo(() => eventsResponse?.events ?? [], [eventsResponse]);
+  const query = useQuery({
+    queryKey: ["active-system-events"],
+    queryFn: async (): Promise<ActiveSystemEventsResponse> => {
+      const response = await apiClient.getActiveSystemEvents();
+      if (!response.ok) {
+        throw new Error("Systeemmeldingen konden niet geladen worden.");
+      }
+      return response.data;
+    },
+  });
 
-  async function loadEvents() {
-    setLoading(true);
-    setError(false);
-    const response = await apiClient.getActiveSystemEvents();
-    if (!response.ok) {
-      setError(true);
-      setLoading(false);
-      return;
-    }
-    setEventsResponse(response.data);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    void loadEvents();
-  }, []);
+  const eventsResponse = query.data ?? null;
+  const events = eventsResponse?.events ?? [];
 
   async function onResolve(systemEventId: string) {
     const response = await apiClient.resolveSystemEvent(systemEventId, { reason_nl: "Gemarkeerd als opgelost vanuit de webinterface." });
@@ -66,7 +59,7 @@ export default function SysteemmeldingenPage() {
       return;
     }
     setActionStatus("Systeemmelding gemarkeerd als opgelost.");
-    await loadEvents();
+    await query.refetch();
   }
 
   async function onArchive(systemEventId: string) {
@@ -76,7 +69,7 @@ export default function SysteemmeldingenPage() {
       return;
     }
     setActionStatus("Systeemmelding gearchiveerd.");
-    await loadEvents();
+    await query.refetch();
   }
 
   async function onCopyDetails(event: SystemEventSummary) {
@@ -96,12 +89,12 @@ export default function SysteemmeldingenPage() {
         {eventsResponse?.storage_available === false ? <p>Opslag is momenteel niet beschikbaar.</p> : null}
       </div>
 
-      <button type="button" onClick={() => void loadEvents()}>Vernieuwen</button>
+      <button type="button" onClick={() => void query.refetch()}>Vernieuwen</button>
       {actionStatus ? <p>{actionStatus}</p> : null}
 
-      {loading ? <p>Systeemmeldingen laden...</p> : null}
-      {error ? <p>Systeemmeldingen konden niet geladen worden.</p> : null}
-      {!loading && !error && events.length === 0 ? <p>Geen actieve systeemmeldingen.</p> : null}
+      {query.isFetching ? <p>Systeemmeldingen laden...</p> : null}
+      {query.isError ? <p>Systeemmeldingen konden niet geladen worden.</p> : null}
+      {!query.isFetching && !query.isError && events.length === 0 ? <p>Geen actieve systeemmeldingen.</p> : null}
 
       <div className="events-list">
         {events.map((event) => (

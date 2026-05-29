@@ -25,12 +25,14 @@ from uuid import uuid4
 from ai_trading_agent_storage import SchedulerRunRecord
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from portfolio_outlook_api.config import Settings
 
 logger = logging.getLogger(__name__)
 
 DAILY_BRIEFING_JOB_NAME = "daily_briefing"
+IBKR_SYNC_JOB_NAME = "ibkr_sync"
 
 STATUS_RUNNING = "running"
 STATUS_SUCCEEDED = "succeeded"
@@ -218,12 +220,38 @@ def build_scheduler(
     return scheduler
 
 
+def run_ibkr_sync_once(runtime_settings: Settings) -> None:
+    """One scheduled IBKR read-only sync tick — best-effort, never raises.
+
+    Reuses the exact path behind ``POST /ibkr/sync/run``. The adapter factory
+    returns ``None`` unless the sync is fully configured (enabled + real client
+    + paper + read-only + host/port), and ``run_sync`` gates on readiness, so
+    this is a safe no-op until an IBKR paper connection is configured. Once it
+    is, this populates the latest sync run that the dashboard reads from."""
+
+    from portfolio_outlook_api.ibkr_ibapi_sync_client import (
+        real_sync_client_session,
+    )
+    from portfolio_outlook_api.ibkr_sync import run_sync
+    from portfolio_outlook_api.ibkr_sync_adapter_factory import (
+        build_real_sync_adapter,
+    )
+
+    try:
+        adapter = build_real_sync_adapter(runtime_settings)
+        with real_sync_client_session(adapter) as active_adapter:
+            run_sync(runtime_settings, adapter=active_adapter)
+    except Exception:  # noqa: BLE001 — a scheduled tick must never crash
+        logger.exception("Scheduled IBKR sync failed.")
+
+
 def install_default_jobs(
     scheduler: BackgroundScheduler,
     runtime_settings: Settings,
     *,
     job_callable: Callable[[], Any] | None = None,
     repo_factory: Callable[[], _SchedulerRunRepoProtocol | None] | None = None,
+    ibkr_sync_callable: Callable[[], Any] | None = None,
 ) -> None:
     """Wire the default daily-briefing job onto the scheduler.
 
@@ -261,6 +289,24 @@ def install_default_jobs(
         name=DAILY_BRIEFING_JOB_NAME,
         replace_existing=True,
     )
+
+    # Scheduled IBKR read-only sync — registered only when sync is enabled, so
+    # the dashboard's positions/cash/valuation refresh automatically instead of
+    # needing a manual POST /ibkr/sync/run. No-ops safely until a paper
+    # connection is configured (see run_ibkr_sync_once).
+    if runtime_settings.ibkr_sync_enabled:
+        sync_fire = ibkr_sync_callable or (
+            lambda: run_ibkr_sync_once(runtime_settings)
+        )
+        scheduler.add_job(
+            sync_fire,
+            trigger=IntervalTrigger(
+                minutes=max(1, runtime_settings.ibkr_sync_interval_minutes)
+            ),
+            id=IBKR_SYNC_JOB_NAME,
+            name=IBKR_SYNC_JOB_NAME,
+            replace_existing=True,
+        )
 
 
 def list_jobs(scheduler: BackgroundScheduler | None) -> tuple[JobInfo, ...]:

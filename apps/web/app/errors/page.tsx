@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { ErrorLogItem, ErrorLogResponse, apiClient } from "@/lib/apiClient";
 import { toClaudeCodeText } from "@/lib/errorCopy";
@@ -10,40 +11,29 @@ function asNlDate(value: string) {
 }
 
 export default function ErrorsPage() {
-  const [data, setData] = useState<ErrorLogResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
   const [status, setStatus] = useState("");
 
-  const errors = useMemo(() => data?.errors ?? [], [data]);
+  const query = useQuery({
+    queryKey: ["errors"],
+    queryFn: async (): Promise<ErrorLogResponse> => {
+      const resp = await apiClient.getErrors();
+      if (!resp.ok) throw new Error("Fouten konden niet geladen worden.");
+      return resp.data;
+    },
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setLoadError(false);
-    const resp = await apiClient.getErrors();
-    if (!resp.ok) {
-      setLoadError(true);
-      setLoading(false);
-      return;
-    }
-    setData(resp.data);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const errors = query.data?.errors ?? [];
 
   async function onResolve(id: string) {
     const resp = await apiClient.resolveError(id);
     setStatus(resp.ok ? "Fout gemarkeerd als opgelost." : "Actie mislukt.");
-    if (resp.ok) await load();
+    if (resp.ok) await query.refetch();
   }
 
   async function onDelete(id: string) {
     const resp = await apiClient.deleteError(id);
     setStatus(resp.ok ? "Fout verwijderd." : "Actie mislukt.");
-    if (resp.ok) await load();
+    if (resp.ok) await query.refetch();
   }
 
   async function onCopy(item: ErrorLogItem) {
@@ -64,14 +54,14 @@ export default function ErrorsPage() {
         <p>Openstaande fouten: {errors.length}</p>
       </div>
 
-      <button type="button" onClick={() => void load()}>
+      <button type="button" onClick={() => void query.refetch()}>
         Vernieuwen
       </button>
       {status ? <p data-testid="error-action-status">{status}</p> : null}
 
-      {loading ? <p>Fouten laden...</p> : null}
-      {loadError ? <p>Fouten konden niet geladen worden.</p> : null}
-      {!loading && !loadError && errors.length === 0 ? (
+      {query.isFetching ? <p>Fouten laden...</p> : null}
+      {query.isError ? <p>Fouten konden niet geladen worden.</p> : null}
+      {!query.isFetching && !query.isError && errors.length === 0 ? (
         <p>Geen openstaande fouten.</p>
       ) : null}
 

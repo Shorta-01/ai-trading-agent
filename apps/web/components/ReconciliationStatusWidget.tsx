@@ -14,8 +14,8 @@
  * False.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import {
   apiClient,
@@ -40,36 +40,16 @@ const MODE_COLORS: Record<string, { bg: string; fg: string }> = {
 
 
 export function ReconciliationStatusWidget() {
-  const [data, setData] = useState<ReconciliationStatusResponse | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const query = useQuery({
+    queryKey: ["reconciliation-status"],
+    queryFn: async (): Promise<ReconciliationStatusResponse | null> => {
       const result = await apiClient.getReconciliationStatus();
-      if (cancelled) return;
-      if (result.ok) {
-        setData(result.data);
-        setUnavailable(false);
-      } else {
-        setUnavailable(true);
-      }
-    }
+      return result.ok ? result.data : null;
+    },
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+  const data = query.data ?? null;
 
-    void load();
-    const handle = window.setInterval(() => {
-      void load();
-    }, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(handle);
-    };
-  }, []);
-
-  if (unavailable) {
-    return null;
-  }
   if (data === null) {
     return null;
   }

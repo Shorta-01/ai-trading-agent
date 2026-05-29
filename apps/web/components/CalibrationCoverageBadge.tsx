@@ -14,7 +14,7 @@
  * order action. ``safe_for_*`` stays False everywhere.
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   apiClient,
@@ -24,6 +24,7 @@ import {
 const HEALTHY_HIT_RATE_FLOOR = 0.6;
 const WARNING_HIT_RATE_FLOOR = 0.4;
 const MIN_SAMPLE_SIZE = 10;
+const POLL_INTERVAL_MS = 60_000;
 
 type Visual = {
   readonly background: string;
@@ -79,30 +80,16 @@ function classify(data: CalibrationCoverageResponse): keyof typeof VISUALS {
 
 
 export function CalibrationCoverageBadge() {
-  const [data, setData] = useState<CalibrationCoverageResponse | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
+  const query = useQuery({
+    queryKey: ["calibration-coverage", 90],
+    queryFn: async (): Promise<CalibrationCoverageResponse | null> => {
       const result = await apiClient.getCalibrationCoverage(90);
-      if (cancelled) return;
-      if (result.ok) {
-        setData(result.data);
-        setUnavailable(false);
-      } else {
-        setUnavailable(true);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return result.ok ? result.data : null;
+    },
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+  const data = query.data ?? null;
 
-  if (unavailable) {
-    return null;
-  }
   if (data === null) {
     return null;
   }

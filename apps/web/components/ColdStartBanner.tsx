@@ -13,8 +13,8 @@
  * Mounted globally in ``app/layout.tsx``.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import {
   apiClient,
@@ -25,30 +25,16 @@ const POLL_INTERVAL_MS = 60_000;
 
 
 export function ColdStartBanner() {
-  const [state, setState] =
-    useState<WatchlistConfirmationStateResponse | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
+  const query = useQuery({
+    queryKey: ["watchlist-confirmation-state"],
+    queryFn: async (): Promise<WatchlistConfirmationStateResponse> => {
       const result = await apiClient.getWatchlistConfirmationState();
-      if (cancelled) return;
-      if (result.ok) {
-        setState(result.data);
-      }
-    }
-
-    void load();
-    const handle = window.setInterval(() => {
-      void load();
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(handle);
-    };
-  }, []);
+      if (!result.ok) throw new Error("unreachable");
+      return result.data;
+    },
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+  const state = query.data ?? null;
 
   if (state === null || state.state !== "unconfirmed") {
     return null;
