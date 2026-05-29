@@ -119,6 +119,38 @@ export type RiskLimitsUpdateInput = {
   fomo_drift_pct: string;
 };
 
+// Hand-defined types that mirror ``ConnectionSettingsResponse`` /
+// ``UpdateConnectionSettingsRequest`` in
+// ``apps/api/src/portfolio_outlook_api/runtime_config_routes.py``. The Claude
+// API key is write-only: the response only carries ``claude_ai_api_key_set``
+// and never the key value. The monthly budget is a string on the wire (no
+// float rounding).
+export type ConnectionSettingsResponse = {
+  ibkr_enabled: boolean;
+  ibkr_account_id: string | null;
+  ibkr_host: string | null;
+  ibkr_port: number | null;
+  ibkr_client_id: number | null;
+  ai_explanation_enabled: boolean;
+  claude_ai_explanation_model: string | null;
+  claude_ai_budget_monthly_eur: string | null;
+  claude_ai_api_key_set: boolean;
+};
+
+export type ConnectionSettingsUpdateInput = {
+  ibkr_enabled: boolean;
+  ibkr_account_id: string | null;
+  ibkr_host: string | null;
+  ibkr_port: number | null;
+  ibkr_client_id: number | null;
+  ai_explanation_enabled: boolean;
+  claude_ai_explanation_model: string | null;
+  claude_ai_budget_monthly_eur: string | null;
+  // Optional: only sent when the operator types a new key. Omit (do not send)
+  // to preserve the previously-stored key.
+  claude_ai_api_key?: string;
+};
+
 
 export type IbkrSyncStatusResponse = {
   configured: boolean;
@@ -1784,6 +1816,10 @@ export const apiClient = {
   getRiskLimits: () => getJson<RiskLimitsResponse>("/settings/risk-limits"),
   updateRiskLimits: (payload: RiskLimitsUpdateInput) =>
     putJson<RiskLimitsResponse>("/settings/risk-limits", payload),
+  getConnectionSettings: () =>
+    getJson<ConnectionSettingsResponse>("/settings/connection"),
+  updateConnectionSettings: (payload: ConnectionSettingsUpdateInput) =>
+    putJson<ConnectionSettingsResponse>("/settings/connection", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

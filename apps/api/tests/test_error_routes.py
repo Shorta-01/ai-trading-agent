@@ -40,8 +40,8 @@ def _report() -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0054_ibkr_nav_snapshots",
-        database_revision_id="0054_ibkr_nav_snapshots",
+        latest_expected_revision_id="0055_runtime_config",
+        database_revision_id="0055_runtime_config",
         persistence_allowed=True,
         blocks_runtime_writes=False,
         explanation_nl="test",
@@ -87,7 +87,7 @@ def _seed(tmp_path) -> None:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0054_ibkr_nav_snapshots')"
+                "('0055_runtime_config')"
             )
         )
         repo = SqlAlchemySystemEventRepository(conn, _report())

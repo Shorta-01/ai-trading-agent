@@ -1082,6 +1082,101 @@
         "title": "ColdStartWatchlistResponse",
         "type": "object"
       },
+      "ConnectionSettingsResponse": {
+        "properties": {
+          "ai_explanation_enabled": {
+            "title": "Ai Explanation Enabled",
+            "type": "boolean"
+          },
+          "claude_ai_api_key_set": {
+            "title": "Claude Ai Api Key Set",
+            "type": "boolean"
+          },
+          "claude_ai_budget_monthly_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claude Ai Budget Monthly Eur"
+          },
+          "claude_ai_explanation_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claude Ai Explanation Model"
+          },
+          "ibkr_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Account Id"
+          },
+          "ibkr_client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Client Id"
+          },
+          "ibkr_enabled": {
+            "title": "Ibkr Enabled",
+            "type": "boolean"
+          },
+          "ibkr_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Host"
+          },
+          "ibkr_port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Port"
+          }
+        },
+        "required": [
+          "ibkr_enabled",
+          "ibkr_account_id",
+          "ibkr_host",
+          "ibkr_port",
+          "ibkr_client_id",
+          "ai_explanation_enabled",
+          "claude_ai_explanation_model",
+          "claude_ai_budget_monthly_eur",
+          "claude_ai_api_key_set"
+        ],
+        "title": "ConnectionSettingsResponse",
+        "type": "object"
+      },
       "CreateActionDraftRequest": {
         "additionalProperties": false,
         "description": "Discriminated union: either ``decision_package_id`` or full fields.",
@@ -9295,6 +9390,105 @@
         "title": "UnmatchedExecutionResponse",
         "type": "object"
       },
+      "UpdateConnectionSettingsRequest": {
+        "properties": {
+          "ai_explanation_enabled": {
+            "title": "Ai Explanation Enabled",
+            "type": "boolean"
+          },
+          "claude_ai_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claude Ai Api Key"
+          },
+          "claude_ai_budget_monthly_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claude Ai Budget Monthly Eur"
+          },
+          "claude_ai_explanation_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claude Ai Explanation Model"
+          },
+          "ibkr_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Account Id"
+          },
+          "ibkr_client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Client Id"
+          },
+          "ibkr_enabled": {
+            "title": "Ibkr Enabled",
+            "type": "boolean"
+          },
+          "ibkr_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Host"
+          },
+          "ibkr_port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Port"
+          }
+        },
+        "required": [
+          "ibkr_enabled",
+          "ai_explanation_enabled"
+        ],
+        "title": "UpdateConnectionSettingsRequest",
+        "type": "object"
+      },
       "UpdateRiskLimitsRequest": {
         "properties": {
           "anti_revenge_loss_threshold_pct": {
@@ -15569,6 +15763,60 @@
           }
         },
         "summary": "Read Scheduler V127 Status"
+      }
+    },
+    "/settings/connection": {
+      "get": {
+        "operationId": "get_connection_settings_settings_connection_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Connection Settings"
+      },
+      "put": {
+        "operationId": "update_connection_settings_settings_connection_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConnectionSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Connection Settings"
       }
     },
     "/settings/risk-limits": {

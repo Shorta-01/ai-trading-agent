@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from ai_trading_agent_storage import (
+    SqlAlchemyRuntimeConfigRepository,
     SqlAlchemySchedulerRunRepository,
     StorageConnectionError,
     StorageConnectionProvider,
@@ -50,6 +51,12 @@ from portfolio_outlook_api.research_sources import router as research_sources_ro
 from portfolio_outlook_api.risk_limits_routes import (
     router as risk_limits_router,
 )
+from portfolio_outlook_api.runtime_config_routes import (
+    apply_runtime_config_overlay,
+)
+from portfolio_outlook_api.runtime_config_routes import (
+    router as runtime_config_router,
+)
 from portfolio_outlook_api.scheduler import build_scheduler, install_default_jobs
 from portfolio_outlook_api.scheduler_routes import (
     router as scheduler_v127_router,
@@ -86,8 +93,36 @@ def _scheduler_repo_factory() -> SqlAlchemySchedulerRunRepository | None:
         return None
 
 
+def _overlay_runtime_config() -> None:
+    """Read the editable ``runtime_config`` row and overlay it onto settings.
+
+    Best-effort: any storage problem is logged and swallowed so it can never
+    crash API startup. The worker-side IBKR host/port/client_id overlay is a
+    follow-up tied to the durable worker session.
+    """
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            record = repo.get()
+        if record is not None:
+            apply_runtime_config_overlay(settings, record)
+            logger.info("runtime config overlay applied")
+    except Exception:  # noqa: BLE001 — startup must never crash on storage
+        logger.exception("Kon runtime-config overlay niet toepassen.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    _overlay_runtime_config()
     scheduler = build_scheduler(settings)
     if scheduler is not None:
         install_default_jobs(
@@ -139,6 +174,7 @@ app.include_router(ibkr_submission_router)
 app.include_router(reconciliation_router)
 app.include_router(error_log_router)
 app.include_router(risk_limits_router)
+app.include_router(runtime_config_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

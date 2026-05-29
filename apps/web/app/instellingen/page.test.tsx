@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
+  ConnectionSettingsResponse,
   RiskLimitsResponse,
   TradingSettingsResponse,
 } from "@/lib/apiClient";
@@ -11,6 +12,8 @@ const getRiskLimits = vi.fn();
 const updateRiskLimits = vi.fn();
 const getTradingSettings = vi.fn();
 const updateTradingSettings = vi.fn();
+const getConnectionSettings = vi.fn();
+const updateConnectionSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -18,6 +21,9 @@ vi.mock("@/lib/apiClient", () => ({
     updateRiskLimits: (...a: unknown[]) => updateRiskLimits(...a),
     getTradingSettings: (...a: unknown[]) => getTradingSettings(...a),
     updateTradingSettings: (...a: unknown[]) => updateTradingSettings(...a),
+    getConnectionSettings: (...a: unknown[]) => getConnectionSettings(...a),
+    updateConnectionSettings: (...a: unknown[]) =>
+      updateConnectionSettings(...a),
   },
 }));
 
@@ -70,6 +76,18 @@ const TRADING: TradingSettingsResponse = {
   safety_summary_nl: "ok",
 };
 
+const CONNECTION: ConnectionSettingsResponse = {
+  ibkr_enabled: true,
+  ibkr_account_id: "DU1234567",
+  ibkr_host: "127.0.0.1",
+  ibkr_port: 7497,
+  ibkr_client_id: 1,
+  ai_explanation_enabled: false,
+  claude_ai_explanation_model: "claude-haiku-4-5",
+  claude_ai_budget_monthly_eur: "50.0",
+  claude_ai_api_key_set: true,
+};
+
 function ok<T>(data: T) {
   return Promise.resolve({ ok: true as const, data });
 }
@@ -79,8 +97,11 @@ beforeEach(() => {
   updateRiskLimits.mockReset();
   getTradingSettings.mockReset();
   updateTradingSettings.mockReset();
+  getConnectionSettings.mockReset();
+  updateConnectionSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
+  getConnectionSettings.mockReturnValue(ok(CONNECTION));
 });
 
 afterEach(() => cleanup());
@@ -98,8 +119,15 @@ describe("InstellingenPage", () => {
       screen.getByTestId("instellingen-universe-section"),
     ).toBeInTheDocument();
     expect(
-      screen.getByTestId("instellingen-config-note"),
+      screen.getByTestId("instellingen-connection-section"),
     ).toBeInTheDocument();
+    // Connection key-set state reflected; the key value is never rendered.
+    expect(
+      screen.getByTestId("instellingen-connection-key-state"),
+    ).toHaveTextContent("Sleutel is ingesteld");
+    expect(
+      screen.getByTestId("instellingen-connection-ibkr_account_id"),
+    ).toHaveValue("DU1234567");
 
     // Risk-limit field pre-filled from the loaded value.
     expect(
@@ -184,5 +212,63 @@ describe("InstellingenPage", () => {
     expect(payload.allowed_universe.allow_etfs).toBe(true);
     // The full user_strategy is sent unchanged.
     expect(payload.user_strategy).toEqual(TRADING.user_strategy);
+  });
+
+  it("saves an edited connection field via updateConnectionSettings", async () => {
+    updateConnectionSettings.mockReturnValue(
+      ok({ ...CONNECTION, ibkr_account_id: "DU9999999" }),
+    );
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "DU9999999");
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+    await waitFor(() =>
+      expect(updateConnectionSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateConnectionSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ ibkr_account_id: "DU9999999" }),
+    );
+    expect(
+      await screen.findByTestId("instellingen-connection-saved-message"),
+    ).toBeInTheDocument();
+  });
+
+  it("omits claude_ai_api_key when the key input is left blank", async () => {
+    updateConnectionSettings.mockReturnValue(ok(CONNECTION));
+    render(<Page />);
+    await screen.findByTestId("instellingen-connection-section");
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+    await waitFor(() =>
+      expect(updateConnectionSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateConnectionSettings.mock.calls[0][0];
+    // Blank key input -> the field is omitted so the stored key is preserved.
+    expect("claude_ai_api_key" in payload).toBe(false);
+  });
+
+  it("sends claude_ai_api_key only when the operator types one", async () => {
+    updateConnectionSettings.mockReturnValue(
+      ok({ ...CONNECTION, claude_ai_api_key_set: true }),
+    );
+    render(<Page />);
+    const keyInput = await screen.findByTestId(
+      "instellingen-connection-claude_ai_api_key",
+    );
+    await userEvent.type(keyInput, "sk-ant-new-key");
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+    await waitFor(() =>
+      expect(updateConnectionSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateConnectionSettings.mock.calls[0][0];
+    expect(payload.claude_ai_api_key).toBe("sk-ant-new-key");
   });
 });

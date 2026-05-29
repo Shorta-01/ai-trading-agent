@@ -49,6 +49,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "ibkr_sync_runs",
         "ibkr_account_cash_snapshots",
         "ibkr_nav_snapshots",
+        "runtime_config",
         "ibkr_position_snapshots",
         "ibkr_open_order_snapshots",
         "ibkr_execution_snapshots",
@@ -218,11 +219,19 @@ def test_no_secret_like_column_names_and_no_legacy_table_names() -> None:
     }
     forbidden_table_fragments = {"portfolio_outlook", "pom"}
 
+    # ``runtime_config.claude_ai_api_key`` is the one intentional secret-bearing
+    # column: the operator-editable Claude API key. The API never returns or
+    # logs the value (only ``claude_ai_api_key_set: bool``), so the
+    # secret-like-name guard is waived for exactly this column.
+    allowed_secret_columns = {("runtime_config", "claude_ai_api_key")}
+
     for table_name, table in metadata.tables.items():
         table_name_lower = table_name.lower()
         assert not any(fragment in table_name_lower for fragment in forbidden_table_fragments)
 
         for column_name in table.c.keys():
+            if (table_name, column_name) in allowed_secret_columns:
+                continue
             column_name_lower = column_name.lower()
             assert not any(token in column_name_lower for token in forbidden_columns)
 

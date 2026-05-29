@@ -638,6 +638,22 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "account opvraagbaar is."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0055_runtime_config",
+        previous_revision_id="0054_ibkr_nav_snapshots",
+        filename="0055_runtime_config.py",
+        label_nl="Bewerkbare IBKR-verbinding + Claude AI-instellingen",
+        description_nl=(
+            "Maakt runtime_config: een enkele configuratierij "
+            "(config_id=\"default\") die de operator de IBKR-verbinding en "
+            "de Claude AI-uitleginstellingen vanuit de Instellingen-pagina "
+            "laat bewerken in plaats van enkel via omgevingsvariabelen. De "
+            "API leest de rij bij het opstarten en overlayt de niet-lege "
+            "waarden op de settings-singleton; de worker-zijde IBKR "
+            "host/poort/client_id overlay is een follow-up gekoppeld aan de "
+            "duurzame worker-sessie."
+        ),
+    ),
 )
 
 
