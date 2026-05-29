@@ -7,8 +7,6 @@
 - Task row: `docs/tasks/queue.md` (`T-NNN`)
 - Intent ref: `docs/intent/<file>.md#<section>` _(brainstorm tasks)_
 - Decision ref: `docs/decisions/NNNN-<slug>.md` _(brainstorm tasks)_
-- Findings resolved: `FIND-XXX, FIND-XXX` _(code-health tasks; list IDs
-  from `docs/code-health/00-findings.md`)_
 
 ## Summary
 
