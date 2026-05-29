@@ -14,7 +14,8 @@
  * any row click in Actief or Historiek.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { ActionDraftGrid } from "@/components/ActionDraftGrid";
 import { ExportSuggestionsButton } from "@/components/ExportSuggestionsButton";
@@ -39,75 +40,62 @@ const TABS: { key: TabKey; label_nl: string }[] = [
 export default function Page() {
   const [tab, setTab] = useState<TabKey>("te-keuren");
 
-  // Te keuren tab data.
-  const [teKeurenDrafts, setTeKeurenDrafts] = useState<
-    ActionDraftResponse[] | null
-  >(null);
-  const [teKeurenError, setTeKeurenError] = useState<string | null>(null);
-
-  // Actief bij IBKR tab data.
-  const [actiefDrafts, setActiefDrafts] = useState<
-    ActionDraftResponse[] | null
-  >(null);
-  const [actiefError, setActiefError] = useState<string | null>(null);
-
-  // Historiek tab data.
-  const [historiekDrafts, setHistoriekDrafts] = useState<
-    ActionDraftResponse[] | null
-  >(null);
-  const [historiekError, setHistoriekError] = useState<string | null>(null);
-
   // Drawer.
   const [drawerDraftId, setDrawerDraftId] = useState<string | null>(null);
 
-  const refreshTeKeuren = useCallback(async () => {
-    setTeKeurenError(null);
-    const result = await apiClient.getActionDraftsTeKeuren();
-    if (!result.ok) {
-      setTeKeurenError(
-        "Actiedrafts konden niet worden geladen. Controleer of de API draait.",
-      );
-      setTeKeurenDrafts([]);
-      return;
-    }
-    setTeKeurenDrafts(result.data.drafts);
-  }, []);
+  const teKeurenQuery = useQuery({
+    queryKey: ["action-drafts-te-keuren"],
+    enabled: tab === "te-keuren",
+    queryFn: async (): Promise<ActionDraftResponse[]> => {
+      const result = await apiClient.getActionDraftsTeKeuren();
+      if (!result.ok) throw new Error("unreachable");
+      return result.data.drafts;
+    },
+  });
+  const actiefQuery = useQuery({
+    queryKey: ["ibkr-submission-active"],
+    enabled: tab === "actief",
+    queryFn: async (): Promise<ActionDraftResponse[]> => {
+      const result = await apiClient.getIbkrSubmissionActive();
+      if (!result.ok) throw new Error("unreachable");
+      return result.data.drafts;
+    },
+  });
+  const historiekQuery = useQuery({
+    queryKey: ["ibkr-submission-historiek"],
+    enabled: tab === "historiek",
+    queryFn: async (): Promise<ActionDraftResponse[]> => {
+      const result = await apiClient.getIbkrSubmissionHistoriek();
+      if (!result.ok) throw new Error("unreachable");
+      return result.data.drafts;
+    },
+  });
 
-  const refreshActief = useCallback(async () => {
-    setActiefError(null);
-    const result = await apiClient.getIbkrSubmissionActive();
-    if (!result.ok) {
-      setActiefError(
-        "Actieve orders konden niet worden geladen. Controleer of de API draait.",
-      );
-      setActiefDrafts([]);
-      return;
-    }
-    setActiefDrafts(result.data.drafts);
-  }, []);
+  // A failed load shows the error banner and an empty grid (drafts = []).
+  const teKeurenDrafts = teKeurenQuery.isError
+    ? []
+    : (teKeurenQuery.data ?? null);
+  const teKeurenError = teKeurenQuery.isError
+    ? "Actiedrafts konden niet worden geladen. Controleer of de API draait."
+    : null;
+  const refreshTeKeuren = () => {
+    void teKeurenQuery.refetch();
+  };
 
-  const refreshHistoriek = useCallback(async () => {
-    setHistoriekError(null);
-    const result = await apiClient.getIbkrSubmissionHistoriek();
-    if (!result.ok) {
-      setHistoriekError(
-        "Historiek kon niet worden geladen. Controleer of de API draait.",
-      );
-      setHistoriekDrafts([]);
-      return;
-    }
-    setHistoriekDrafts(result.data.drafts);
-  }, []);
+  const actiefDrafts = actiefQuery.isError ? [] : (actiefQuery.data ?? null);
+  const actiefError = actiefQuery.isError
+    ? "Actieve orders konden niet worden geladen. Controleer of de API draait."
+    : null;
+  const refreshActief = () => {
+    void actiefQuery.refetch();
+  };
 
-  useEffect(() => {
-    if (tab === "te-keuren") {
-      void refreshTeKeuren();
-    } else if (tab === "actief") {
-      void refreshActief();
-    } else if (tab === "historiek") {
-      void refreshHistoriek();
-    }
-  }, [tab, refreshTeKeuren, refreshActief, refreshHistoriek]);
+  const historiekDrafts = historiekQuery.isError
+    ? []
+    : (historiekQuery.data ?? null);
+  const historiekError = historiekQuery.isError
+    ? "Historiek kon niet worden geladen. Controleer of de API draait."
+    : null;
 
   return (
     <main className="page-wrap" data-testid="ibkr-acties-page">

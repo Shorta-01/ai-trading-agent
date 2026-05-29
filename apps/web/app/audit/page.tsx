@@ -1,15 +1,29 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { apiClient, type FreshnessAuditListResponse, type ProviderSourceListResponse, type RequestLogListResponse } from "@/lib/apiClient";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { apiClient } from "@/lib/apiClient";
 import { buildProviderOptions, buildStatusOptions, countFilteredItems, filteredEmptyText, formatDateTime, matchesAuditSearch, safetySummaryLabel } from "./auditFormatting";
 
 export default function AuditPage() {
-  const [logs, setLogs] = useState<RequestLogListResponse | null>(null);
-  const [sources, setSources] = useState<ProviderSourceListResponse | null>(null);
-  const [freshness, setFreshness] = useState<FreshnessAuditListResponse | null>(null);
+  const auditQuery = useQuery({
+    queryKey: ["audit-overview"],
+    queryFn: async () => {
+      const [l, s, f] = await Promise.all([
+        apiClient.getRequestAuditRequestLogs(),
+        apiClient.getRequestAuditProviderSources(),
+        apiClient.getRequestAuditFreshnessAudits(),
+      ]);
+      // All-or-nothing: the original page only renders once every list
+      // loads, and otherwise stays on the loading state.
+      if (!(l.ok && s.ok && f.ok)) throw new Error("unreachable");
+      return { logs: l.data, sources: s.data, freshness: f.data };
+    },
+  });
+  const logs = auditQuery.data?.logs ?? null;
+  const sources = auditQuery.data?.sources ?? null;
+  const freshness = auditQuery.data?.freshness ?? null;
   const [q, setQ] = useState(""); const [type, setType] = useState("all"); const [provider, setProvider] = useState("all"); const [status, setStatus] = useState("all");
-  useEffect(() => { void (async () => { const [l, s, f] = await Promise.all([apiClient.getRequestAuditRequestLogs(), apiClient.getRequestAuditProviderSources(), apiClient.getRequestAuditFreshnessAudits()]); if (l.ok && s.ok && f.ok) { setLogs(l.data); setSources(s.data); setFreshness(f.data); } })(); }, []);
   const providerOptions = useMemo(() => buildProviderOptions([...(logs?.items.map((i) => i.provider_code) ?? []), ...(sources?.items.map((i) => i.provider_code) ?? [])]), [logs, sources]);
   const statusOptions = useMemo(() => buildStatusOptions([...(logs?.items.map((i) => i.request_status) ?? []), ...(freshness?.items.map((i) => i.freshness_status) ?? [])]), [logs, freshness]);
   if (!logs || !sources || !freshness) return <main className="page-wrap"><div className="empty-state">Laden...</div></main>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { SectionHeader } from "@/components/SectionHeader";
@@ -23,7 +24,6 @@ function f(value?: string | null) {
 }
 
 export default function ResearchSourcesPage() {
-  const [sources, setSources] = useState<ResearchSourceRecord[]>([]);
   const [selected, setSelected] = useState<ResearchSourceRecord | null>(null);
   const [status, setStatus] = useState("Laden...");
   const [error, setError] = useState("");
@@ -40,25 +40,48 @@ export default function ResearchSourcesPage() {
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const selectedSourceId = useMemo(() => selected?.library_source_id ?? "", [selected]);
 
-  async function loadSources() {
-    const response = await apiClient.listResearchSources();
-    if (!response.ok) {
-      if (response.status === 503) {
-        setError("De opslag is nog niet verbonden. De onderzoeksbibliotheek kan de bron nog niet bewaren.");
-      } else {
-        setError("Onderzoeksbronnen konden niet geladen worden.");
+  const sourcesQuery = useQuery({
+    queryKey: ["research-sources"],
+    queryFn: async (): Promise<ResearchSourceRecord[]> => {
+      const response = await apiClient.listResearchSources();
+      if (!response.ok) {
+        throw new Error(
+          response.status === 503
+            ? "De opslag is nog niet verbonden. De onderzoeksbibliotheek kan de bron nog niet bewaren."
+            : "Onderzoeksbronnen konden niet geladen worden.",
+        );
       }
-      setStatus("Onderzoeksbibliotheek: niet beschikbaar");
-      return;
-    }
-    setSources(response.data.records);
-    setStatus("Onderzoeksbibliotheek: beschikbaar");
-    setError("");
-  }
+      return response.data.records;
+    },
+  });
+  const sources = sourcesQuery.data ?? [];
 
+  // status/error mirror the list-load outcome on the initial fetch and
+  // after every refetch. Mutation handlers that don't refetch the list
+  // (URL/note) keep their own inline message untouched.
   useEffect(() => {
-    void loadSources();
-  }, []);
+    if (sourcesQuery.isSuccess) {
+      setStatus("Onderzoeksbibliotheek: beschikbaar");
+      setError("");
+    } else if (sourcesQuery.isError) {
+      setStatus("Onderzoeksbibliotheek: niet beschikbaar");
+      setError(
+        sourcesQuery.error instanceof Error
+          ? sourcesQuery.error.message
+          : "Onderzoeksbronnen konden niet geladen worden.",
+      );
+    }
+  }, [
+    sourcesQuery.isSuccess,
+    sourcesQuery.isError,
+    sourcesQuery.error,
+    sourcesQuery.dataUpdatedAt,
+    sourcesQuery.errorUpdatedAt,
+  ]);
+
+  async function loadSources() {
+    await sourcesQuery.refetch();
+  }
 
   async function onCreateSource(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

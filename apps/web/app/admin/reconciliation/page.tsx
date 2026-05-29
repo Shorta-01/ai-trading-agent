@@ -17,7 +17,8 @@
  * IBKR.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 
 import {
   apiClient,
@@ -41,50 +42,42 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 
+type ReconciliationOverview = {
+  status: ReconciliationStatusResponse;
+  pendingReview: ManualReviewResponse[] | null;
+  unmatched: UnmatchedExecutionRow[] | null;
+  runs: ReconciliationRunResponse[] | null;
+};
+
 export default function Page() {
-  const [status, setStatus] = useState<ReconciliationStatusResponse | null>(
-    null,
-  );
-  const [pendingReview, setPendingReview] = useState<
-    ManualReviewResponse[] | null
-  >(null);
-  const [unmatched, setUnmatched] = useState<UnmatchedExecutionRow[] | null>(
-    null,
-  );
-  const [runs, setRuns] = useState<ReconciliationRunResponse[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["reconciliation-overview"],
+    queryFn: async (): Promise<ReconciliationOverview> => {
+      const [statusResult, reviewResult, unmatchedResult, runsResult] =
+        await Promise.all([
+          apiClient.getReconciliationStatus(),
+          apiClient.getReconciliationManualReview(),
+          apiClient.getReconciliationUnmatchedExecutions(),
+          apiClient.getReconciliationRuns(),
+        ]);
+      // The status read gates the whole page; the others degrade to null.
+      if (!statusResult.ok) {
+        throw new Error("Reconciliatiestatus is niet beschikbaar.");
+      }
+      return {
+        status: statusResult.data,
+        pendingReview: reviewResult.ok ? reviewResult.data.rows : null,
+        unmatched: unmatchedResult.ok ? unmatchedResult.data.rows : null,
+        runs: runsResult.ok ? runsResult.data.runs : null,
+      };
+    },
+  });
 
-  const refresh = useCallback(async () => {
-    const [statusResult, reviewResult, unmatchedResult, runsResult] =
-      await Promise.all([
-        apiClient.getReconciliationStatus(),
-        apiClient.getReconciliationManualReview(),
-        apiClient.getReconciliationUnmatchedExecutions(),
-        apiClient.getReconciliationRuns(),
-      ]);
-
-    if (statusResult.ok) {
-      setStatus(statusResult.data);
-    } else {
-      setError("Reconciliatiestatus is niet beschikbaar.");
-      return;
-    }
-
-    if (reviewResult.ok) {
-      setPendingReview(reviewResult.data.rows);
-    }
-    if (unmatchedResult.ok) {
-      setUnmatched(unmatchedResult.data.rows);
-    }
-    if (runsResult.ok) {
-      setRuns(runsResult.data.runs);
-    }
-    setError(null);
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const status = query.data?.status ?? null;
+  const pendingReview = query.data?.pendingReview ?? null;
+  const unmatched = query.data?.unmatched ?? null;
+  const runs = query.data?.runs ?? null;
+  const error = query.isError ? "Reconciliatiestatus is niet beschikbaar." : null;
 
   const handleAcknowledge = useCallback(
     async (queueId: number) => {
@@ -100,9 +93,9 @@ export default function Page() {
         window.alert("Bevestigen mislukt.");
         return;
       }
-      await refresh();
+      await query.refetch();
     },
-    [refresh],
+    [query],
   );
 
   if (error !== null) {

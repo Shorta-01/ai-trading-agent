@@ -17,8 +17,8 @@
  * for testability.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { DecisionPackageDetail } from "@/components/DecisionPackageDetail";
 import {
@@ -28,31 +28,22 @@ import {
 
 export default function Page() {
   const params = useParams<{ id: string }>();
-  const [pkg, setPkg] = useState<DecisionPackageResponse | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
-
-  useEffect(() => {
-    if (!params?.id) return;
-    let cancelled = false;
-    async function load() {
+  const query = useQuery({
+    queryKey: ["decision-package", params?.id],
+    enabled: Boolean(params?.id),
+    queryFn: async (): Promise<DecisionPackageResponse> => {
       const result = await apiClient.getDecisionPackage(params.id);
-      if (cancelled) return;
-      if (result.ok) {
-        setPkg(result.data);
-      } else {
-        // apiClient.getJson collapses all non-OK responses (404 + 503)
-        // to ``not_reachable`` — surface a single Dutch fallback rather
-        // than guessing which one happened.
-        setUnavailable(true);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [params?.id]);
+      // apiClient.getJson collapses all non-OK responses (404 + 503)
+      // to ``not_reachable`` — surface a single Dutch fallback rather
+      // than guessing which one happened.
+      if (!result.ok) throw new Error("not_reachable");
+      return result.data;
+    },
+  });
 
-  if (unavailable) {
+  const pkg = query.data ?? null;
+
+  if (query.isError) {
     return (
       <main className="page-wrap" style={{ padding: 24 }}>
         <p data-testid="decision-package-not-found">
