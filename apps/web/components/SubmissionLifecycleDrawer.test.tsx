@@ -1,9 +1,11 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { IbkrSubmissionLifecycleEvent } from "@/lib/apiClient";
@@ -25,6 +27,14 @@ import { apiClient } from "@/lib/apiClient";
 
 import { SubmissionLifecycleDrawer } from "./SubmissionLifecycleDrawer";
 
+function render(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 const SAMPLE_EVENTS: IbkrSubmissionLifecycleEvent[] = [
   {

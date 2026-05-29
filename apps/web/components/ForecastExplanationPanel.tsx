@@ -21,7 +21,7 @@
  * 9. Geldig tot (forecast_valid_until)
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   apiClient,
@@ -50,48 +50,35 @@ function fmtDate(iso: string): string {
 
 
 export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
-  const [data, setData] = useState<ForecastLatestResponse | null>(null);
-  const [errorReason, setErrorReason] = useState<string | null>(null);
-  const [decisionPackageId, setDecisionPackageId] = useState<string | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    let cancelled = false;
-    setData(null);
-    setErrorReason(null);
-    setDecisionPackageId(null);
-
-    async function load() {
+  const forecastQuery = useQuery({
+    queryKey: ["forecast-latest", conid],
+    enabled: open,
+    queryFn: async (): Promise<ForecastLatestResponse> => {
       const result = await apiClient.getForecastLatest(conid);
-      if (cancelled) return;
-      if (result.ok) {
-        setData(result.data);
-      } else {
-        setErrorReason(result.reason ?? "not_reachable");
-        return;
-      }
-      // Task 132: best-effort Decision Package lookup. Missing
-      // package → button hidden (no error surfaced; the package
-      // is simply not yet composed).
+      if (!result.ok) throw new Error(result.reason ?? "not_reachable");
+      return result.data;
+    },
+  });
+
+  // Task 132: best-effort Decision Package lookup, only after the
+  // forecast loads. Missing package → button hidden (no error
+  // surfaced; the package is simply not yet composed).
+  const decisionPackageQuery = useQuery({
+    queryKey: ["latest-decision-package", conid],
+    enabled: open && forecastQuery.isSuccess,
+    queryFn: async (): Promise<string | null> => {
       const pkgResult = await apiClient.getLatestDecisionPackage({ conid });
-      if (cancelled) return;
-      if (pkgResult.ok) {
-        setDecisionPackageId(pkgResult.data.decision_package_id);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, conid]);
+      return pkgResult.ok ? pkgResult.data.decision_package_id : null;
+    },
+  });
 
   if (!open) {
     return null;
   }
+
+  const data = forecastQuery.data ?? null;
+  const hasError = forecastQuery.isError;
+  const decisionPackageId = decisionPackageQuery.data ?? null;
 
   return (
     <div
@@ -156,13 +143,13 @@ export function ForecastExplanationPanel({ conid, open, onClose }: Props) {
           </button>
         </div>
 
-        {errorReason !== null && (
+        {hasError && (
           <p data-testid="forecast-explanation-error" style={{ color: "#b91c1c" }}>
             Voorspelling is op dit moment niet beschikbaar.
           </p>
         )}
 
-        {data === null && errorReason === null && (
+        {data === null && !hasError && (
           <p data-testid="forecast-explanation-loading">Bezig met laden…</p>
         )}
 
