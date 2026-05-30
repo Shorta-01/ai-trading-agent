@@ -423,6 +423,11 @@ class PortfolioScheduler:
         try:
             with provider.checked_connection(require_writable=True) as checked:
                 lock = _build_lock(checked.connection)
+                # ``result`` is one of two distinct dataclasses depending on
+                # ``kind`` — both expose ``.mode`` and ``.error_message`` but
+                # mypy can't unify their concrete types across the if-else,
+                # so the variable is widened to ``Any``.
+                result: Any
                 if kind == "submission":
                     result = build_submission_sweep(
                         connection=checked.connection,

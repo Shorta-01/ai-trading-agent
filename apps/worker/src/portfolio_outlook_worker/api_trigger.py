@@ -15,7 +15,7 @@ when the request *does* land).
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +61,13 @@ def _post(
         )
         return None
     try:
-        return response.json()
+        body = response.json()
     except Exception:  # noqa: BLE001 — non-JSON body is unexpected but inert
         logger.exception("api trigger %s returned non-JSON body", url)
         return None
+    if isinstance(body, dict):
+        return cast("dict[str, Any]", body)
+    return None
 
 
 __all__ = ["trigger_morning_chain", "trigger_ibkr_sync"]
