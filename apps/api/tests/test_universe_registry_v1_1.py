@@ -123,3 +123,72 @@ def test_universe_by_index_default_set_returns_sp500_filtered() -> None:
     entries = universe_by_index("BEL20")
     assert len(entries) > 0
     assert all(e.index_code == "BEL20" for e in entries)
+
+
+# ---- Multi-select index-code composition --------------------------------
+
+
+def test_locked_index_codes_lists_all_thirteen_markets() -> None:
+    """The operator-pickable index-code set must enumerate every index
+    the registry actually carries — otherwise the UI multi-select would
+    hide markets that the underlying ``compose_universe_from_index_codes``
+    can already build."""
+
+    from portfolio_outlook_api.universe_registry import (
+        LOCKED_INDEX_CODES,
+        UNIVERSE_SET_ALL_5K,
+        locked_universe,
+    )
+
+    indices_in_data = {e.index_code for e in locked_universe(UNIVERSE_SET_ALL_5K)}
+    assert indices_in_data == LOCKED_INDEX_CODES
+
+
+def test_compose_universe_from_index_codes_single_market() -> None:
+    from portfolio_outlook_api.universe_registry import (
+        compose_universe_from_index_codes,
+    )
+
+    bel20 = compose_universe_from_index_codes(("BEL20",))
+    assert len(bel20) == 20
+    assert all(e.index_code == "BEL20" for e in bel20)
+
+
+def test_compose_universe_from_index_codes_multiple_markets_deduped() -> None:
+    """Picking BEL20 + AEX should produce the union (20 + 25 = 45)."""
+
+    from portfolio_outlook_api.universe_registry import (
+        compose_universe_from_index_codes,
+    )
+
+    union = compose_universe_from_index_codes(("BEL20", "AEX"))
+    assert len(union) == 45
+    seen_codes = {e.index_code for e in union}
+    assert seen_codes == {"BEL20", "AEX"}
+
+
+def test_compose_universe_from_index_codes_returns_empty_for_empty_input() -> None:
+    from portfolio_outlook_api.universe_registry import (
+        compose_universe_from_index_codes,
+    )
+
+    assert compose_universe_from_index_codes(()) == ()
+
+
+def test_parse_index_codes_accepts_comma_list_strips_whitespace() -> None:
+    from portfolio_outlook_api.universe_registry import parse_index_codes
+
+    assert parse_index_codes("BEL20, AEX ,CAC40") == ("BEL20", "AEX", "CAC40")
+
+
+def test_parse_index_codes_deduplicates() -> None:
+    from portfolio_outlook_api.universe_registry import parse_index_codes
+
+    assert parse_index_codes("BEL20,AEX,BEL20") == ("BEL20", "AEX")
+
+
+def test_parse_index_codes_rejects_unknown_code() -> None:
+    from portfolio_outlook_api.universe_registry import parse_index_codes
+
+    with pytest.raises(ValueError, match="NOTACODE"):
+        parse_index_codes("BEL20,NOTACODE")

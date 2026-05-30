@@ -38,6 +38,11 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.universe_registry import (
+    INDEX_CODE_LABELS_NL,
+    LOCKED_INDEX_CODES,
+    parse_index_codes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +208,143 @@ def update_connection_settings(
     return _serialise(record)
 
 
+# ---- Universe-scan multi-select -----------------------------------------
+
+
+class UniverseScanIndexOption(BaseModel):
+    code: str
+    label_nl: str
+
+
+class UniverseScanSettingsResponse(BaseModel):
+    selected_codes: list[str]
+    available_codes: list[UniverseScanIndexOption]
+    help_nl: str
+
+
+class UpdateUniverseScanSettingsRequest(BaseModel):
+    selected_codes: list[str]
+
+
+def _available_codes_payload() -> list[UniverseScanIndexOption]:
+    return [
+        UniverseScanIndexOption(code=code, label_nl=INDEX_CODE_LABELS_NL[code])
+        for code in sorted(LOCKED_INDEX_CODES)
+    ]
+
+
+def _selected_codes_payload(stored: str | None) -> list[str]:
+    """Decode the runtime_config CSV column to a list, honouring env fallback.
+
+    Empty / null DB value falls back to the env-var
+    ``universe_scan_index_codes`` setting; if that's also empty, returns
+    ``[]`` so the UI shows nothing selected.
+    """
+
+    raw = (stored or "").strip()
+    if not raw:
+        raw = (settings.universe_scan_index_codes or "").strip()
+    if not raw:
+        return []
+    try:
+        return list(parse_index_codes(raw))
+    except ValueError:
+        # Bad persisted value — surface as empty rather than crash the GET.
+        return []
+
+
+@router.get("/settings/universe-scan", response_model=UniverseScanSettingsResponse)
+def get_universe_scan_settings() -> UniverseScanSettingsResponse:
+    """Operator's selected scan markets + the full list to choose from."""
+
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    stored = current.universe_scan_index_codes if current is not None else None
+    return UniverseScanSettingsResponse(
+        selected_codes=_selected_codes_payload(stored),
+        available_codes=_available_codes_payload(),
+        help_nl=(
+            "Kies welke beurzen het systeem dagelijks moet scannen. Niets "
+            "geselecteerd valt terug op de oude vaste set (``universe_set``)."
+        ),
+    )
+
+
+@router.put(
+    "/settings/universe-scan", response_model=UniverseScanSettingsResponse
+)
+def update_universe_scan_settings(
+    payload: UpdateUniverseScanSettingsRequest,
+) -> UniverseScanSettingsResponse:
+    """Persist the operator's multi-select. Validates against
+    ``LOCKED_INDEX_CODES``; unknown codes raise HTTP 422."""
+
+    # Validate by reusing the same parser the scan runner uses.
+    csv = ",".join(payload.selected_codes)
+    try:
+        cleaned = parse_index_codes(csv)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                # Carry over the existing IBKR/AI fields untouched. Operators
+                # editing the scan list shouldn't accidentally clobber the
+                # connection settings.
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=",".join(cleaned) if cleaned else None,
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+            # Reflect the new selection on the running settings singleton so
+            # the next scan picks it up without an API restart.
+            settings.universe_scan_index_codes = ",".join(cleaned)
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return UniverseScanSettingsResponse(
+        selected_codes=list(cleaned),
+        available_codes=_available_codes_payload(),
+        help_nl=(
+            "Kies welke beurzen het systeem dagelijks moet scannen. Niets "
+            "geselecteerd valt terug op de oude vaste set (``universe_set``)."
+        ),
+    )
+
+
 def apply_runtime_config_overlay(
     settings_obj: Any, record: RuntimeConfigRecord
 ) -> None:
@@ -227,3 +369,5 @@ def apply_runtime_config_overlay(
     # ``ai_explanation_enabled`` is a non-null boolean column; the persisted
     # operator choice always wins once a row exists.
     settings_obj.ai_explanation_enabled = record.ai_explanation_enabled
+    if record.universe_scan_index_codes is not None:
+        settings_obj.universe_scan_index_codes = record.universe_scan_index_codes

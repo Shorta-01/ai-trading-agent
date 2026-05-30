@@ -44,7 +44,12 @@ from portfolio_outlook_api.eodhd_client import (
     EodhdClientError,
     EodhdFundamentals,
 )
-from portfolio_outlook_api.universe_registry import UniverseEntry, locked_universe
+from portfolio_outlook_api.universe_registry import (
+    UniverseEntry,
+    compose_universe_from_index_codes,
+    locked_universe,
+    parse_index_codes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +186,7 @@ def scan_universe(
     triggered_by: str = "manual",
     universe: Sequence[UniverseEntry] | None = None,
     universe_set: str | None = None,
+    universe_index_codes: str | None = None,
     cache_ttl_hours: int = 0,
     now: datetime | None = None,
 ) -> UniverseScanReport:
@@ -203,8 +209,22 @@ def scan_universe(
 
     requested_at = datetime.now(UTC)
     actual_now = now or requested_at
+    # Resolution order (highest priority first):
+    #   1. Explicit ``universe`` argument (full-override; tests use this)
+    #   2. ``universe_index_codes`` multi-select (operator-configured)
+    #   3. ``universe_set`` locked-set code (legacy)
+    #   4. Default locked set
     if universe is not None:
         target_universe = tuple(universe)
+    elif universe_index_codes:
+        target_universe = compose_universe_from_index_codes(
+            parse_index_codes(universe_index_codes)
+        )
+        if not target_universe:
+            # All codes parsed but the result was empty (operator picked
+            # nothing usable) — fall back to the locked-set default so a
+            # mis-typed env var doesn't silently no-op the scan.
+            target_universe = locked_universe()
     elif universe_set is not None:
         target_universe = locked_universe(universe_set)
     else:

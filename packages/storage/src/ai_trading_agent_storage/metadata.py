@@ -1342,6 +1342,9 @@ runtime_config = Table(
     Column("claude_ai_budget_monthly_eur", MONEY_NUMERIC, nullable=True),
     Column("claude_ai_api_key", Text, nullable=True),
     Column("updated_at", DateTime(timezone=True), nullable=False),
+    # Multi-select scan markets (V1.1 follow-up): comma-separated locked
+    # index codes. ``None`` means "fall back to ``settings.universe_set``".
+    Column("universe_scan_index_codes", Text, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

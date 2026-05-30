@@ -185,6 +185,13 @@ class Settings(BaseSettings):
     universe_scan_sync_enabled: bool = False
     universe_scan_max_tickers_per_run: int = 50
     universe_scan_history_lookback_days: int = 400
+    # Operator-selectable scan markets (multi-select). Comma-separated list
+    # of locked index codes (see ``universe_registry.LOCKED_INDEX_CODES``):
+    # ``"BEL20,AEX,CAC40,DAX40,FTSE100,..."``. When non-empty this OVERRIDES
+    # ``universe_set`` — the scan target becomes the union of the selected
+    # indices. Empty (default) keeps the existing locked-set behaviour so
+    # nothing changes for current deployments.
+    universe_scan_index_codes: str = ""
     ai_ts_predictor_enabled: bool = False
     ai_ts_predictor_real_client_enabled: bool = False
     ai_ts_predictor_provider_code: str = "stub"

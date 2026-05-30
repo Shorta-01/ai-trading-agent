@@ -346,6 +346,16 @@ export default function Page() {
   const [connectionSaved, setConnectionSaved] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+  // Section 5 — universe scan markets (multi-select).
+  const [universeScanSelected, setUniverseScanSelected] = useState<string[]>([]);
+  const [universeScanAvailable, setUniverseScanAvailable] = useState<
+    Array<{ code: string; label_nl: string }>
+  >([]);
+  const [universeScanHelp, setUniverseScanHelp] = useState<string>("");
+  const [universeScanSaving, setUniverseScanSaving] = useState(false);
+  const [universeScanSaved, setUniverseScanSaved] = useState<string | null>(null);
+  const [universeScanError, setUniverseScanError] = useState<string | null>(null);
+
   const riskQuery = useQuery({
     queryKey: RISK_LIMITS_KEY,
     queryFn: async () => {
@@ -413,6 +423,50 @@ export default function Page() {
     );
   }
 
+  const universeScanQuery = useQuery({
+    queryKey: ["instellingen", "universe-scan"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getUniverseScanSettings();
+      if (!result.ok) throw new Error("universe-scan-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = universeScanQuery.data;
+    if (!data) return;
+    setUniverseScanSelected(data.selected_codes);
+    setUniverseScanAvailable(data.available_codes);
+    setUniverseScanHelp(data.help_nl);
+  }, [universeScanQuery.data]);
+
+  function toggleUniverseScanCode(code: string, checked: boolean) {
+    setUniverseScanSelected((prev) =>
+      checked ? (prev.includes(code) ? prev : [...prev, code]) : prev.filter((c) => c !== code),
+    );
+  }
+
+  async function handleSaveUniverseScan() {
+    setUniverseScanSaving(true);
+    setUniverseScanError(null);
+    setUniverseScanSaved(null);
+    const result = await apiClient.updateUniverseScanSettings({
+      selected_codes: universeScanSelected,
+    });
+    setUniverseScanSaving(false);
+    if (!result.ok) {
+      setUniverseScanError(
+        "Opslaan mislukt. Controleer de selectie en of de API beschikbaar is.",
+      );
+      return;
+    }
+    queryClient.setQueryData(
+      ["instellingen", "universe-scan"],
+      result.data,
+    );
+    setUniverseScanSaved("Scan-universum opgeslagen.");
+  }
+
   const connectionQuery = useQuery({
     queryKey: CONNECTION_SETTINGS_KEY,
     queryFn: async () => {
@@ -435,9 +489,15 @@ export default function Page() {
   }
 
   const loading =
-    riskQuery.isPending || tradingQuery.isPending || connectionQuery.isPending;
+    riskQuery.isPending
+    || tradingQuery.isPending
+    || connectionQuery.isPending
+    || universeScanQuery.isPending;
   const loadError =
-    riskQuery.isError && tradingQuery.isError && connectionQuery.isError
+    riskQuery.isError
+    && tradingQuery.isError
+    && connectionQuery.isError
+    && universeScanQuery.isError
       ? "Instellingen konden niet worden geladen."
       : null;
 
@@ -944,6 +1004,82 @@ export default function Page() {
               error={universeError}
               onSave={() => void handleSaveUniverse()}
             />
+          </section>
+
+          {/* Section 4b — Scan markets (multi-select). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-universe-scan-section"
+          >
+            <h2 style={{ margin: 0 }}>Scan-universum (beurzen)</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {universeScanHelp || "Kies welke beurzen het systeem dagelijks scant."}
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 6,
+                marginTop: 10,
+              }}
+            >
+              {universeScanAvailable.map((option) => (
+                <label
+                  key={option.code}
+                  data-testid={`instellingen-universe-scan-option-${option.code}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "4px 6px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 4,
+                    fontSize: 13,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={universeScanSelected.includes(option.code)}
+                    onChange={(e) =>
+                      toggleUniverseScanCode(option.code, e.target.checked)
+                    }
+                  />
+                  <span>{option.label_nl}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveUniverseScan()}
+                disabled={universeScanSaving}
+                data-testid="instellingen-universe-scan-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: universeScanSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {universeScanSaving ? "Opslaan…" : "Scan-universum opslaan"}
+              </button>
+              {universeScanSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {universeScanSaved}
+                </span>
+              ) : null}
+              {universeScanError ? (
+                <span
+                  data-testid="instellingen-universe-scan-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {universeScanError}
+                </span>
+              ) : null}
+            </div>
           </section>
 
           {/* Section 4 — Connection + AI (editable). */}
