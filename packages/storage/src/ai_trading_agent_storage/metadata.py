@@ -1361,6 +1361,12 @@ runtime_config = Table(
     Column("forecast_minimum_bars_required", Integer, nullable=True),
     Column("daily_briefing_lookback_hours", Integer, nullable=True),
     Column("universe_scan_cache_ttl_hours", Integer, nullable=True),
+    # Worker-side sweep + EODHD overlay (Settings UI PR D). Null = use env-var.
+    Column("sweep_interval_seconds", Integer, nullable=True),
+    Column("sweep_retry_max_attempts", Integer, nullable=True),
+    Column("sweep_retry_backoff_seconds", MONEY_NUMERIC, nullable=True),
+    Column("sweep_alert_after_consecutive_errors", Integer, nullable=True),
+    Column("eodhd_rate_limit_per_second", Integer, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown
