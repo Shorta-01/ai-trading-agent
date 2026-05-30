@@ -345,6 +345,203 @@ def update_universe_scan_settings(
     )
 
 
+# ---- Order policy + suggestion filters (Settings UI PR A) ---------------
+
+
+class OrderPolicySettingsResponse(BaseModel):
+    """Operator-editable defaults for action-draft sizing + the suggestion
+    portfolio-context gate. Strings on the wire so Decimal precision
+    survives the round trip and the form stays parser-friendly."""
+
+    default_buy_value_eur: str
+    default_top_up_pct: str
+    default_reduce_pct: str
+    max_sector_pct: str
+    cost_dominates_ratio: str
+    suggestion_valid_minutes: int
+    help_nl: str
+
+
+class UpdateOrderPolicySettingsRequest(BaseModel):
+    default_buy_value_eur: Decimal
+    default_top_up_pct: Decimal
+    default_reduce_pct: Decimal
+    max_sector_pct: Decimal
+    cost_dominates_ratio: Decimal
+    suggestion_valid_minutes: int
+
+
+_ORDER_POLICY_HELP_NL = (
+    "Standaard koop-/verminder-bedragen + diversificatie- en kostengates "
+    "die de morgenchain en de Action Draft composer toepassen. "
+    "Suggesties zijn altijd alleen-lezen advies — niets wordt automatisch "
+    "geplaatst."
+)
+
+
+def _decimal_text(value: Decimal | str) -> str:
+    """Stable string form for a Decimal-valued setting (handles both stored
+    Decimals and env-var strings)."""
+
+    if isinstance(value, Decimal):
+        return format(value.normalize(), "f")
+    return str(value)
+
+
+def _order_policy_payload(record: RuntimeConfigRecord | None) -> OrderPolicySettingsResponse:
+    if record is None:
+        return OrderPolicySettingsResponse(
+            default_buy_value_eur=_decimal_text(settings.action_drafts_default_buy_value),
+            default_top_up_pct=_decimal_text(settings.action_drafts_top_up_pct),
+            default_reduce_pct=_decimal_text(settings.action_drafts_reduce_pct),
+            max_sector_pct=_decimal_text(settings.max_sector_pct),
+            cost_dominates_ratio=_decimal_text(settings.cost_dominates_ratio),
+            suggestion_valid_minutes=settings.suggestions_valid_minutes,
+            help_nl=_ORDER_POLICY_HELP_NL,
+        )
+    return OrderPolicySettingsResponse(
+        default_buy_value_eur=_decimal_text(
+            record.default_buy_value_eur
+            if record.default_buy_value_eur is not None
+            else settings.action_drafts_default_buy_value
+        ),
+        default_top_up_pct=_decimal_text(
+            record.default_top_up_pct
+            if record.default_top_up_pct is not None
+            else settings.action_drafts_top_up_pct
+        ),
+        default_reduce_pct=_decimal_text(
+            record.default_reduce_pct
+            if record.default_reduce_pct is not None
+            else settings.action_drafts_reduce_pct
+        ),
+        max_sector_pct=_decimal_text(
+            record.max_sector_pct
+            if record.max_sector_pct is not None
+            else settings.max_sector_pct
+        ),
+        cost_dominates_ratio=_decimal_text(
+            record.cost_dominates_ratio
+            if record.cost_dominates_ratio is not None
+            else settings.cost_dominates_ratio
+        ),
+        suggestion_valid_minutes=(
+            record.suggestion_valid_minutes
+            if record.suggestion_valid_minutes is not None
+            else settings.suggestions_valid_minutes
+        ),
+        help_nl=_ORDER_POLICY_HELP_NL,
+    )
+
+
+@router.get(
+    "/settings/order-policy", response_model=OrderPolicySettingsResponse
+)
+def get_order_policy_settings() -> OrderPolicySettingsResponse:
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _order_policy_payload(current)
+
+
+@router.put(
+    "/settings/order-policy", response_model=OrderPolicySettingsResponse
+)
+def update_order_policy_settings(
+    payload: UpdateOrderPolicySettingsRequest,
+) -> OrderPolicySettingsResponse:
+    if payload.default_buy_value_eur <= 0:
+        raise HTTPException(
+            status_code=422, detail="Standaard koopbedrag moet groter zijn dan 0."
+        )
+    if not (Decimal("0") < payload.default_top_up_pct <= Decimal("100")):
+        raise HTTPException(
+            status_code=422,
+            detail="Bijkoop-percentage moet tussen 0 en 100 liggen.",
+        )
+    if not (Decimal("0") < payload.default_reduce_pct <= Decimal("100")):
+        raise HTTPException(
+            status_code=422,
+            detail="Verminder-percentage moet tussen 0 en 100 liggen.",
+        )
+    if not (Decimal("0") < payload.max_sector_pct <= Decimal("100")):
+        raise HTTPException(
+            status_code=422,
+            detail="Sectorconcentratie-cap moet tussen 0 en 100 liggen.",
+        )
+    if payload.cost_dominates_ratio <= Decimal("0"):
+        raise HTTPException(
+            status_code=422,
+            detail="Kosten-vs-rendement drempel moet groter zijn dan 0.",
+        )
+    if payload.suggestion_valid_minutes <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Suggestiegeldigheid moet groter zijn dan 0 minuten.",
+        )
+
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=(
+                    existing.universe_scan_index_codes if existing else None
+                ),
+                default_buy_value_eur=payload.default_buy_value_eur,
+                default_top_up_pct=payload.default_top_up_pct,
+                default_reduce_pct=payload.default_reduce_pct,
+                max_sector_pct=payload.max_sector_pct,
+                cost_dominates_ratio=payload.cost_dominates_ratio,
+                suggestion_valid_minutes=payload.suggestion_valid_minutes,
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+            # Reflect on the running settings singleton.
+            settings.action_drafts_default_buy_value = str(
+                payload.default_buy_value_eur
+            )
+            settings.action_drafts_top_up_pct = str(payload.default_top_up_pct)
+            settings.action_drafts_reduce_pct = str(payload.default_reduce_pct)
+            settings.max_sector_pct = str(payload.max_sector_pct)
+            settings.cost_dominates_ratio = str(payload.cost_dominates_ratio)
+            settings.suggestions_valid_minutes = payload.suggestion_valid_minutes
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _order_policy_payload(record)
+
+
 def apply_runtime_config_overlay(
     settings_obj: Any, record: RuntimeConfigRecord
 ) -> None:
@@ -371,3 +568,20 @@ def apply_runtime_config_overlay(
     settings_obj.ai_explanation_enabled = record.ai_explanation_enabled
     if record.universe_scan_index_codes is not None:
         settings_obj.universe_scan_index_codes = record.universe_scan_index_codes
+    # Settings UI PR A — push operator-edited order policy onto the
+    # singleton so the next morning chain / action-draft sync picks it
+    # up without an API restart. Each null leaves the env-default alone.
+    if record.default_buy_value_eur is not None:
+        settings_obj.action_drafts_default_buy_value = str(
+            record.default_buy_value_eur
+        )
+    if record.default_top_up_pct is not None:
+        settings_obj.action_drafts_top_up_pct = str(record.default_top_up_pct)
+    if record.default_reduce_pct is not None:
+        settings_obj.action_drafts_reduce_pct = str(record.default_reduce_pct)
+    if record.max_sector_pct is not None:
+        settings_obj.max_sector_pct = str(record.max_sector_pct)
+    if record.cost_dominates_ratio is not None:
+        settings_obj.cost_dominates_ratio = str(record.cost_dominates_ratio)
+    if record.suggestion_valid_minutes is not None:
+        settings_obj.suggestions_valid_minutes = record.suggestion_valid_minutes

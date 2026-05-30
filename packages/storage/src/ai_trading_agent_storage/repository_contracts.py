@@ -289,6 +289,16 @@ class RuntimeConfigRecord:
     # codes (e.g. ``"BEL20,AEX,CAC40"``). ``None`` means the operator
     # hasn't customised — fall back to ``settings.universe_set``.
     universe_scan_index_codes: str | None = None
+    # Settings UI PR A — order-policy + suggestion-filter overlay.
+    # ``None`` in any field means the operator hasn't customised it;
+    # the API overlay leaves the corresponding ``settings`` value alone
+    # so the env-var / code constant default applies.
+    default_buy_value_eur: Decimal | None = None
+    default_top_up_pct: Decimal | None = None
+    default_reduce_pct: Decimal | None = None
+    max_sector_pct: Decimal | None = None
+    cost_dominates_ratio: Decimal | None = None
+    suggestion_valid_minutes: int | None = None
 
 
 @dataclass(frozen=True)

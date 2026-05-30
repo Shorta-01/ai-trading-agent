@@ -348,6 +348,19 @@ export default function Page() {
 
   // Section 5 — universe scan markets (multi-select).
   const [universeScanSelected, setUniverseScanSelected] = useState<string[]>([]);
+  // Settings UI PR A — order policy + suggestion filters.
+  const [orderPolicy, setOrderPolicy] = useState({
+    default_buy_value_eur: "",
+    default_top_up_pct: "",
+    default_reduce_pct: "",
+    max_sector_pct: "",
+    cost_dominates_ratio: "",
+    suggestion_valid_minutes: 1440,
+  });
+  const [orderPolicyHelp, setOrderPolicyHelp] = useState<string>("");
+  const [orderPolicySaving, setOrderPolicySaving] = useState(false);
+  const [orderPolicySaved, setOrderPolicySaved] = useState<string | null>(null);
+  const [orderPolicyError, setOrderPolicyError] = useState<string | null>(null);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -446,6 +459,53 @@ export default function Page() {
     );
   }
 
+  // Settings UI PR A — order-policy query + save.
+  const orderPolicyQuery = useQuery({
+    queryKey: ["instellingen", "order-policy"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getOrderPolicySettings();
+      if (!result.ok) throw new Error("order-policy-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = orderPolicyQuery.data;
+    if (!data) return;
+    setOrderPolicy({
+      default_buy_value_eur: data.default_buy_value_eur,
+      default_top_up_pct: data.default_top_up_pct,
+      default_reduce_pct: data.default_reduce_pct,
+      max_sector_pct: data.max_sector_pct,
+      cost_dominates_ratio: data.cost_dominates_ratio,
+      suggestion_valid_minutes: data.suggestion_valid_minutes,
+    });
+    setOrderPolicyHelp(data.help_nl);
+  }, [orderPolicyQuery.data]);
+
+  function setOrderPolicyField<K extends keyof typeof orderPolicy>(
+    key: K,
+    value: (typeof orderPolicy)[K],
+  ) {
+    setOrderPolicy((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleSaveOrderPolicy() {
+    setOrderPolicySaving(true);
+    setOrderPolicyError(null);
+    setOrderPolicySaved(null);
+    const result = await apiClient.updateOrderPolicySettings(orderPolicy);
+    setOrderPolicySaving(false);
+    if (!result.ok) {
+      setOrderPolicyError(
+        "Opslaan mislukt. Controleer de waarden (alle bedragen + percentages > 0).",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "order-policy"], result.data);
+    setOrderPolicySaved("Order- en suggestie-instellingen opgeslagen.");
+  }
+
   async function handleSaveUniverseScan() {
     setUniverseScanSaving(true);
     setUniverseScanError(null);
@@ -492,12 +552,14 @@ export default function Page() {
     riskQuery.isPending
     || tradingQuery.isPending
     || connectionQuery.isPending
-    || universeScanQuery.isPending;
+    || universeScanQuery.isPending
+    || orderPolicyQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
     && connectionQuery.isError
     && universeScanQuery.isError
+    && orderPolicyQuery.isError
       ? "Instellingen konden niet worden geladen."
       : null;
 
@@ -1077,6 +1139,164 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {universeScanError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4c — Order policy + suggestion filters (PR A). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-order-policy-section"
+          >
+            <h2 style={{ margin: 0 }}>Orders &amp; suggesties</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {orderPolicyHelp
+                || "Standaard order-grootte en suggestie-filters. Suggesties blijven alleen-lezen advies; niets wordt automatisch geplaatst."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Standaard koopbedrag (EUR)
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  data-testid="instellingen-order-policy-default_buy_value_eur"
+                  value={orderPolicy.default_buy_value_eur}
+                  onChange={(e) =>
+                    setOrderPolicyField("default_buy_value_eur", e.target.value)
+                  }
+                />
+                <span className="help-text">
+                  Wat het systeem standaard voorstelt bij elke &ldquo;Kopen&rdquo;
+                  suggestie. Verhoog voor grotere posities; verlaag voor
+                  voorzichtigere instap.
+                </span>
+              </label>
+              <label>
+                Bijkoop-percentage (0–1, bv 0.25 = 25%)
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  data-testid="instellingen-order-policy-default_top_up_pct"
+                  value={orderPolicy.default_top_up_pct}
+                  onChange={(e) =>
+                    setOrderPolicyField("default_top_up_pct", e.target.value)
+                  }
+                />
+                <span className="help-text">
+                  Bij &ldquo;Langzaam bijkopen&rdquo;: hoeveel van je huidige
+                  positie er voorgesteld wordt om bij te kopen. 0.25 = 25%.
+                </span>
+              </label>
+              <label>
+                Verminder-percentage (0–1)
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  data-testid="instellingen-order-policy-default_reduce_pct"
+                  value={orderPolicy.default_reduce_pct}
+                  onChange={(e) =>
+                    setOrderPolicyField("default_reduce_pct", e.target.value)
+                  }
+                />
+                <span className="help-text">
+                  Bij &ldquo;Verminderen&rdquo;: hoeveel van je positie er
+                  voorgesteld wordt te verkopen.
+                </span>
+              </label>
+              <label>
+                Sectorconcentratie-cap (%)
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  data-testid="instellingen-order-policy-max_sector_pct"
+                  value={orderPolicy.max_sector_pct}
+                  onChange={(e) =>
+                    setOrderPolicyField("max_sector_pct", e.target.value)
+                  }
+                />
+                <span className="help-text">
+                  Boven dit percentage per sector downgradet het systeem
+                  nieuwe &ldquo;Kopen&rdquo; voorstellen naar &ldquo;Bekijken&rdquo;
+                  (diversificatie-gate).
+                </span>
+              </label>
+              <label>
+                Kosten-vs-rendement drempel
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  data-testid="instellingen-order-policy-cost_dominates_ratio"
+                  value={orderPolicy.cost_dominates_ratio}
+                  onChange={(e) =>
+                    setOrderPolicyField("cost_dominates_ratio", e.target.value)
+                  }
+                />
+                <span className="help-text">
+                  Als verwacht rendement minder is dan deze factor maal de
+                  geschatte transactiekosten, dan &ldquo;Bekijken&rdquo; in
+                  plaats van &ldquo;Kopen&rdquo;. Standaard 3× — verlaag voor
+                  een toleranter filter.
+                </span>
+              </label>
+              <label>
+                Suggestiegeldigheid (minuten)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-order-policy-suggestion_valid_minutes"
+                  value={orderPolicy.suggestion_valid_minutes}
+                  onChange={(e) =>
+                    setOrderPolicyField(
+                      "suggestion_valid_minutes",
+                      Number(e.target.value),
+                    )
+                  }
+                />
+                <span className="help-text">
+                  Hoe lang een suggestie geldig blijft voordat hij automatisch
+                  als &ldquo;expired&rdquo; gemarkeerd wordt. 1440 = 24 uur.
+                </span>
+              </label>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveOrderPolicy()}
+                disabled={orderPolicySaving}
+                data-testid="instellingen-order-policy-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: orderPolicySaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {orderPolicySaving ? "Opslaan…" : "Orders & suggesties opslaan"}
+              </button>
+              {orderPolicySaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {orderPolicySaved}
+                </span>
+              ) : null}
+              {orderPolicyError ? (
+                <span
+                  data-testid="instellingen-order-policy-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {orderPolicyError}
                 </span>
               ) : null}
             </div>

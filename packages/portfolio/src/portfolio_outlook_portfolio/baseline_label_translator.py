@@ -137,6 +137,11 @@ class PortfolioContext:
     """Commission + spread + tax estimate (round-trip), 0..100. ``None``
     means "no cost model available" — gate skips the cost-vs-gain check."""
 
+    cost_dominates_ratio: Decimal | None = None
+    """Operator-tunable override for the cost-vs-gain ratio (default 3 ×).
+    The gate trips when expected return < ``cost_dominates_ratio`` × the
+    round-trip cost. Lower = more permissive."""
+
 
 @dataclass(frozen=True)
 class SuggestionDecision:
@@ -425,11 +430,13 @@ def apply_portfolio_context_gates(
                 except Exception:  # noqa: BLE001 — bad driver string
                     return_pct = None
                 break
+        # Operator can override the locked default via the resolver-provided
+        # context; falls back to the module constant when not supplied.
+        cost_ratio = context.cost_dominates_ratio or _COST_DOMINATES_RATIO
         if (
             return_pct is not None
             and return_pct > Decimal("0")
-            and return_pct
-            < _COST_DOMINATES_RATIO * context.estimated_round_trip_cost_pct
+            and return_pct < cost_ratio * context.estimated_round_trip_cost_pct
         ):
             blockers.append("cost_exceeds_gain")
 
