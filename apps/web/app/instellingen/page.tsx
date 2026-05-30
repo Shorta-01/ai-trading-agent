@@ -407,6 +407,26 @@ export default function Page() {
   const [advancedSaved, setAdvancedSaved] = useState<string | null>(null);
   const [advancedError, setAdvancedError] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Settings UI PR G — forecast horizon, ensemble toggle, risk profile,
+  // universe set, market-data feed toggles.
+  const [forecastMarketForm, setForecastMarketForm] = useState({
+    forecast_horizon_trading_days: 21,
+    forecast_ensemble_enabled: false,
+    suggestions_risk_profile: "Gebalanceerd",
+    universe_set: "SP500",
+    market_data_provider: "none",
+    market_data_sync_enabled: false,
+    ibkr_market_data_enabled: false,
+    ibkr_market_data_type: "delayed",
+  });
+  const [forecastMarketHelp, setForecastMarketHelp] = useState<string>("");
+  const [forecastMarketSaving, setForecastMarketSaving] = useState(false);
+  const [forecastMarketSaved, setForecastMarketSaved] = useState<string | null>(
+    null,
+  );
+  const [forecastMarketError, setForecastMarketError] = useState<string | null>(
+    null,
+  );
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -659,6 +679,49 @@ export default function Page() {
     setAdvancedSaved("Geavanceerde instellingen opgeslagen.");
   }
 
+  // Settings UI PR G — forecast & market query + save.
+  const forecastMarketQuery = useQuery({
+    queryKey: ["instellingen", "forecast-market"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getForecastMarketSettings();
+      if (!result.ok) throw new Error("forecast-market-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = forecastMarketQuery.data;
+    if (!data) return;
+    setForecastMarketForm({
+      forecast_horizon_trading_days: data.forecast_horizon_trading_days,
+      forecast_ensemble_enabled: data.forecast_ensemble_enabled,
+      suggestions_risk_profile: data.suggestions_risk_profile,
+      universe_set: data.universe_set,
+      market_data_provider: data.market_data_provider,
+      market_data_sync_enabled: data.market_data_sync_enabled,
+      ibkr_market_data_enabled: data.ibkr_market_data_enabled,
+      ibkr_market_data_type: data.ibkr_market_data_type,
+    });
+    setForecastMarketHelp(data.help_nl);
+  }, [forecastMarketQuery.data]);
+
+  async function handleSaveForecastMarket() {
+    setForecastMarketSaving(true);
+    setForecastMarketError(null);
+    setForecastMarketSaved(null);
+    const result =
+      await apiClient.updateForecastMarketSettings(forecastMarketForm);
+    setForecastMarketSaving(false);
+    if (!result.ok) {
+      setForecastMarketError(
+        "Opslaan mislukt. Controleer dat alle waarden binnen het toegestane bereik liggen.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "forecast-market"], result.data);
+    setForecastMarketSaved("Voorspellings- en marktdata-instellingen opgeslagen.");
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -758,7 +821,8 @@ export default function Page() {
     || schedulerQuery.isPending
     || dataWindowQuery.isPending
     || workerSweepQuery.isPending
-    || advancedQuery.isPending;
+    || advancedQuery.isPending
+    || forecastMarketQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -1871,6 +1935,228 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {workerSweepError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4h — Forecast & marktdata (PR G). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-forecast-market-section"
+          >
+            <h2 style={{ margin: 0 }}>Voorspelling &amp; marktdata</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {forecastMarketHelp
+                || "Hoe ver het systeem vooruitkijkt, welke modellen meedoen, welk risico-profiel suggesties hebben, en welke marktdata-feeds actief zijn."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Voorspellings-horizon (handelsdagen)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-forecast-horizon"
+                  value={forecastMarketForm.forecast_horizon_trading_days}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      forecast_horizon_trading_days: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoeveel handelsdagen vooruit de modellen voorspellen.
+                  Standaard 21 (≈ één maand). Hoger = bredere
+                  onzekerheidsband, lager = scherper maar korter zicht.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-forecast-ensemble"
+                  checked={forecastMarketForm.forecast_ensemble_enabled}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      forecast_ensemble_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Ensemble-voorspelling inschakelen
+                <span className="help-text">
+                  Uit (standaard) = alleen GBM. Aan = GBM + Momentum +
+                  Mean-reversion (en QVM als er een fundamentele
+                  universum-set is). Combineert meerdere modellen voor
+                  robuustere voorspellingen.
+                </span>
+              </label>
+              <label>
+                Risico-profiel voor suggesties
+                <select
+                  data-testid="instellingen-forecast-risk-profile"
+                  value={forecastMarketForm.suggestions_risk_profile}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      suggestions_risk_profile: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="Voorzichtig">Voorzichtig</option>
+                  <option value="Gebalanceerd">Gebalanceerd</option>
+                  <option value="Groei">Groei</option>
+                </select>
+                <span className="help-text">
+                  Profiel dat de suggestie-engine toepast. Voorzichtig =
+                  meer cash, strikter; Groei = meer aandelen, ruimer.
+                </span>
+              </label>
+              <label>
+                Universum-set
+                <select
+                  data-testid="instellingen-forecast-universe-set"
+                  value={forecastMarketForm.universe_set}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      universe_set: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="SP500">SP500 (~500 namen)</option>
+                  <option value="EU600">EU600 (~600 namen)</option>
+                  <option value="ALL_5K">ALL_5K (volledige scope)</option>
+                </select>
+                <span className="help-text">
+                  De vaste universum-set die het systeem scant. Wordt
+                  overschreven door de per-beurs multi-selectie hierboven
+                  als die niet leeg is.
+                </span>
+              </label>
+              <label>
+                Marktdata-provider
+                <select
+                  data-testid="instellingen-forecast-md-provider"
+                  value={forecastMarketForm.market_data_provider}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      market_data_provider: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="none">Geen (gebruik snapshots)</option>
+                  <option value="eodhd">EODHD</option>
+                  <option value="ibkr">IBKR</option>
+                </select>
+                <span className="help-text">
+                  Bron voor end-of-day prijzen. Geen = alleen
+                  laatst-opgeslagen snapshots; EODHD = dagelijkse pull
+                  via API (vereist EODHD-key); IBKR = live via TWS.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-forecast-md-sync"
+                  checked={forecastMarketForm.market_data_sync_enabled}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      market_data_sync_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Marktdata-sync inschakelen
+                <span className="help-text">
+                  Uit (standaard) = geen automatische prijs-pull. Aan =
+                  het systeem haalt periodiek nieuwe prijzen op via de
+                  geselecteerde provider.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-forecast-ibkr-md-enabled"
+                  checked={forecastMarketForm.ibkr_market_data_enabled}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      ibkr_market_data_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                IBKR live marktdata inschakelen
+                <span className="help-text">
+                  Uit (standaard) = alleen end-of-day data. Aan =
+                  realtime/delayed quotes via TWS-marktdata-sessie. Let
+                  op: verbruikt IBKR-marktdata-quotum.
+                </span>
+              </label>
+              <label>
+                IBKR marktdata-type
+                <select
+                  data-testid="instellingen-forecast-ibkr-md-type"
+                  value={forecastMarketForm.ibkr_market_data_type}
+                  onChange={(e) =>
+                    setForecastMarketForm((p) => ({
+                      ...p,
+                      ibkr_market_data_type: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="delayed">delayed (15min vertraagd)</option>
+                  <option value="realtime">realtime (live)</option>
+                  <option value="delayed_frozen">delayed_frozen</option>
+                  <option value="frozen">frozen</option>
+                </select>
+                <span className="help-text">
+                  Welk soort marktdata IBKR moet leveren. Delayed is
+                  gratis; realtime kost een abonnement. Frozen-varianten
+                  bevriezen de laatste prijs buiten beurstijd.
+                </span>
+              </label>
+            </div>
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => void handleSaveForecastMarket()}
+                disabled={forecastMarketSaving}
+                data-testid="instellingen-forecast-market-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: forecastMarketSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {forecastMarketSaving
+                  ? "Opslaan…"
+                  : "Voorspelling & marktdata opslaan"}
+              </button>
+              {forecastMarketSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {forecastMarketSaved}
+                </span>
+              ) : null}
+              {forecastMarketError ? (
+                <span
+                  data-testid="instellingen-forecast-market-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {forecastMarketError}
                 </span>
               ) : null}
             </div>

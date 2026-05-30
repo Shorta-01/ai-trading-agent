@@ -1375,6 +1375,15 @@ runtime_config = Table(
     # Sharpe direction-label thresholds (Settings UI PR F). Null = env-var.
     Column("sharpe_strong_threshold", Numeric(8, 4), nullable=True),
     Column("sharpe_slight_threshold", Numeric(8, 4), nullable=True),
+    # Forecast & market-behaviour overlay (Settings UI PR G). Null = env-var.
+    Column("forecast_horizon_trading_days", Integer, nullable=True),
+    Column("forecast_ensemble_enabled", Boolean, nullable=True),
+    Column("suggestions_risk_profile", Text, nullable=True),
+    Column("universe_set", Text, nullable=True),
+    Column("market_data_provider", Text, nullable=True),
+    Column("market_data_sync_enabled", Boolean, nullable=True),
+    Column("ibkr_market_data_enabled", Boolean, nullable=True),
+    Column("ibkr_market_data_type", Text, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

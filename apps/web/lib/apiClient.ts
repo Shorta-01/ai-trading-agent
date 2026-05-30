@@ -217,6 +217,29 @@ export type AdvancedSettingsUpdateInput = {
   sharpe_slight_threshold: string;
 };
 
+export type ForecastMarketSettingsResponse = {
+  forecast_horizon_trading_days: number;
+  forecast_ensemble_enabled: boolean;
+  suggestions_risk_profile: string;
+  universe_set: string;
+  market_data_provider: string;
+  market_data_sync_enabled: boolean;
+  ibkr_market_data_enabled: boolean;
+  ibkr_market_data_type: string;
+  help_nl: string;
+};
+
+export type ForecastMarketSettingsUpdateInput = {
+  forecast_horizon_trading_days: number;
+  forecast_ensemble_enabled: boolean;
+  suggestions_risk_profile: string;
+  universe_set: string;
+  market_data_provider: string;
+  market_data_sync_enabled: boolean;
+  ibkr_market_data_enabled: boolean;
+  ibkr_market_data_type: string;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1956,6 +1979,15 @@ export const apiClient = {
     getJson<AdvancedSettingsResponse>("/settings/advanced"),
   updateAdvancedSettings: (payload: AdvancedSettingsUpdateInput) =>
     putJson<AdvancedSettingsResponse>("/settings/advanced", payload),
+  getForecastMarketSettings: () =>
+    getJson<ForecastMarketSettingsResponse>("/settings/forecast-market"),
+  updateForecastMarketSettings: (
+    payload: ForecastMarketSettingsUpdateInput,
+  ) =>
+    putJson<ForecastMarketSettingsResponse>(
+      "/settings/forecast-market",
+      payload,
+    ),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

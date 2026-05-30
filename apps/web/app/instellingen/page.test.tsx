@@ -44,6 +44,8 @@ const getWorkerSweepSettings = vi.fn();
 const updateWorkerSweepSettings = vi.fn();
 const getAdvancedSettings = vi.fn();
 const updateAdvancedSettings = vi.fn();
+const getForecastMarketSettings = vi.fn();
+const updateForecastMarketSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -75,6 +77,10 @@ vi.mock("@/lib/apiClient", () => ({
     getAdvancedSettings: (...a: unknown[]) => getAdvancedSettings(...a),
     updateAdvancedSettings: (...a: unknown[]) =>
       updateAdvancedSettings(...a),
+    getForecastMarketSettings: (...a: unknown[]) =>
+      getForecastMarketSettings(...a),
+    updateForecastMarketSettings: (...a: unknown[]) =>
+      updateForecastMarketSettings(...a),
   },
 }));
 
@@ -196,6 +202,18 @@ const ADVANCED = {
   help_nl: "Geavanceerde instellingen voor power-users.",
 };
 
+const FORECAST_MARKET = {
+  forecast_horizon_trading_days: 21,
+  forecast_ensemble_enabled: false,
+  suggestions_risk_profile: "Gebalanceerd",
+  universe_set: "SP500",
+  market_data_provider: "none",
+  market_data_sync_enabled: false,
+  ibkr_market_data_enabled: false,
+  ibkr_market_data_type: "delayed",
+  help_nl: "Voorspellings- en marktdata-instellingen.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -215,6 +233,8 @@ beforeEach(() => {
   updateWorkerSweepSettings.mockReset();
   getAdvancedSettings.mockReset();
   updateAdvancedSettings.mockReset();
+  getForecastMarketSettings.mockReset();
+  updateForecastMarketSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -224,6 +244,7 @@ beforeEach(() => {
   getDataWindowSettings.mockReturnValue(ok(DATA_WINDOWS));
   getWorkerSweepSettings.mockReturnValue(ok(WORKER_SWEEPS));
   getAdvancedSettings.mockReturnValue(ok(ADVANCED));
+  getForecastMarketSettings.mockReturnValue(ok(FORECAST_MARKET));
 });
 
 afterEach(() => cleanup());
@@ -622,5 +643,42 @@ describe("InstellingenPage", () => {
     const payload = updateAdvancedSettings.mock.calls[0][0];
     expect(payload.sharpe_strong_threshold).toBe("1.5");
     expect(payload.sharpe_slight_threshold).toBe("0.5");
+  });
+
+  it("renders the forecast & market section + saves edited values", async () => {
+    updateForecastMarketSettings.mockReturnValue(
+      ok({
+        ...FORECAST_MARKET,
+        forecast_horizon_trading_days: 60,
+        forecast_ensemble_enabled: true,
+        universe_set: "EU600",
+      }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-forecast-market-section"),
+    ).toBeInTheDocument();
+    const horizon = screen.getByTestId("instellingen-forecast-horizon");
+    expect(horizon).toHaveValue(21);
+    await userEvent.clear(horizon);
+    await userEvent.type(horizon, "60");
+    await userEvent.click(
+      screen.getByTestId("instellingen-forecast-ensemble"),
+    );
+    await userEvent.selectOptions(
+      screen.getByTestId("instellingen-forecast-universe-set"),
+      "EU600",
+    );
+    await userEvent.click(
+      screen.getByTestId("instellingen-forecast-market-save"),
+    );
+    await waitFor(() =>
+      expect(updateForecastMarketSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateForecastMarketSettings.mock.calls[0][0];
+    expect(payload.forecast_horizon_trading_days).toBe(60);
+    expect(payload.forecast_ensemble_enabled).toBe(true);
+    expect(payload.universe_set).toBe("EU600");
+    expect(payload.suggestions_risk_profile).toBe("Gebalanceerd");
   });
 });

@@ -749,6 +749,21 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "(1.0 en 0.3)."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0063_runtime_config_forecast_market",
+        previous_revision_id="0062_runtime_config_sharpe_thresholds",
+        filename="0063_runtime_config_forecast_market.py",
+        label_nl="Voorspellings- en marktdata-overlay in runtime_config",
+        description_nl=(
+            "Voegt acht kolommen toe voor operator-zichtbare voorspellings- "
+            "en marktdata-toggles: ``forecast_horizon_trading_days``, "
+            "``forecast_ensemble_enabled``, ``suggestions_risk_profile``, "
+            "``universe_set``, ``market_data_provider``, "
+            "``market_data_sync_enabled``, ``ibkr_market_data_enabled`` en "
+            "``ibkr_market_data_type``. Null in elk veld: terugvallen op "
+            "de env-var of ingebouwde default."
+        ),
+    ),
 )
 
 
