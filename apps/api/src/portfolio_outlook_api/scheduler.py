@@ -312,12 +312,24 @@ def install_default_jobs(
     their own. ``repo_factory`` is invoked each fire to obtain a fresh
     repository (since DB sessions are short-lived); if it returns
     ``None`` the run is logged in memory but not persisted.
+
+    When ``scheduler_api_legacy_cron`` is False (the new default) this
+    function still validates the cron string (so a malformed env var is
+    caught at startup just like before) but registers no jobs — the
+    worker process owns the cron and POSTs to the API endpoints. Set
+    the flag to True to restore the in-process API cron behavior.
     """
 
     trigger = _parse_cron(
         runtime_settings.scheduler_daily_briefing_cron,
         runtime_settings.scheduler_timezone,
     )
+    # New default: the worker owns scheduling. The cron above is still
+    # parsed (so a malformed env var fails startup the same way it
+    # always did), but no job lands on the in-process scheduler. The
+    # POST endpoints remain available for the worker (and manual fires).
+    if not getattr(runtime_settings, "scheduler_api_legacy_cron", False):
+        return
     if job_callable is not None:
         effective_callable = job_callable
     else:

@@ -49,6 +49,12 @@ class IbkrSettings(BaseModel):
     # and the per-cycle work isn't completing fast enough to keep the
     # next tick from queueing behind it.
     sweep_interval_seconds: int = 60
+    # Persistent-failure alerting: a single sweep error is normal IBKR
+    # noise; N consecutive error ticks should reach the operator. When
+    # the count hits this threshold the worker writes a SystemEvent so
+    # /systeemmeldingen surfaces the problem instead of it living
+    # only in the log file. Reset on the next non-error tick.
+    sweep_alert_after_consecutive_errors: int = 3
 
 
 class EodhdSettings(BaseModel):
@@ -78,6 +84,27 @@ class SchedulerSettings(BaseModel):
     enabled: bool = False
     timezone: str = "Europe/Brussels"
     heartbeat_interval_seconds: int = 60
+
+    # Worker-side triggers for jobs that previously lived in the API
+    # process. They POST to existing API endpoints so the worker stays
+    # the single source of cron truth while the API serves HTTP only —
+    # multi-replica API deploys no longer race on `scheduler_runs`.
+    api_base_url: str | None = None
+    # Daily morning-chain trigger (POST /scheduler/runs/morning-chain).
+    morning_chain_trigger_enabled: bool = False
+    morning_chain_cron: str = "30 6 * * *"
+    # When true, the morning chain is fired inline at the end of the
+    # 06:00 pre-briefing run instead of via a separate cron. This is
+    # the signal-chain delivery — no clock gap between pre-briefing
+    # and morning chain, so a slow pre-briefing can't let the morning
+    # chain run against stale state.
+    morning_chain_after_pre_briefing: bool = False
+    # IBKR read-only sync trigger (POST /ibkr/sync/run).
+    ibkr_sync_trigger_enabled: bool = False
+    ibkr_sync_interval_minutes: int = 15
+    # HTTP timeout for the API-trigger calls. The morning chain can
+    # legitimately take minutes; tune for the longest expected run.
+    api_request_timeout_seconds: float = 300.0
 
 
 class Settings(BaseSettings):
