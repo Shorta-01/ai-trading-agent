@@ -166,6 +166,21 @@ export type SchedulerSettingsUpdateInput = {
   ibkr_sync_interval_minutes: number;
 };
 
+export type DataWindowSettingsResponse = {
+  forecast_history_lookback_days: number;
+  forecast_minimum_bars_required: number;
+  daily_briefing_lookback_hours: number;
+  universe_scan_cache_ttl_hours: number;
+  help_nl: string;
+};
+
+export type DataWindowSettingsUpdateInput = {
+  forecast_history_lookback_days: number;
+  forecast_minimum_bars_required: number;
+  daily_briefing_lookback_hours: number;
+  universe_scan_cache_ttl_hours: number;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1893,6 +1908,10 @@ export const apiClient = {
     getJson<SchedulerSettingsResponse>("/settings/scheduler"),
   updateSchedulerSettings: (payload: SchedulerSettingsUpdateInput) =>
     putJson<SchedulerSettingsResponse>("/settings/scheduler", payload),
+  getDataWindowSettings: () =>
+    getJson<DataWindowSettingsResponse>("/settings/data-windows"),
+  updateDataWindowSettings: (payload: DataWindowSettingsUpdateInput) =>
+    putJson<DataWindowSettingsResponse>("/settings/data-windows", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
