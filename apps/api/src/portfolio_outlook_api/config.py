@@ -151,6 +151,18 @@ class Settings(BaseSettings):
     action_drafts_default_buy_value: str = "1000"
     action_drafts_top_up_pct: str = "0.25"
     action_drafts_reduce_pct: str = "0.25"
+    # Settings UI PR A — suggestion-filter knobs the morning chain reads.
+    # Both are operator-tunable from the Settings page; values are
+    # written into ``runtime_config`` and overlaid at startup.
+    # ``max_sector_pct``: when the operator's existing holdings in an
+    # asset's sector already reach this percentage of the portfolio,
+    # ``apply_portfolio_context_gates`` downgrades new Kopen suggestions
+    # to Bekijken (diversification gate).
+    # ``cost_dominates_ratio``: if expected return is less than this
+    # multiple of the estimated round-trip cost, the trade isn't
+    # economical and the gate downgrades it.
+    max_sector_pct: str = "30"
+    cost_dominates_ratio: str = "3"
     ibkr_paper_order_submission_enabled: bool = False
     ibkr_paper_order_submission_real_client_enabled: bool = False
     ibkr_paper_order_submission_host: str | None = None

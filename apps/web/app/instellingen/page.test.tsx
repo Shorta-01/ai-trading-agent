@@ -34,6 +34,8 @@ const getConnectionSettings = vi.fn();
 const updateConnectionSettings = vi.fn();
 const getUniverseScanSettings = vi.fn();
 const updateUniverseScanSettings = vi.fn();
+const getOrderPolicySettings = vi.fn();
+const updateOrderPolicySettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -48,6 +50,10 @@ vi.mock("@/lib/apiClient", () => ({
       getUniverseScanSettings(...a),
     updateUniverseScanSettings: (...a: unknown[]) =>
       updateUniverseScanSettings(...a),
+    getOrderPolicySettings: (...a: unknown[]) =>
+      getOrderPolicySettings(...a),
+    updateOrderPolicySettings: (...a: unknown[]) =>
+      updateOrderPolicySettings(...a),
   },
 }));
 
@@ -126,6 +132,16 @@ const UNIVERSE_SCAN = {
   help_nl: "Kies welke beurzen het systeem dagelijks moet scannen.",
 };
 
+const ORDER_POLICY = {
+  default_buy_value_eur: "1000",
+  default_top_up_pct: "0.25",
+  default_reduce_pct: "0.25",
+  max_sector_pct: "30",
+  cost_dominates_ratio: "3",
+  suggestion_valid_minutes: 1440,
+  help_nl: "Standaard order-grootte en suggestie-filters.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -135,10 +151,13 @@ beforeEach(() => {
   updateConnectionSettings.mockReset();
   getUniverseScanSettings.mockReset();
   updateUniverseScanSettings.mockReset();
+  getOrderPolicySettings.mockReset();
+  updateOrderPolicySettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
   getUniverseScanSettings.mockReturnValue(ok(UNIVERSE_SCAN));
+  getOrderPolicySettings.mockReturnValue(ok(ORDER_POLICY));
 });
 
 afterEach(() => cleanup());
@@ -340,5 +359,48 @@ describe("InstellingenPage", () => {
     expect(updateUniverseScanSettings.mock.calls[0][0]).toEqual({
       selected_codes: ["BEL20", "AEX", "CAC40"],
     });
+  });
+
+  it("renders the order-policy section with persisted values", async () => {
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-order-policy-section"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("instellingen-order-policy-default_buy_value_eur"),
+    ).toHaveValue(1000);
+    expect(
+      screen.getByTestId("instellingen-order-policy-max_sector_pct"),
+    ).toHaveValue(30);
+    expect(
+      screen.getByTestId("instellingen-order-policy-suggestion_valid_minutes"),
+    ).toHaveValue(1440);
+  });
+
+  it("saves the order policy with the edited values", async () => {
+    updateOrderPolicySettings.mockReturnValue(
+      ok({
+        ...ORDER_POLICY,
+        default_buy_value_eur: "2500",
+        max_sector_pct: "25",
+      }),
+    );
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-order-policy-default_buy_value_eur",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "2500");
+    const cap = screen.getByTestId("instellingen-order-policy-max_sector_pct");
+    await userEvent.clear(cap);
+    await userEvent.type(cap, "25");
+    await userEvent.click(screen.getByTestId("instellingen-order-policy-save"));
+    await waitFor(() =>
+      expect(updateOrderPolicySettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateOrderPolicySettings.mock.calls[0][0];
+    expect(payload.default_buy_value_eur).toBe("2500");
+    expect(payload.max_sector_pct).toBe("25");
+    expect(payload.suggestion_valid_minutes).toBe(1440);
   });
 });

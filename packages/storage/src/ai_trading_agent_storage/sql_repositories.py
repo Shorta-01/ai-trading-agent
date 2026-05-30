@@ -6131,6 +6131,12 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "claude_ai_api_key": record.claude_ai_api_key,
             "updated_at": record.updated_at,
             "universe_scan_index_codes": record.universe_scan_index_codes,
+            "default_buy_value_eur": record.default_buy_value_eur,
+            "default_top_up_pct": record.default_top_up_pct,
+            "default_reduce_pct": record.default_reduce_pct,
+            "max_sector_pct": record.max_sector_pct,
+            "cost_dominates_ratio": record.cost_dominates_ratio,
+            "suggestion_valid_minutes": record.suggestion_valid_minutes,
         }
         existing = (
             self._connection.execute(
@@ -6173,6 +6179,16 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         claude_ai_api_key=row["claude_ai_api_key"],
         updated_at=row["updated_at"],
         universe_scan_index_codes=row.get("universe_scan_index_codes"),
+        default_buy_value_eur=_to_decimal(row.get("default_buy_value_eur")),
+        default_top_up_pct=_to_decimal(row.get("default_top_up_pct")),
+        default_reduce_pct=_to_decimal(row.get("default_reduce_pct")),
+        max_sector_pct=_to_decimal(row.get("max_sector_pct")),
+        cost_dominates_ratio=_to_decimal(row.get("cost_dominates_ratio")),
+        suggestion_valid_minutes=(
+            int(row["suggestion_valid_minutes"])
+            if row.get("suggestion_valid_minutes") is not None
+            else None
+        ),
     )
 
 

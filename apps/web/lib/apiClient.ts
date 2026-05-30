@@ -136,6 +136,25 @@ export type UniverseScanSettingsResponse = {
   help_nl: string;
 };
 
+export type OrderPolicySettingsResponse = {
+  default_buy_value_eur: string;
+  default_top_up_pct: string;
+  default_reduce_pct: string;
+  max_sector_pct: string;
+  cost_dominates_ratio: string;
+  suggestion_valid_minutes: number;
+  help_nl: string;
+};
+
+export type OrderPolicySettingsUpdateInput = {
+  default_buy_value_eur: string;
+  default_top_up_pct: string;
+  default_reduce_pct: string;
+  max_sector_pct: string;
+  cost_dominates_ratio: string;
+  suggestion_valid_minutes: number;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1855,6 +1874,10 @@ export const apiClient = {
     getJson<UniverseScanSettingsResponse>("/settings/universe-scan"),
   updateUniverseScanSettings: (payload: { selected_codes: string[] }) =>
     putJson<UniverseScanSettingsResponse>("/settings/universe-scan", payload),
+  getOrderPolicySettings: () =>
+    getJson<OrderPolicySettingsResponse>("/settings/order-policy"),
+  updateOrderPolicySettings: (payload: OrderPolicySettingsUpdateInput) =>
+    putJson<OrderPolicySettingsResponse>("/settings/order-policy", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

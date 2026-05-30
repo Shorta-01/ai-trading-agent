@@ -667,6 +667,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "op het env-var/locked-set gedrag."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0057_runtime_config_order_policy",
+        previous_revision_id="0056_runtime_config_universe_scan",
+        filename="0057_runtime_config_order_policy.py",
+        label_nl="Order-policy + suggestiefilter overlay in runtime_config",
+        description_nl=(
+            "Voegt zes kolommen toe aan ``runtime_config`` zodat de Settings-"
+            "UI standaard koopbedrag, bijkoop/verminder-percentages, "
+            "sectorconcentratie-cap, kosten-vs-rendement-drempel en "
+            "suggestiegeldigheidsvenster kan persisteren. Null betekent in "
+            "elk veld: terugvallen op env-var of broncode-default."
+        ),
+    ),
 )
 
 

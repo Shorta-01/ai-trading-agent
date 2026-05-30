@@ -1305,12 +1305,26 @@ def run_suggestions_sync() -> dict[str, object]:
                         "Voer eerst een forecast-sync uit."
                     ),
                 )
+            # Operator-edited diversification + cost gates from Settings UI
+            # PR A. The resolver returns the same PortfolioContext for every
+            # conid because today the runtime doesn't know per-asset sector
+            # weights yet — when that wiring lands the resolver can return
+            # the per-conid figures and the gates start firing for real.
+            from decimal import Decimal as _D
+
+            from portfolio_outlook_portfolio import PortfolioContext as _PortfolioContext
+
+            _operator_context = _PortfolioContext(
+                max_sector_pct=_D(settings.max_sector_pct),
+                cost_dominates_ratio=_D(settings.cost_dominates_ratio),
+            )
             report = sync_suggestions(
                 forecasts=forecasts,
                 positions=positions,
                 risk_profile=settings.suggestions_risk_profile,
                 repo=suggestion_repo,
                 valid_minutes=settings.suggestions_valid_minutes,
+                portfolio_context_resolver=lambda _conid: _operator_context,
             )
     except StorageConnectionError:
         return _build_blocked_suggestion_response(

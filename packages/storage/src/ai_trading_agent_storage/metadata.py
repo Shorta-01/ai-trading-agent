@@ -1345,6 +1345,14 @@ runtime_config = Table(
     # Multi-select scan markets (V1.1 follow-up): comma-separated locked
     # index codes. ``None`` means "fall back to ``settings.universe_set``".
     Column("universe_scan_index_codes", Text, nullable=True),
+    # Order-policy + suggestion-filter overlay (Settings UI PR A). Null
+    # in any column means "fall back to the env-var or constant default".
+    Column("default_buy_value_eur", MONEY_NUMERIC, nullable=True),
+    Column("default_top_up_pct", MONEY_NUMERIC, nullable=True),
+    Column("default_reduce_pct", MONEY_NUMERIC, nullable=True),
+    Column("max_sector_pct", MONEY_NUMERIC, nullable=True),
+    Column("cost_dominates_ratio", MONEY_NUMERIC, nullable=True),
+    Column("suggestion_valid_minutes", Integer, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown
