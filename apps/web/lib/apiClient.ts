@@ -125,6 +125,17 @@ export type RiskLimitsUpdateInput = {
 // API key is write-only: the response only carries ``claude_ai_api_key_set``
 // and never the key value. The monthly budget is a string on the wire (no
 // float rounding).
+export type UniverseScanIndexOption = {
+  code: string;
+  label_nl: string;
+};
+
+export type UniverseScanSettingsResponse = {
+  selected_codes: string[];
+  available_codes: UniverseScanIndexOption[];
+  help_nl: string;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1840,6 +1851,10 @@ export const apiClient = {
     getJson<ConnectionSettingsResponse>("/settings/connection"),
   updateConnectionSettings: (payload: ConnectionSettingsUpdateInput) =>
     putJson<ConnectionSettingsResponse>("/settings/connection", payload),
+  getUniverseScanSettings: () =>
+    getJson<UniverseScanSettingsResponse>("/settings/universe-scan"),
+  updateUniverseScanSettings: (payload: { selected_codes: string[] }) =>
+    putJson<UniverseScanSettingsResponse>("/settings/universe-scan", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

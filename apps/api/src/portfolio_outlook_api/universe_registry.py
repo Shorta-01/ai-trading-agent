@@ -508,6 +508,117 @@ _LOCKED_UNIVERSE_BY_SET: dict[str, tuple[UniverseEntry, ...]] = {
 }
 
 
+# ---- Per-index multi-select (operator-pickable markets) -----------------
+#
+# The locked sets above bundle indices into all-or-nothing groups. The
+# operator may instead pick any subset of indices via the new
+# ``universe_scan_index_codes`` setting (a comma-separated list of these
+# codes). ``compose_universe_from_index_codes`` builds the deduped union.
+
+INDEX_CODE_BEL20: Final[str] = "BEL20"
+INDEX_CODE_AEX: Final[str] = "AEX"
+INDEX_CODE_CAC40: Final[str] = "CAC40"
+INDEX_CODE_DAX40: Final[str] = "DAX40"
+INDEX_CODE_FTSE100: Final[str] = "FTSE100"
+INDEX_CODE_FTSEMIB: Final[str] = "FTSEMIB"
+INDEX_CODE_IBEX35: Final[str] = "IBEX35"
+INDEX_CODE_NORDIC30: Final[str] = "NORDIC30"
+INDEX_CODE_SLI: Final[str] = "SLI"
+INDEX_CODE_SP100: Final[str] = "SP100"
+INDEX_CODE_NASDAQ100: Final[str] = "NASDAQ100"
+INDEX_CODE_RUSSELL1000: Final[str] = "RUSSELL1000"
+INDEX_CODE_RUSSELL2000: Final[str] = "RUSSELL2000"
+
+# Locked set of pickable index codes. Adding a new index here is the
+# *only* place that has to change — ``compose_universe_from_index_codes``
+# discovers entries by scanning every locked set with this code.
+LOCKED_INDEX_CODES: Final[frozenset[str]] = frozenset(
+    {
+        INDEX_CODE_BEL20,
+        INDEX_CODE_AEX,
+        INDEX_CODE_CAC40,
+        INDEX_CODE_DAX40,
+        INDEX_CODE_FTSE100,
+        INDEX_CODE_FTSEMIB,
+        INDEX_CODE_IBEX35,
+        INDEX_CODE_NORDIC30,
+        INDEX_CODE_SLI,
+        INDEX_CODE_SP100,
+        INDEX_CODE_NASDAQ100,
+        INDEX_CODE_RUSSELL1000,
+        INDEX_CODE_RUSSELL2000,
+    }
+)
+
+
+# Human-readable labels per index code. The UI multi-select uses these.
+INDEX_CODE_LABELS_NL: Final[dict[str, str]] = {
+    INDEX_CODE_BEL20: "België — Bel20",
+    INDEX_CODE_AEX: "Nederland — AEX",
+    INDEX_CODE_CAC40: "Frankrijk — CAC 40",
+    INDEX_CODE_DAX40: "Duitsland — DAX 40",
+    INDEX_CODE_FTSE100: "Verenigd Koninkrijk — FTSE 100",
+    INDEX_CODE_FTSEMIB: "Italië — FTSE MIB",
+    INDEX_CODE_IBEX35: "Spanje — IBEX 35",
+    INDEX_CODE_NORDIC30: "Noord-Europa — Nordic 30",
+    INDEX_CODE_SLI: "Zwitserland — SLI",
+    INDEX_CODE_SP100: "VS — S&P 100",
+    INDEX_CODE_NASDAQ100: "VS — NASDAQ 100",
+    INDEX_CODE_RUSSELL1000: "VS — Russell 1000 (extras)",
+    INDEX_CODE_RUSSELL2000: "VS — Russell 2000 (extras)",
+}
+
+
+def parse_index_codes(raw: str) -> tuple[str, ...]:
+    """Parse a comma-separated index-code list and reject unknown codes.
+
+    Leading/trailing whitespace is stripped per token. Empty tokens are
+    silently dropped. The result preserves operator-supplied order and
+    deduplicates.
+    """
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw_token in (raw or "").split(","):
+        token = raw_token.strip()
+        if not token:
+            continue
+        if token not in LOCKED_INDEX_CODES:
+            raise ValueError(
+                f"unknown universe_scan_index_code {token!r}; "
+                f"must be one of {sorted(LOCKED_INDEX_CODES)}"
+            )
+        if token in seen:
+            continue
+        seen.add(token)
+        out.append(token)
+    return tuple(out)
+
+
+def compose_universe_from_index_codes(
+    codes: Sequence[str],
+) -> tuple[UniverseEntry, ...]:
+    """Build the deduplicated universe entry tuple for a multi-select.
+
+    Scans the broadest locked set (``ALL_5K``) and keeps every entry whose
+    ``index_code`` is in ``codes``. Order in the result follows the
+    operator-supplied ``codes`` order — within each index the registry's
+    own order is preserved.
+    """
+
+    if not codes:
+        return ()
+    requested = list(codes)
+    by_code: dict[str, list[UniverseEntry]] = {code: [] for code in requested}
+    for entry in _ALL_5K_SET:
+        if entry.index_code in by_code:
+            by_code[entry.index_code].append(entry)
+    flat: list[UniverseEntry] = []
+    for code in requested:
+        flat.extend(by_code[code])
+    return _dedupe_by_eodhd_symbol(flat)
+
+
 def _dedupe_by_eodhd_symbol(
     entries: Sequence[UniverseEntry],
 ) -> tuple[UniverseEntry, ...]:

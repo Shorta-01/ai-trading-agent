@@ -4037,6 +4037,7 @@ def run_universe_scan() -> dict[str, object]:
                 history_lookback_days=settings.universe_scan_history_lookback_days,
                 triggered_by="manual",
                 universe_set=settings.universe_set,
+                universe_index_codes=settings.universe_scan_index_codes,
                 cache_ttl_hours=settings.universe_scan_cache_ttl_hours,
             )
     except StorageConnectionError:

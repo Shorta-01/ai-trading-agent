@@ -32,6 +32,8 @@ const getTradingSettings = vi.fn();
 const updateTradingSettings = vi.fn();
 const getConnectionSettings = vi.fn();
 const updateConnectionSettings = vi.fn();
+const getUniverseScanSettings = vi.fn();
+const updateUniverseScanSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -42,6 +44,10 @@ vi.mock("@/lib/apiClient", () => ({
     getConnectionSettings: (...a: unknown[]) => getConnectionSettings(...a),
     updateConnectionSettings: (...a: unknown[]) =>
       updateConnectionSettings(...a),
+    getUniverseScanSettings: (...a: unknown[]) =>
+      getUniverseScanSettings(...a),
+    updateUniverseScanSettings: (...a: unknown[]) =>
+      updateUniverseScanSettings(...a),
   },
 }));
 
@@ -110,6 +116,16 @@ function ok<T>(data: T) {
   return Promise.resolve({ ok: true as const, data });
 }
 
+const UNIVERSE_SCAN = {
+  selected_codes: ["BEL20", "AEX"],
+  available_codes: [
+    { code: "BEL20", label_nl: "België — Bel20" },
+    { code: "AEX", label_nl: "Nederland — AEX" },
+    { code: "CAC40", label_nl: "Frankrijk — CAC 40" },
+  ],
+  help_nl: "Kies welke beurzen het systeem dagelijks moet scannen.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -117,9 +133,12 @@ beforeEach(() => {
   updateTradingSettings.mockReset();
   getConnectionSettings.mockReset();
   updateConnectionSettings.mockReset();
+  getUniverseScanSettings.mockReset();
+  updateUniverseScanSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
+  getUniverseScanSettings.mockReturnValue(ok(UNIVERSE_SCAN));
 });
 
 afterEach(() => cleanup());
@@ -288,5 +307,38 @@ describe("InstellingenPage", () => {
     );
     const payload = updateConnectionSettings.mock.calls[0][0];
     expect(payload.claude_ai_api_key).toBe("sk-ant-new-key");
+  });
+
+  it("renders the scan-universe multi-select with stored selection", async () => {
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-universe-scan-section"),
+    ).toBeInTheDocument();
+    const bel20 = screen.getByTestId("instellingen-universe-scan-option-BEL20");
+    const aex = screen.getByTestId("instellingen-universe-scan-option-AEX");
+    const cac40 = screen.getByTestId("instellingen-universe-scan-option-CAC40");
+    expect(bel20.querySelector("input")).toBeChecked();
+    expect(aex.querySelector("input")).toBeChecked();
+    expect(cac40.querySelector("input")).not.toBeChecked();
+  });
+
+  it("saves the multi-select via updateUniverseScanSettings", async () => {
+    updateUniverseScanSettings.mockReturnValue(
+      ok({ ...UNIVERSE_SCAN, selected_codes: ["BEL20", "AEX", "CAC40"] }),
+    );
+    render(<Page />);
+    await screen.findByTestId("instellingen-universe-scan-section");
+    // Toggle CAC40 on.
+    const cac40 = screen.getByTestId("instellingen-universe-scan-option-CAC40");
+    const checkbox = cac40.querySelector("input");
+    expect(checkbox).not.toBeNull();
+    await userEvent.click(checkbox as HTMLInputElement);
+    await userEvent.click(screen.getByTestId("instellingen-universe-scan-save"));
+    await waitFor(() =>
+      expect(updateUniverseScanSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateUniverseScanSettings.mock.calls[0][0]).toEqual({
+      selected_codes: ["BEL20", "AEX", "CAC40"],
+    });
   });
 });

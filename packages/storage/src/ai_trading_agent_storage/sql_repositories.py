@@ -6130,6 +6130,7 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "claude_ai_budget_monthly_eur": record.claude_ai_budget_monthly_eur,
             "claude_ai_api_key": record.claude_ai_api_key,
             "updated_at": record.updated_at,
+            "universe_scan_index_codes": record.universe_scan_index_codes,
         }
         existing = (
             self._connection.execute(
@@ -6171,6 +6172,7 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         ),
         claude_ai_api_key=row["claude_ai_api_key"],
         updated_at=row["updated_at"],
+        universe_scan_index_codes=row.get("universe_scan_index_codes"),
     )
 
 

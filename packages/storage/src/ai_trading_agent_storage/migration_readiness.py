@@ -654,6 +654,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "duurzame worker-sessie."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0056_runtime_config_universe_scan",
+        previous_revision_id="0055_runtime_config",
+        filename="0056_runtime_config_universe_scan.py",
+        label_nl="Multi-select scan-universum in runtime_config",
+        description_nl=(
+            "Voegt ``universe_scan_index_codes`` toe aan ``runtime_config`` "
+            "— een door de operator selecteerbare lijst beurzen "
+            "(comma-separated locked index codes) die de oude vaste "
+            "``universe_set``-selectie vervangt. Null betekent: terugvallen "
+            "op het env-var/locked-set gedrag."
+        ),
+    ),
 )
 
 

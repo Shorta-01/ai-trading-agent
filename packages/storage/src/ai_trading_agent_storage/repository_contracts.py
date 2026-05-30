@@ -285,6 +285,10 @@ class RuntimeConfigRecord:
     claude_ai_budget_monthly_eur: Decimal | None
     claude_ai_api_key: str | None
     updated_at: datetime
+    # Operator-selected universe-scan markets, comma-separated index
+    # codes (e.g. ``"BEL20,AEX,CAC40"``). ``None`` means the operator
+    # hasn't customised — fall back to ``settings.universe_set``.
+    universe_scan_index_codes: str | None = None
 
 
 @dataclass(frozen=True)
