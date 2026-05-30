@@ -171,23 +171,101 @@ def _sample_stdev(values: Sequence[float], mean: float) -> float:
     return _pm.sample_stdev(np.asarray(values, dtype=np.float64))
 
 
-def _direction_label(expected_return_pct: float) -> tuple[str, str]:
-    """Translate the expected log-return drift over the horizon to a Dutch
-    direction label.
+# Risk-adjusted (horizon-Sharpe) thresholds — the units are "standard
+# deviations of horizon-volatility from zero." See
+# ``_direction_label_sharpe`` below for the derivation.
+#
+# A Sharpe of 1.0 means the expected return sits one standard deviation
+# above zero, which under a Brownian assumption corresponds to ~84%
+# probability the realised return is positive — a defensible
+# "strong_up" bar. 0.3 corresponds to ~62% — the lowest defensible
+# "slight" bucket. Tune these here only.
+_SHARPE_STRONG_THRESHOLD: float = 1.0
+_SHARPE_SLIGHT_THRESHOLD: float = 0.3
 
-    Thresholds are deliberately conservative — the doctrine forbids
-    overconfident headlines. Anything between ``-2%`` and ``+2%`` is neutral.
+# Absolute-return fallback thresholds (legacy). Used only when
+# horizon-volatility is unavailable. Same numbers as V1 for back-compat.
+_ABS_STRONG_THRESHOLD: float = 10.0
+_ABS_SLIGHT_THRESHOLD: float = 2.0
+
+
+def _direction_label(
+    expected_return_pct: float,
+    *,
+    vol_annual: float | None = None,
+    horizon_days: int | None = None,
+) -> tuple[str, str]:
+    """Translate the expected return into a Dutch direction label.
+
+    When both ``vol_annual`` (decimal, e.g. 0.20 = 20%/yr) and
+    ``horizon_days`` are provided this uses a **risk-adjusted Sharpe**
+    threshold via :func:`_direction_label_sharpe`. Otherwise (legacy
+    callers / tests with no volatility) it falls back to the V1 fixed
+    absolute-return thresholds (±2% / ±10%).
+
+    The Sharpe path is the right one for production: a 10%-expected
+    return on a 5%-vol utility is materially different from a
+    10%-expected return on a 60%-vol small-cap. The fixed thresholds
+    treated them identically.
     """
 
-    if expected_return_pct >= 10.0:
+    if (
+        vol_annual is not None
+        and vol_annual > 0.0
+        and horizon_days is not None
+        and horizon_days > 0
+    ):
+        return _direction_label_sharpe(
+            expected_return_pct=expected_return_pct,
+            vol_annual=vol_annual,
+            horizon_days=horizon_days,
+        )
+
+    if expected_return_pct >= _ABS_STRONG_THRESHOLD:
         return "strong_up", "Sterke stijging verwacht"
-    if expected_return_pct >= 2.0:
+    if expected_return_pct >= _ABS_SLIGHT_THRESHOLD:
         return "slight_up", "Lichte stijging verwacht"
-    if expected_return_pct > -2.0:
+    if expected_return_pct > -_ABS_SLIGHT_THRESHOLD:
         return "neutral", "Geen duidelijke richting"
-    if expected_return_pct > -10.0:
+    if expected_return_pct > -_ABS_STRONG_THRESHOLD:
         return "slight_down", "Lichte daling verwacht"
     return "strong_down", "Duidelijke daling verwacht"
+
+
+def _direction_label_sharpe(
+    *,
+    expected_return_pct: float,
+    vol_annual: float,
+    horizon_days: int,
+) -> tuple[str, str]:
+    """Risk-adjusted direction label (Sharpe over the forecast horizon).
+
+    Derivation:
+      vol_h_pct = vol_annual * 100 * sqrt(horizon_days / 252)
+                  (annual vol scaled to the horizon, expressed as %)
+      sharpe_h  = expected_return_pct / vol_h_pct
+                  ("standard deviations of horizon-vol from zero")
+
+    Reads as: how confident can the model really be that the move is
+    in the predicted direction, accounting for the asset's own
+    volatility? A 5%-return forecast on a 5%-vol asset is strong
+    evidence; the same 5% on a 30%-vol asset is just noise.
+    """
+
+    vol_h_pct = vol_annual * 100.0 * math.sqrt(horizon_days / 252.0)
+    if vol_h_pct <= 0.0:
+        # Degenerate input — fall back to absolute thresholds.
+        return _direction_label(expected_return_pct)
+    sharpe = expected_return_pct / vol_h_pct
+    if sharpe >= _SHARPE_STRONG_THRESHOLD:
+        return "strong_up", "Sterke stijging verwacht (risico-gecorrigeerd)"
+    if sharpe >= _SHARPE_SLIGHT_THRESHOLD:
+        return "slight_up", "Lichte stijging verwacht (risico-gecorrigeerd)"
+    if sharpe > -_SHARPE_SLIGHT_THRESHOLD:
+        return "neutral", "Geen duidelijke richting (risico-gecorrigeerd)"
+    if sharpe > -_SHARPE_STRONG_THRESHOLD:
+        return "slight_down", "Lichte daling verwacht (risico-gecorrigeerd)"
+    return "strong_down", "Duidelijke daling verwacht (risico-gecorrigeerd)"
 
 
 def _confidence_from_sample_size(n: int) -> float:
@@ -420,7 +498,11 @@ def compute_baseline_forecast(
     # Downside risk score: percentage drawdown to the p10 level vs current.
     downside_risk = max(0.0, (s0 - p10) / s0) * 100.0
     confidence = _confidence_from_sample_size(len(returns))
-    label, label_nl = _direction_label(expected_return_pct)
+    label, label_nl = _direction_label(
+        expected_return_pct,
+        vol_annual=sigma_annual,
+        horizon_days=horizon_trading_days,
+    )
 
     explanation_nl = (
         f"Baseline GBM op {len(returns)} dagrendementen: drift "

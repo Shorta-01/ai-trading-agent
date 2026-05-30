@@ -1,0 +1,4 @@
+# Stray empty file occasionally produced by the test suite (relative-path
+# write somewhere in tests/). Doesn't reproduce in CI's clean checkout
+# but lands in my local commits unless explicitly ignored.
+missing
