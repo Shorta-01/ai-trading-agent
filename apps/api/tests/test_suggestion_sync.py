@@ -258,3 +258,41 @@ def test_sync_suggestions_continues_when_expire_raises() -> None:
         valid_minutes=1440,
     )
     assert report.suggestion_persisted == 0
+
+
+# ---- #3 — portfolio-context resolver wired into sync_suggestions ---------
+
+
+def test_sync_suggestions_applies_portfolio_context_gate_when_resolver_present() -> None:
+    """The gate downgrades a buy → Bekijken when the resolved context
+    reports the position is already at the per-position cap."""
+
+    from decimal import Decimal as _D
+
+    from portfolio_outlook_portfolio import PortfolioContext
+
+    repo = FakeRepo()
+    sync_suggestions(
+        forecasts=[
+            _forecast(
+                conid="100",
+                symbol="ASML",
+                direction="strong_up",
+                confidence="0.90",
+            )
+        ],
+        positions=[],
+        risk_profile="Groei",
+        repo=repo,
+        valid_minutes=1440,
+        portfolio_context_resolver=lambda _conid: PortfolioContext(
+            current_position_pct=_D("10"),
+            max_position_pct=_D("10"),
+        ),
+    )
+    record = repo.saved[0]
+    assert record.action_label == "Bekijken"
+    assert record.status == "control_needed"
+    # The blocker code surfaces in blockers_json so the UI can explain.
+    assert record.blockers_json is not None
+    assert "over_max_position_pct" in record.blockers_json

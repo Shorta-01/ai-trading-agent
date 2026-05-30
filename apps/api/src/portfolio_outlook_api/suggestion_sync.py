@@ -14,6 +14,7 @@ Hard contract:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -29,8 +30,10 @@ from portfolio_outlook_portfolio import (
     BASELINE_LABEL_TRANSLATOR_MODEL_VERSION,
     BaselineForecast,
     HistoricalBar,
+    PortfolioContext,
     SuggestionDecision,
     SuggestionInputs,
+    apply_portfolio_context_gates,
     translate_forecast_to_label,
 )
 
@@ -137,6 +140,7 @@ def sync_suggestions(
     risk_profile: str,
     repo: _AssetSuggestionRepoProtocol,
     valid_minutes: int,
+    portfolio_context_resolver: Callable[[str], PortfolioContext] | None = None,
 ) -> SuggestionSyncReport:
     """Run one suggestion cycle and persist one record per forecast."""
 
@@ -182,6 +186,17 @@ def sync_suggestions(
                 has_position=has_position,
             )
         )
+        # #3 — portfolio-context gate: when a resolver is wired in, ask it
+        # for the live position/sector/cost state and let the gate
+        # downgrade Kopen / Langzaam bijkopen to Bekijken if the trade
+        # is irresponsible given the rest of the portfolio. Caller-side
+        # resolver is optional; absent it the gate is a no-op.
+        if portfolio_context_resolver is not None:
+            try:
+                context = portfolio_context_resolver(conid)
+            except Exception:  # noqa: BLE001 — gate is best-effort
+                context = PortfolioContext()
+            decision = apply_portfolio_context_gates(decision, context)
         generated_at = datetime.now(UTC)
         valid_until = generated_at + timedelta(minutes=valid_minutes)
         record = _build_suggestion_record(

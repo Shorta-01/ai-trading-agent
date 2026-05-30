@@ -385,3 +385,151 @@ def test_drivers_and_rationale_are_populated() -> None:
     )
     assert any("direction_label=strong_up" in d for d in decision.drivers)
     assert decision.rationale_nl  # non-empty
+
+
+# ---- #3 portfolio-context gate post-processor ---------------------------
+
+
+def _kopen_decision() -> "SuggestionDecision":
+    """Build a happy-path Kopen decision from a strong-up cold-start
+    forecast we can then post-process through the gate."""
+
+    from portfolio_outlook_portfolio.baseline_forecast import BaselineForecast
+    from portfolio_outlook_portfolio.baseline_label_translator import (
+        SuggestionDecision,
+        SuggestionInputs,
+        translate_forecast_to_label,
+    )
+
+    forecast = BaselineForecast(
+        horizon_days=30,
+        data_points_used=120,
+        history_first_bar_date=None,
+        history_last_bar_date=None,
+        current_price=Decimal("100"),
+        # 5% expected on 5% vol → strong Sharpe → strong_up.
+        expected_return_pct=Decimal("5.0"),
+        p10_price=Decimal("90"),
+        p50_price=Decimal("105"),
+        p90_price=Decimal("120"),
+        prob_gain=Decimal("0.8"),
+        prob_loss=Decimal("0.2"),
+        prob_loss_gt_5pct=Decimal("0.1"),
+        prob_loss_gt_10pct=Decimal("0.02"),
+        prob_gain_gt_5pct=Decimal("0.5"),
+        prob_gain_gt_10pct=Decimal("0.2"),
+        expected_volatility_annual=Decimal("0.05"),
+        downside_risk_score=Decimal("5"),
+        confidence_score=Decimal("0.85"),
+        direction_label="strong_up",
+        direction_label_nl="Sterke stijging verwacht",
+        explanation_nl="test",
+        status="ready",
+        blocking_reason=None,
+    )
+    decision: SuggestionDecision = translate_forecast_to_label(
+        SuggestionInputs(
+            forecast=forecast, risk_profile="Groei", has_position=False
+        )
+    )
+    # Sanity: this fixture really produces Kopen.
+    assert decision.action_label == "Kopen"
+    return decision
+
+
+def test_portfolio_gate_passes_through_when_no_context_supplied() -> None:
+    """A PortfolioContext with all None fields is a no-op."""
+
+    from portfolio_outlook_portfolio.baseline_label_translator import (
+        PortfolioContext,
+        apply_portfolio_context_gates,
+    )
+
+    decision = _kopen_decision()
+    out = apply_portfolio_context_gates(decision, PortfolioContext())
+    assert out is decision  # untouched
+
+
+def test_portfolio_gate_downgrades_to_bekijken_when_already_at_max_position() -> None:
+    """The user's per-position cap is the hardest gate: at-or-past it,
+    don't suggest more, regardless of how strong the forecast is."""
+
+    from portfolio_outlook_portfolio.baseline_label_translator import (
+        PortfolioContext,
+        apply_portfolio_context_gates,
+    )
+
+    out = apply_portfolio_context_gates(
+        _kopen_decision(),
+        PortfolioContext(
+            current_position_pct=Decimal("10"),
+            max_position_pct=Decimal("10"),
+        ),
+    )
+    assert out.action_label == "Bekijken"
+    assert out.status == "control_needed"
+    assert "over_max_position_pct" in out.blockers
+
+
+def test_portfolio_gate_downgrades_when_sector_concentration_is_at_cap() -> None:
+    """A 6th tech name doesn't diversify; downgrade to Bekijken."""
+
+    from portfolio_outlook_portfolio.baseline_label_translator import (
+        PortfolioContext,
+        apply_portfolio_context_gates,
+    )
+
+    out = apply_portfolio_context_gates(
+        _kopen_decision(),
+        PortfolioContext(sector_pct=Decimal("30")),  # default cap is 30%
+    )
+    assert out.action_label == "Bekijken"
+    assert "over_max_sector_pct" in out.blockers
+
+
+def test_portfolio_gate_downgrades_when_cost_dominates_expected_gain() -> None:
+    """Default ratio: cost must be < 1/3 of expected return. With a 5%
+    expected return, a 2% round-trip cost trips the gate (cost > 33%)."""
+
+    from portfolio_outlook_portfolio.baseline_label_translator import (
+        PortfolioContext,
+        apply_portfolio_context_gates,
+    )
+
+    out = apply_portfolio_context_gates(
+        _kopen_decision(),
+        PortfolioContext(estimated_round_trip_cost_pct=Decimal("2.0")),
+    )
+    assert out.action_label == "Bekijken"
+    assert "cost_exceeds_gain" in out.blockers
+
+
+def test_portfolio_gate_leaves_non_buy_labels_alone() -> None:
+    """The gate only affects buy proposals — selling a sector that's
+    already over-weighted, for example, should still be Verkopen."""
+
+    from portfolio_outlook_portfolio.baseline_label_translator import (
+        PortfolioContext,
+        SuggestionDecision,
+        apply_portfolio_context_gates,
+    )
+
+    sell_decision = SuggestionDecision(
+        action_label="Verkopen",
+        action_label_nl="Verkopen",
+        confidence_label="Hoog",
+        confidence_label_nl="Hoog",
+        confidence_score=Decimal("0.85"),
+        rationale_nl="test",
+        drivers=("expected_return_pct=-10",),
+        blockers=(),
+        status="ready",
+        blocking_reason=None,
+        risk_profile="Gebalanceerd",
+        has_position=True,
+    )
+    out = apply_portfolio_context_gates(
+        sell_decision,
+        PortfolioContext(sector_pct=Decimal("50")),
+    )
+    assert out is sell_decision  # untouched
