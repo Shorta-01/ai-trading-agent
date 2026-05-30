@@ -36,6 +36,8 @@ const getUniverseScanSettings = vi.fn();
 const updateUniverseScanSettings = vi.fn();
 const getOrderPolicySettings = vi.fn();
 const updateOrderPolicySettings = vi.fn();
+const getSchedulerSettings = vi.fn();
+const updateSchedulerSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -54,6 +56,9 @@ vi.mock("@/lib/apiClient", () => ({
       getOrderPolicySettings(...a),
     updateOrderPolicySettings: (...a: unknown[]) =>
       updateOrderPolicySettings(...a),
+    getSchedulerSettings: (...a: unknown[]) => getSchedulerSettings(...a),
+    updateSchedulerSettings: (...a: unknown[]) =>
+      updateSchedulerSettings(...a),
   },
 }));
 
@@ -142,6 +147,12 @@ const ORDER_POLICY = {
   help_nl: "Standaard order-grootte en suggestie-filters.",
 };
 
+const SCHEDULER = {
+  scheduler_daily_briefing_cron: "30 6 * * *",
+  ibkr_sync_interval_minutes: 15,
+  help_nl: "Wanneer de briefing klaarstaat en hoe vaak IBKR wordt gesynchroniseerd.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -153,11 +164,14 @@ beforeEach(() => {
   updateUniverseScanSettings.mockReset();
   getOrderPolicySettings.mockReset();
   updateOrderPolicySettings.mockReset();
+  getSchedulerSettings.mockReset();
+  updateSchedulerSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
   getUniverseScanSettings.mockReturnValue(ok(UNIVERSE_SCAN));
   getOrderPolicySettings.mockReturnValue(ok(ORDER_POLICY));
+  getSchedulerSettings.mockReturnValue(ok(SCHEDULER));
 });
 
 afterEach(() => cleanup());
@@ -402,5 +416,27 @@ describe("InstellingenPage", () => {
     expect(payload.default_buy_value_eur).toBe("2500");
     expect(payload.max_sector_pct).toBe("25");
     expect(payload.suggestion_valid_minutes).toBe(1440);
+  });
+
+  it("renders the scheduler section + saves an edited cron", async () => {
+    updateSchedulerSettings.mockReturnValue(
+      ok({ ...SCHEDULER, scheduler_daily_briefing_cron: "45 7 * * *" }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-scheduler-section"),
+    ).toBeInTheDocument();
+    const cron = screen.getByTestId("instellingen-scheduler-cron");
+    expect(cron).toHaveValue("30 6 * * *");
+    await userEvent.clear(cron);
+    await userEvent.type(cron, "45 7 * * *");
+    await userEvent.click(screen.getByTestId("instellingen-scheduler-save"));
+    await waitFor(() =>
+      expect(updateSchedulerSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateSchedulerSettings.mock.calls[0][0]).toEqual({
+      scheduler_daily_briefing_cron: "45 7 * * *",
+      ibkr_sync_interval_minutes: 15,
+    });
   });
 });
