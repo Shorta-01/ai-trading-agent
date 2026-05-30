@@ -2350,6 +2350,29 @@ class SqlAlchemyAssetSuggestionRepository(_Base):
             f"{len(ordered)} assetsuggesties opgehaald.",
         )
 
+    def expire_stale_asset_suggestions(self, *, now: datetime) -> int:
+        """Flip every ``status='ready'`` row whose ``valid_until`` has
+        passed to ``status='expired'`` with a stable blocking_reason.
+
+        Returns the number of rows updated. Idempotent — only ``ready``
+        rows are touched, so re-running on the same cutoff is a no-op
+        after the first run. Called from the morning chain and from a
+        nightly cleanup so a stale ``Bekijken`` doesn't silt up the
+        watchlist forever.
+        """
+
+        update = (
+            asset_suggestions.update()
+            .where(asset_suggestions.c.status == "ready")
+            .where(asset_suggestions.c.valid_until < now)
+            .values(
+                status="expired",
+                blocking_reason="past_valid_until",
+            )
+        )
+        result = self._connection.execute(update)
+        return int(result.rowcount or 0)
+
 
 def _suggestion_from_row(row: RowMapping) -> AssetSuggestionRecord:
     data = dict(row)

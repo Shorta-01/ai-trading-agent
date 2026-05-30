@@ -56,6 +56,7 @@ class SuggestionSyncReport:
 
 class _AssetSuggestionRepoProtocol(Protocol):
     def save_asset_suggestion(self, record: AssetSuggestionRecord) -> object: ...
+    def expire_stale_asset_suggestions(self, *, now: datetime) -> int: ...
 
 
 def _forecast_record_to_baseline_dataclass(
@@ -140,6 +141,13 @@ def sync_suggestions(
     """Run one suggestion cycle and persist one record per forecast."""
 
     requested_at = datetime.now(UTC)
+    # #7 — expire yesterday's still-``ready`` rows before generating today's.
+    # Idempotent on the cutoff; keeps stale ``Bekijken`` from silting up the
+    # watchlist forever. Failure here is non-fatal — the new cycle proceeds.
+    try:
+        repo.expire_stale_asset_suggestions(now=requested_at)
+    except Exception:  # noqa: BLE001 — never fail a sync over hygiene
+        pass
     held_conids = {
         (p.conid or "").strip() for p in positions if (p.conid or "").strip()
     }

@@ -87,6 +87,9 @@ def _fake_storage(monkeypatch, *, latest_run, positions, forecasts, saved_target
             saved_target.append(record)
             return None
 
+        def expire_stale_asset_suggestions(self, *, now: object) -> int:
+            return 0
+
         def list_latest_asset_suggestions_by_conids(self, _conids: tuple[str, ...]):
             return _ListResult(saved_target)
 

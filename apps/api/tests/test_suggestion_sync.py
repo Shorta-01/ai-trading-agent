@@ -90,15 +90,23 @@ def _position(conid: str, symbol: str) -> IbkrPositionSnapshotRecord:
 class FakeRepo:
     def __init__(self) -> None:
         self.saved: list[AssetSuggestionRecord] = []
+        self.expire_calls: list[object] = []
 
     def save_asset_suggestion(self, record: AssetSuggestionRecord) -> object:
         self.saved.append(record)
         return None
 
+    def expire_stale_asset_suggestions(self, *, now: object) -> int:
+        self.expire_calls.append(now)
+        return 0
+
 
 class RaisingRepo:
     def save_asset_suggestion(self, record: AssetSuggestionRecord) -> object:
         raise RuntimeError("simulated persistence failure")
+
+    def expire_stale_asset_suggestions(self, *, now: object) -> int:
+        return 0
 
 
 def test_held_strong_down_high_confidence_persists_verkopen() -> None:
@@ -211,3 +219,42 @@ def test_report_summary_status_when_no_forecasts() -> None:
 
     assert report.suggestion_persisted == 0
     assert report.status_nl == "Geen voorspellingen beschikbaar"
+
+
+# ---- #7 — auto-expire stale suggestions ---------------------------------
+
+
+def test_sync_suggestions_calls_expire_stale_before_generating() -> None:
+    """Every sync cycle should sweep stale rows first so a ``Bekijken``
+    from yesterday doesn't keep hanging around past its valid_until."""
+
+    repo = FakeRepo()
+    sync_suggestions(
+        forecasts=[],
+        positions=[],
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+    )
+    assert len(repo.expire_calls) == 1
+
+
+def test_sync_suggestions_continues_when_expire_raises() -> None:
+    """Expire is hygiene; if it raises (e.g. transient DB error) the
+    main sync cycle must still complete — failing the whole morning
+    chain over a cleanup step would be the wrong trade-off."""
+
+    class _ExpireFails(FakeRepo):
+        def expire_stale_asset_suggestions(self, *, now: object) -> int:
+            raise RuntimeError("simulated expire failure")
+
+    repo = _ExpireFails()
+    # No raise — the cycle completes cleanly.
+    report = sync_suggestions(
+        forecasts=[],
+        positions=[],
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+    )
+    assert report.suggestion_persisted == 0
