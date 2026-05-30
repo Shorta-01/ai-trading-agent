@@ -6143,6 +6143,13 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "forecast_minimum_bars_required": record.forecast_minimum_bars_required,
             "daily_briefing_lookback_hours": record.daily_briefing_lookback_hours,
             "universe_scan_cache_ttl_hours": record.universe_scan_cache_ttl_hours,
+            "sweep_interval_seconds": record.sweep_interval_seconds,
+            "sweep_retry_max_attempts": record.sweep_retry_max_attempts,
+            "sweep_retry_backoff_seconds": record.sweep_retry_backoff_seconds,
+            "sweep_alert_after_consecutive_errors": (
+                record.sweep_alert_after_consecutive_errors
+            ),
+            "eodhd_rate_limit_per_second": record.eodhd_rate_limit_per_second,
         }
         existing = (
             self._connection.execute(
@@ -6219,6 +6226,29 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         universe_scan_cache_ttl_hours=(
             int(row["universe_scan_cache_ttl_hours"])
             if row.get("universe_scan_cache_ttl_hours") is not None
+            else None
+        ),
+        sweep_interval_seconds=(
+            int(row["sweep_interval_seconds"])
+            if row.get("sweep_interval_seconds") is not None
+            else None
+        ),
+        sweep_retry_max_attempts=(
+            int(row["sweep_retry_max_attempts"])
+            if row.get("sweep_retry_max_attempts") is not None
+            else None
+        ),
+        sweep_retry_backoff_seconds=_to_decimal(
+            row.get("sweep_retry_backoff_seconds")
+        ),
+        sweep_alert_after_consecutive_errors=(
+            int(row["sweep_alert_after_consecutive_errors"])
+            if row.get("sweep_alert_after_consecutive_errors") is not None
+            else None
+        ),
+        eodhd_rate_limit_per_second=(
+            int(row["eodhd_rate_limit_per_second"])
+            if row.get("eodhd_rate_limit_per_second") is not None
             else None
         ),
     )

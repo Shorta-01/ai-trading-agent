@@ -40,6 +40,8 @@ const getSchedulerSettings = vi.fn();
 const updateSchedulerSettings = vi.fn();
 const getDataWindowSettings = vi.fn();
 const updateDataWindowSettings = vi.fn();
+const getWorkerSweepSettings = vi.fn();
+const updateWorkerSweepSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -64,6 +66,10 @@ vi.mock("@/lib/apiClient", () => ({
     getDataWindowSettings: (...a: unknown[]) => getDataWindowSettings(...a),
     updateDataWindowSettings: (...a: unknown[]) =>
       updateDataWindowSettings(...a),
+    getWorkerSweepSettings: (...a: unknown[]) =>
+      getWorkerSweepSettings(...a),
+    updateWorkerSweepSettings: (...a: unknown[]) =>
+      updateWorkerSweepSettings(...a),
   },
 }));
 
@@ -166,6 +172,15 @@ const DATA_WINDOWS = {
   help_nl: "Lookbacks en cache-vensters.",
 };
 
+const WORKER_SWEEPS = {
+  sweep_interval_seconds: 60,
+  sweep_retry_max_attempts: 3,
+  sweep_retry_backoff_seconds: "2.0",
+  sweep_alert_after_consecutive_errors: 3,
+  eodhd_rate_limit_per_second: 10,
+  help_nl: "Worker-zijde cadens en EODHD-rate-limit.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -181,6 +196,8 @@ beforeEach(() => {
   updateSchedulerSettings.mockReset();
   getDataWindowSettings.mockReset();
   updateDataWindowSettings.mockReset();
+  getWorkerSweepSettings.mockReset();
+  updateWorkerSweepSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -188,6 +205,7 @@ beforeEach(() => {
   getOrderPolicySettings.mockReturnValue(ok(ORDER_POLICY));
   getSchedulerSettings.mockReturnValue(ok(SCHEDULER));
   getDataWindowSettings.mockReturnValue(ok(DATA_WINDOWS));
+  getWorkerSweepSettings.mockReturnValue(ok(WORKER_SWEEPS));
 });
 
 afterEach(() => cleanup());
@@ -480,5 +498,36 @@ describe("InstellingenPage", () => {
       daily_briefing_lookback_hours: 24,
       universe_scan_cache_ttl_hours: 24,
     });
+  });
+
+  it("renders the worker-sweeps section + saves edited values", async () => {
+    updateWorkerSweepSettings.mockReturnValue(
+      ok({
+        ...WORKER_SWEEPS,
+        sweep_interval_seconds: 120,
+        eodhd_rate_limit_per_second: 5,
+      }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-worker-sweeps-section"),
+    ).toBeInTheDocument();
+    const interval = screen.getByTestId("instellingen-worker-sweep_interval");
+    expect(interval).toHaveValue(60);
+    await userEvent.clear(interval);
+    await userEvent.type(interval, "120");
+    const rate = screen.getByTestId("instellingen-worker-eodhd_rate");
+    await userEvent.clear(rate);
+    await userEvent.type(rate, "5");
+    await userEvent.click(
+      screen.getByTestId("instellingen-worker-sweeps-save"),
+    );
+    await waitFor(() =>
+      expect(updateWorkerSweepSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateWorkerSweepSettings.mock.calls[0][0];
+    expect(payload.sweep_interval_seconds).toBe(120);
+    expect(payload.eodhd_rate_limit_per_second).toBe(5);
+    expect(payload.sweep_retry_max_attempts).toBe(3);
   });
 });

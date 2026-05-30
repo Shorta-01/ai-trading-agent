@@ -381,6 +381,18 @@ export default function Page() {
   const [dataWindowSaving, setDataWindowSaving] = useState(false);
   const [dataWindowSaved, setDataWindowSaved] = useState<string | null>(null);
   const [dataWindowError, setDataWindowError] = useState<string | null>(null);
+  // Settings UI PR D — worker-side sweeps + EODHD.
+  const [workerSweepForm, setWorkerSweepForm] = useState({
+    sweep_interval_seconds: 60,
+    sweep_retry_max_attempts: 3,
+    sweep_retry_backoff_seconds: "2.0",
+    sweep_alert_after_consecutive_errors: 3,
+    eodhd_rate_limit_per_second: 10,
+  });
+  const [workerSweepHelp, setWorkerSweepHelp] = useState<string>("");
+  const [workerSweepSaving, setWorkerSweepSaving] = useState(false);
+  const [workerSweepSaved, setWorkerSweepSaved] = useState<string | null>(null);
+  const [workerSweepError, setWorkerSweepError] = useState<string | null>(null);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -552,6 +564,46 @@ export default function Page() {
     setDataWindowHelp(data.help_nl);
   }, [dataWindowQuery.data]);
 
+  // Settings UI PR D — worker sweeps query + save.
+  const workerSweepQuery = useQuery({
+    queryKey: ["instellingen", "worker-sweeps"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getWorkerSweepSettings();
+      if (!result.ok) throw new Error("worker-sweep-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = workerSweepQuery.data;
+    if (!data) return;
+    setWorkerSweepForm({
+      sweep_interval_seconds: data.sweep_interval_seconds,
+      sweep_retry_max_attempts: data.sweep_retry_max_attempts,
+      sweep_retry_backoff_seconds: data.sweep_retry_backoff_seconds,
+      sweep_alert_after_consecutive_errors:
+        data.sweep_alert_after_consecutive_errors,
+      eodhd_rate_limit_per_second: data.eodhd_rate_limit_per_second,
+    });
+    setWorkerSweepHelp(data.help_nl);
+  }, [workerSweepQuery.data]);
+
+  async function handleSaveWorkerSweeps() {
+    setWorkerSweepSaving(true);
+    setWorkerSweepError(null);
+    setWorkerSweepSaved(null);
+    const result = await apiClient.updateWorkerSweepSettings(workerSweepForm);
+    setWorkerSweepSaving(false);
+    if (!result.ok) {
+      setWorkerSweepError(
+        "Opslaan mislukt. Controleer dat alle waarden ≥ 1 zijn (backoff mag 0).",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "worker-sweeps"], result.data);
+    setWorkerSweepSaved("Worker-sweep instellingen opgeslagen.");
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -649,7 +701,8 @@ export default function Page() {
     || universeScanQuery.isPending
     || orderPolicyQuery.isPending
     || schedulerQuery.isPending
-    || dataWindowQuery.isPending;
+    || dataWindowQuery.isPending
+    || workerSweepQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -658,6 +711,7 @@ export default function Page() {
     && orderPolicyQuery.isError
     && schedulerQuery.isError
     && dataWindowQuery.isError
+    && workerSweepQuery.isError
       ? "Instellingen konden niet worden geladen."
       : null;
 
@@ -1610,6 +1664,157 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {dataWindowError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4f — Worker sweeps + EODHD (PR D). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-worker-sweeps-section"
+          >
+            <h2 style={{ margin: 0 }}>Worker-sweeps &amp; EODHD</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {workerSweepHelp
+                || "Worker-zijde cadens en EODHD-rate-limit. Sweep-interval geldt vanaf de eerstvolgende worker-restart; retry/alert/rate-limit nemen direct effect."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Sweep-interval (seconden)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-worker-sweep_interval"
+                  value={workerSweepForm.sweep_interval_seconds}
+                  onChange={(e) =>
+                    setWorkerSweepForm((p) => ({
+                      ...p,
+                      sweep_interval_seconds: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe vaak de worker openstaande orders + cancels naar IBKR
+                  verzendt. Standaard 60s. Wijziging vereist een
+                  worker-restart om door te dringen tot de interval-job
+                  registratie.
+                </span>
+              </label>
+              <label>
+                Sweep-retry pogingen
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-worker-sweep_retries"
+                  value={workerSweepForm.sweep_retry_max_attempts}
+                  onChange={(e) =>
+                    setWorkerSweepForm((p) => ({
+                      ...p,
+                      sweep_retry_max_attempts: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Max aantal pogingen binnen één tick voordat een
+                  voorbijgaande IBKR-fout als blijvend telt. Standaard 3.
+                </span>
+              </label>
+              <label>
+                Sweep-retry backoff (seconden)
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  data-testid="instellingen-worker-sweep_backoff"
+                  value={workerSweepForm.sweep_retry_backoff_seconds}
+                  onChange={(e) =>
+                    setWorkerSweepForm((p) => ({
+                      ...p,
+                      sweep_retry_backoff_seconds: e.target.value,
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Tussen elke retry wacht het systeem
+                  <code> backoff × 2^(poging-1)</code> seconden. Standaard
+                  2.0 = 2s, 4s, 8s.
+                </span>
+              </label>
+              <label>
+                Foutdrempel voor alert
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-worker-sweep_alert"
+                  value={workerSweepForm.sweep_alert_after_consecutive_errors}
+                  onChange={(e) =>
+                    setWorkerSweepForm((p) => ({
+                      ...p,
+                      sweep_alert_after_consecutive_errors: Number(
+                        e.target.value,
+                      ),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Na hoeveel opeenvolgende foute sweep-ticks de operator
+                  een systeemmelding krijgt. Standaard 3.
+                </span>
+              </label>
+              <label>
+                EODHD rate-limit (req/sec)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-worker-eodhd_rate"
+                  value={workerSweepForm.eodhd_rate_limit_per_second}
+                  onChange={(e) =>
+                    setWorkerSweepForm((p) => ({
+                      ...p,
+                      eodhd_rate_limit_per_second: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Maximaal aantal EODHD-requests per seconde. Onder je
+                  abonnementsplan houden om throttling te voorkomen.
+                </span>
+              </label>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveWorkerSweeps()}
+                disabled={workerSweepSaving}
+                data-testid="instellingen-worker-sweeps-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: workerSweepSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {workerSweepSaving ? "Opslaan…" : "Worker-sweeps opslaan"}
+              </button>
+              {workerSweepSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {workerSweepSaved}
+                </span>
+              ) : null}
+              {workerSweepError ? (
+                <span
+                  data-testid="instellingen-worker-sweeps-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {workerSweepError}
                 </span>
               ) : null}
             </div>

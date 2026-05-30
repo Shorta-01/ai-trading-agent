@@ -27,6 +27,9 @@ from ai_trading_agent_storage import (
 
 from portfolio_outlook_worker.config import settings
 from portfolio_outlook_worker.ibkr_gateway import IbkrGateway
+from portfolio_outlook_worker.runtime_config_overlay import (
+    apply_worker_runtime_config_overlay,
+)
 from portfolio_outlook_worker.scheduler import PortfolioScheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -171,6 +174,11 @@ def _start_scheduler() -> None:
 
 
 def start_worker() -> None:
+    # Settings UI PR D — pull operator-edited sweep/EODHD values from
+    # runtime_config BEFORE the scheduler registers interval jobs so
+    # the cadence picked up matches what the operator saved on the
+    # Settings page.
+    apply_worker_runtime_config_overlay(settings)
     logger.info(
         "Worker gestart (env=%s, paper_only_mode=%s, ibkr_enabled=%s, "
         "scheduler_enabled=%s).",

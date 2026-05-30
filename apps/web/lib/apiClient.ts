@@ -181,6 +181,23 @@ export type DataWindowSettingsUpdateInput = {
   universe_scan_cache_ttl_hours: number;
 };
 
+export type WorkerSweepSettingsResponse = {
+  sweep_interval_seconds: number;
+  sweep_retry_max_attempts: number;
+  sweep_retry_backoff_seconds: string;
+  sweep_alert_after_consecutive_errors: number;
+  eodhd_rate_limit_per_second: number;
+  help_nl: string;
+};
+
+export type WorkerSweepSettingsUpdateInput = {
+  sweep_interval_seconds: number;
+  sweep_retry_max_attempts: number;
+  sweep_retry_backoff_seconds: string;
+  sweep_alert_after_consecutive_errors: number;
+  eodhd_rate_limit_per_second: number;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1912,6 +1929,10 @@ export const apiClient = {
     getJson<DataWindowSettingsResponse>("/settings/data-windows"),
   updateDataWindowSettings: (payload: DataWindowSettingsUpdateInput) =>
     putJson<DataWindowSettingsResponse>("/settings/data-windows", payload),
+  getWorkerSweepSettings: () =>
+    getJson<WorkerSweepSettingsResponse>("/settings/worker-sweeps"),
+  updateWorkerSweepSettings: (payload: WorkerSweepSettingsUpdateInput) =>
+    putJson<WorkerSweepSettingsResponse>("/settings/worker-sweeps", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

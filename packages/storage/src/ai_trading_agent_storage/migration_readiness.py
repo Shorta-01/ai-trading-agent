@@ -707,6 +707,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "veld: terugvallen op de env-var."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0060_runtime_config_worker_sweeps",
+        previous_revision_id="0059_runtime_config_data_windows",
+        filename="0060_runtime_config_worker_sweeps.py",
+        label_nl="Worker-sweep + EODHD overlay in runtime_config",
+        description_nl=(
+            "Voegt vijf kolommen toe aan ``runtime_config`` zodat de "
+            "Settings-UI de worker-sweep cadens, in-tick retry, "
+            "alert-drempel en EODHD-rate-limit kan persisteren. De "
+            "worker leest deze kolommen bij startup voordat de "
+            "scheduler jobs registreert, dus interval-job registratie "
+            "neemt de operatorwaarde over bij de volgende worker-restart."
+        ),
+    ),
 )
 
 

@@ -865,6 +865,212 @@ def update_data_window_settings(
     return _data_window_payload(record)
 
 
+# ---- Worker sweeps + EODHD (Settings UI PR D) ---------------------------
+
+
+class WorkerSweepSettingsResponse(BaseModel):
+    """Operator-editable worker-side knobs. The values are persisted on
+    the same ``runtime_config`` row the API overlays at startup; the
+    worker reads the same row at its own startup so the operator
+    edits show up after the worker is restarted (interval-job
+    registration) and immediately for the per-tick reads (retry
+    attempts, alert threshold)."""
+
+    sweep_interval_seconds: int
+    sweep_retry_max_attempts: int
+    sweep_retry_backoff_seconds: str
+    sweep_alert_after_consecutive_errors: int
+    eodhd_rate_limit_per_second: int
+    help_nl: str
+
+
+class UpdateWorkerSweepSettingsRequest(BaseModel):
+    sweep_interval_seconds: int
+    sweep_retry_max_attempts: int
+    sweep_retry_backoff_seconds: Decimal
+    sweep_alert_after_consecutive_errors: int
+    eodhd_rate_limit_per_second: int
+
+
+_WORKER_SWEEP_HELP_NL = (
+    "Worker-zijde sweep cadens, in-tick retry-instellingen en de "
+    "EODHD-rate limit. Wijzigingen in de sweep-interval nemen effect "
+    "vanaf de eerstvolgende worker-restart; retry, alert-drempel en "
+    "rate-limit nemen direct effect bij de volgende tick."
+)
+
+
+def _worker_sweep_payload(
+    record: RuntimeConfigRecord | None,
+) -> WorkerSweepSettingsResponse:
+    # Pull each field from runtime_config if set, otherwise fall back to
+    # the worker-side env-default. The API doesn't have the worker's
+    # settings singleton in-process; we hard-code the worker's
+    # ``IbkrSettings`` defaults here so the GET returns a sensible
+    # baseline when no row has been saved yet.
+    sweep_interval = (
+        record.sweep_interval_seconds
+        if record is not None and record.sweep_interval_seconds is not None
+        else 60
+    )
+    retries = (
+        record.sweep_retry_max_attempts
+        if record is not None and record.sweep_retry_max_attempts is not None
+        else 3
+    )
+    backoff = (
+        record.sweep_retry_backoff_seconds
+        if record is not None and record.sweep_retry_backoff_seconds is not None
+        else Decimal("2.0")
+    )
+    alert = (
+        record.sweep_alert_after_consecutive_errors
+        if record is not None
+        and record.sweep_alert_after_consecutive_errors is not None
+        else 3
+    )
+    rate_limit = (
+        record.eodhd_rate_limit_per_second
+        if record is not None and record.eodhd_rate_limit_per_second is not None
+        else 10
+    )
+    return WorkerSweepSettingsResponse(
+        sweep_interval_seconds=sweep_interval,
+        sweep_retry_max_attempts=retries,
+        sweep_retry_backoff_seconds=_decimal_text(backoff),
+        sweep_alert_after_consecutive_errors=alert,
+        eodhd_rate_limit_per_second=rate_limit,
+        help_nl=_WORKER_SWEEP_HELP_NL,
+    )
+
+
+@router.get(
+    "/settings/worker-sweeps", response_model=WorkerSweepSettingsResponse
+)
+def get_worker_sweep_settings() -> WorkerSweepSettingsResponse:
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _worker_sweep_payload(current)
+
+
+@router.put(
+    "/settings/worker-sweeps", response_model=WorkerSweepSettingsResponse
+)
+def update_worker_sweep_settings(
+    payload: UpdateWorkerSweepSettingsRequest,
+) -> WorkerSweepSettingsResponse:
+    if payload.sweep_interval_seconds < 1:
+        raise HTTPException(
+            status_code=422, detail="Sweep-interval moet ≥ 1 seconde zijn."
+        )
+    if payload.sweep_retry_max_attempts < 1:
+        raise HTTPException(
+            status_code=422, detail="Sweep-retry pogingen moet ≥ 1 zijn."
+        )
+    if payload.sweep_retry_backoff_seconds < Decimal("0"):
+        raise HTTPException(
+            status_code=422, detail="Sweep-retry backoff moet ≥ 0 seconden zijn."
+        )
+    if payload.sweep_alert_after_consecutive_errors < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Alert-drempel moet ≥ 1 opeenvolgende fout zijn.",
+        )
+    if payload.eodhd_rate_limit_per_second < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="EODHD rate-limit moet ≥ 1 request/seconde zijn.",
+        )
+
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=(
+                    existing.universe_scan_index_codes if existing else None
+                ),
+                default_buy_value_eur=(
+                    existing.default_buy_value_eur if existing else None
+                ),
+                default_top_up_pct=(
+                    existing.default_top_up_pct if existing else None
+                ),
+                default_reduce_pct=(
+                    existing.default_reduce_pct if existing else None
+                ),
+                max_sector_pct=existing.max_sector_pct if existing else None,
+                cost_dominates_ratio=(
+                    existing.cost_dominates_ratio if existing else None
+                ),
+                suggestion_valid_minutes=(
+                    existing.suggestion_valid_minutes if existing else None
+                ),
+                scheduler_daily_briefing_cron=(
+                    existing.scheduler_daily_briefing_cron if existing else None
+                ),
+                ibkr_sync_interval_minutes=(
+                    existing.ibkr_sync_interval_minutes if existing else None
+                ),
+                forecast_history_lookback_days=(
+                    existing.forecast_history_lookback_days if existing else None
+                ),
+                forecast_minimum_bars_required=(
+                    existing.forecast_minimum_bars_required if existing else None
+                ),
+                daily_briefing_lookback_hours=(
+                    existing.daily_briefing_lookback_hours if existing else None
+                ),
+                universe_scan_cache_ttl_hours=(
+                    existing.universe_scan_cache_ttl_hours if existing else None
+                ),
+                sweep_interval_seconds=payload.sweep_interval_seconds,
+                sweep_retry_max_attempts=payload.sweep_retry_max_attempts,
+                sweep_retry_backoff_seconds=payload.sweep_retry_backoff_seconds,
+                sweep_alert_after_consecutive_errors=(
+                    payload.sweep_alert_after_consecutive_errors
+                ),
+                eodhd_rate_limit_per_second=payload.eodhd_rate_limit_per_second,
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _worker_sweep_payload(record)
+
+
 def apply_runtime_config_overlay(
     settings_obj: Any, record: RuntimeConfigRecord
 ) -> None:
@@ -933,3 +1139,8 @@ def apply_runtime_config_overlay(
         settings_obj.universe_scan_cache_ttl_hours = (
             record.universe_scan_cache_ttl_hours
         )
+    # Settings UI PR D — worker-side sweep + EODHD values are also
+    # written here so the API's GET /settings/worker-sweeps reads back
+    # the operator-edited values without an extra storage hop. The
+    # WORKER reads the same row via apply_worker_runtime_config_overlay
+    # at its own startup; the API just mirrors the columns for display.

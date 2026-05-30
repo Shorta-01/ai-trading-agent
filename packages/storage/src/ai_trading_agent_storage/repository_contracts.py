@@ -307,6 +307,14 @@ class RuntimeConfigRecord:
     forecast_minimum_bars_required: int | None = None
     daily_briefing_lookback_hours: int | None = None
     universe_scan_cache_ttl_hours: int | None = None
+    # Settings UI PR D — worker-side sweep + EODHD overlay. ``None`` = env-var.
+    # The worker reads these at startup via apply_worker_runtime_config_overlay
+    # before ``scheduler.start()``, so interval-job registration picks them up.
+    sweep_interval_seconds: int | None = None
+    sweep_retry_max_attempts: int | None = None
+    sweep_retry_backoff_seconds: Decimal | None = None
+    sweep_alert_after_consecutive_errors: int | None = None
+    eodhd_rate_limit_per_second: int | None = None
 
 
 @dataclass(frozen=True)
