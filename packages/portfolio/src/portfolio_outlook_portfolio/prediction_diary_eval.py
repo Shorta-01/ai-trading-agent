@@ -22,9 +22,13 @@ Labels per horizon:
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from ai_trading_agent_storage import PredictionDiaryEntryRecord
 
 # Labels — exposed as string constants so callers can compare without
 # importing the enum-shape into UI layers.
@@ -173,3 +177,72 @@ def evaluate_diary_outcomes(
         horizon_1m=horizon_1m,
         explanation_nl=explanation_nl,
     )
+
+
+# ---- #5 — diary → live per-predictor Brier-style scores -----------------
+
+
+# Brier-equivalent scoring per diary outcome label. The classical Brier
+# score is mean squared error against the realised outcome; for our
+# categorical outcome labels we use a deliberately simple mapping that
+# preserves ordering: lower is better, ``right`` is 0, ``wrong`` is 1.
+# Tunable in one place; the relative ordering is what the inverse-Brier
+# ensemble weighting consumes.
+_OUTCOME_TO_BRIER_EQUIVALENT: dict[str, Decimal] = {
+    "right": Decimal("0.0"),
+    "early": Decimal("0.4"),
+    "inconclusive": Decimal("0.5"),
+    "wrong": Decimal("1.0"),
+}
+
+
+def compute_live_brier_history_from_diary(
+    *,
+    diary_entries: Iterable[PredictionDiaryEntryRecord],
+    forecast_model_by_id: Mapping[str, str],
+    horizon_key: str = "outcome_label_1m",
+) -> dict[str, Decimal]:
+    """Per-predictor Brier-equivalent score from live diary outcomes.
+
+    Drop-in replacement for the backtest-only ``brier_history`` that
+    ``run_ensemble_forecast(weight_strategy="auto")`` already consumes:
+    the keys are predictor ``model_code`` values (e.g. ``"baseline_gbm"``,
+    ``"momentum"``, ``"qvm"``), the values are average Brier-equivalent
+    scores in [0, 1] across all evaluated diary entries.
+
+    Args:
+        diary_entries: Iterable of ``PredictionDiaryEntryRecord``.
+            ``no_data`` and ``None`` outcome labels are skipped — they
+            contribute no signal.
+        forecast_model_by_id: Mapping ``forecast_id → forecast.model_code``.
+            Built once by the caller from the forecast repo.
+        horizon_key: Which horizon's outcome to score
+            (``outcome_label_1d``, ``outcome_label_1w``, or
+            ``outcome_label_1m``). Default 1m matches the morning-chain
+            cadence.
+
+    Returns: ``{model_code: mean_brier_equivalent}``. Predictors with no
+    scored entries are omitted so the existing equal-weight fallback
+    applies.
+    """
+
+    sums: dict[str, Decimal] = {}
+    counts: dict[str, int] = {}
+    for entry in diary_entries:
+        if entry.forecast_id is None:
+            continue
+        model_code = forecast_model_by_id.get(entry.forecast_id)
+        if not model_code:
+            continue
+        label = getattr(entry, horizon_key, None)
+        if label is None or label == "no_data":
+            continue
+        score = _OUTCOME_TO_BRIER_EQUIVALENT.get(label)
+        if score is None:
+            continue
+        sums[model_code] = sums.get(model_code, Decimal("0")) + score
+        counts[model_code] = counts.get(model_code, 0) + 1
+    return {
+        model: (sums[model] / Decimal(counts[model])).quantize(Decimal("0.000001"))
+        for model in sums
+    }

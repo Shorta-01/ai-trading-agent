@@ -28,6 +28,7 @@ from portfolio_outlook_portfolio.baseline_label_translator import (
     RISK_PROFILE_GEBALANCEERD,
     RISK_PROFILE_GROEI,
     RISK_PROFILE_VOORZICHTIG,
+    SuggestionDecision,
     SuggestionInputs,
     translate_forecast_to_label,
 )
@@ -390,13 +391,12 @@ def test_drivers_and_rationale_are_populated() -> None:
 # ---- #3 portfolio-context gate post-processor ---------------------------
 
 
-def _kopen_decision() -> "SuggestionDecision":
+def _kopen_decision() -> SuggestionDecision:
     """Build a happy-path Kopen decision from a strong-up cold-start
     forecast we can then post-process through the gate."""
 
     from portfolio_outlook_portfolio.baseline_forecast import BaselineForecast
     from portfolio_outlook_portfolio.baseline_label_translator import (
-        SuggestionDecision,
         SuggestionInputs,
         translate_forecast_to_label,
     )
