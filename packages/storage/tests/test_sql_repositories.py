@@ -808,6 +808,91 @@ def test_asset_suggestion_repository_persists_and_returns_latest_per_conid() -> 
         assert {r.suggestion_id for r in listed.records} == {"s2", "s3"}
 
 
+def test_asset_suggestion_expire_stale_flips_ready_rows_past_valid_until() -> None:
+    """The expire helper must:
+       - flip ``ready`` rows whose ``valid_until`` is in the past to
+         ``status='expired'`` with a stable blocking_reason
+       - leave rows that are still valid alone
+       - leave rows already at a non-ready status alone (idempotent)
+    """
+
+    from ai_trading_agent_storage.repository_contracts import AssetSuggestionRecord
+    from ai_trading_agent_storage.sql_repositories import (
+        SqlAlchemyAssetSuggestionRepository,
+    )
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    cutoff = datetime(2026, 5, 30, 12, 0, tzinfo=UTC)
+    with engine.connect() as conn:
+        metadata.create_all(conn)
+        repo = SqlAlchemyAssetSuggestionRepository(conn, _report(True))
+
+        def _record(
+            suggestion_id: str, valid_until: datetime, status: str
+        ) -> AssetSuggestionRecord:
+            return AssetSuggestionRecord(
+                suggestion_id=suggestion_id,
+                ibkr_conid="100",
+                symbol="ASML",
+                currency="EUR",
+                forecast_id="f",
+                model_code="m",
+                model_version="v1",
+                generated_at=datetime(2026, 5, 29, 6, 0, tzinfo=UTC),
+                valid_until=valid_until,
+                risk_profile="Gebalanceerd",
+                has_position=False,
+                action_label="Bekijken",
+                action_label_nl="Bekijken",
+                confidence_label="Middel",
+                confidence_label_nl="Middel",
+                confidence_score=Decimal("0.5"),
+                rationale_nl="r",
+                drivers_json=("direction_label=slight_up",),
+                blockers_json=None,
+                status=status,
+                blocking_reason=None,
+            )
+
+        # Past valid_until, ready -> should be flipped.
+        repo.save_asset_suggestion(
+            _record("stale_ready", datetime(2026, 5, 30, 6, 0, tzinfo=UTC), "ready")
+        )
+        # Future valid_until, ready -> should be left alone.
+        repo.save_asset_suggestion(
+            _record("fresh_ready", datetime(2026, 6, 30, 0, 0, tzinfo=UTC), "ready")
+        )
+        # Past valid_until, already blocked -> should be left alone.
+        repo.save_asset_suggestion(
+            _record("stale_blocked", datetime(2026, 5, 30, 6, 0, tzinfo=UTC), "blocked")
+        )
+
+        updated = repo.expire_stale_asset_suggestions(now=cutoff)
+        assert updated == 1
+
+        # `list_latest_*` collapses to one row per conid; we need every row
+        # to verify each ID transitioned the right way, so query raw.
+        from sqlalchemy import select as _select
+
+        from ai_trading_agent_storage import asset_suggestions
+
+        all_rows = {
+            row["suggestion_id"]: row
+            for row in (
+                conn.execute(_select(asset_suggestions))
+                .mappings()
+                .all()
+            )
+        }
+        assert all_rows["stale_ready"]["status"] == "expired"
+        assert all_rows["stale_ready"]["blocking_reason"] == "past_valid_until"
+        assert all_rows["fresh_ready"]["status"] == "ready"
+        assert all_rows["stale_blocked"]["status"] == "blocked"
+
+        # Idempotency: a second call updates nothing.
+        assert repo.expire_stale_asset_suggestions(now=cutoff) == 0
+
+
 def test_asset_suggestion_record_rejects_safety_flags_true() -> None:
     from ai_trading_agent_storage.repository_contracts import AssetSuggestionRecord
 

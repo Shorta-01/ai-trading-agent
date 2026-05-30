@@ -111,6 +111,13 @@ class ForecastByAccountRow(BaseModel):
     p50_log_return: str
     prob_positive: str
     user_holds_position: bool
+    # Surfaced so the volglijst UI can show the forecast horizon + actual
+    # prediction interval ("we expect X to Y with Z probability") instead
+    # of just a Hoog/Middel/Laag confidence label — the data is already
+    # in the underlying ``AssetForecastRecord``, it just wasn't exposed.
+    horizon_trading_days: int
+    p10_log_return: str
+    p90_log_return: str
 
 
 class ForecastByAccountResponse(BaseModel):
@@ -374,6 +381,12 @@ def read_forecasts_by_account(
                         "generated_at": latest.generated_at.isoformat(),
                         "p50_log_return": str(latest.p50_log_return),
                         "prob_positive": str(latest.prob_positive),
+                        # Surface the prediction interval + horizon to the
+                        # UI (#1, #6 — replaces opaque "Hoog/Middel/Laag"
+                        # with the actual range the model predicts).
+                        "horizon_trading_days": latest.horizon_trading_days,
+                        "p10_log_return": str(latest.p10_log_return),
+                        "p90_log_return": str(latest.p90_log_return),
                         # Position-held lookup is wired into the
                         # forecasting step (Task 131) but the
                         # read-API still defaults to False until

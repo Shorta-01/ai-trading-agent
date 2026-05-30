@@ -47,13 +47,26 @@ class UniverseEntry:
 
 
 # V1.1 §22.4 operator-selectable universe sets.
+UNIVERSE_SET_STARTER_50: Final[str] = "STARTER_50"
 UNIVERSE_SET_SP500: Final[str] = "SP500"
 UNIVERSE_SET_EU600: Final[str] = "EU600"
 UNIVERSE_SET_ALL_5K: Final[str] = "ALL_5K"
 LOCKED_UNIVERSE_SETS: Final[frozenset[str]] = frozenset(
-    {UNIVERSE_SET_SP500, UNIVERSE_SET_EU600, UNIVERSE_SET_ALL_5K}
+    {
+        UNIVERSE_SET_STARTER_50,
+        UNIVERSE_SET_SP500,
+        UNIVERSE_SET_EU600,
+        UNIVERSE_SET_ALL_5K,
+    }
 )
-DEFAULT_UNIVERSE_SET: Final[str] = UNIVERSE_SET_SP500
+# STARTER_50 (Bel20 + AEX, ~45 large/liquid Belgian + Dutch names) is
+# the smallest locked set and the new default. The doctrine of
+# disabled-by-default scanning is intact (``universe_scan_sync_enabled``
+# is still ``False``); but when the operator opts in the system reaches
+# for a 45-name set instead of 325+, so "daily new opportunities"
+# actually surfaces before the EODHD quota becomes a concern. Operators
+# who want the broader universes pick SP500 / EU600 / ALL_5K explicitly.
+DEFAULT_UNIVERSE_SET: Final[str] = UNIVERSE_SET_STARTER_50
 
 
 # ---- Bel20 -----------------------------------------------------------
@@ -463,6 +476,11 @@ ALL_5K_EXTRA: Final[tuple[UniverseEntry, ...]] = (
 )
 
 
+_STARTER_50_SET: tuple[UniverseEntry, ...] = (
+    *BEL20,
+    *AEX,
+)
+
 _SP500_SET: tuple[UniverseEntry, ...] = (
     *BEL20,
     *AEX,
@@ -483,6 +501,7 @@ _ALL_5K_SET: tuple[UniverseEntry, ...] = (
 )
 
 _LOCKED_UNIVERSE_BY_SET: dict[str, tuple[UniverseEntry, ...]] = {
+    UNIVERSE_SET_STARTER_50: _STARTER_50_SET,
     UNIVERSE_SET_SP500: _SP500_SET,
     UNIVERSE_SET_EU600: _EU600_SET,
     UNIVERSE_SET_ALL_5K: _ALL_5K_SET,

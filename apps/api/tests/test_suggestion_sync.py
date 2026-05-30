@@ -90,15 +90,23 @@ def _position(conid: str, symbol: str) -> IbkrPositionSnapshotRecord:
 class FakeRepo:
     def __init__(self) -> None:
         self.saved: list[AssetSuggestionRecord] = []
+        self.expire_calls: list[object] = []
 
     def save_asset_suggestion(self, record: AssetSuggestionRecord) -> object:
         self.saved.append(record)
         return None
 
+    def expire_stale_asset_suggestions(self, *, now: object) -> int:
+        self.expire_calls.append(now)
+        return 0
+
 
 class RaisingRepo:
     def save_asset_suggestion(self, record: AssetSuggestionRecord) -> object:
         raise RuntimeError("simulated persistence failure")
+
+    def expire_stale_asset_suggestions(self, *, now: object) -> int:
+        return 0
 
 
 def test_held_strong_down_high_confidence_persists_verkopen() -> None:
@@ -211,3 +219,80 @@ def test_report_summary_status_when_no_forecasts() -> None:
 
     assert report.suggestion_persisted == 0
     assert report.status_nl == "Geen voorspellingen beschikbaar"
+
+
+# ---- #7 — auto-expire stale suggestions ---------------------------------
+
+
+def test_sync_suggestions_calls_expire_stale_before_generating() -> None:
+    """Every sync cycle should sweep stale rows first so a ``Bekijken``
+    from yesterday doesn't keep hanging around past its valid_until."""
+
+    repo = FakeRepo()
+    sync_suggestions(
+        forecasts=[],
+        positions=[],
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+    )
+    assert len(repo.expire_calls) == 1
+
+
+def test_sync_suggestions_continues_when_expire_raises() -> None:
+    """Expire is hygiene; if it raises (e.g. transient DB error) the
+    main sync cycle must still complete — failing the whole morning
+    chain over a cleanup step would be the wrong trade-off."""
+
+    class _ExpireFails(FakeRepo):
+        def expire_stale_asset_suggestions(self, *, now: object) -> int:
+            raise RuntimeError("simulated expire failure")
+
+    repo = _ExpireFails()
+    # No raise — the cycle completes cleanly.
+    report = sync_suggestions(
+        forecasts=[],
+        positions=[],
+        risk_profile="Gebalanceerd",
+        repo=repo,
+        valid_minutes=1440,
+    )
+    assert report.suggestion_persisted == 0
+
+
+# ---- #3 — portfolio-context resolver wired into sync_suggestions ---------
+
+
+def test_sync_suggestions_applies_portfolio_context_gate_when_resolver_present() -> None:
+    """The gate downgrades a buy → Bekijken when the resolved context
+    reports the position is already at the per-position cap."""
+
+    from decimal import Decimal as _D
+
+    from portfolio_outlook_portfolio import PortfolioContext
+
+    repo = FakeRepo()
+    sync_suggestions(
+        forecasts=[
+            _forecast(
+                conid="100",
+                symbol="ASML",
+                direction="strong_up",
+                confidence="0.90",
+            )
+        ],
+        positions=[],
+        risk_profile="Groei",
+        repo=repo,
+        valid_minutes=1440,
+        portfolio_context_resolver=lambda _conid: PortfolioContext(
+            current_position_pct=_D("10"),
+            max_position_pct=_D("10"),
+        ),
+    )
+    record = repo.saved[0]
+    assert record.action_label == "Bekijken"
+    assert record.status == "control_needed"
+    # The blocker code surfaces in blockers_json so the UI can explain.
+    assert record.blockers_json is not None
+    assert "over_max_position_pct" in record.blockers_json

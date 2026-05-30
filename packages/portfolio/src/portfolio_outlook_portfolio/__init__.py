@@ -109,8 +109,10 @@ from .baseline_label_translator import (
     RISK_PROFILE_GEBALANCEERD,
     RISK_PROFILE_GROEI,
     RISK_PROFILE_VOORZICHTIG,
+    PortfolioContext,
     SuggestionDecision,
     SuggestionInputs,
+    apply_portfolio_context_gates,
     translate_forecast_to_label,
 )
 from .baseline_label_translator import (
@@ -505,7 +507,9 @@ __all__ = [
     "compute_baseline_forecast",
     "SuggestionInputs",
     "SuggestionDecision",
+    "PortfolioContext",
     "translate_forecast_to_label",
+    "apply_portfolio_context_gates",
     "LABEL_KOPEN",
     "LABEL_LANGZAAM_BIJKOPEN",
     "LABEL_HOUDEN",

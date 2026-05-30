@@ -116,3 +116,184 @@ def test_zero_or_negative_issued_price_returns_zero_pct() -> None:
         realized_price_1m=None,
     )
     assert result.horizon_1d.realized_return_pct == Decimal("0")
+
+
+# ---- #5 — live Brier history from diary outcomes ------------------------
+
+
+def _diary_entry(
+    *,
+    entry_id: str,
+    forecast_id: str | None,
+    outcome_1m: str | None,
+):  # type: ignore[no-untyped-def]
+    """Minimal diary entry stub for the Brier-aggregation function."""
+
+    from datetime import UTC, datetime
+    from decimal import Decimal as _D
+
+    from ai_trading_agent_storage import PredictionDiaryEntryRecord
+
+    return PredictionDiaryEntryRecord(
+        entry_id=entry_id,
+        suggestion_id=f"sug_{entry_id}",
+        forecast_id=forecast_id,
+        ibkr_conid="100",
+        symbol="ASML",
+        currency="EUR",
+        issued_at=datetime(2026, 5, 1, tzinfo=UTC),
+        issued_action_label="Kopen",
+        issued_action_label_nl="Kopen",
+        issued_confidence_label="Hoog",
+        issued_horizon_days=30,
+        issued_price=_D("100"),
+        issued_p10_price=_D("90"),
+        issued_p50_price=_D("105"),
+        issued_p90_price=_D("120"),
+        issued_prob_gain=_D("0.8"),
+        issued_prob_loss=_D("0.2"),
+        user_decision=None,
+        realized_price_1d=None,
+        realized_price_1w=None,
+        realized_price_1m=None,
+        realized_return_pct_1d=None,
+        realized_return_pct_1w=None,
+        realized_return_pct_1m=None,
+        outcome_label_1d=None,
+        outcome_label_1w=None,
+        outcome_label_1m=outcome_1m,
+        outcome_explanation_nl="test",
+        last_evaluated_at=datetime(2026, 5, 30, tzinfo=UTC),
+        created_at=datetime(2026, 5, 1, tzinfo=UTC),
+        updated_at=datetime(2026, 5, 30, tzinfo=UTC),
+    )
+
+
+def test_compute_live_brier_returns_empty_dict_with_no_entries() -> None:
+    from portfolio_outlook_portfolio.prediction_diary_eval import (
+        compute_live_brier_history_from_diary,
+    )
+
+    assert compute_live_brier_history_from_diary(
+        diary_entries=(), forecast_model_by_id={}
+    ) == {}
+
+
+def test_compute_live_brier_averages_per_predictor() -> None:
+    """Two predictors, three entries each: GBM (right, right, wrong)
+    avg = (0 + 0 + 1)/3 ≈ 0.333; QVM (right, inconclusive, wrong)
+    avg = (0 + 0.5 + 1)/3 = 0.5. Lower = better, so GBM gets more
+    weight in the inverse-Brier ensemble."""
+
+    from portfolio_outlook_portfolio.prediction_diary_eval import (
+        compute_live_brier_history_from_diary,
+    )
+
+    entries = [
+        _diary_entry(entry_id="a", forecast_id="f1", outcome_1m="right"),
+        _diary_entry(entry_id="b", forecast_id="f2", outcome_1m="right"),
+        _diary_entry(entry_id="c", forecast_id="f3", outcome_1m="wrong"),
+        _diary_entry(entry_id="d", forecast_id="f4", outcome_1m="right"),
+        _diary_entry(entry_id="e", forecast_id="f5", outcome_1m="inconclusive"),
+        _diary_entry(entry_id="f", forecast_id="f6", outcome_1m="wrong"),
+    ]
+    model_map = {
+        "f1": "baseline_gbm",
+        "f2": "baseline_gbm",
+        "f3": "baseline_gbm",
+        "f4": "qvm",
+        "f5": "qvm",
+        "f6": "qvm",
+    }
+    history = compute_live_brier_history_from_diary(
+        diary_entries=entries, forecast_model_by_id=model_map
+    )
+    assert "baseline_gbm" in history
+    assert "qvm" in history
+    # 1/3 ≈ 0.333333
+    assert abs(history["baseline_gbm"] - Decimal("0.333333")) < Decimal("0.000005")
+    # 1.5/3 = 0.5
+    assert history["qvm"] == Decimal("0.500000")
+
+
+def test_compute_live_brier_skips_no_data_and_unmapped_entries() -> None:
+    """no_data outcomes contribute no signal; entries whose forecast_id
+    isn't in the model map are silently dropped (the lookup table is
+    the source of truth)."""
+
+    from portfolio_outlook_portfolio.prediction_diary_eval import (
+        compute_live_brier_history_from_diary,
+    )
+
+    entries = [
+        _diary_entry(entry_id="a", forecast_id="f1", outcome_1m="right"),
+        _diary_entry(entry_id="b", forecast_id="f2", outcome_1m="no_data"),
+        _diary_entry(entry_id="c", forecast_id="f3", outcome_1m="wrong"),  # unmapped
+        _diary_entry(entry_id="d", forecast_id=None, outcome_1m="right"),  # no forecast_id
+    ]
+    model_map = {"f1": "baseline_gbm", "f2": "baseline_gbm"}
+    history = compute_live_brier_history_from_diary(
+        diary_entries=entries, forecast_model_by_id=model_map
+    )
+    # Only the "right" entry for f1 was counted; no_data skipped.
+    assert history == {"baseline_gbm": Decimal("0.000000")}
+
+
+def test_compute_live_brier_honors_horizon_key() -> None:
+    """The function defaults to the 1m horizon but lets the caller
+    pick 1d or 1w when they prefer faster feedback."""
+
+    from datetime import UTC, datetime
+    from decimal import Decimal as _D
+
+    from ai_trading_agent_storage import PredictionDiaryEntryRecord
+
+    from portfolio_outlook_portfolio.prediction_diary_eval import (
+        compute_live_brier_history_from_diary,
+    )
+
+    entry = PredictionDiaryEntryRecord(
+        entry_id="e",
+        suggestion_id="s",
+        forecast_id="f1",
+        ibkr_conid="100",
+        symbol="ASML",
+        currency="EUR",
+        issued_at=datetime(2026, 5, 1, tzinfo=UTC),
+        issued_action_label="Kopen",
+        issued_action_label_nl="Kopen",
+        issued_confidence_label="Hoog",
+        issued_horizon_days=30,
+        issued_price=_D("100"),
+        issued_p10_price=_D("90"),
+        issued_p50_price=_D("105"),
+        issued_p90_price=_D("120"),
+        issued_prob_gain=_D("0.8"),
+        issued_prob_loss=_D("0.2"),
+        user_decision=None,
+        realized_price_1d=None,
+        realized_price_1w=None,
+        realized_price_1m=None,
+        realized_return_pct_1d=None,
+        realized_return_pct_1w=None,
+        realized_return_pct_1m=None,
+        outcome_label_1d="right",
+        outcome_label_1w="wrong",
+        outcome_label_1m=None,
+        outcome_explanation_nl="test",
+        last_evaluated_at=datetime(2026, 5, 30, tzinfo=UTC),
+        created_at=datetime(2026, 5, 1, tzinfo=UTC),
+        updated_at=datetime(2026, 5, 30, tzinfo=UTC),
+    )
+    via_1d = compute_live_brier_history_from_diary(
+        diary_entries=(entry,),
+        forecast_model_by_id={"f1": "baseline_gbm"},
+        horizon_key="outcome_label_1d",
+    )
+    via_1w = compute_live_brier_history_from_diary(
+        diary_entries=(entry,),
+        forecast_model_by_id={"f1": "baseline_gbm"},
+        horizon_key="outcome_label_1w",
+    )
+    assert via_1d == {"baseline_gbm": Decimal("0.000000")}  # right = 0
+    assert via_1w == {"baseline_gbm": Decimal("1.000000")}  # wrong = 1

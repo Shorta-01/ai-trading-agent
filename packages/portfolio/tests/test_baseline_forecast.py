@@ -322,3 +322,66 @@ def test_decimal_precision_is_preserved_in_outputs() -> None:
         result.prob_loss,
     ):
         assert isinstance(value, Decimal)
+
+
+# ---- #2 risk-adjusted (Sharpe) direction labels --------------------------
+
+
+def test_direction_label_falls_back_to_absolute_thresholds_without_volatility() -> None:
+    """Legacy callers (tests with no volatility input) keep the V1
+    ±2% / ±10% behavior so existing assertions don't break."""
+
+    from portfolio_outlook_portfolio.baseline_forecast import _direction_label
+
+    assert _direction_label(15.0) == ("strong_up", "Sterke stijging verwacht")
+    assert _direction_label(5.0) == ("slight_up", "Lichte stijging verwacht")
+    assert _direction_label(0.0) == ("neutral", "Geen duidelijke richting")
+    assert _direction_label(-5.0) == ("slight_down", "Lichte daling verwacht")
+    assert _direction_label(-15.0) == ("strong_down", "Duidelijke daling verwacht")
+
+
+def test_direction_label_sharpe_penalises_volatile_assets() -> None:
+    """A 10% expected return on a 5%-vol utility is a strong signal;
+    the same 10% on a 60%-vol small-cap is noise. The V1 absolute
+    thresholds called both 'strong_up'; the Sharpe path distinguishes."""
+
+    from portfolio_outlook_portfolio.baseline_forecast import _direction_label
+
+    # Low-vol utility — Sharpe ~ 10 / (5 * sqrt(30/252)*100/100) ≈ very high.
+    low_vol = _direction_label(10.0, vol_annual=0.05, horizon_days=30)
+    assert low_vol[0] == "strong_up"
+
+    # High-vol small-cap — Sharpe ~ 10 / (60 * sqrt(30/252)) ≈ 0.48 → slight_up.
+    high_vol = _direction_label(10.0, vol_annual=0.60, horizon_days=30)
+    assert high_vol[0] == "slight_up"
+
+
+def test_direction_label_sharpe_thresholds_at_buckets() -> None:
+    """Lock the Sharpe bucket boundaries (1.0 strong, 0.3 slight) so
+    re-tuning shows up in code review rather than silently shifting
+    the system's recommendations."""
+
+    from portfolio_outlook_portfolio.baseline_forecast import _direction_label
+
+    # Construct inputs so the Sharpe lands at a known value.
+    # vol_h_pct = vol_annual * 100 * sqrt(horizon_days/252).
+    # With vol_annual=0.10, horizon=63 (~quarter): vol_h_pct = 10 * 0.5 = 5.
+    # Then a 5%-expected-return → Sharpe = 1.0 → strong_up boundary.
+    assert _direction_label(5.0, vol_annual=0.10, horizon_days=63)[0] == "strong_up"
+    # And 1.5%-expected-return → Sharpe = 0.3 → slight_up boundary.
+    assert (
+        _direction_label(1.5, vol_annual=0.10, horizon_days=63)[0] == "slight_up"
+    )
+    # Below the slight boundary → neutral.
+    assert (
+        _direction_label(1.0, vol_annual=0.10, horizon_days=63)[0] == "neutral"
+    )
+
+
+def test_direction_label_sharpe_handles_zero_volatility_gracefully() -> None:
+    """A zero-vol degenerate input should fall back to absolute
+    thresholds rather than divide-by-zero."""
+
+    from portfolio_outlook_portfolio.baseline_forecast import _direction_label
+
+    assert _direction_label(15.0, vol_annual=0.0, horizon_days=30)[0] == "strong_up"

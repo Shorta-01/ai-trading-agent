@@ -100,6 +100,44 @@ class SuggestionInputs:
     given a confident action."""
 
 
+# #3 — Portfolio-context post-processor inputs. Apply ``apply_portfolio_context_gates``
+# AFTER ``translate_forecast_to_label`` to downgrade any Kopen / Langzaam bijkopen
+# label to Bekijken when a portfolio-level concern fires. Fields are optional so
+# callers without (yet) a real portfolio context skip the gate entirely.
+
+_MAX_SECTOR_PCT_DEFAULT: Final[Decimal] = Decimal("30")
+"""Default cap on sector concentration. 30% means at most ~3 sector-mates."""
+
+_COST_DOMINATES_RATIO: Final[Decimal] = Decimal("3")
+"""Trigger the cost-vs-gain gate when the expected gain is less than
+``_COST_DOMINATES_RATIO`` × the estimated round-trip cost. With the
+default 3× a 0.5% estimated cost requires a 1.5% expected return."""
+
+
+@dataclass(frozen=True)
+class PortfolioContext:
+    """Live portfolio state the gate uses to refuse risky buy proposals."""
+
+    current_position_pct: Decimal | None = None
+    """Current size of this conid in the portfolio, 0..100. ``None`` =
+    unknown (gate skips the max-position check)."""
+
+    max_position_pct: Decimal | None = None
+    """User's locked per-position cap from settings. ``None`` = no cap
+    configured."""
+
+    sector_pct: Decimal | None = None
+    """Current portfolio % already in this asset's sector. ``None`` =
+    unknown (gate skips the sector check)."""
+
+    max_sector_pct: Decimal | None = None
+    """Cap on sector concentration. ``None`` uses the default 30%."""
+
+    estimated_round_trip_cost_pct: Decimal | None = None
+    """Commission + spread + tax estimate (round-trip), 0..100. ``None``
+    means "no cost model available" — gate skips the cost-vs-gain check."""
+
+
 @dataclass(frozen=True)
 class SuggestionDecision:
     action_label: str
@@ -323,3 +361,100 @@ def _label_for_cold_start(
     if direction == "strong_down":
         return LABEL_VERMIJDEN
     return LABEL_GEEN_ACTIE
+
+
+# ---- Public post-processor (#3 portfolio-context gate) --------------------
+
+
+_BUY_LABELS: Final[frozenset[str]] = frozenset(
+    {LABEL_KOPEN, LABEL_LANGZAAM_BIJKOPEN}
+)
+
+
+def apply_portfolio_context_gates(
+    decision: SuggestionDecision, context: PortfolioContext
+) -> SuggestionDecision:
+    """Downgrade a buy proposal to ``Bekijken`` if a portfolio-level
+    gate fires.
+
+    Three gates, all skipped silently when their inputs are ``None``:
+
+    * **Over max position %** — already at-or-past the user's per-position
+      cap; suggesting more is irresponsible regardless of forecast.
+    * **Over max sector %** — sector concentration is at-or-past the cap;
+      adding the Nth tech name doesn't diversify.
+    * **Cost dominates gain** — estimated round-trip cost is more than
+      one-third of the expected return; the trade isn't economical.
+
+    The function is a pure transform; the original ``decision`` is
+    returned untouched when no gate fires or when the label isn't a buy.
+    """
+
+    if decision.action_label not in _BUY_LABELS:
+        return decision
+    if decision.status != "ready":
+        # Already control_needed / blocked; the existing path handles it.
+        return decision
+
+    blockers: list[str] = []
+
+    if (
+        context.current_position_pct is not None
+        and context.max_position_pct is not None
+        and context.current_position_pct >= context.max_position_pct
+    ):
+        blockers.append("over_max_position_pct")
+
+    sector_cap = context.max_sector_pct or _MAX_SECTOR_PCT_DEFAULT
+    if (
+        context.sector_pct is not None
+        and context.sector_pct >= sector_cap
+    ):
+        blockers.append("over_max_sector_pct")
+
+    if context.estimated_round_trip_cost_pct is not None:
+        expected_return = decision.drivers
+        # The driver tuple carries ``expected_return_pct=<value>`` as
+        # a string; parsing it back is awkward but avoids a second
+        # input field. We just look it up cheaply.
+        return_pct: Decimal | None = None
+        for entry in expected_return:
+            if entry.startswith("expected_return_pct="):
+                try:
+                    return_pct = Decimal(entry.split("=", 1)[1])
+                except Exception:  # noqa: BLE001 — bad driver string
+                    return_pct = None
+                break
+        if (
+            return_pct is not None
+            and return_pct > Decimal("0")
+            and return_pct
+            < _COST_DOMINATES_RATIO * context.estimated_round_trip_cost_pct
+        ):
+            blockers.append("cost_exceeds_gain")
+
+    if not blockers:
+        return decision
+
+    combined_blockers = _format_blockers((*decision.blockers, *blockers))
+    return SuggestionDecision(
+        action_label=LABEL_BEKIJKEN,
+        action_label_nl=LABEL_BEKIJKEN,
+        confidence_label=decision.confidence_label,
+        confidence_label_nl=decision.confidence_label_nl,
+        confidence_score=decision.confidence_score,
+        rationale_nl=(
+            "Bekijken in plaats van kopen: portfoliogaten houden de "
+            "aankoop tegen. Controle nodig: "
+            + ", ".join(blockers)
+            + "."
+        ),
+        drivers=decision.drivers,
+        blockers=combined_blockers,
+        status="control_needed",
+        blocking_reason="portfolio_context_gate",
+        risk_profile=decision.risk_profile,
+        has_position=decision.has_position,
+        model_code=decision.model_code,
+        model_version=decision.model_version,
+    )
