@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from .baseline_forecast import (
     DEFAULT_REGIME_SHIFT_THRESHOLD_PCT,
+    DEFAULT_SHARPE_SLIGHT_THRESHOLD,
+    DEFAULT_SHARPE_STRONG_THRESHOLD,
     MINIMUM_BARS_REQUIRED,
     compute_baseline_forecast,
 )
@@ -72,12 +74,16 @@ class GbmPredictor:
         regime_shift_enabled: bool = False,
         regime_shift_threshold_pct: float = DEFAULT_REGIME_SHIFT_THRESHOLD_PCT,
         garch_enabled: bool = False,
+        sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
+        sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
     ) -> None:
         self._minimum_bars_required = minimum_bars_required
         self._drift_window_days = drift_window_days
         self._regime_shift_enabled = regime_shift_enabled
         self._regime_shift_threshold_pct = regime_shift_threshold_pct
         self._garch_enabled = garch_enabled
+        self._sharpe_strong_threshold = sharpe_strong_threshold
+        self._sharpe_slight_threshold = sharpe_slight_threshold
 
     @property
     def model_code(self) -> str:
@@ -97,6 +103,8 @@ class GbmPredictor:
             regime_shift_enabled=self._regime_shift_enabled,
             regime_shift_threshold_pct=self._regime_shift_threshold_pct,
             garch_enabled=self._garch_enabled,
+            sharpe_strong_threshold=self._sharpe_strong_threshold,
+            sharpe_slight_threshold=self._sharpe_slight_threshold,
         )
         is_ready = forecast.status == "ready"
         return PredictionDistribution(

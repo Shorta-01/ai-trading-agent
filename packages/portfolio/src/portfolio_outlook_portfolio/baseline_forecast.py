@@ -179,9 +179,12 @@ def _sample_stdev(values: Sequence[float], mean: float) -> float:
 # above zero, which under a Brownian assumption corresponds to ~84%
 # probability the realised return is positive — a defensible
 # "strong_up" bar. 0.3 corresponds to ~62% — the lowest defensible
-# "slight" bucket. Tune these here only.
-_SHARPE_STRONG_THRESHOLD: float = 1.0
-_SHARPE_SLIGHT_THRESHOLD: float = 0.3
+# "slight" bucket. These are the defaults; callers can override via the
+# ``sharpe_*_threshold`` kwargs threaded through ``compute_baseline_forecast``.
+DEFAULT_SHARPE_STRONG_THRESHOLD: float = 1.0
+DEFAULT_SHARPE_SLIGHT_THRESHOLD: float = 0.3
+_SHARPE_STRONG_THRESHOLD: float = DEFAULT_SHARPE_STRONG_THRESHOLD
+_SHARPE_SLIGHT_THRESHOLD: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD
 
 # Absolute-return fallback thresholds (legacy). Used only when
 # horizon-volatility is unavailable. Same numbers as V1 for back-compat.
@@ -194,6 +197,8 @@ def _direction_label(
     *,
     vol_annual: float | None = None,
     horizon_days: int | None = None,
+    sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
+    sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
 ) -> tuple[str, str]:
     """Translate the expected return into a Dutch direction label.
 
@@ -219,6 +224,8 @@ def _direction_label(
             expected_return_pct=expected_return_pct,
             vol_annual=vol_annual,
             horizon_days=horizon_days,
+            sharpe_strong_threshold=sharpe_strong_threshold,
+            sharpe_slight_threshold=sharpe_slight_threshold,
         )
 
     if expected_return_pct >= _ABS_STRONG_THRESHOLD:
@@ -237,6 +244,8 @@ def _direction_label_sharpe(
     expected_return_pct: float,
     vol_annual: float,
     horizon_days: int,
+    sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
+    sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
 ) -> tuple[str, str]:
     """Risk-adjusted direction label (Sharpe over the forecast horizon).
 
@@ -257,13 +266,13 @@ def _direction_label_sharpe(
         # Degenerate input — fall back to absolute thresholds.
         return _direction_label(expected_return_pct)
     sharpe = expected_return_pct / vol_h_pct
-    if sharpe >= _SHARPE_STRONG_THRESHOLD:
+    if sharpe >= sharpe_strong_threshold:
         return "strong_up", "Sterke stijging verwacht (risico-gecorrigeerd)"
-    if sharpe >= _SHARPE_SLIGHT_THRESHOLD:
+    if sharpe >= sharpe_slight_threshold:
         return "slight_up", "Lichte stijging verwacht (risico-gecorrigeerd)"
-    if sharpe > -_SHARPE_SLIGHT_THRESHOLD:
+    if sharpe > -sharpe_slight_threshold:
         return "neutral", "Geen duidelijke richting (risico-gecorrigeerd)"
-    if sharpe > -_SHARPE_STRONG_THRESHOLD:
+    if sharpe > -sharpe_strong_threshold:
         return "slight_down", "Lichte daling verwacht (risico-gecorrigeerd)"
     return "strong_down", "Duidelijke daling verwacht (risico-gecorrigeerd)"
 
@@ -372,6 +381,8 @@ def compute_baseline_forecast(
     regime_shift_enabled: bool = False,
     regime_shift_threshold_pct: float = DEFAULT_REGIME_SHIFT_THRESHOLD_PCT,
     garch_enabled: bool = False,
+    sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
+    sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
 ) -> BaselineForecast:
     """Compute a baseline GBM forecast or return a blocked result.
 
@@ -502,6 +513,8 @@ def compute_baseline_forecast(
         expected_return_pct,
         vol_annual=sigma_annual,
         horizon_days=horizon_trading_days,
+        sharpe_strong_threshold=sharpe_strong_threshold,
+        sharpe_slight_threshold=sharpe_slight_threshold,
     )
 
     explanation_nl = (

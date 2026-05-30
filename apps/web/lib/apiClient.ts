@@ -203,6 +203,8 @@ export type AdvancedSettingsResponse = {
   gbm_drift_window_days: number | null;
   action_draft_approval_valid_minutes: number;
   ai_explanation_provider_code: string;
+  sharpe_strong_threshold: string;
+  sharpe_slight_threshold: string;
   help_nl: string;
 };
 
@@ -211,6 +213,8 @@ export type AdvancedSettingsUpdateInput = {
   gbm_drift_window_days: number | null;
   action_draft_approval_valid_minutes: number;
   ai_explanation_provider_code: string;
+  sharpe_strong_threshold: string;
+  sharpe_slight_threshold: string;
 };
 
 export type ConnectionSettingsResponse = {

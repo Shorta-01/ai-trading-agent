@@ -251,6 +251,12 @@ class Settings(BaseSettings):
     gbm_regime_shift_enabled: bool = False
     gbm_regime_shift_threshold_pct: Decimal = Decimal("5.0")
     gbm_garch_enabled: bool = False  # reserved; raises NotImplementedError if set True
+    # Risk-adjusted (horizon-Sharpe) direction-label thresholds used by
+    # the GBM path. 1.0 = "strong" bucket cutoff, 0.3 = "slight" bucket
+    # cutoff. The Settings UI surfaces these behind the "Geavanceerde
+    # instellingen" accordion.
+    sharpe_strong_threshold: float = 1.0
+    sharpe_slight_threshold: float = 0.3
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False

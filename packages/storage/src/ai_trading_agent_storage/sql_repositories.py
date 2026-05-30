@@ -6156,6 +6156,8 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
                 record.action_draft_approval_valid_minutes
             ),
             "ai_explanation_provider_code": record.ai_explanation_provider_code,
+            "sharpe_strong_threshold": record.sharpe_strong_threshold,
+            "sharpe_slight_threshold": record.sharpe_slight_threshold,
         }
         existing = (
             self._connection.execute(
@@ -6269,6 +6271,16 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
             else None
         ),
         ai_explanation_provider_code=row.get("ai_explanation_provider_code"),
+        sharpe_strong_threshold=(
+            Decimal(str(row["sharpe_strong_threshold"]))
+            if row.get("sharpe_strong_threshold") is not None
+            else None
+        ),
+        sharpe_slight_threshold=(
+            Decimal(str(row["sharpe_slight_threshold"]))
+            if row.get("sharpe_slight_threshold") is not None
+            else None
+        ),
     )
 
 

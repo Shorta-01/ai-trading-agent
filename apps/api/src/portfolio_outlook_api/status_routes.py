@@ -1114,6 +1114,8 @@ def run_forecast_sync() -> dict[str, object]:
                 qvm_universe=qvm_universe,
                 weight_strategy=weight_strategy,
                 brier_history=brier_history,
+                sharpe_strong_threshold=settings.sharpe_strong_threshold,
+                sharpe_slight_threshold=settings.sharpe_slight_threshold,
             )
     except StorageConnectionError:
         return _build_blocked_forecast_response(

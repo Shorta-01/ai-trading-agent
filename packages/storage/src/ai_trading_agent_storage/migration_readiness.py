@@ -735,6 +735,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "terugvallen op de env-var of ingebouwde default."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0062_runtime_config_sharpe_thresholds",
+        previous_revision_id="0061_runtime_config_advanced",
+        filename="0062_runtime_config_sharpe_thresholds.py",
+        label_nl="Sharpe-drempels voor richting-labels in runtime_config",
+        description_nl=(
+            "Voegt twee Numeric-kolommen toe voor de risico-gecorrigeerde "
+            "(Sharpe) drempels die de GBM-richting-label-logica gebruikt: "
+            "``sharpe_strong_threshold`` (sterke beweging) en "
+            "``sharpe_slight_threshold`` (lichte beweging). Null in elk "
+            "veld: terugvallen op de env-var of ingebouwde default "
+            "(1.0 en 0.3)."
+        ),
+    ),
 )
 
 

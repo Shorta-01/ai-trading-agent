@@ -199,6 +199,8 @@ def sync_forecasts(
     qvm_universe: UniverseFundamentals | None = None,
     weight_strategy: str = "equal_weight",
     brier_history: dict[str, Decimal] | None = None,
+    sharpe_strong_threshold: float = 1.0,
+    sharpe_slight_threshold: float = 0.3,
 ) -> ForecastSyncReport:
     """Run one full forecast cycle and persist every successful row.
 
@@ -379,6 +381,8 @@ def sync_forecasts(
                 qvm_universe=qvm_universe,
                 weight_strategy=weight_strategy,
                 brier_history=brier_history,
+                sharpe_strong_threshold=sharpe_strong_threshold,
+                sharpe_slight_threshold=sharpe_slight_threshold,
             )
             forecast_record = adapt_ensemble_to_forecast_record(
                 position=position,
@@ -397,6 +401,8 @@ def sync_forecasts(
                 current_price=current_price,
                 horizon_trading_days=horizon_trading_days,
                 minimum_bars_required=minimum_bars_required,
+                sharpe_strong_threshold=sharpe_strong_threshold,
+                sharpe_slight_threshold=sharpe_slight_threshold,
             )
             forecast_record = _build_forecast_record(
                 position=position,

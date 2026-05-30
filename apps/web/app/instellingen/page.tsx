@@ -399,6 +399,8 @@ export default function Page() {
     gbm_drift_window_days: null as number | null,
     action_draft_approval_valid_minutes: 5,
     ai_explanation_provider_code: "stub",
+    sharpe_strong_threshold: "1.0",
+    sharpe_slight_threshold: "0.3",
   });
   const [advancedHelp, setAdvancedHelp] = useState<string>("");
   const [advancedSaving, setAdvancedSaving] = useState(false);
@@ -635,6 +637,8 @@ export default function Page() {
       action_draft_approval_valid_minutes:
         data.action_draft_approval_valid_minutes,
       ai_explanation_provider_code: data.ai_explanation_provider_code,
+      sharpe_strong_threshold: data.sharpe_strong_threshold,
+      sharpe_slight_threshold: data.sharpe_slight_threshold,
     });
     setAdvancedHelp(data.help_nl);
   }, [advancedQuery.data]);
@@ -2005,6 +2009,51 @@ export default function Page() {
                       Welke provider de Nederlandse uitleg-tekst onder
                       elke suggestie genereert. Stub kost niets, Claude
                       gebruikt je maandbudget.
+                    </span>
+                  </label>
+                  <label>
+                    Sharpe-drempel "sterke beweging"
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      data-testid="instellingen-advanced-sharpe-strong"
+                      value={advancedForm.sharpe_strong_threshold}
+                      onChange={(e) =>
+                        setAdvancedForm((p) => ({
+                          ...p,
+                          sharpe_strong_threshold: e.target.value,
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Boven welke risico-gecorrigeerde score (Sharpe) een
+                      voorspelling als "sterke stijging/daling" wordt
+                      gelabeld. Standaard 1.0 ≈ ~84% kans op de
+                      voorspelde richting. Hoger = strikter, lager =
+                      sneller "sterk" stempel.
+                    </span>
+                  </label>
+                  <label>
+                    Sharpe-drempel "lichte beweging"
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      data-testid="instellingen-advanced-sharpe-slight"
+                      value={advancedForm.sharpe_slight_threshold}
+                      onChange={(e) =>
+                        setAdvancedForm((p) => ({
+                          ...p,
+                          sharpe_slight_threshold: e.target.value,
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Onderste drempel voor "lichte stijging/daling".
+                      Standaard 0.3 ≈ ~62% kans. Tussen deze waarde en
+                      0 valt het label terug op "Geen duidelijke
+                      richting". Moet lager zijn dan de sterke drempel.
                     </span>
                   </label>
                 </div>

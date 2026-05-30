@@ -537,6 +537,12 @@ def update_order_policy_settings(
                 ai_explanation_provider_code=(
                     existing.ai_explanation_provider_code if existing else None
                 ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -704,6 +710,12 @@ def update_scheduler_settings(
                 ),
                 ai_explanation_provider_code=(
                     existing.ai_explanation_provider_code if existing else None
+                ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
                 ),
             )
             repo.upsert(record)
@@ -892,6 +904,12 @@ def update_data_window_settings(
                 ),
                 ai_explanation_provider_code=(
                     existing.ai_explanation_provider_code if existing else None
+                ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
                 ),
             )
             repo.upsert(record)
@@ -1117,6 +1135,12 @@ def update_worker_sweep_settings(
                 ai_explanation_provider_code=(
                     existing.ai_explanation_provider_code if existing else None
                 ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -1143,6 +1167,8 @@ class AdvancedSettingsResponse(BaseModel):
     gbm_drift_window_days: int | None
     action_draft_approval_valid_minutes: int
     ai_explanation_provider_code: str
+    sharpe_strong_threshold: str
+    sharpe_slight_threshold: str
     help_nl: str
 
 
@@ -1151,6 +1177,8 @@ class UpdateAdvancedSettingsRequest(BaseModel):
     gbm_drift_window_days: int | None = None
     action_draft_approval_valid_minutes: int
     ai_explanation_provider_code: str
+    sharpe_strong_threshold: Decimal
+    sharpe_slight_threshold: Decimal
 
 
 _ADVANCED_HELP_NL = (
@@ -1185,11 +1213,23 @@ def _advanced_payload(
         if record is not None and record.ai_explanation_provider_code is not None
         else settings.ai_explanation_provider_code
     )
+    sharpe_strong = (
+        record.sharpe_strong_threshold
+        if record is not None and record.sharpe_strong_threshold is not None
+        else Decimal(str(settings.sharpe_strong_threshold))
+    )
+    sharpe_slight = (
+        record.sharpe_slight_threshold
+        if record is not None and record.sharpe_slight_threshold is not None
+        else Decimal(str(settings.sharpe_slight_threshold))
+    )
     return AdvancedSettingsResponse(
         ensemble_weight_strategy=strategy,
         gbm_drift_window_days=drift_window,
         action_draft_approval_valid_minutes=approval_minutes,
         ai_explanation_provider_code=provider,
+        sharpe_strong_threshold=_decimal_text(sharpe_strong),
+        sharpe_slight_threshold=_decimal_text(sharpe_slight),
         help_nl=_ADVANCED_HELP_NL,
     )
 
@@ -1238,6 +1278,23 @@ def update_advanced_settings(
         raise HTTPException(
             status_code=422,
             detail="Goedkeuringsvenster moet ≥ 1 minuut zijn.",
+        )
+    if payload.sharpe_strong_threshold <= Decimal("0"):
+        raise HTTPException(
+            status_code=422,
+            detail="Sharpe-sterk drempel moet > 0 zijn.",
+        )
+    if payload.sharpe_slight_threshold <= Decimal("0"):
+        raise HTTPException(
+            status_code=422,
+            detail="Sharpe-licht drempel moet > 0 zijn.",
+        )
+    if payload.sharpe_slight_threshold >= payload.sharpe_strong_threshold:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Sharpe-licht drempel moet lager zijn dan de Sharpe-sterk drempel."
+            ),
         )
 
     now = datetime.now(UTC)
@@ -1326,6 +1383,8 @@ def update_advanced_settings(
                     payload.action_draft_approval_valid_minutes
                 ),
                 ai_explanation_provider_code=payload.ai_explanation_provider_code,
+                sharpe_strong_threshold=payload.sharpe_strong_threshold,
+                sharpe_slight_threshold=payload.sharpe_slight_threshold,
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -1337,6 +1396,8 @@ def update_advanced_settings(
             settings.ai_explanation_provider_code = (
                 payload.ai_explanation_provider_code
             )
+            settings.sharpe_strong_threshold = float(payload.sharpe_strong_threshold)
+            settings.sharpe_slight_threshold = float(payload.sharpe_slight_threshold)
     except StorageConnectionError as exc:
         raise HTTPException(
             status_code=503, detail="Opslag is niet beschikbaar."
@@ -1430,3 +1491,10 @@ def apply_runtime_config_overlay(
         )
     if record.ai_explanation_provider_code is not None:
         settings_obj.ai_explanation_provider_code = record.ai_explanation_provider_code
+    # Settings UI PR F — Sharpe direction-label thresholds. Stored as
+    # Decimal in the DB; the GBM path expects float. Null leaves the
+    # env-default (1.0 / 0.3) in place.
+    if record.sharpe_strong_threshold is not None:
+        settings_obj.sharpe_strong_threshold = float(record.sharpe_strong_threshold)
+    if record.sharpe_slight_threshold is not None:
+        settings_obj.sharpe_slight_threshold = float(record.sharpe_slight_threshold)
