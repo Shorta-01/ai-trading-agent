@@ -12,6 +12,7 @@ from portfolio_outlook_api.universe_registry import (
     UNIVERSE_SET_ALL_5K,
     UNIVERSE_SET_EU600,
     UNIVERSE_SET_SP500,
+    UNIVERSE_SET_STARTER_50,
     UniverseEntry,
     locked_universe,
     universe_by_index,
@@ -21,20 +22,38 @@ from portfolio_outlook_api.universe_registry import (
 def test_locked_universe_sets_are_immutable_frozenset() -> None:
     assert isinstance(LOCKED_UNIVERSE_SETS, frozenset)
     assert LOCKED_UNIVERSE_SETS == {
+        UNIVERSE_SET_STARTER_50,
         UNIVERSE_SET_SP500,
         UNIVERSE_SET_EU600,
         UNIVERSE_SET_ALL_5K,
     }
 
 
-def test_default_set_is_sp500() -> None:
-    assert DEFAULT_UNIVERSE_SET == UNIVERSE_SET_SP500
+def test_default_set_is_starter_50() -> None:
+    """STARTER_50 (Bel20 + AEX) is the new default — large/liquid Belgian
+    + Dutch names so the operator gets real ``Nieuwe kansen`` output
+    inside the EODHD quota before deciding to opt into the larger sets."""
+
+    assert DEFAULT_UNIVERSE_SET == UNIVERSE_SET_STARTER_50
 
 
-def test_locked_universe_default_returns_sp500_set() -> None:
+def test_locked_universe_default_returns_starter_50_set() -> None:
     by_default = locked_universe()
-    by_explicit = locked_universe(UNIVERSE_SET_SP500)
+    by_explicit = locked_universe(UNIVERSE_SET_STARTER_50)
     assert by_default == by_explicit
+
+
+def test_starter_50_is_bel20_plus_aex() -> None:
+    """The starter set is the union of Bel20 (20) + AEX (~25) — a
+    deliberately-tight set the operator can lean on without large
+    EODHD-quota concerns. The actual count depends on whether AEX
+    happens to overlap any Bel20 symbol but in practice it doesn't."""
+
+    starter = locked_universe(UNIVERSE_SET_STARTER_50)
+    symbols = {e.eodhd_symbol for e in starter}
+    assert "ABI.BR" in symbols  # Bel20
+    assert "ASML.AS" in symbols  # AEX
+    assert 30 <= len(starter) <= 50  # small set by design
 
 
 def test_locked_universe_rejects_unknown_set_code() -> None:

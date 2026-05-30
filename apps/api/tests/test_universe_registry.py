@@ -30,8 +30,14 @@ def test_locked_universe_dedupes_overlapping_tickers() -> None:
     assert len(eodhd_symbols) == len(set(eodhd_symbols))
 
 
-def test_locked_universe_covers_all_indices() -> None:
-    universe = locked_universe()
+def test_locked_universe_sp500_covers_all_v1_indices() -> None:
+    """The SP500 set is the V1 broad universe and must cover every index
+    Slice 17 originally committed to. The default switched to STARTER_50
+    (Bel20 + AEX only) so we assert against SP500 explicitly here."""
+
+    from portfolio_outlook_api.universe_registry import UNIVERSE_SET_SP500
+
+    universe = locked_universe(UNIVERSE_SET_SP500)
     seen_indices = {e.index_code for e in universe}
     assert {"BEL20", "AEX", "CAC40", "DAX40", "SP100"}.issubset(seen_indices)
 
