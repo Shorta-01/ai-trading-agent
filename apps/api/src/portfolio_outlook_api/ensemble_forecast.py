@@ -67,6 +67,8 @@ def build_ensemble_predictors(
     qvm_universe: UniverseFundamentals | None = None,
     sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
     sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
+    gbm_regime_shift_enabled: bool = False,
+    gbm_regime_shift_threshold_pct: float = 5.0,
 ) -> list[PredictorProtocol]:
     """Assemble the doctrine-compliant classical predictor set.
 
@@ -76,14 +78,17 @@ def build_ensemble_predictors(
     combiner then drops it, so a missing/small universe simply yields a
     3-predictor ensemble. AI-TS is intentionally excluded (intent §7).
 
-    The Sharpe thresholds flow into the embedded ``GbmPredictor`` so the
-    operator-tunable values reach the GBM direction-label logic.
+    The Sharpe + GBM regime-shift thresholds flow into the embedded
+    ``GbmPredictor`` so the operator-tunable values reach the GBM
+    direction-label and drift-blending logic.
     """
 
     predictors: list[PredictorProtocol] = [
         GbmPredictor(
             sharpe_strong_threshold=sharpe_strong_threshold,
             sharpe_slight_threshold=sharpe_slight_threshold,
+            regime_shift_enabled=gbm_regime_shift_enabled,
+            regime_shift_threshold_pct=gbm_regime_shift_threshold_pct,
         ),
         MomentumPredictor(),
         MeanReversionPredictor(),
@@ -204,6 +209,8 @@ def run_ensemble_forecast(
     brier_history: dict[str, Decimal] | None = None,
     sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
     sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
+    gbm_regime_shift_enabled: bool = False,
+    gbm_regime_shift_threshold_pct: float = 5.0,
 ) -> EnsembleResult:
     """Build the predictor set and combine it for one asset.
 
@@ -218,6 +225,8 @@ def run_ensemble_forecast(
         qvm_universe=qvm_universe,
         sharpe_strong_threshold=sharpe_strong_threshold,
         sharpe_slight_threshold=sharpe_slight_threshold,
+        gbm_regime_shift_enabled=gbm_regime_shift_enabled,
+        gbm_regime_shift_threshold_pct=gbm_regime_shift_threshold_pct,
     )
     metadata = {"symbol": target_symbol}
     if sector:

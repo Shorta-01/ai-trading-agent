@@ -1116,6 +1116,10 @@ def run_forecast_sync() -> dict[str, object]:
                 brier_history=brier_history,
                 sharpe_strong_threshold=settings.sharpe_strong_threshold,
                 sharpe_slight_threshold=settings.sharpe_slight_threshold,
+                gbm_regime_shift_enabled=settings.gbm_regime_shift_enabled,
+                gbm_regime_shift_threshold_pct=float(
+                    settings.gbm_regime_shift_threshold_pct
+                ),
             )
     except StorageConnectionError:
         return _build_blocked_forecast_response(
