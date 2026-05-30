@@ -361,6 +361,15 @@ export default function Page() {
   const [orderPolicySaving, setOrderPolicySaving] = useState(false);
   const [orderPolicySaved, setOrderPolicySaved] = useState<string | null>(null);
   const [orderPolicyError, setOrderPolicyError] = useState<string | null>(null);
+  // Settings UI PR B — scheduler cadence.
+  const [schedulerForm, setSchedulerForm] = useState({
+    scheduler_daily_briefing_cron: "",
+    ibkr_sync_interval_minutes: 15,
+  });
+  const [schedulerHelp, setSchedulerHelp] = useState<string>("");
+  const [schedulerSaving, setSchedulerSaving] = useState(false);
+  const [schedulerSaved, setSchedulerSaved] = useState<string | null>(null);
+  const [schedulerError, setSchedulerError] = useState<string | null>(null);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -490,6 +499,42 @@ export default function Page() {
     setOrderPolicy((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Settings UI PR B — scheduler query + save.
+  const schedulerQuery = useQuery({
+    queryKey: ["instellingen", "scheduler"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getSchedulerSettings();
+      if (!result.ok) throw new Error("scheduler-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = schedulerQuery.data;
+    if (!data) return;
+    setSchedulerForm({
+      scheduler_daily_briefing_cron: data.scheduler_daily_briefing_cron,
+      ibkr_sync_interval_minutes: data.ibkr_sync_interval_minutes,
+    });
+    setSchedulerHelp(data.help_nl);
+  }, [schedulerQuery.data]);
+
+  async function handleSaveScheduler() {
+    setSchedulerSaving(true);
+    setSchedulerError(null);
+    setSchedulerSaved(null);
+    const result = await apiClient.updateSchedulerSettings(schedulerForm);
+    setSchedulerSaving(false);
+    if (!result.ok) {
+      setSchedulerError(
+        "Opslaan mislukt. Controleer dat de cron-uitdrukking 5 velden heeft en niet samenvalt met de 06:00 worker-slot.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "scheduler"], result.data);
+    setSchedulerSaved("Planning opgeslagen.");
+  }
+
   async function handleSaveOrderPolicy() {
     setOrderPolicySaving(true);
     setOrderPolicyError(null);
@@ -553,13 +598,15 @@ export default function Page() {
     || tradingQuery.isPending
     || connectionQuery.isPending
     || universeScanQuery.isPending
-    || orderPolicyQuery.isPending;
+    || orderPolicyQuery.isPending
+    || schedulerQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
     && connectionQuery.isError
     && universeScanQuery.isError
     && orderPolicyQuery.isError
+    && schedulerQuery.isError
       ? "Instellingen konden niet worden geladen."
       : null;
 
@@ -1297,6 +1344,93 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {orderPolicyError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4d — Scheduler cadence (PR B). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-scheduler-section"
+          >
+            <h2 style={{ margin: 0 }}>Planning &amp; cadans</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {schedulerHelp
+                || "Wanneer de morgenbriefing klaarstaat en hoe vaak IBKR-posities worden bijgewerkt."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Morgenbriefing-cron (5 velden, Europe/Brussels)
+                <input
+                  type="text"
+                  data-testid="instellingen-scheduler-cron"
+                  value={schedulerForm.scheduler_daily_briefing_cron}
+                  onChange={(e) =>
+                    setSchedulerForm((p) => ({
+                      ...p,
+                      scheduler_daily_briefing_cron: e.target.value,
+                    }))
+                  }
+                  placeholder="30 6 * * *"
+                />
+                <span className="help-text">
+                  Standaard <code>30 6 * * *</code> (06:30). Mag niet
+                  samenvallen met de worker&rsquo;s vergrendelde 06:00 slot.
+                  Wijzigingen gelden vanaf de eerstvolgende API-herstart.
+                </span>
+              </label>
+              <label>
+                IBKR-sync interval (minuten)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-scheduler-ibkr_sync"
+                  value={schedulerForm.ibkr_sync_interval_minutes}
+                  onChange={(e) =>
+                    setSchedulerForm((p) => ({
+                      ...p,
+                      ibkr_sync_interval_minutes: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe vaak posities/cash bij IBKR opgehaald worden. Lager
+                  = verser; hoger = minder API-belasting. Wijziging is
+                  direct actief op de volgende tick.
+                </span>
+              </label>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveScheduler()}
+                disabled={schedulerSaving}
+                data-testid="instellingen-scheduler-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: schedulerSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {schedulerSaving ? "Opslaan…" : "Planning opslaan"}
+              </button>
+              {schedulerSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {schedulerSaved}
+                </span>
+              ) : null}
+              {schedulerError ? (
+                <span
+                  data-testid="instellingen-scheduler-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {schedulerError}
                 </span>
               ) : null}
             </div>

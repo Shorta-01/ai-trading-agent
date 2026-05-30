@@ -6137,6 +6137,8 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "max_sector_pct": record.max_sector_pct,
             "cost_dominates_ratio": record.cost_dominates_ratio,
             "suggestion_valid_minutes": record.suggestion_valid_minutes,
+            "scheduler_daily_briefing_cron": record.scheduler_daily_briefing_cron,
+            "ibkr_sync_interval_minutes": record.ibkr_sync_interval_minutes,
         }
         existing = (
             self._connection.execute(
@@ -6187,6 +6189,12 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         suggestion_valid_minutes=(
             int(row["suggestion_valid_minutes"])
             if row.get("suggestion_valid_minutes") is not None
+            else None
+        ),
+        scheduler_daily_briefing_cron=row.get("scheduler_daily_briefing_cron"),
+        ibkr_sync_interval_minutes=(
+            int(row["ibkr_sync_interval_minutes"])
+            if row.get("ibkr_sync_interval_minutes") is not None
             else None
         ),
     )

@@ -1353,6 +1353,9 @@ runtime_config = Table(
     Column("max_sector_pct", MONEY_NUMERIC, nullable=True),
     Column("cost_dominates_ratio", MONEY_NUMERIC, nullable=True),
     Column("suggestion_valid_minutes", Integer, nullable=True),
+    # Scheduler-cadence overlay (Settings UI PR B). Null = use env-var.
+    Column("scheduler_daily_briefing_cron", Text, nullable=True),
+    Column("ibkr_sync_interval_minutes", Integer, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

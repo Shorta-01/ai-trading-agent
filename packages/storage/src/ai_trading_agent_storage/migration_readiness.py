@@ -680,6 +680,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "elk veld: terugvallen op env-var of broncode-default."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0058_runtime_config_scheduler",
+        previous_revision_id="0057_runtime_config_order_policy",
+        filename="0058_runtime_config_scheduler.py",
+        label_nl="Scheduler-cadens overlay in runtime_config",
+        description_nl=(
+            "Voegt ``scheduler_daily_briefing_cron`` en "
+            "``ibkr_sync_interval_minutes`` toe aan ``runtime_config`` zodat "
+            "de operator de morgenbriefing-tijd en IBKR-sync cadans vanuit de "
+            "Settings-pagina kan aanpassen. Null betekent: terugvallen op de "
+            "env-var (``SCHEDULER_DAILY_BRIEFING_CRON`` / "
+            "``IBKR_SYNC_INTERVAL_MINUTES``)."
+        ),
+    ),
 )
 
 

@@ -155,6 +155,17 @@ export type OrderPolicySettingsUpdateInput = {
   suggestion_valid_minutes: number;
 };
 
+export type SchedulerSettingsResponse = {
+  scheduler_daily_briefing_cron: string;
+  ibkr_sync_interval_minutes: number;
+  help_nl: string;
+};
+
+export type SchedulerSettingsUpdateInput = {
+  scheduler_daily_briefing_cron: string;
+  ibkr_sync_interval_minutes: number;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1878,6 +1889,10 @@ export const apiClient = {
     getJson<OrderPolicySettingsResponse>("/settings/order-policy"),
   updateOrderPolicySettings: (payload: OrderPolicySettingsUpdateInput) =>
     putJson<OrderPolicySettingsResponse>("/settings/order-policy", payload),
+  getSchedulerSettings: () =>
+    getJson<SchedulerSettingsResponse>("/settings/scheduler"),
+  updateSchedulerSettings: (payload: SchedulerSettingsUpdateInput) =>
+    putJson<SchedulerSettingsResponse>("/settings/scheduler", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
