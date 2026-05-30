@@ -694,6 +694,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "``IBKR_SYNC_INTERVAL_MINUTES``)."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0059_runtime_config_data_windows",
+        previous_revision_id="0058_runtime_config_scheduler",
+        filename="0059_runtime_config_data_windows.py",
+        label_nl="Data-window overlay in runtime_config",
+        description_nl=(
+            "Voegt vier kolommen toe aan ``runtime_config`` zodat de "
+            "Settings-UI de voorspellings-lookback in dagen, het minimum "
+            "aantal koersdagen voor een GBM-fit, het briefing-tijdvenster "
+            "en de universe-scan cache-TTL kan persisteren. Null in elk "
+            "veld: terugvallen op de env-var."
+        ),
+    ),
 )
 
 
