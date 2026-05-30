@@ -53,7 +53,7 @@ Phase 4 evolution candidate: add a historical-universe data source. Doctrine §1
 
 ## 3. Leaderboard — Option C (chosen)
 
-A read-only screen, linked from the prediction track record screen (T-016b — `docs/reality/functionality/prediction-track-record-screen.md`). Not a separate top-level entry.
+A read-only screen, linked from the prediction track record screen. Not a separate top-level entry.
 
 ### Columns per predictor
 
@@ -135,4 +135,3 @@ The leaderboard does not allow direct retirement / promotion actions. Decisions 
 - `docs/intent/prediction-diary-and-calibration.md` (where calibration metrics come from)
 - `docs/intent/settings-and-credentials.md` (Category 3 hosts shadow / retirement thresholds; Category 5 hosts on-demand backtest)
 - `docs/intent/dashboard-and-order-flow.md` (system-decision items for promote / retire surface in actions area)
-- Existing reality target: T-024 `docs/reality/functionality/predictor-backtest-and-leaderboard.md`

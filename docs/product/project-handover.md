@@ -1,7 +1,7 @@
 - Task 152-R6 completed: repair-only merged-red CI fix after Task 152-R5 for the `api` job `pytest` failures; fake-client execution helpers now enable the full Task 152 prerequisite gate set in tests, including dummy `ibkr_sync_host`, `ibkr_sync_port`, and `ibkr_sync_client_id` values alongside `ibkr_tws_readonly_real_client_enabled=True`. Missing host/port/client-id blockers remain tested for default/real configuration gaps, default-blocked tests still verify disabled-by-default safety-gated behavior, no-secret checks remain strict (no raw config/account payload leaks), and no production runtime behavior was widened (runtime default-disabled, readiness never connects, no sync/market-data/FX/suggestions/actions/orders/broker execution, no auto-connect/reconnect/persistent session manager, no schema/migrations, no `ib_insync`).
 - Task 152-R5 completed: repair-only merged-red CI fix after Task 152-R4 for the `api` job `pytest` failures; fake-client execution helpers now enable the full Task 152 gate set including `ibkr_tws_readonly_real_client_enabled=True`, and remaining fake-client execution/error-path tests that still used `_settings(...)` were corrected to use `_fake_client_ready_settings(...)`. Default-blocked tests still prove disabled-by-default and safety-gated behavior. No production runtime widening: runtime remains disabled by default, readiness endpoint never connects, no account/portfolio sync, no positions/cash/open-orders/executions sync, no market-data runtime, no FX runtime, no suggestions/action drafts/orders/broker execution, no auto-connect/reconnect loop, no persistent session manager, no schema/migrations, no `ib_insync`, and no secret/raw broker payload exposure.
 - Task 152-R4 (repair-only) completed: repaired merged-red CI after Task 152-R3 in `api` job (`pytest` failed while `ruff` and `mypy` were green) by fixing stale fake-client manual status-check test expectations introduced by stricter Task 152 gate behavior. Fake-client execution tests now enable all required gates before expecting connection/check/disconnect behavior; default-blocked tests still prove disabled-by-default behavior; and no-secret tests now reject exact raw configured values rather than safe diagnostic code names like `missing_host`. Real manual status-check capability remains. Runtime remains disabled by default; readiness endpoint still never connects; no account/portfolio sync runtime, no positions/cash/open-orders/executions sync, no market-data runtime, no FX runtime, no suggestions/action drafts/orders, no broker execution, no auto-connect/reconnect loop, no persistent session manager, no schema/migrations, no `ib_insync`, and no secrets/raw broker payload exposure.
-- Task 152-R2 (repair-only) completed: repaired merged-red CI after Task 152-R in `api` job (`ruff check .`) by replacing Ruff-B009-triggering constant-attribute `getattr(...)` in `ibkr_ibapi_manual_status_client.py` with Ruff-compliant direct attribute access using narrow local Any-casts, while preserving the typed `ibapi` protocol/factory boundary and real manual status-check capability. Runtime remains disabled by default; readiness endpoint still never connects; no account/portfolio sync runtime, no positions/cash/open-orders/executions sync, no market-data runtime, no FX runtime, no suggestions/action drafts/orders, no broker execution, no auto-connect/reconnect loop, no persistent session manager, no schema/migrations, no `ib_insync`, and no secrets/raw broker payload exposure.
+- Task 152-R2 (repair-only) completed: repaired merged-red CI after Task 152-R in `api` job (`ruff check.`) by replacing Ruff-B009-triggering constant-attribute `getattr(...)` in `ibkr_ibapi_manual_status_client.py` with Ruff-compliant direct attribute access using narrow local Any-casts, while preserving the typed `ibapi` protocol/factory boundary and real manual status-check capability. Runtime remains disabled by default; readiness endpoint still never connects; no account/portfolio sync runtime, no positions/cash/open-orders/executions sync, no market-data runtime, no FX runtime, no suggestions/action drafts/orders, no broker execution, no auto-connect/reconnect loop, no persistent session manager, no schema/migrations, no `ib_insync`, and no secrets/raw broker payload exposure.
 - Task 152-R (repair-only) completed: repaired merged-red CI after Task 152 (`api` job, `mypy src`) by isolating untyped `ibapi` usage behind typed protocol/factory boundary in manual status client. Real manual status-check remains; runtime disabled by default; readiness endpoint still never connects; no sync/market-data/FX/suggestions/orders/broker execution expansion; no schema changes; no `ib_insync`.
 - Task 151: dependency-isolated `ibapi` façade toegevoegd (preflight-only, geen connectiviteit/wiring/runtimeuitbreiding).
 - Task 150-R completed: merged-red repair na Task 150 voor API `pytest` failure in `test_repository_does_not_introduce_ib_insync`; preflightscan vernauwd naar projectmetadata + productie-runtime broncode i.p.v. alle repository-testbestanden, zodat bestaande safety-assertions met `ib_insync` in tests (zoals `packages/storage/tests/test_alembic_skeleton.py`) geen vals-positieve dependencyintroductie meer triggeren. `ibapi` blijft dependency/install-import preflight-only, geen productie-runtime import van `ibapi`, geen `ib_insync` dependency, geen runtime-connectiviteit/sockets by default, geen echte TWS/Gateway clientimplementatie, geen auto-connect/reconnect/persistente session manager, geen account/portfolio sync runtime, geen market-data/FX runtime, geen suggestions/action drafts/orders/broker execution, geen API/web-gedragswijziging en geen storage schema/migraties.
@@ -44,7 +44,7 @@
 - Producttrackingstatus: Task 137 is afgerond als planning/documentation-only Milestone B sliceslectie na Task 136. Geselecteerde volgende implementatietaak is Task 138: harden IBKR read-only adapter contracts + deterministic fake-adapter sync fixtures voor cash/positions/open orders/executions. Geen runtimecode, geen API/web behaviorwijziging, geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties, action drafts, orders of broker execution toegevoegd.
 - Producttrackingstatus: Task 135B-R is afgerond als repair-only follow-up na merged-red Task 135B: API Ruff E501 line-too-long failures in IBKR sync validation/testbestanden zijn hersteld met formatting-only wijzigingen; geen runtime/API/storage/migratie/scope-uitbreiding, geen market-data runtime, suggesties, action drafts, orders of broker execution toegevoegd.
 - Producttrackingstatus: Task 136 is afgerond als nauwe contract-uitlijning na Task 135B-R: duurzame `/ibkr/sync/status` responses bevatten nu dezelfde Task 135B payload-validatievelden en safetyvelden als de memory/read-status route. Historische duurzame runs zonder opgeslagen payload-validatie-details blijven conservatief `not_available` (geen verzonnen validatiefouten). Geen storage schema/migraties, geen echte TWS/Gateway runtime, geen market-data runtime, geen suggesties, action drafts, orders of broker execution toegevoegd.
-- Producttrackingstatus: Task 135A is afgerond als documentatie-only audit/reconciliatie na Task 134B-R2 (PR #326) en herstelde producttrackingdrift naar repository-truth op `main` (markerfix in `current-state`, Milestone B queue/backlog driftfix, auditdocument toegevoegd, handover/history/scope/next-task opnieuw uitgelijnd). Task 135B blijft de volgende implementatiestap in `docs/product/next-task.md` op basis van deze audit. Geen runtime-, API-, web-, storage-, migratie-, netwerk- of berekeningsgedrag gewijzigd; geen echte TWS/Gateway netwerkruntime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen fake data toegevoegd.
+- Producttrackingstatus: Task 135A is afgerond als documentatie-only audit/reconciliatie na Task 134B-R2 (PR #326) en herstelde producttrackingdrift naar repository-truth op `main` (markerfix in `current-state`, Milestone B queue/backlog driftfix, auditdocument toegevoegd, handover/history/scope/next-task opnieuw uitgelijnd). Task 135B blijft de volgende implementatiestap in op basis van deze audit. Geen runtime-, API-, web-, storage-, migratie-, netwerk- of berekeningsgedrag gewijzigd; geen echte TWS/Gateway netwerkruntime, geen market-data runtime, geen suggesties, geen action drafts, geen orders en geen fake data toegevoegd.
 
 ## Purpose
 
@@ -53,27 +53,25 @@ Dit document zorgt dat nieuwe sessies starten vanuit repository-truth, niet chat
 ## Verplichte leesvolgorde voor elke nieuwe sessie
 
 1. Source-of-truth productdocs:
-   - `docs/product/final-solution-vision.md`
-   - `docs/product/release-1-functional-workflow-blueprint.md`
-   - `docs/product/current-state.md`
-   - `docs/product/locked-decisions.md`
-   - `docs/product/version-1-scope-register.md`
-   - `docs/product/version-1-backlog.md`
+ - `docs/product/final-solution-vision.md`
+ - `docs/product/release-1-functional-workflow-blueprint.md`
+ - 
+ - `docs/product/locked-decisions.md`
+ - `docs/product/version-1-scope-register.md`
+ - `docs/product/version-1-backlog.md`
 2. CI-procesregels:
-   - `docs/product/codex-ci-quality-rules.md`
+ - 
 3. Actuele voortgang:
-   - laatste gemergede PR + CI status op main
-   - open PR’s en hun CI-status
+ - laatste gemergede PR + CI status op main
+ - open PR’s en hun CI-status
 4. Volgende implementatiestap:
-   - `docs/product/next-task.md`
-
+ - 
 
 ## Read-only readiness terminologie-startpunt
 
 Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, **geen runtime-unlock**) raadpleeg vroeg:
 - `docs/product/read-only-readiness-ui-contract-inventory.md`
 - `docs/product/read-only-readiness-pr-checklist.md`
-- `docs/product/read-only-readiness-product-doc-terminology-audit.md`
 
 ## Kerncontext
 
@@ -90,31 +88,27 @@ Voor consistente reviewtaal in nieuwe sessies (documentatie/review guardrails, *
 - Eindvisie: `docs/product/final-solution-vision.md`
 - Release 1 workflow blueprint: `docs/product/release-1-functional-workflow-blueprint.md`
 - Resterend werk: `docs/product/version-1-backlog.md`
-- Volgende taak: `docs/product/next-task.md`
-
+- Volgende taak: 
 
 ## Producttracking drift-preventieregel (documentation/review discipline)
 
 Wanneer een taak als afgerond wordt vastgelegd in productdocs, moet dezelfde PR altijd expliciet controleren en zo nodig bijwerken:
-- `docs/product/current-state.md` titel;
-- `Huidige toestand:`-regel in `docs/product/current-state.md`;
-- task completion-regel in `docs/product/current-state.md`;
-- `docs/product/task-history.md`;
+- titel;
+- `Huidige toestand:`-regel;
+- task completion-regel;
+-;
 - `docs/product/version-1-scope-register.md`;
 - `docs/product/version-1-backlog.md`;
-- `docs/product/next-task.md`.
+-.
 
 Aanvullend:
 - `next-task.md` mag geen nieuwe drift-only taak plannen tenzij er echte trackingdrift te herstellen is.
 - Als de enige noodzakelijke fix een tasknummercorrectie in `current-state.md` is, moet die correctie in dezelfde PR worden meegebundeld en niet als losse volgende taak worden gepland.
 - Dit is een documentatie/review-discipline-regel en **geen** geautomatiseerde CI-regel.
 
-- Verplicht lezen: docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md
-
-
 ## Task 128 workflowpivot
-- Gebruik voortaan `docs/product/codex-task-template.md` en `docs/product/task-queue.md` voor kortere milestone-gerichte opdrachten.
-- Red/green CI discipline volgt `docs/product/codex-red-green-ci-workflow.md`.
+- Gebruik voortaan en voor kortere milestone-gerichte opdrachten.
+- Red/green CI discipline volgt.
 - Geen auto-merge; human review en manual merge blijven verplicht.
 
 ## Task 130P workflow rule (nieuw)
@@ -122,12 +116,11 @@ Aanvullend:
 - Geen handmatige owner-testing voor partial, unfinished slices; handmatige testing pas bij volledige Version 1 release candidate.
 - Partial features moeten via CI + fake adapters/fixtures/contracttests worden afgedekt.
 - Toekomstige taken moeten waar veilig milestone-batches gebruiken binnen strikte safety boundaries.
-- Eerdere kleine Task 131-route is vervangen door Task 131B in `docs/product/next-task.md` (tenzij latere inspectie een nog veiligere batch oplevert).
-
+- Eerdere kleine Task 131-route is vervangen door Task 131B in (tenzij latere inspectie een nog veiligere batch oplevert).
 
 ## Task 130Q handover update
-- Owner workshop productrichting is nu vergrendeld in `docs/product/version-1-owner-workshop-decision-locks-task-130q.md` (mission-control dashboard, daily operating model, Action Center, Research Desk, structured order drafts, evidence-gated engine).
-- Tracking marker drift in `docs/product/current-state.md` is met Task 130Q-R verder gecorrigeerd naar **na Task 130Q-R**.
+- Owner workshop productrichting is nu vergrendeld in (mission-control dashboard, daily operating model, Action Center, Research Desk, structured order drafts, evidence-gated engine).
+- Tracking marker drift in is met Task 130Q-R verder gecorrigeerd naar **na Task 130Q-R**.
 - Task 131B is afgerond en Task 131B-R heeft de merged-red API statusregressie gerepareerd; volgende implementatierichting is Task 133B (tenzij latere inspectie een veiligere batch oplevert).
 
 - Nieuw in Task 139: status-only inspectie van recente IBKR syncruns via `/ibkr/sync/runs` en detail via `/ibkr/sync/runs/{sync_run_id}`. In-memory history, geen real-runtime toevoegingen.

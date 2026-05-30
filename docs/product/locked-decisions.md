@@ -1,5 +1,6 @@
-- Software name and account-mode scope lock: `AI Trading Agent` is the active software name; product is account-mode-aware and not paper-only as identity. See `docs/product/software-name-and-account-mode-scope-lock-task-154l.md`.
 # Locked Decisions (Version 1)
+
+- Software name and account-mode scope lock: `AI Trading Agent` is the active software name; product is account-mode-aware and not paper-only as identity.
 
 ## Version 1 product experience locks
 
@@ -14,8 +15,7 @@ Kernsamenvatting:
 
 ## Task 130Q owner workshop lock (Version 1)
 
-Task 130Q vergrendelt de owner workshop-beslissingen als product source-of-truth in:
-- `docs/product/version-1-owner-workshop-decision-locks-task-130q.md`
+Task 130Q vergrendelt de owner workshop-beslissingen als product source-of-truth.
 
 Kernlocks (samenvatting):
 - decision-first mission-control dashboard met exacte titel `AI Trading Agent`;
@@ -61,17 +61,17 @@ Kader:
 - Vermijd onverklaarde financiële jargon op hoofdniveau.
 - Geavanceerde termen enkel in detail/advanced views met eenvoudige uitleg.
 - Hoofdsecties:
-  - Dashboard
-  - Prestaties
-  - Actiesuggesties
-  - Portefeuille
-  - Volglijst
-  - Kansen en waarschuwingen
-  - Transactiegeschiedenis
-  - Asset Detail Page
-  - Belgische fiscaliteit en compliance
-  - Instellingen
-  - Audit en leerinzichten (waarschijnlijk advanced-only)
+ - Dashboard
+ - Prestaties
+ - Actiesuggesties
+ - Portefeuille
+ - Volglijst
+ - Kansen en waarschuwingen
+ - Transactiegeschiedenis
+ - Asset Detail Page
+ - Belgische fiscaliteit en compliance
+ - Instellingen
+ - Audit en leerinzichten (waarschijnlijk advanced-only)
 
 ## 3) Locked simple action labels
 
@@ -203,14 +203,14 @@ Verder:
 ## 15) Audit en traceability
 
 - Het systeem moet reconstrueren:
-  - welke data gekend was
-  - waar data vandaan kwam
-  - wat Python berekende
-  - wat AI uitlegde
-  - welke regels passeerden of blokkeerden
-  - welke suggestie getoond werd
-  - wat user deed
-  - wat het resultaat nadien was
+ - welke data gekend was
+ - waar data vandaan kwam
+ - wat Python berekende
+ - wat AI uitlegde
+ - welke regels passeerden of blokkeerden
+ - welke suggestie getoond werd
+ - wat user deed
+ - wat het resultaat nadien was
 - Audit viewer is later verplicht.
 - Append-only/hash-ready audit log is gepland.
 
@@ -229,7 +229,6 @@ Verder:
 - Geen hardcoded lokale paden.
 - Encrypted backups.
 - Backup is pas vertrouwd na restore-test.
-
 
 ## 18) Release 1 functional workflow blueprint locks
 
@@ -265,7 +264,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Locked wording: “Every active watchlist item must have a validated IBKR contract identity, including conid, asset class, exchange or primary exchange where available, and currency. Manual add must use IBKR contract search and user selection. System-detected assets must resolve to the correct IBKR contract before they can become active watchlist items. IBKR watchlist sync is allowed, but imported items must be stored with full conid-based identity and all sync conflicts must be auditable. No unresolved asset may receive market data, analysis, suggestions or action drafts.”
 - Locked principle: “No serious analysis or suggestion may run on loose, ambiguous or unvalidated data.”
 
-
 ## Architecture-audit lock additions (Task 88I)
 
 - Usable cash mag **niet** gebaseerd zijn op leveraged buying power; enkel auditeerbare beschikbare funds/cash min verplichtingen en user buffer.
@@ -286,12 +284,10 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Eerste broker action flow blijft whole-share/unit, Buy/Sell, Limit, Day-only, user-approved en account-mode zichtbaar/geverifieerd vóór submit.
 
 ## Task 127 decision lock
-- Bron: `docs/product/action-draft-prediction-diary-alerts-decision-locks-task-127.md`.
 - Productidentiteit: IBKR portfolio/watchlist intelligence, account-mode-aware (paper/real-money zichtbaar), niet paper-only als identiteit.
 - Geen automatische brokeractie; expliciete user-goedkeuring blijft verplicht.
 - Version 1 scope bevat nu expliciet Prediction Diary, alerts en daily briefing (zonder runtime-implementatie in Task 127).
 - Eerste action-draft ordertype-scope blijft: whole shares, Buy/Sell, Limit, Day, bewerkbaar, dry-run verplicht, geen auto-send.
-
 
 ## IBKR account mode and user approval lock
 - GUI moet zichtbaar tonen: paper of real-money accountmodus.
@@ -301,7 +297,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Geen automatische brokeractie.
 - Geen stille submit/modify/cancel.
 - Toekomstige brokeractie vereist validatie, dry-run, finale confirmatie en audit trail.
-
 
 ## Task 126 product locks
 - De software ondersteunt één geconfigureerd IBKR-account tegelijk. Account-modus (Paper of Live) is wat IBKR rapporteert voor dat account; de software dwingt geen paper-only af. De gebruiker kiest het account in Instellingen.
@@ -315,7 +310,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - `ib_insync` is alleen toegestaan in `apps/worker/src/portfolio_outlook_worker/ibkr_gateway.py`. De API + packages blijven op `ibapi`-via-facade. Storage-laag levert `psycopg[binary]>=3.2` als runtime driver voor productie (SQLite-gebaseerde tests blijven ongewijzigd).
 - Belgian tax module (TOB + dividend roerende voorheffing) draait alleen in live-modus. In paper-modus blijft de TOB-rekenpad inactief; berekeningen zijn pure-Python en gebeuren in `packages/portfolio/belgian_tax`. Geen extra modus-gating in routes; de tax-module zelf bepaalt of er een TOB-rij wordt aangemaakt op basis van de configured account-mode.
 
-
 ## Task 127 product locks (APScheduler runtime foundation)
 - Scheduler choice: APScheduler 3.x met SQLAlchemy job store backed by Postgres. Leeft in het worker-proces; geen aparte service. Tests gebruiken `MemoryJobStore`.
 - Locked schedule: 06:00 pre-briefing + every hour minute 0 from 07:00 through 21:00 Europe/Brussels (16 dagelijkse runs in totaal). Weekenden en feestdagen worden meegevuurd; de orchestrator beslist wat te doen, de scheduler vuurt alleen.
@@ -323,8 +317,7 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Cold-start detectie: lege portfolio-snapshots ÉN lege watchlist voor de geconfigureerde `ibkr_account_id` = `cold_start`; anders `normal`. Deterministisch tegen durable storage; geen heuristiek.
 - Audit-rij per run in `scheduled_run_audit` met `{run_id, run_at, run_type, ibkr_account_id, mode_detected, duration_ms, outcome, error_details_json, next_scheduled_at}`. Append-only — geen update of delete.
 - `SCHEDULER_ENABLED` env-var (default `false`) bepaalt of de scheduler start. Bij `false` draait de worker normaal verder maar zonder geplande runs (Task 120 disabled-by-default discipline).
-- Alle gepland werk respecteert `IBKR_ENABLED` + `IbkrGateway.is_connected()`. Disconnected gateway → audit-rij `mode_detected=disconnected` en clean exit; geen error. De scheduler vuurt nooit IBKR-netwerkverkeer buiten de gateway om.
-
+- Alle gepland werk respecteert `IBKR_ENABLED` + `IbkrGateway.is_connected`. Disconnected gateway → audit-rij `mode_detected=disconnected` en clean exit; geen error. De scheduler vuurt nooit IBKR-netwerkverkeer buiten de gateway om.
 
 ## Task 128 product locks (cold-start onboarding)
 - Cold-start triggers a starter watchlist seed (one-time per `ibkr_account_id`). Idempotency via the `cold_start_seed_audit` table's `UNIQUE` on `ibkr_account_id`; the seed function returns an `AlreadySeeded` typed result on the second call.
@@ -334,7 +327,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Volglijst page in the unconfirmed flow shows the yellow info card + starter rows with `Verwijder` buttons + the locked `BEVESTIG`-confirmation block. The text input requires the exact uppercase Dutch phrase `BEVESTIG`; lower-case or other phrasing returns HTTP 400 with `"Bevestigingscode is onjuist."`. Empty watchlist returns HTTP 422; already-confirmed state returns HTTP 409.
 - Every state transition writes an append-only `watchlist_confirmation_audit` row with `{account_id, from_state, to_state, event_at, actor, row_count_at_event, details_json}` — `actor='system'` for the seed, `actor='user'` for the confirmation.
 - Orchestrator behaviour: the `mode_detected` set widens to include `awaiting_watchlist_confirmation`. The sequence is `cold_start` (only on the very first run, when nothing has been seeded yet) → `awaiting_watchlist_confirmation` (after seed, before user confirms) → `normal` (after confirmation). The advice-generation surface stays inactive until the orchestrator emits `mode_detected="normal"`.
-
 
 ## Task 129 product locks (EOD market-data runtime)
 - Provider: EODHD All World plan (~€20/mo). Single-provider for V1; no multi-provider failover. Failed fetches log + the run completes.
@@ -348,7 +340,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Per-account scoping: fetches are scoped to assets in *this user's* watchlist + portfolio. The system never fetches market data for unrelated assets.
 - Configurable enable flag: `MARKET_DATA_FETCH_ENABLED` (default `false`). When off the orchestrator skips the market-data step entirely. `EODHD_API_KEY=None` is a valid configuration — `EodhdClient` returns a typed `NotConfiguredError` without touching the network.
 
-
 ## Task 135 product locks (IBKR reconciliation + manual-review queue)
 - Reconciliation is the **self-healing convergence layer** between the locally-persisted `ibkr_executions` + `action_drafts` tables and IBKR-side truth. It runs as a recurring worker tick (cadence + APScheduler wiring shipped in Task 135b) and walks **three passes in fixed order**: Pass A (orphaned executions — IBKR has fills we missed), Pass B (stale in-flight — drafts we think are in-flight that IBKR no longer reports), Pass C (24h timeout escalation — `awaiting_reply_timeout` drafts that still have no IBKR data after the cut-off become `requires_manual_review`). The orchestration shell (single-flight lock, run-row bookkeeping, ordering) lives in Task 135b; Task 135a ships the per-pass storage layer + Pass A only.
 - Reconciliation is **IBKR-read-only**. It calls only execution/order-status polls (`reqExecutions`-style); it never writes to IBKR. The API never touches reconciliation either — only the worker reads the local truth + the IBKR truth and writes the audit rows. There is no user-facing "re-submit" or "force cancel" affordance.
@@ -361,20 +352,18 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - **`safe_for_submission` stays hard-False at the CHECK + dataclass + repo layers**, including the `requires_manual_review` status path. The Task 135 widening of the state machine never touches that invariant. The reconciler doesn't grant submission permission.
 - Pass A reverse-lookup is via `SqlAlchemyIbkrSubmissionAuditRepository.get_action_draft_id_for_perm_id(perm_id)` — the only canonical mapping from `ibkr_perm_id` to `action_draft_id`. If multiple submission audit rows share a `perm_id` (shouldn't happen with IBKR's monotonic perm_ids but defended-in-depth), the most-recent one wins.
 
-
 ## Task 134 product locks (IBKR submission lifecycle + behavioural guardrails)
-- Submission is **only ever triggered by the worker**. The API never writes to IBKR. The worker owns the IB Insync session and is the only process that calls `placeOrder()`. The API only changes draft status and reads.
+- Submission is **only ever triggered by the worker**. The API never writes to IBKR. The worker owns the IB Insync session and is the only process that calls `placeOrder`. The API only changes draft status and reads.
 - Submission cadence (Task 134b): one APScheduler cron job (`ibkr_submission_sweep`) every 60 seconds between 09:00 and 22:30 Brussels time on weekdays; outside that window the sweep skips and audits `mode_detected="market_closed"`. Single-flight via Postgres advisory lock.
-- **Two-tier safety re-check is non-negotiable**: Tier 1 (pure-function `evaluate_submission_gates`) re-runs every gate that was checked at draft creation — account-mode + connection + account-ID + market-hours + duplicate-in-flight + behavioural guardrails + cash/position sufficiency + FOMO drift; any failure blocks the draft at `user_approved` with a structured `submission_block_reason` and a Dutch UI badge. Tier 2 (worker submitter, Task 134b) re-reads the live account ID right before `placeOrder()` and asserts it matches the draft.
+- **Two-tier safety re-check is non-negotiable**: Tier 1 (pure-function `evaluate_submission_gates`) re-runs every gate that was checked at draft creation — account-mode + connection + account-ID + market-hours + duplicate-in-flight + behavioural guardrails + cash/position sufficiency + FOMO drift; any failure blocks the draft at `user_approved` with a structured `submission_block_reason` and a Dutch UI badge. Tier 2 (worker submitter, Task 134b) re-reads the live account ID right before `placeOrder` and asserts it matches the draft.
 - Locked `submission_block_reason` enum (13 values): `cash_insufficient`, `mode_mismatch`, `connection_down`, `account_id_mismatch`, `duplicate_in_flight`, `market_closed`, `cooldown`, `daily_limit`, `soft_drawdown`, `hard_drawdown`, `fomo`, `tick_size_invalid`, `unknown`. Each maps to a locked Dutch sentence surfaced verbatim by the UI.
 - Behavioural guardrails are **always-on per the brainstorm** and stored per-account in `behavioural_guardrail_settings` with brainstorm-locked defaults: 60-second cooldown, 5 approvals per 24h, 72h/1% anti-revenge (soft warning, not a block), 5%/5 trading-day soft drawdown (BUY blocked, SELL allowed), 10%/20 trading-day hard drawdown (all blocked until user acknowledges in Settings), 1.5% price drift from approved limit (FOMO, re-approval required). Thresholds are global per the brainstorm; per-account storage is a future-flexibility hook. UI to edit them ships in Task 138; for V1 launch the defaults stand — no `.env` overrides.
 - Order shape locked at LMT × DAY × whole-share STK for V1. No MKT, no bracket/stop/trailing, no GTC/OPG/IOC, no batch submission. One draft per sweep tick, FIFO by `user_approved_at`.
 - Tick-size precision: limit prices must be rounded to the contract's tick size via `reqContractDetails` on every submission (no cache for V1). Banker's rounding (`ROUND_HALF_EVEN`); off-grid drift > one tick raises `LimitPriceNotOnTickSizeError` and the draft blocks with `tick_size_invalid`.
-- IBKR submission state machine (locked transitions): `user_approved` → `submitted` (after `placeOrder()` returns with a `permId`) → `accepted` (on IBKR `Submitted` callback) → `working` (on `PreSubmitted` / confirmed `Submitted`) → `filled` (on `Filled` with remaining = 0) / `partially_filled` (on `Filled` with remaining > 0) / `cancelled` (on `Cancelled`) / `rejected` (on `Rejected` with reason captured). If no IBKR callback within 60s of submission, the draft is marked `awaiting_reply_timeout` and reconciliation is flagged for Task 135.
+- IBKR submission state machine (locked transitions): `user_approved` → `submitted` (after `placeOrder` returns with a `permId`) → `accepted` (on IBKR `Submitted` callback) → `working` (on `PreSubmitted` / confirmed `Submitted`) → `filled` (on `Filled` with remaining = 0) / `partially_filled` (on `Filled` with remaining > 0) / `cancelled` (on `Cancelled`) / `rejected` (on `Rejected` with reason captured). If no IBKR callback within 60s of submission, the draft is marked `awaiting_reply_timeout` and reconciliation is flagged for Task 135.
 - Fill flow updates the durable position snapshot: on full fill a new `ibkr_position_snapshots` row reflects the post-fill state; the fill is also recorded in `ibkr_executions` (UNIQUE on `ibkr_exec_id`). Decision Package + Action Draft remain immutable — the terminal state is recorded in the draft's `status` + audit chain only.
-- Cancellation is one-way and user-initiated only (Task 134c): `POST /action-draft/{id}/cancel-submitted` is valid only for `submitted`/`accepted`/`working`/`partially_filled`, transitions to `pending_cancellation`, and the worker calls `ib.cancelOrder()` — the actual `cancelled` status comes from the IBKR callback. No automatic cancellation by the system, no retry on rejection.
+- Cancellation is one-way and user-initiated only (Task 134c): `POST /action-draft/{id}/cancel-submitted` is valid only for `submitted`/`accepted`/`working`/`partially_filled`, transitions to `pending_cancellation`, and the worker calls `ib.cancelOrder` — the actual `cancelled` status comes from the IBKR callback. No automatic cancellation by the system, no retry on rejection.
 - **`safe_for_submission` stays hard-False at the CHECK + dataclass + repo layers in V1.** Task 134's submitter doesn't depend on it being True; it remains a defense-in-depth artefact from Task 133. No code path exposes it as a toggle.
-
 
 ## Task 133 product locks (Action Draft data model + Te keuren tab)
 - Een Action Draft is de **User To-Do laag** in de drie-stage actieflow (System Advice → User To-Do → IBKR Submission). Het is een prefilled IBKR-format order voorstel afgeleid van een non-Geblokkeerd Decision Package + de huidige IBKR cash + positie snapshot, in IBKR-submittable vorm. Editable tot de gebruiker goedkeurt; daarna immutable.
@@ -390,17 +379,15 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - `user_buffer_eur` is een persistent setting (Decimal in `UserStrategySettings`, default €0, persisted via de bestaande `/settings/trading` PUT in de `user_strategy` JSON kolom). Default lock: **€0**, op user request.
 - Geen automatische Action Draft creatie. Geen retroactieve draft generatie voor historische Decision Packages. Geen `safe_for_submission=True` in enig code-pad. Geen `float` voor enig monetair veld. Geen merge van rode CI.
 
-
 ## Task 132 product locks (Decision Package data model)
 - A Decision Package is an immutable, audit-traceable container that wraps a single forecast for a single (account, conid) at a single moment in time. It contains: asset identity snapshot, holding context, current valuation (EUR), market-data freshness, forecast snapshot (copy of the forecast at composition time), EUR price levels at quantiles, gate outcomes, suggested action label (copied from the forecast), block reason (copied from the forecast), deterministic Dutch explanation, evidence references, audit_trail_hash, previous_package_hash. Safety booleans (`safe_for_action_drafts`, `safe_for_orders`) are hard-False both at the dataclass layer and at the DB CHECK-constraint layer; they only flip when the Action Center + approval workflows ship in future tasks.
 - A Decision Package is composed only when the underlying forecast label is NOT `Geblokkeerd`. The composer raises `GeblokkeerdForecastError` if called for a blocked forecast. The DB CHECK constraint on `suggested_action_label` excludes `Geblokkeerd`. Blocked forecasts get no Decision Package — the forecast row alone communicates the block.
 - Composition trigger: immediately after the forecasting step within the same `morning_briefing` scheduled run. The orchestrator invokes `decision_package_runner.run(...)` after the forecasting runner returns successfully; the runner queries forecasts for the run, filters non-Geblokkeerd, and composes + persists one Decision Package per remaining forecast. Per-asset composition failures don't crash the run.
 - Append-only at the storage layer: the `SqlAlchemyDecisionPackageRepository` has no `update` or `delete` methods (enforced by a regression test). If a later run produces a different forecast for the same asset, a NEW Decision Package is composed; the old one is NEVER mutated. Linkage between old and new is via the `previous_package_hash` chain.
 - Per-asset hash chain: for each (ibkr_account_id, conid) pair, Decision Packages form a chain ordered by `composed_at`. First package's `previous_package_hash` is NULL; every subsequent one's `previous_package_hash` equals the prior package's `audit_trail_hash`. The hash is SHA-256 over canonical JSON of every package-defining field (excluding `composed_at` and `decision_package_id` so re-composition of identical content yields identical hashes — chain verifiability rests on this).
-- Five locked gates evaluated by `evaluate_gates()` in order: `forecast_valid` (always True at the composer entry point — Geblokkeerd is filtered upstream), `data_fresh` (market snapshot exists), `asset_listing_resolved` (asset_listing record present), `freshness_within_sla` (data_age_trading_days ≤ 3), `confidence_at_least_medium` (forecast confidence ∈ {Gemiddeld, Hoog}). Each emits a `GateOutcome(gate_name, passed, reason_nl)`; the Dutch explanation appends one "Let op: <reason_nl>" sentence per failed gate.
-- Deterministic Dutch explanation: pure Python templating in `render_explanation()`. No AI. Hardcoded label-to-prose mapping. Hardcoded Dutch month names (avoiding locale-dependent strftime). The same forecast + same context always produces the exact same paragraph; the test `test_compose_idempotent_hash_excluding_composed_at` proves it. Doctrine: "AI never originates a field of the Decision Package".
+- Five locked gates evaluated by `evaluate_gates` in order: `forecast_valid` (always True at the composer entry point — Geblokkeerd is filtered upstream), `data_fresh` (market snapshot exists), `asset_listing_resolved` (asset_listing record present), `freshness_within_sla` (data_age_trading_days ≤ 3), `confidence_at_least_medium` (forecast confidence ∈ {Gemiddeld, Hoog}). Each emits a `GateOutcome(gate_name, passed, reason_nl)`; the Dutch explanation appends one "Let op: <reason_nl>" sentence per failed gate.
+- Deterministic Dutch explanation: pure Python templating in `render_explanation`. No AI. Hardcoded label-to-prose mapping. Hardcoded Dutch month names (avoiding locale-dependent strftime). The same forecast + same context always produces the exact same paragraph; the test `test_compose_idempotent_hash_excluding_composed_at` proves it. Doctrine: "AI never originates a field of the Decision Package".
 - API surface: three read-only routes — `GET /decision-package/{id}`, `GET /decision-package/latest?conid=&account_id=`, `GET /decision-package/chain?conid=&account_id=&limit=` (max 50). `account_id` is optional on `/latest`, falling back to `IBKR_ACCOUNT_ID_HINT` — mirrors the `/forecast/by-account` convention so the UI doesn't need to plumb the account ID through every component. Decimal-as-string on the wire. HTTP 503 + Dutch body on storage unavailability. Routes are ordered such that `/latest` and `/chain` are registered before `/{id}` to avoid FastAPI matching them as the path param.
-
 
 ## Task 131 product locks (multi-asset forecasting)
 - Forecast scope per `morning_briefing` run = the union of (confirmed-watchlist items for the account) and (current IBKR position snapshots with quantity > 0). Deduplicated by conid. `FORECAST_PILOT_CONIDS` is retired as a hard config; `FORECAST_OVERRIDE_CONIDS` is the new test-override env var that bypasses the universe resolver entirely.
@@ -411,7 +398,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Dashboard summary widget: `/forecast/day-summary` returns `{label_counts, total_forecasts, total_blocked, block_reasons}`; the `ForecastDaySummaryWidget` renders compact pills per non-zero label, clicking a pill routes to `/volglijst?filter=<label>`. Informational only — gates nothing; `safe_for_*` stays False.
 - Performance budget: a single `morning_briefing` run with up to 15 assets must complete in <60s wall-clock time. The performance test runs 15 real bootstraps and asserts the bound; on failure the bug is the regression, not the budget.
 
-
 ## Task 130 product locks (baseline historical-bootstrap forecast)
 - Pilot scope V1.1.0: forecasts run only for conids listed in `FORECAST_PILOT_CONIDS` (default `ASML.AS`). Expanding the pilot set is a config change, not a code change.
 - Forecast horizon: 20 trading days (~4 calendar weeks). Single horizon for V1.1.0; multi-horizon hierarchical forecasts are post-V1.1.
@@ -421,7 +407,6 @@ Deze lock bevestigt de veiligheidsgrenzen: Version 1 is account-mode-aware met z
 - Forecast generated on `morning_briefing` 07:00 fires only. `pre_briefing` 06:00 fires run calibration. `hourly_delta` fires touch neither — forecasts don't change intraday for a 20-day horizon with EOD inputs.
 - Forecast is stored, not recomputed. Each forecast carries `forecast_run_id` + `forecast_valid_until` (= 20 trading days from generation). API + UI read the most-recent valid row; expired forecasts surface as `verlopen — wacht op volgende morgenrun`.
 - Calibration diary writes a row when a forecast expires. `hit_status` is locked to four values: `realized_within_p10_p90` / `realized_above_p90` / `realized_below_p10` / `realized_outside_band` (the last for the rare case where realized exactly equals p10 or p90). Append-only; UNIQUE on `forecast_run_id` so calibration is idempotent.
-
 
 ## Retired locks
 - **V1-paper-only enforcement** — Retired by Task 126 on 2026-05-25. The software now supports any IBKR account; account mode is detected (via two-tier prefix + behavioural check, persisted to `ibkr_connection_audit`) and displayed via the persistent `AccountModeBadge`, not enforced. The earlier paper-only assertion has been removed; mode is informational only. Older docs referencing the paper-only-V1 lock should be read as historical context.
