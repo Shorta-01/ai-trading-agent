@@ -30,7 +30,7 @@ def test_skeleton_ready_without_database_connection() -> None:
     assert is_migration_skeleton_ready() is True
 
 
-def test_exactly_sixty_one_revision_files_exist_with_expected_names() -> None:
+def test_exactly_sixty_two_revision_files_exist_with_expected_names() -> None:
     versions_dir = ROOT / "alembic" / "versions"
     revision_files = sorted(
         path.name for path in versions_dir.glob("*.py") if path.name != ".gitkeep"
@@ -97,6 +97,7 @@ def test_exactly_sixty_one_revision_files_exist_with_expected_names() -> None:
         "0059_runtime_config_data_windows.py",
         "0060_runtime_config_worker_sweeps.py",
         "0061_runtime_config_advanced.py",
+        "0062_runtime_config_sharpe_thresholds.py",
     ]
 
 

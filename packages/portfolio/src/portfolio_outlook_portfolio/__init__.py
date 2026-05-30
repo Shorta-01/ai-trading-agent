@@ -80,6 +80,13 @@ from .approval_guards import (
     require_approved_decision,
 )
 from .baseline_forecast import (
+    DEFAULT_SHARPE_SLIGHT_THRESHOLD,
+    DEFAULT_SHARPE_STRONG_THRESHOLD,
+    BaselineForecast,
+    HistoricalBar,
+    compute_baseline_forecast,
+)
+from .baseline_forecast import (
     MINIMUM_BARS_REQUIRED as BASELINE_FORECAST_MIN_BARS,
 )
 from .baseline_forecast import (
@@ -87,11 +94,6 @@ from .baseline_forecast import (
 )
 from .baseline_forecast import (
     MODEL_VERSION as BASELINE_FORECAST_MODEL_VERSION,
-)
-from .baseline_forecast import (
-    BaselineForecast,
-    HistoricalBar,
-    compute_baseline_forecast,
 )
 from .baseline_label_translator import (
     LABEL_BEKIJKEN,
@@ -505,6 +507,8 @@ __all__ = [
     "BASELINE_FORECAST_MODEL_CODE",
     "BASELINE_FORECAST_MODEL_VERSION",
     "compute_baseline_forecast",
+    "DEFAULT_SHARPE_STRONG_THRESHOLD",
+    "DEFAULT_SHARPE_SLIGHT_THRESHOLD",
     "SuggestionInputs",
     "SuggestionDecision",
     "PortfolioContext",

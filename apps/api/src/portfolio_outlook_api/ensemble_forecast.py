@@ -34,6 +34,8 @@ from ai_trading_agent_storage import (
     PredictorBacktestRunRecord,
 )
 from portfolio_outlook_portfolio import (
+    DEFAULT_SHARPE_SLIGHT_THRESHOLD,
+    DEFAULT_SHARPE_STRONG_THRESHOLD,
     EnsembleResult,
     GbmPredictor,
     HistoricalBar,
@@ -63,6 +65,8 @@ def build_ensemble_predictors(
     *,
     target_symbol: str,
     qvm_universe: UniverseFundamentals | None = None,
+    sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
+    sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
 ) -> list[PredictorProtocol]:
     """Assemble the doctrine-compliant classical predictor set.
 
@@ -71,10 +75,16 @@ def build_ensemble_predictors(
     itself gracefully (insufficient_universe / symbol_not_in_universe) and the
     combiner then drops it, so a missing/small universe simply yields a
     3-predictor ensemble. AI-TS is intentionally excluded (intent §7).
+
+    The Sharpe thresholds flow into the embedded ``GbmPredictor`` so the
+    operator-tunable values reach the GBM direction-label logic.
     """
 
     predictors: list[PredictorProtocol] = [
-        GbmPredictor(),
+        GbmPredictor(
+            sharpe_strong_threshold=sharpe_strong_threshold,
+            sharpe_slight_threshold=sharpe_slight_threshold,
+        ),
         MomentumPredictor(),
         MeanReversionPredictor(),
     ]
@@ -192,6 +202,8 @@ def run_ensemble_forecast(
     qvm_universe: UniverseFundamentals | None = None,
     weight_strategy: str = WEIGHT_STRATEGY_EQUAL,
     brier_history: dict[str, Decimal] | None = None,
+    sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
+    sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
 ) -> EnsembleResult:
     """Build the predictor set and combine it for one asset.
 
@@ -202,7 +214,10 @@ def run_ensemble_forecast(
     """
 
     predictors = build_ensemble_predictors(
-        target_symbol=target_symbol, qvm_universe=qvm_universe
+        target_symbol=target_symbol,
+        qvm_universe=qvm_universe,
+        sharpe_strong_threshold=sharpe_strong_threshold,
+        sharpe_slight_threshold=sharpe_slight_threshold,
     )
     metadata = {"symbol": target_symbol}
     if sector:

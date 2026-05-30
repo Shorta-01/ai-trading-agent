@@ -191,6 +191,8 @@ const ADVANCED = {
   gbm_drift_window_days: null as number | null,
   action_draft_approval_valid_minutes: 5,
   ai_explanation_provider_code: "stub",
+  sharpe_strong_threshold: "1.0",
+  sharpe_slight_threshold: "0.3",
   help_nl: "Geavanceerde instellingen voor power-users.",
 };
 
@@ -586,6 +588,39 @@ describe("InstellingenPage", () => {
       gbm_drift_window_days: null,
       action_draft_approval_valid_minutes: 10,
       ai_explanation_provider_code: "stub",
+      sharpe_strong_threshold: "1.0",
+      sharpe_slight_threshold: "0.3",
     });
+  });
+
+  it("renders the sharpe thresholds in the advanced section and saves them", async () => {
+    updateAdvancedSettings.mockReturnValue(
+      ok({
+        ...ADVANCED,
+        sharpe_strong_threshold: "1.5",
+        sharpe_slight_threshold: "0.5",
+      }),
+    );
+    render(<Page />);
+    await userEvent.click(
+      await screen.findByTestId("instellingen-advanced-toggle"),
+    );
+    const strong = screen.getByTestId("instellingen-advanced-sharpe-strong");
+    const slight = screen.getByTestId("instellingen-advanced-sharpe-slight");
+    expect(strong).toHaveValue(1.0);
+    expect(slight).toHaveValue(0.3);
+    await userEvent.clear(strong);
+    await userEvent.type(strong, "1.5");
+    await userEvent.clear(slight);
+    await userEvent.type(slight, "0.5");
+    await userEvent.click(
+      screen.getByTestId("instellingen-advanced-save"),
+    );
+    await waitFor(() =>
+      expect(updateAdvancedSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateAdvancedSettings.mock.calls[0][0];
+    expect(payload.sharpe_strong_threshold).toBe("1.5");
+    expect(payload.sharpe_slight_threshold).toBe("0.5");
   });
 });

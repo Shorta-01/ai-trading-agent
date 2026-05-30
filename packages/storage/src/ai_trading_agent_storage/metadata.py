@@ -1372,6 +1372,9 @@ runtime_config = Table(
     Column("gbm_drift_window_days", Integer, nullable=True),
     Column("action_draft_approval_valid_minutes", Integer, nullable=True),
     Column("ai_explanation_provider_code", Text, nullable=True),
+    # Sharpe direction-label thresholds (Settings UI PR F). Null = env-var.
+    Column("sharpe_strong_threshold", Numeric(8, 4), nullable=True),
+    Column("sharpe_slight_threshold", Numeric(8, 4), nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

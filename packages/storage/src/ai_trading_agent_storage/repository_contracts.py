@@ -320,6 +320,9 @@ class RuntimeConfigRecord:
     gbm_drift_window_days: int | None = None
     action_draft_approval_valid_minutes: int | None = None
     ai_explanation_provider_code: str | None = None
+    # Settings UI PR F — Sharpe direction-label thresholds. ``None`` = env-var.
+    sharpe_strong_threshold: Decimal | None = None
+    sharpe_slight_threshold: Decimal | None = None
 
 
 @dataclass(frozen=True)
