@@ -523,6 +523,20 @@ def update_order_policy_settings(
                 max_sector_pct=payload.max_sector_pct,
                 cost_dominates_ratio=payload.cost_dominates_ratio,
                 suggestion_valid_minutes=payload.suggestion_valid_minutes,
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -677,6 +691,20 @@ def update_scheduler_settings(
                 ),
                 scheduler_daily_briefing_cron=payload.scheduler_daily_briefing_cron,
                 ibkr_sync_interval_minutes=payload.ibkr_sync_interval_minutes,
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -851,6 +879,20 @@ def update_data_window_settings(
                 forecast_minimum_bars_required=payload.forecast_minimum_bars_required,
                 daily_briefing_lookback_hours=payload.daily_briefing_lookback_hours,
                 universe_scan_cache_ttl_hours=payload.universe_scan_cache_ttl_hours,
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -1061,6 +1103,20 @@ def update_worker_sweep_settings(
                     payload.sweep_alert_after_consecutive_errors
                 ),
                 eodhd_rate_limit_per_second=payload.eodhd_rate_limit_per_second,
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -1069,6 +1125,223 @@ def update_worker_sweep_settings(
             status_code=503, detail="Opslag is niet beschikbaar."
         ) from exc
     return _worker_sweep_payload(record)
+
+
+# ---- Advanced "power-user" settings (Settings UI PR E) -----------------
+
+
+_ALLOWED_ENSEMBLE_STRATEGIES = ("equal_weight", "auto")
+_ALLOWED_AI_EXPLANATION_PROVIDERS = ("stub", "claude")
+
+
+class AdvancedSettingsResponse(BaseModel):
+    """Tier-2 power-user knobs surfaced behind the "Geavanceerde
+    instellingen" accordion. Each value falls back to the API
+    settings-singleton default (env-var) when no DB row has been saved."""
+
+    ensemble_weight_strategy: str
+    gbm_drift_window_days: int | None
+    action_draft_approval_valid_minutes: int
+    ai_explanation_provider_code: str
+    help_nl: str
+
+
+class UpdateAdvancedSettingsRequest(BaseModel):
+    ensemble_weight_strategy: str
+    gbm_drift_window_days: int | None = None
+    action_draft_approval_valid_minutes: int
+    ai_explanation_provider_code: str
+
+
+_ADVANCED_HELP_NL = (
+    "Geavanceerde instellingen voor power-users. Pas alleen aan als je "
+    "weet wat je doet — verkeerde waarden kunnen voorspellingen of "
+    "order-uitleg uit balans brengen. Laat in twijfel staan op de "
+    "ingebouwde standaard."
+)
+
+
+def _advanced_payload(
+    record: RuntimeConfigRecord | None,
+) -> AdvancedSettingsResponse:
+    strategy = (
+        record.ensemble_weight_strategy
+        if record is not None and record.ensemble_weight_strategy is not None
+        else settings.ensemble_weight_strategy
+    )
+    drift_window = (
+        record.gbm_drift_window_days
+        if record is not None and record.gbm_drift_window_days is not None
+        else settings.gbm_drift_window_days
+    )
+    approval_minutes = (
+        record.action_draft_approval_valid_minutes
+        if record is not None
+        and record.action_draft_approval_valid_minutes is not None
+        else settings.action_draft_approval_valid_minutes
+    )
+    provider = (
+        record.ai_explanation_provider_code
+        if record is not None and record.ai_explanation_provider_code is not None
+        else settings.ai_explanation_provider_code
+    )
+    return AdvancedSettingsResponse(
+        ensemble_weight_strategy=strategy,
+        gbm_drift_window_days=drift_window,
+        action_draft_approval_valid_minutes=approval_minutes,
+        ai_explanation_provider_code=provider,
+        help_nl=_ADVANCED_HELP_NL,
+    )
+
+
+@router.get("/settings/advanced", response_model=AdvancedSettingsResponse)
+def get_advanced_settings() -> AdvancedSettingsResponse:
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _advanced_payload(current)
+
+
+@router.put("/settings/advanced", response_model=AdvancedSettingsResponse)
+def update_advanced_settings(
+    payload: UpdateAdvancedSettingsRequest,
+) -> AdvancedSettingsResponse:
+    if payload.ensemble_weight_strategy not in _ALLOWED_ENSEMBLE_STRATEGIES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Ensemble-strategie moet 'equal_weight' of 'auto' zijn."
+            ),
+        )
+    if payload.ai_explanation_provider_code not in _ALLOWED_AI_EXPLANATION_PROVIDERS:
+        raise HTTPException(
+            status_code=422,
+            detail="AI-uitleg provider moet 'stub' of 'claude' zijn.",
+        )
+    if (
+        payload.gbm_drift_window_days is not None
+        and payload.gbm_drift_window_days < 1
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="GBM drift-venster moet ≥ 1 dag zijn (of leeglaten).",
+        )
+    if payload.action_draft_approval_valid_minutes < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Goedkeuringsvenster moet ≥ 1 minuut zijn.",
+        )
+
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=(
+                    existing.universe_scan_index_codes if existing else None
+                ),
+                default_buy_value_eur=(
+                    existing.default_buy_value_eur if existing else None
+                ),
+                default_top_up_pct=(
+                    existing.default_top_up_pct if existing else None
+                ),
+                default_reduce_pct=(
+                    existing.default_reduce_pct if existing else None
+                ),
+                max_sector_pct=existing.max_sector_pct if existing else None,
+                cost_dominates_ratio=(
+                    existing.cost_dominates_ratio if existing else None
+                ),
+                suggestion_valid_minutes=(
+                    existing.suggestion_valid_minutes if existing else None
+                ),
+                scheduler_daily_briefing_cron=(
+                    existing.scheduler_daily_briefing_cron if existing else None
+                ),
+                ibkr_sync_interval_minutes=(
+                    existing.ibkr_sync_interval_minutes if existing else None
+                ),
+                forecast_history_lookback_days=(
+                    existing.forecast_history_lookback_days if existing else None
+                ),
+                forecast_minimum_bars_required=(
+                    existing.forecast_minimum_bars_required if existing else None
+                ),
+                daily_briefing_lookback_hours=(
+                    existing.daily_briefing_lookback_hours if existing else None
+                ),
+                universe_scan_cache_ttl_hours=(
+                    existing.universe_scan_cache_ttl_hours if existing else None
+                ),
+                sweep_interval_seconds=(
+                    existing.sweep_interval_seconds if existing else None
+                ),
+                sweep_retry_max_attempts=(
+                    existing.sweep_retry_max_attempts if existing else None
+                ),
+                sweep_retry_backoff_seconds=(
+                    existing.sweep_retry_backoff_seconds if existing else None
+                ),
+                sweep_alert_after_consecutive_errors=(
+                    existing.sweep_alert_after_consecutive_errors
+                    if existing
+                    else None
+                ),
+                eodhd_rate_limit_per_second=(
+                    existing.eodhd_rate_limit_per_second if existing else None
+                ),
+                ensemble_weight_strategy=payload.ensemble_weight_strategy,
+                gbm_drift_window_days=payload.gbm_drift_window_days,
+                action_draft_approval_valid_minutes=(
+                    payload.action_draft_approval_valid_minutes
+                ),
+                ai_explanation_provider_code=payload.ai_explanation_provider_code,
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+            settings.ensemble_weight_strategy = payload.ensemble_weight_strategy
+            settings.gbm_drift_window_days = payload.gbm_drift_window_days
+            settings.action_draft_approval_valid_minutes = (
+                payload.action_draft_approval_valid_minutes
+            )
+            settings.ai_explanation_provider_code = (
+                payload.ai_explanation_provider_code
+            )
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _advanced_payload(record)
 
 
 def apply_runtime_config_overlay(
@@ -1144,3 +1417,16 @@ def apply_runtime_config_overlay(
     # the operator-edited values without an extra storage hop. The
     # WORKER reads the same row via apply_worker_runtime_config_overlay
     # at its own startup; the API just mirrors the columns for display.
+    # Settings UI PR E — Tier-2 advanced overlay. Each null falls back
+    # to the env-default; these power-user knobs live behind the
+    # collapsed "Geavanceerde instellingen" accordion in the UI.
+    if record.ensemble_weight_strategy is not None:
+        settings_obj.ensemble_weight_strategy = record.ensemble_weight_strategy
+    if record.gbm_drift_window_days is not None:
+        settings_obj.gbm_drift_window_days = record.gbm_drift_window_days
+    if record.action_draft_approval_valid_minutes is not None:
+        settings_obj.action_draft_approval_valid_minutes = (
+            record.action_draft_approval_valid_minutes
+        )
+    if record.ai_explanation_provider_code is not None:
+        settings_obj.ai_explanation_provider_code = record.ai_explanation_provider_code
