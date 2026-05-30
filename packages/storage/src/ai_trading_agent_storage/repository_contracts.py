@@ -299,6 +299,14 @@ class RuntimeConfigRecord:
     max_sector_pct: Decimal | None = None
     cost_dominates_ratio: Decimal | None = None
     suggestion_valid_minutes: int | None = None
+    # Settings UI PR B — scheduler-cadence overlay. ``None`` = env-var.
+    scheduler_daily_briefing_cron: str | None = None
+    ibkr_sync_interval_minutes: int | None = None
+    # Settings UI PR C — data-window overlay. ``None`` = env-var.
+    forecast_history_lookback_days: int | None = None
+    forecast_minimum_bars_required: int | None = None
+    daily_briefing_lookback_hours: int | None = None
+    universe_scan_cache_ttl_hours: int | None = None
 
 
 @dataclass(frozen=True)

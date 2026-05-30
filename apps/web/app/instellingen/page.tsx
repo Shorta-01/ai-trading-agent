@@ -361,6 +361,26 @@ export default function Page() {
   const [orderPolicySaving, setOrderPolicySaving] = useState(false);
   const [orderPolicySaved, setOrderPolicySaved] = useState<string | null>(null);
   const [orderPolicyError, setOrderPolicyError] = useState<string | null>(null);
+  // Settings UI PR B — scheduler cadence.
+  const [schedulerForm, setSchedulerForm] = useState({
+    scheduler_daily_briefing_cron: "",
+    ibkr_sync_interval_minutes: 15,
+  });
+  const [schedulerHelp, setSchedulerHelp] = useState<string>("");
+  const [schedulerSaving, setSchedulerSaving] = useState(false);
+  const [schedulerSaved, setSchedulerSaved] = useState<string | null>(null);
+  const [schedulerError, setSchedulerError] = useState<string | null>(null);
+  // Settings UI PR C — data-window knobs.
+  const [dataWindowForm, setDataWindowForm] = useState({
+    forecast_history_lookback_days: 400,
+    forecast_minimum_bars_required: 60,
+    daily_briefing_lookback_hours: 24,
+    universe_scan_cache_ttl_hours: 24,
+  });
+  const [dataWindowHelp, setDataWindowHelp] = useState<string>("");
+  const [dataWindowSaving, setDataWindowSaving] = useState(false);
+  const [dataWindowSaved, setDataWindowSaved] = useState<string | null>(null);
+  const [dataWindowError, setDataWindowError] = useState<string | null>(null);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -490,6 +510,80 @@ export default function Page() {
     setOrderPolicy((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Settings UI PR B — scheduler query + save.
+  const schedulerQuery = useQuery({
+    queryKey: ["instellingen", "scheduler"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getSchedulerSettings();
+      if (!result.ok) throw new Error("scheduler-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = schedulerQuery.data;
+    if (!data) return;
+    setSchedulerForm({
+      scheduler_daily_briefing_cron: data.scheduler_daily_briefing_cron,
+      ibkr_sync_interval_minutes: data.ibkr_sync_interval_minutes,
+    });
+    setSchedulerHelp(data.help_nl);
+  }, [schedulerQuery.data]);
+
+  // Settings UI PR C — data-window query + save.
+  const dataWindowQuery = useQuery({
+    queryKey: ["instellingen", "data-windows"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getDataWindowSettings();
+      if (!result.ok) throw new Error("data-window-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = dataWindowQuery.data;
+    if (!data) return;
+    setDataWindowForm({
+      forecast_history_lookback_days: data.forecast_history_lookback_days,
+      forecast_minimum_bars_required: data.forecast_minimum_bars_required,
+      daily_briefing_lookback_hours: data.daily_briefing_lookback_hours,
+      universe_scan_cache_ttl_hours: data.universe_scan_cache_ttl_hours,
+    });
+    setDataWindowHelp(data.help_nl);
+  }, [dataWindowQuery.data]);
+
+  async function handleSaveDataWindows() {
+    setDataWindowSaving(true);
+    setDataWindowError(null);
+    setDataWindowSaved(null);
+    const result = await apiClient.updateDataWindowSettings(dataWindowForm);
+    setDataWindowSaving(false);
+    if (!result.ok) {
+      setDataWindowError(
+        "Opslaan mislukt. Controleer dat alle waarden ≥ 1 zijn en dat het minimum koersdagen niet groter is dan de lookback.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "data-windows"], result.data);
+    setDataWindowSaved("Data-vensters opgeslagen.");
+  }
+
+  async function handleSaveScheduler() {
+    setSchedulerSaving(true);
+    setSchedulerError(null);
+    setSchedulerSaved(null);
+    const result = await apiClient.updateSchedulerSettings(schedulerForm);
+    setSchedulerSaving(false);
+    if (!result.ok) {
+      setSchedulerError(
+        "Opslaan mislukt. Controleer dat de cron-uitdrukking 5 velden heeft en niet samenvalt met de 06:00 worker-slot.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "scheduler"], result.data);
+    setSchedulerSaved("Planning opgeslagen.");
+  }
+
   async function handleSaveOrderPolicy() {
     setOrderPolicySaving(true);
     setOrderPolicyError(null);
@@ -553,13 +647,17 @@ export default function Page() {
     || tradingQuery.isPending
     || connectionQuery.isPending
     || universeScanQuery.isPending
-    || orderPolicyQuery.isPending;
+    || orderPolicyQuery.isPending
+    || schedulerQuery.isPending
+    || dataWindowQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
     && connectionQuery.isError
     && universeScanQuery.isError
     && orderPolicyQuery.isError
+    && schedulerQuery.isError
+    && dataWindowQuery.isError
       ? "Instellingen konden niet worden geladen."
       : null;
 
@@ -1297,6 +1395,221 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {orderPolicyError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4d — Scheduler cadence (PR B). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-scheduler-section"
+          >
+            <h2 style={{ margin: 0 }}>Planning &amp; cadans</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {schedulerHelp
+                || "Wanneer de morgenbriefing klaarstaat en hoe vaak IBKR-posities worden bijgewerkt."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Morgenbriefing-cron (5 velden, Europe/Brussels)
+                <input
+                  type="text"
+                  data-testid="instellingen-scheduler-cron"
+                  value={schedulerForm.scheduler_daily_briefing_cron}
+                  onChange={(e) =>
+                    setSchedulerForm((p) => ({
+                      ...p,
+                      scheduler_daily_briefing_cron: e.target.value,
+                    }))
+                  }
+                  placeholder="30 6 * * *"
+                />
+                <span className="help-text">
+                  Standaard <code>30 6 * * *</code> (06:30). Mag niet
+                  samenvallen met de worker&rsquo;s vergrendelde 06:00 slot.
+                  Wijzigingen gelden vanaf de eerstvolgende API-herstart.
+                </span>
+              </label>
+              <label>
+                IBKR-sync interval (minuten)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-scheduler-ibkr_sync"
+                  value={schedulerForm.ibkr_sync_interval_minutes}
+                  onChange={(e) =>
+                    setSchedulerForm((p) => ({
+                      ...p,
+                      ibkr_sync_interval_minutes: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe vaak posities/cash bij IBKR opgehaald worden. Lager
+                  = verser; hoger = minder API-belasting. Wijziging is
+                  direct actief op de volgende tick.
+                </span>
+              </label>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveScheduler()}
+                disabled={schedulerSaving}
+                data-testid="instellingen-scheduler-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: schedulerSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {schedulerSaving ? "Opslaan…" : "Planning opslaan"}
+              </button>
+              {schedulerSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {schedulerSaved}
+                </span>
+              ) : null}
+              {schedulerError ? (
+                <span
+                  data-testid="instellingen-scheduler-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {schedulerError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4e — Data windows (PR C). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-data-windows-section"
+          >
+            <h2 style={{ margin: 0 }}>Marktdata &amp; modellen</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {dataWindowHelp
+                || "Lookbacks en cache-vensters die de morgenchain gebruikt."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Voorspellings-lookback (dagen)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-data-history_lookback"
+                  value={dataWindowForm.forecast_history_lookback_days}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      forecast_history_lookback_days: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe ver het model terugkijkt om voorspellingen te bouwen.
+                  Standaard 400. Hoger = robuuster maar meer EODHD-calls.
+                </span>
+              </label>
+              <label>
+                Minimum koersdagen voor GBM-fit
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-data-min_bars"
+                  value={dataWindowForm.forecast_minimum_bars_required}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      forecast_minimum_bars_required: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Zonder zoveel handelsdagen historie wordt geen GBM-voorspelling
+                  gemaakt. 60 is het wiskundige minimum voor stabiele
+                  parameters.
+                </span>
+              </label>
+              <label>
+                Briefing-tijdvenster (uren)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-data-briefing_lookback"
+                  value={dataWindowForm.daily_briefing_lookback_hours}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      daily_briefing_lookback_hours: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Welke periode de morgenbriefing samenvat. 24u = sinds
+                  gisteren.
+                </span>
+              </label>
+              <label>
+                Scan-cache TTL (uren)
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  data-testid="instellingen-data-scan_cache_ttl"
+                  value={dataWindowForm.universe_scan_cache_ttl_hours}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      universe_scan_cache_ttl_hours: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe lang opgeslagen scan-resultaten hergebruikt worden
+                  voordat ze opnieuw opgehaald worden. 0 = altijd ververwen
+                  (kostbaarste optie); 24 is de standaard.
+                </span>
+              </label>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveDataWindows()}
+                disabled={dataWindowSaving}
+                data-testid="instellingen-data-windows-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: dataWindowSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {dataWindowSaving ? "Opslaan…" : "Data-vensters opslaan"}
+              </button>
+              {dataWindowSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {dataWindowSaved}
+                </span>
+              ) : null}
+              {dataWindowError ? (
+                <span
+                  data-testid="instellingen-data-windows-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {dataWindowError}
                 </span>
               ) : null}
             </div>

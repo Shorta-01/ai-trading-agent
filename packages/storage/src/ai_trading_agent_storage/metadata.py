@@ -1353,6 +1353,14 @@ runtime_config = Table(
     Column("max_sector_pct", MONEY_NUMERIC, nullable=True),
     Column("cost_dominates_ratio", MONEY_NUMERIC, nullable=True),
     Column("suggestion_valid_minutes", Integer, nullable=True),
+    # Scheduler-cadence overlay (Settings UI PR B). Null = use env-var.
+    Column("scheduler_daily_briefing_cron", Text, nullable=True),
+    Column("ibkr_sync_interval_minutes", Integer, nullable=True),
+    # Data-window overlay (Settings UI PR C). Null = use env-var.
+    Column("forecast_history_lookback_days", Integer, nullable=True),
+    Column("forecast_minimum_bars_required", Integer, nullable=True),
+    Column("daily_briefing_lookback_hours", Integer, nullable=True),
+    Column("universe_scan_cache_ttl_hours", Integer, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

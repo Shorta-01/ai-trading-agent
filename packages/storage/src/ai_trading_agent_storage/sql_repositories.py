@@ -6137,6 +6137,12 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "max_sector_pct": record.max_sector_pct,
             "cost_dominates_ratio": record.cost_dominates_ratio,
             "suggestion_valid_minutes": record.suggestion_valid_minutes,
+            "scheduler_daily_briefing_cron": record.scheduler_daily_briefing_cron,
+            "ibkr_sync_interval_minutes": record.ibkr_sync_interval_minutes,
+            "forecast_history_lookback_days": record.forecast_history_lookback_days,
+            "forecast_minimum_bars_required": record.forecast_minimum_bars_required,
+            "daily_briefing_lookback_hours": record.daily_briefing_lookback_hours,
+            "universe_scan_cache_ttl_hours": record.universe_scan_cache_ttl_hours,
         }
         existing = (
             self._connection.execute(
@@ -6187,6 +6193,32 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         suggestion_valid_minutes=(
             int(row["suggestion_valid_minutes"])
             if row.get("suggestion_valid_minutes") is not None
+            else None
+        ),
+        scheduler_daily_briefing_cron=row.get("scheduler_daily_briefing_cron"),
+        ibkr_sync_interval_minutes=(
+            int(row["ibkr_sync_interval_minutes"])
+            if row.get("ibkr_sync_interval_minutes") is not None
+            else None
+        ),
+        forecast_history_lookback_days=(
+            int(row["forecast_history_lookback_days"])
+            if row.get("forecast_history_lookback_days") is not None
+            else None
+        ),
+        forecast_minimum_bars_required=(
+            int(row["forecast_minimum_bars_required"])
+            if row.get("forecast_minimum_bars_required") is not None
+            else None
+        ),
+        daily_briefing_lookback_hours=(
+            int(row["daily_briefing_lookback_hours"])
+            if row.get("daily_briefing_lookback_hours") is not None
+            else None
+        ),
+        universe_scan_cache_ttl_hours=(
+            int(row["universe_scan_cache_ttl_hours"])
+            if row.get("universe_scan_cache_ttl_hours") is not None
             else None
         ),
     )
