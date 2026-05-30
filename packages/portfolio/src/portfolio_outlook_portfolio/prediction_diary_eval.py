@@ -25,10 +25,23 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import TYPE_CHECKING, Final
+from typing import Final, Protocol
 
-if TYPE_CHECKING:
-    from ai_trading_agent_storage import PredictionDiaryEntryRecord
+
+class _DiaryEntryLike(Protocol):
+    """Structural shape of a prediction-diary entry the live-Brier
+    aggregator reads.
+
+    Declared locally so the ``packages/portfolio`` leaf package stays
+    free of any dependency on ``packages/storage`` — the API caller
+    passes its real ``PredictionDiaryEntryRecord`` instances and Python
+    duck-typing handles the rest.
+    """
+
+    forecast_id: str | None
+    outcome_label_1d: str | None
+    outcome_label_1w: str | None
+    outcome_label_1m: str | None
 
 # Labels — exposed as string constants so callers can compare without
 # importing the enum-shape into UI layers.
@@ -198,7 +211,7 @@ _OUTCOME_TO_BRIER_EQUIVALENT: dict[str, Decimal] = {
 
 def compute_live_brier_history_from_diary(
     *,
-    diary_entries: Iterable[PredictionDiaryEntryRecord],
+    diary_entries: Iterable[_DiaryEntryLike],
     forecast_model_by_id: Mapping[str, str],
     horizon_key: str = "outcome_label_1m",
 ) -> dict[str, Decimal]:
