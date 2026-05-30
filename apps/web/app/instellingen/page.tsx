@@ -370,6 +370,17 @@ export default function Page() {
   const [schedulerSaving, setSchedulerSaving] = useState(false);
   const [schedulerSaved, setSchedulerSaved] = useState<string | null>(null);
   const [schedulerError, setSchedulerError] = useState<string | null>(null);
+  // Settings UI PR C — data-window knobs.
+  const [dataWindowForm, setDataWindowForm] = useState({
+    forecast_history_lookback_days: 400,
+    forecast_minimum_bars_required: 60,
+    daily_briefing_lookback_hours: 24,
+    universe_scan_cache_ttl_hours: 24,
+  });
+  const [dataWindowHelp, setDataWindowHelp] = useState<string>("");
+  const [dataWindowSaving, setDataWindowSaving] = useState(false);
+  const [dataWindowSaved, setDataWindowSaved] = useState<string | null>(null);
+  const [dataWindowError, setDataWindowError] = useState<string | null>(null);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -519,6 +530,44 @@ export default function Page() {
     setSchedulerHelp(data.help_nl);
   }, [schedulerQuery.data]);
 
+  // Settings UI PR C — data-window query + save.
+  const dataWindowQuery = useQuery({
+    queryKey: ["instellingen", "data-windows"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getDataWindowSettings();
+      if (!result.ok) throw new Error("data-window-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = dataWindowQuery.data;
+    if (!data) return;
+    setDataWindowForm({
+      forecast_history_lookback_days: data.forecast_history_lookback_days,
+      forecast_minimum_bars_required: data.forecast_minimum_bars_required,
+      daily_briefing_lookback_hours: data.daily_briefing_lookback_hours,
+      universe_scan_cache_ttl_hours: data.universe_scan_cache_ttl_hours,
+    });
+    setDataWindowHelp(data.help_nl);
+  }, [dataWindowQuery.data]);
+
+  async function handleSaveDataWindows() {
+    setDataWindowSaving(true);
+    setDataWindowError(null);
+    setDataWindowSaved(null);
+    const result = await apiClient.updateDataWindowSettings(dataWindowForm);
+    setDataWindowSaving(false);
+    if (!result.ok) {
+      setDataWindowError(
+        "Opslaan mislukt. Controleer dat alle waarden ≥ 1 zijn en dat het minimum koersdagen niet groter is dan de lookback.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "data-windows"], result.data);
+    setDataWindowSaved("Data-vensters opgeslagen.");
+  }
+
   async function handleSaveScheduler() {
     setSchedulerSaving(true);
     setSchedulerError(null);
@@ -599,7 +648,8 @@ export default function Page() {
     || connectionQuery.isPending
     || universeScanQuery.isPending
     || orderPolicyQuery.isPending
-    || schedulerQuery.isPending;
+    || schedulerQuery.isPending
+    || dataWindowQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -607,6 +657,7 @@ export default function Page() {
     && universeScanQuery.isError
     && orderPolicyQuery.isError
     && schedulerQuery.isError
+    && dataWindowQuery.isError
       ? "Instellingen konden niet worden geladen."
       : null;
 
@@ -1431,6 +1482,134 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {schedulerError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4e — Data windows (PR C). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-data-windows-section"
+          >
+            <h2 style={{ margin: 0 }}>Marktdata &amp; modellen</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {dataWindowHelp
+                || "Lookbacks en cache-vensters die de morgenchain gebruikt."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                Voorspellings-lookback (dagen)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-data-history_lookback"
+                  value={dataWindowForm.forecast_history_lookback_days}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      forecast_history_lookback_days: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe ver het model terugkijkt om voorspellingen te bouwen.
+                  Standaard 400. Hoger = robuuster maar meer EODHD-calls.
+                </span>
+              </label>
+              <label>
+                Minimum koersdagen voor GBM-fit
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-data-min_bars"
+                  value={dataWindowForm.forecast_minimum_bars_required}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      forecast_minimum_bars_required: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Zonder zoveel handelsdagen historie wordt geen GBM-voorspelling
+                  gemaakt. 60 is het wiskundige minimum voor stabiele
+                  parameters.
+                </span>
+              </label>
+              <label>
+                Briefing-tijdvenster (uren)
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  data-testid="instellingen-data-briefing_lookback"
+                  value={dataWindowForm.daily_briefing_lookback_hours}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      daily_briefing_lookback_hours: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Welke periode de morgenbriefing samenvat. 24u = sinds
+                  gisteren.
+                </span>
+              </label>
+              <label>
+                Scan-cache TTL (uren)
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  data-testid="instellingen-data-scan_cache_ttl"
+                  value={dataWindowForm.universe_scan_cache_ttl_hours}
+                  onChange={(e) =>
+                    setDataWindowForm((p) => ({
+                      ...p,
+                      universe_scan_cache_ttl_hours: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Hoe lang opgeslagen scan-resultaten hergebruikt worden
+                  voordat ze opnieuw opgehaald worden. 0 = altijd ververwen
+                  (kostbaarste optie); 24 is de standaard.
+                </span>
+              </label>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSaveDataWindows()}
+                disabled={dataWindowSaving}
+                data-testid="instellingen-data-windows-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: dataWindowSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {dataWindowSaving ? "Opslaan…" : "Data-vensters opslaan"}
+              </button>
+              {dataWindowSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {dataWindowSaved}
+                </span>
+              ) : null}
+              {dataWindowError ? (
+                <span
+                  data-testid="instellingen-data-windows-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {dataWindowError}
                 </span>
               ) : null}
             </div>

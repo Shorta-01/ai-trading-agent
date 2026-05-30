@@ -38,6 +38,8 @@ const getOrderPolicySettings = vi.fn();
 const updateOrderPolicySettings = vi.fn();
 const getSchedulerSettings = vi.fn();
 const updateSchedulerSettings = vi.fn();
+const getDataWindowSettings = vi.fn();
+const updateDataWindowSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -59,6 +61,9 @@ vi.mock("@/lib/apiClient", () => ({
     getSchedulerSettings: (...a: unknown[]) => getSchedulerSettings(...a),
     updateSchedulerSettings: (...a: unknown[]) =>
       updateSchedulerSettings(...a),
+    getDataWindowSettings: (...a: unknown[]) => getDataWindowSettings(...a),
+    updateDataWindowSettings: (...a: unknown[]) =>
+      updateDataWindowSettings(...a),
   },
 }));
 
@@ -153,6 +158,14 @@ const SCHEDULER = {
   help_nl: "Wanneer de briefing klaarstaat en hoe vaak IBKR wordt gesynchroniseerd.",
 };
 
+const DATA_WINDOWS = {
+  forecast_history_lookback_days: 400,
+  forecast_minimum_bars_required: 60,
+  daily_briefing_lookback_hours: 24,
+  universe_scan_cache_ttl_hours: 24,
+  help_nl: "Lookbacks en cache-vensters.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -166,12 +179,15 @@ beforeEach(() => {
   updateOrderPolicySettings.mockReset();
   getSchedulerSettings.mockReset();
   updateSchedulerSettings.mockReset();
+  getDataWindowSettings.mockReset();
+  updateDataWindowSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
   getUniverseScanSettings.mockReturnValue(ok(UNIVERSE_SCAN));
   getOrderPolicySettings.mockReturnValue(ok(ORDER_POLICY));
   getSchedulerSettings.mockReturnValue(ok(SCHEDULER));
+  getDataWindowSettings.mockReturnValue(ok(DATA_WINDOWS));
 });
 
 afterEach(() => cleanup());
@@ -437,6 +453,32 @@ describe("InstellingenPage", () => {
     expect(updateSchedulerSettings.mock.calls[0][0]).toEqual({
       scheduler_daily_briefing_cron: "45 7 * * *",
       ibkr_sync_interval_minutes: 15,
+    });
+  });
+
+  it("renders the data-windows section + saves edited lookbacks", async () => {
+    updateDataWindowSettings.mockReturnValue(
+      ok({ ...DATA_WINDOWS, forecast_history_lookback_days: 600 }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-data-windows-section"),
+    ).toBeInTheDocument();
+    const lookback = screen.getByTestId("instellingen-data-history_lookback");
+    expect(lookback).toHaveValue(400);
+    await userEvent.clear(lookback);
+    await userEvent.type(lookback, "600");
+    await userEvent.click(
+      screen.getByTestId("instellingen-data-windows-save"),
+    );
+    await waitFor(() =>
+      expect(updateDataWindowSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateDataWindowSettings.mock.calls[0][0]).toEqual({
+      forecast_history_lookback_days: 600,
+      forecast_minimum_bars_required: 60,
+      daily_briefing_lookback_hours: 24,
+      universe_scan_cache_ttl_hours: 24,
     });
   });
 });
