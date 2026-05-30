@@ -1296,6 +1296,12 @@ export type ForecastByAccountRow = {
   p50_log_return: string;
   prob_positive: string;
   user_holds_position: boolean;
+  // #1 + #6 — forecast horizon + prediction interval, surfaced so the UI
+  // can show "we expect X to Y with Z probability" instead of just a
+  // Hoog/Middel/Laag confidence label.
+  horizon_trading_days: number;
+  p10_log_return: string;
+  p90_log_return: string;
 };
 
 export type ForecastByAccountResponse = {
