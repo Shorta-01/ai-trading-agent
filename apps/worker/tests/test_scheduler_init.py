@@ -505,3 +505,80 @@ def test_sweep_streak_is_per_kind(monkeypatch) -> None:
     scheduler._track_sweep_outcome(kind="cancel", mode="error", error_message="y")
     components = sorted(c["source_component"] for c in captured)
     assert components == ["scheduler:cancel_sweep", "scheduler:submission_sweep"]
+
+
+# ---- #8 — in-tick retry with exponential backoff ------------------------
+
+
+class _Result:
+    def __init__(self, mode: str) -> None:
+        self.mode = mode
+
+
+def test_retry_helper_returns_first_success_without_sleeping() -> None:
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    slept: list[float] = []
+    result = _run_sweep_with_backoff(
+        attempt=lambda: _Result("completed"),
+        max_attempts=3,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    assert result.mode == "completed"
+    assert slept == []  # never slept because first attempt succeeded
+
+
+def test_retry_helper_retries_on_error_then_succeeds() -> None:
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    sequence = iter([_Result("error"), _Result("error"), _Result("completed")])
+    slept: list[float] = []
+    result = _run_sweep_with_backoff(
+        attempt=lambda: next(sequence),
+        max_attempts=3,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    assert result.mode == "completed"
+    # Exponential backoff between attempts: 2s, 4s.
+    assert slept == [2.0, 4.0]
+
+
+def test_retry_helper_exhausts_attempts_and_returns_last_error() -> None:
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    sequence = iter(
+        [_Result("error"), _Result("error"), _Result("error"), _Result("completed")]
+    )
+    slept: list[float] = []
+    result = _run_sweep_with_backoff(
+        attempt=lambda: next(sequence),
+        max_attempts=3,
+        base_backoff_seconds=1.0,
+        sleep_fn=slept.append,
+    )
+    # Only 3 attempts allowed — the would-be 4th success is never reached.
+    assert result.mode == "error"
+    assert slept == [1.0, 2.0]  # two sleeps between the three attempts
+
+
+def test_retry_helper_treats_max_attempts_below_one_as_one() -> None:
+    """A misconfigured ``sweep_retry_max_attempts=0`` must not skip the
+    sweep entirely — clamp to at least one attempt."""
+
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    calls = [0]
+
+    def _attempt() -> _Result:
+        calls[0] += 1
+        return _Result("completed")
+
+    _run_sweep_with_backoff(
+        attempt=_attempt,
+        max_attempts=0,
+        base_backoff_seconds=1.0,
+        sleep_fn=lambda _: None,
+    )
+    assert calls == [1]
