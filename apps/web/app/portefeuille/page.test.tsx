@@ -23,6 +23,7 @@ const fns = vi.hoisted(() => ({
   getIbkrAccountMode: vi.fn(),
   getSchedulerJobs: vi.fn(),
   getLatestSchedulerRun: vi.fn(),
+  getRecentSchedulerRuns: vi.fn(),
 }));
 
 vi.mock("@/lib/apiClient", () => ({
@@ -93,6 +94,7 @@ function mockAllOk() {
     }),
   );
   fns.getLatestSchedulerRun.mockReturnValue(ok({ item: null }));
+  fns.getRecentSchedulerRuns.mockReturnValue(ok({ items: [], limit: 10 }));
 }
 
 beforeEach(() => {
@@ -123,5 +125,50 @@ describe("PortfolioPage data state machine", () => {
     expect(
       await screen.findByText("Sync mislukt. Controleer de IBKR-koppeling."),
     ).toBeInTheDocument();
+  });
+
+  it("renders the recent daily-briefing runs tile with rows when present", async () => {
+    mockAllOk();
+    fns.getRecentSchedulerRuns.mockReturnValue(
+      ok({
+        items: [
+          {
+            run_id: "sch_1",
+            job_name: "daily_briefing",
+            scheduled_at: "2026-05-29T06:30:00+00:00",
+            started_at: "2026-05-29T06:30:01+00:00",
+            finished_at: "2026-05-29T06:30:42+00:00",
+            status: "succeeded",
+            error_text: null,
+            triggered_by: "scheduler",
+          },
+          {
+            run_id: "sch_2",
+            job_name: "daily_briefing",
+            scheduled_at: "2026-05-28T06:30:00+00:00",
+            started_at: "2026-05-28T06:30:01+00:00",
+            finished_at: "2026-05-28T06:30:09+00:00",
+            status: "failed",
+            error_text: "market_data_sync timeout",
+            triggered_by: "scheduler",
+          },
+        ],
+        limit: 10,
+      }),
+    );
+    render(<PortfolioPage />);
+    // findByText waits for the query to settle, not just the tile shell.
+    expect(await screen.findByText("market_data_sync timeout")).toBeInTheDocument();
+    const tile = screen.getByTestId("scheduler-recent-runs");
+    expect(tile).toHaveTextContent("Recente daily-briefing runs");
+    expect(tile).toHaveTextContent("succeeded");
+    expect(tile).toHaveTextContent("failed");
+  });
+
+  it("shows the empty hint when no recent runs exist", async () => {
+    mockAllOk();
+    render(<PortfolioPage />);
+    const tile = await screen.findByTestId("scheduler-recent-runs");
+    expect(tile).toHaveTextContent("Nog geen runs.");
   });
 });

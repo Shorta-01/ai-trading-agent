@@ -256,3 +256,94 @@ def test_install_default_jobs_captures_morning_chain_failure() -> None:
     assert repo.updated[0].status == STATUS_FAILED
     assert repo.updated[0].error_text is not None
     assert "market_data_sync" in repo.updated[0].error_text
+
+
+# ---- job-option hardening + cron-collision validation -------------------
+
+
+def test_daily_briefing_cron_default_passes_collision_check() -> None:
+    """The locked default (30 6 * * *) doesn't collide with the worker's
+    06:00 pre-briefing slot — operators picked 06:30 for exactly that
+    reason."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    install_default_jobs(scheduler, _settings(scheduler_enabled=True))
+    job = scheduler.get_job(DAILY_BRIEFING_JOB_NAME)
+    assert job is not None
+
+
+@pytest.mark.parametrize(
+    "colliding_cron",
+    [
+        "0 6 * * *",  # the obvious operator footgun
+        "0 */2 * * *",  # every even hour — includes 06:00
+        "0 6 * * 1",  # Monday at 06:00 — still hour=6 minute=0
+    ],
+)
+def test_daily_briefing_cron_rejects_06_00_collision(colliding_cron: str) -> None:
+    """The API daily-briefing must not land on the same minute as the
+    worker's locked 06:00 pre-briefing — that would double-fire the
+    morning chain."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    with pytest.raises(ValueError, match="06:00 pre-briefing slot"):
+        install_default_jobs(
+            scheduler,
+            _settings(
+                scheduler_enabled=True,
+                scheduler_daily_briefing_cron=colliding_cron,
+            ),
+        )
+
+
+def test_daily_briefing_cron_accepts_safe_neighbour_minutes() -> None:
+    """Crons that fire near 06:00 but never exactly on it must be
+    accepted — operators legitimately want 05:55, 06:01, 06:30…"""
+
+    for safe in ("55 5 * * *", "1 6 * * *", "30 6 * * *", "0 7 * * *"):
+        scheduler = build_scheduler(_settings(scheduler_enabled=True))
+        assert scheduler is not None
+        install_default_jobs(
+            scheduler,
+            _settings(scheduler_enabled=True, scheduler_daily_briefing_cron=safe),
+        )
+
+
+def test_daily_briefing_job_has_explicit_max_instances_and_coalesce() -> None:
+    """A slow morning chain must never queue a parallel run; APScheduler
+    defaults are explicit-wired so the behaviour is obvious from the code."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    install_default_jobs(scheduler, _settings(scheduler_enabled=True))
+    job = scheduler.get_job(DAILY_BRIEFING_JOB_NAME)
+    assert job is not None
+    assert job.max_instances == 1
+    assert job.coalesce is True
+    assert job.misfire_grace_time is not None and job.misfire_grace_time > 0
+
+
+def test_ibkr_sync_job_has_jitter_and_guards_when_enabled() -> None:
+    """Interval jobs get jitter so multi-replica deploys don't fire
+    in lockstep on the same second."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    install_default_jobs(
+        scheduler,
+        _settings(
+            scheduler_enabled=True,
+            ibkr_sync_enabled=True,
+            ibkr_sync_interval_minutes=5,
+        ),
+        ibkr_sync_callable=lambda: None,
+    )
+    job = scheduler.get_job(IBKR_SYNC_JOB_NAME)
+    assert job is not None
+    assert job.max_instances == 1
+    assert job.coalesce is True
+    assert job.misfire_grace_time is not None and job.misfire_grace_time > 0
+    # IntervalTrigger exposes the jitter as a public attribute.
+    assert getattr(job.trigger, "jitter", None) is not None

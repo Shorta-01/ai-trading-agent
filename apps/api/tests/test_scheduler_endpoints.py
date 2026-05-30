@@ -46,7 +46,7 @@ def _scheduler_run() -> SchedulerRunRecord:
     )
 
 
-def _fake_storage(monkeypatch, *, latest_run=None) -> None:
+def _fake_storage(monkeypatch, *, latest_run=None, recent_runs=None) -> None:
     class _Connection:
         connection = "fake"
         readiness = object()
@@ -70,6 +70,10 @@ def _fake_storage(monkeypatch, *, latest_run=None) -> None:
             if latest_run is None:
                 return type("_R", (), {"found": False, "record": None})()
             return type("_R", (), {"found": True, "record": latest_run})()
+
+        def list_scheduler_runs(self, *, limit: int = 50):
+            records = tuple(recent_runs or ())[:limit]
+            return type("_L", (), {"records": records})()
 
     monkeypatch.setattr(status_routes, "StorageConnectionProvider", _FakeStorageProvider)
     monkeypatch.setattr(
@@ -129,6 +133,57 @@ def test_latest_run_returns_record_when_present(monkeypatch) -> None:
     assert body["item"]["status"] == "succeeded"
     assert body["item"]["triggered_by"] == "scheduler"
     assert body["safe_for_orders"] is False
+
+
+# ---- GET /scheduler/runs (recent list) --------------------------------
+
+
+def test_recent_runs_returns_not_configured_without_storage() -> None:
+    api_settings.storage.enabled = False
+    api_settings.storage.database_url = None
+    r = client.get("/scheduler/runs")
+    body = r.json()
+    assert r.status_code == 200
+    assert body["status"] == "not_configured"
+    assert body["items"] == []
+
+
+def test_recent_runs_returns_empty_list_when_no_runs(monkeypatch) -> None:
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "postgresql://fake"
+    _fake_storage(monkeypatch, recent_runs=())
+
+    r = client.get("/scheduler/runs")
+    body = r.json()
+    assert r.status_code == 200
+    assert body["status"] == "ok"
+    assert body["items"] == []
+
+
+def test_recent_runs_returns_records_when_present(monkeypatch) -> None:
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "postgresql://fake"
+    _fake_storage(monkeypatch, recent_runs=(_scheduler_run(),))
+
+    r = client.get("/scheduler/runs")
+    body = r.json()
+    assert body["status"] == "ok"
+    assert len(body["items"]) == 1
+    assert body["items"][0]["run_id"] == "run-1"
+    assert body["items"][0]["status"] == "succeeded"
+    assert body["safe_for_orders"] is False
+
+
+def test_recent_runs_bounds_limit(monkeypatch) -> None:
+    api_settings.storage.enabled = True
+    api_settings.storage.database_url = "postgresql://fake"
+    _fake_storage(monkeypatch, recent_runs=tuple(_scheduler_run() for _ in range(5)))
+
+    # Operator-supplied limit gets clamped to [1, 200] but otherwise honored.
+    r = client.get("/scheduler/runs?limit=3")
+    body = r.json()
+    assert body["limit"] == 3
+    assert len(body["items"]) == 3
 
 
 # ---- GET /ibkr/account/mode -------------------------------------------

@@ -43,6 +43,12 @@ class IbkrSettings(BaseModel):
     submission_sweep_enabled: bool = False
     cancel_sweep_enabled: bool = False
     order_session_client_id: int = 2
+    # Cadence for the submission + cancel sweeps. The earlier
+    # implementation hard-coded 60s; surfacing it as config lets
+    # operators slow the sweep down when an IBKR session is sluggish
+    # and the per-cycle work isn't completing fast enough to keep the
+    # next tick from queueing behind it.
+    sweep_interval_seconds: int = 60
 
 
 class EodhdSettings(BaseModel):

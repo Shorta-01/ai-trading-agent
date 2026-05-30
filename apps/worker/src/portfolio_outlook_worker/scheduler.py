@@ -52,7 +52,16 @@ _PRE_BRIEFING_JOB_ID = "pre_briefing"
 _HOURLY_JOB_ID = "hourly"
 _SUBMISSION_SWEEP_JOB_ID = "submission_sweep"
 _CANCEL_SWEEP_JOB_ID = "cancel_sweep"
-_SWEEP_INTERVAL_SECONDS = 60
+
+# Per-job APScheduler guards. ``max_instances=1`` and ``coalesce=True``
+# stop a slow run from spawning a parallel one; ``misfire_grace_time``
+# bounds how late a "missed" fire is still acceptable (cron fires only).
+# A small ``jitter`` on the interval jobs decorrelates fires across
+# multiple worker replicas so they don't thunder-herd Postgres/IBKR.
+_INTERVAL_JITTER_SECONDS = 10
+_CRON_MISFIRE_GRACE_SECONDS = 300
+_HOURLY_MISFIRE_GRACE_SECONDS = 600
+_INTERVAL_MISFIRE_GRACE_SECONDS = 60
 
 
 class _PositionSnapshotCounts:
@@ -155,6 +164,9 @@ class PortfolioScheduler:
             timezone=self._scheduler_settings.timezone,
             id=_PRE_BRIEFING_JOB_ID,
             replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
         )
         self._scheduler.add_job(
             self._on_hourly,
@@ -164,13 +176,20 @@ class PortfolioScheduler:
             timezone=self._scheduler_settings.timezone,
             id=_HOURLY_JOB_ID,
             replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=_HOURLY_MISFIRE_GRACE_SECONDS,
         )
         self._scheduler.add_job(
             self._heartbeat,
             "interval",
             seconds=self._scheduler_settings.heartbeat_interval_seconds,
+            jitter=_INTERVAL_JITTER_SECONDS,
             id="heartbeat",
             replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=_INTERVAL_MISFIRE_GRACE_SECONDS,
         )
         self._register_order_sweeps()
         # Auto-capture: any job that raises lands in the central error log.
@@ -245,21 +264,30 @@ class PortfolioScheduler:
             return
         if self._ibkr_settings.account_id is None:
             return
+        sweep_seconds = max(1, self._ibkr_settings.sweep_interval_seconds)
         if self._ibkr_settings.submission_sweep_enabled:
             self._scheduler.add_job(
                 self._on_submission_sweep,
                 "interval",
-                seconds=_SWEEP_INTERVAL_SECONDS,
+                seconds=sweep_seconds,
+                jitter=_INTERVAL_JITTER_SECONDS,
                 id=_SUBMISSION_SWEEP_JOB_ID,
                 replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_INTERVAL_MISFIRE_GRACE_SECONDS,
             )
         if self._ibkr_settings.cancel_sweep_enabled:
             self._scheduler.add_job(
                 self._on_cancel_sweep,
                 "interval",
-                seconds=_SWEEP_INTERVAL_SECONDS,
+                seconds=sweep_seconds,
+                jitter=_INTERVAL_JITTER_SECONDS,
                 id=_CANCEL_SWEEP_JOB_ID,
                 replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_INTERVAL_MISFIRE_GRACE_SECONDS,
             )
 
     def _on_submission_sweep(self) -> None:

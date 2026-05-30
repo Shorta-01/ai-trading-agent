@@ -734,6 +734,16 @@ export type LatestSchedulerRunResponse = {
   safe_for_orders?: boolean;
 };
 
+export type RecentSchedulerRunsResponse = {
+  status: string;
+  status_nl?: string;
+  help_nl: string;
+  limit: number;
+  items: SchedulerRunResponse[];
+  safe_for_action_drafts?: boolean;
+  safe_for_orders?: boolean;
+};
+
 export type IbkrAccountModeResponse = {
   status: string;
   mode: string;
@@ -1568,6 +1578,10 @@ export const apiClient = {
   getSchedulerJobs: () => getJson<SchedulerJobsResponse>("/scheduler/jobs"),
   getLatestSchedulerRun: () =>
     getJson<LatestSchedulerRunResponse>("/scheduler/runs/latest"),
+  getRecentSchedulerRuns: (limit = 20) =>
+    getJson<RecentSchedulerRunsResponse>(
+      `/scheduler/runs?limit=${Math.max(1, Math.min(200, limit))}`,
+    ),
   getIbkrAccountMode: () => getJson<IbkrAccountModeResponse>("/ibkr/account/mode"),
   getIbkrConnectionStatus: () =>
     getJson<IbkrConnectionStatusResponse>("/ibkr/connection/status"),
