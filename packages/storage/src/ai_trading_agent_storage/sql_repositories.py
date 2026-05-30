@@ -6150,6 +6150,12 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
                 record.sweep_alert_after_consecutive_errors
             ),
             "eodhd_rate_limit_per_second": record.eodhd_rate_limit_per_second,
+            "ensemble_weight_strategy": record.ensemble_weight_strategy,
+            "gbm_drift_window_days": record.gbm_drift_window_days,
+            "action_draft_approval_valid_minutes": (
+                record.action_draft_approval_valid_minutes
+            ),
+            "ai_explanation_provider_code": record.ai_explanation_provider_code,
         }
         existing = (
             self._connection.execute(
@@ -6251,6 +6257,18 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
             if row.get("eodhd_rate_limit_per_second") is not None
             else None
         ),
+        ensemble_weight_strategy=row.get("ensemble_weight_strategy"),
+        gbm_drift_window_days=(
+            int(row["gbm_drift_window_days"])
+            if row.get("gbm_drift_window_days") is not None
+            else None
+        ),
+        action_draft_approval_valid_minutes=(
+            int(row["action_draft_approval_valid_minutes"])
+            if row.get("action_draft_approval_valid_minutes") is not None
+            else None
+        ),
+        ai_explanation_provider_code=row.get("ai_explanation_provider_code"),
     )
 
 

@@ -42,6 +42,8 @@ const getDataWindowSettings = vi.fn();
 const updateDataWindowSettings = vi.fn();
 const getWorkerSweepSettings = vi.fn();
 const updateWorkerSweepSettings = vi.fn();
+const getAdvancedSettings = vi.fn();
+const updateAdvancedSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -70,6 +72,9 @@ vi.mock("@/lib/apiClient", () => ({
       getWorkerSweepSettings(...a),
     updateWorkerSweepSettings: (...a: unknown[]) =>
       updateWorkerSweepSettings(...a),
+    getAdvancedSettings: (...a: unknown[]) => getAdvancedSettings(...a),
+    updateAdvancedSettings: (...a: unknown[]) =>
+      updateAdvancedSettings(...a),
   },
 }));
 
@@ -181,6 +186,14 @@ const WORKER_SWEEPS = {
   help_nl: "Worker-zijde cadens en EODHD-rate-limit.",
 };
 
+const ADVANCED = {
+  ensemble_weight_strategy: "equal_weight",
+  gbm_drift_window_days: null as number | null,
+  action_draft_approval_valid_minutes: 5,
+  ai_explanation_provider_code: "stub",
+  help_nl: "Geavanceerde instellingen voor power-users.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -198,6 +211,8 @@ beforeEach(() => {
   updateDataWindowSettings.mockReset();
   getWorkerSweepSettings.mockReset();
   updateWorkerSweepSettings.mockReset();
+  getAdvancedSettings.mockReset();
+  updateAdvancedSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -206,6 +221,7 @@ beforeEach(() => {
   getSchedulerSettings.mockReturnValue(ok(SCHEDULER));
   getDataWindowSettings.mockReturnValue(ok(DATA_WINDOWS));
   getWorkerSweepSettings.mockReturnValue(ok(WORKER_SWEEPS));
+  getAdvancedSettings.mockReturnValue(ok(ADVANCED));
 });
 
 afterEach(() => cleanup());
@@ -529,5 +545,47 @@ describe("InstellingenPage", () => {
     expect(payload.sweep_interval_seconds).toBe(120);
     expect(payload.eodhd_rate_limit_per_second).toBe(5);
     expect(payload.sweep_retry_max_attempts).toBe(3);
+  });
+
+  it("renders the advanced section collapsed by default + saves when expanded", async () => {
+    updateAdvancedSettings.mockReturnValue(
+      ok({
+        ...ADVANCED,
+        ensemble_weight_strategy: "auto",
+        action_draft_approval_valid_minutes: 10,
+      }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-advanced-section"),
+    ).toBeInTheDocument();
+    const toggle = screen.getByTestId("instellingen-advanced-toggle");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // Inputs are hidden while collapsed.
+    expect(
+      screen.queryByTestId("instellingen-advanced-ensemble"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const ensemble = screen.getByTestId("instellingen-advanced-ensemble");
+    expect(ensemble).toHaveValue("equal_weight");
+    await userEvent.selectOptions(ensemble, "auto");
+    const minutes = screen.getByTestId(
+      "instellingen-advanced-approval-minutes",
+    );
+    await userEvent.clear(minutes);
+    await userEvent.type(minutes, "10");
+    await userEvent.click(
+      screen.getByTestId("instellingen-advanced-save"),
+    );
+    await waitFor(() =>
+      expect(updateAdvancedSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateAdvancedSettings.mock.calls[0][0]).toEqual({
+      ensemble_weight_strategy: "auto",
+      gbm_drift_window_days: null,
+      action_draft_approval_valid_minutes: 10,
+      ai_explanation_provider_code: "stub",
+    });
   });
 });

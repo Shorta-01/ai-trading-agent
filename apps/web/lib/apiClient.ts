@@ -198,6 +198,21 @@ export type WorkerSweepSettingsUpdateInput = {
   eodhd_rate_limit_per_second: number;
 };
 
+export type AdvancedSettingsResponse = {
+  ensemble_weight_strategy: string;
+  gbm_drift_window_days: number | null;
+  action_draft_approval_valid_minutes: number;
+  ai_explanation_provider_code: string;
+  help_nl: string;
+};
+
+export type AdvancedSettingsUpdateInput = {
+  ensemble_weight_strategy: string;
+  gbm_drift_window_days: number | null;
+  action_draft_approval_valid_minutes: number;
+  ai_explanation_provider_code: string;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1933,6 +1948,10 @@ export const apiClient = {
     getJson<WorkerSweepSettingsResponse>("/settings/worker-sweeps"),
   updateWorkerSweepSettings: (payload: WorkerSweepSettingsUpdateInput) =>
     putJson<WorkerSweepSettingsResponse>("/settings/worker-sweeps", payload),
+  getAdvancedSettings: () =>
+    getJson<AdvancedSettingsResponse>("/settings/advanced"),
+  updateAdvancedSettings: (payload: AdvancedSettingsUpdateInput) =>
+    putJson<AdvancedSettingsResponse>("/settings/advanced", payload),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

@@ -393,6 +393,18 @@ export default function Page() {
   const [workerSweepSaving, setWorkerSweepSaving] = useState(false);
   const [workerSweepSaved, setWorkerSweepSaved] = useState<string | null>(null);
   const [workerSweepError, setWorkerSweepError] = useState<string | null>(null);
+  // Settings UI PR E — Tier-2 advanced (power-user) knobs.
+  const [advancedForm, setAdvancedForm] = useState({
+    ensemble_weight_strategy: "equal_weight",
+    gbm_drift_window_days: null as number | null,
+    action_draft_approval_valid_minutes: 5,
+    ai_explanation_provider_code: "stub",
+  });
+  const [advancedHelp, setAdvancedHelp] = useState<string>("");
+  const [advancedSaving, setAdvancedSaving] = useState(false);
+  const [advancedSaved, setAdvancedSaved] = useState<string | null>(null);
+  const [advancedError, setAdvancedError] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -604,6 +616,45 @@ export default function Page() {
     setWorkerSweepSaved("Worker-sweep instellingen opgeslagen.");
   }
 
+  // Settings UI PR E — Tier-2 advanced query + save.
+  const advancedQuery = useQuery({
+    queryKey: ["instellingen", "advanced"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getAdvancedSettings();
+      if (!result.ok) throw new Error("advanced-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = advancedQuery.data;
+    if (!data) return;
+    setAdvancedForm({
+      ensemble_weight_strategy: data.ensemble_weight_strategy,
+      gbm_drift_window_days: data.gbm_drift_window_days,
+      action_draft_approval_valid_minutes:
+        data.action_draft_approval_valid_minutes,
+      ai_explanation_provider_code: data.ai_explanation_provider_code,
+    });
+    setAdvancedHelp(data.help_nl);
+  }, [advancedQuery.data]);
+
+  async function handleSaveAdvanced() {
+    setAdvancedSaving(true);
+    setAdvancedError(null);
+    setAdvancedSaved(null);
+    const result = await apiClient.updateAdvancedSettings(advancedForm);
+    setAdvancedSaving(false);
+    if (!result.ok) {
+      setAdvancedError(
+        "Opslaan mislukt. Controleer dat alle waarden binnen het toegestane bereik liggen.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "advanced"], result.data);
+    setAdvancedSaved("Geavanceerde instellingen opgeslagen.");
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -702,7 +753,8 @@ export default function Page() {
     || orderPolicyQuery.isPending
     || schedulerQuery.isPending
     || dataWindowQuery.isPending
-    || workerSweepQuery.isPending;
+    || workerSweepQuery.isPending
+    || advancedQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -1818,6 +1870,185 @@ export default function Page() {
                 </span>
               ) : null}
             </div>
+          </section>
+
+          {/* Section 4g — Geavanceerde instellingen (PR E). Collapsed by
+              default; meant for power-users only. */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-advanced-section"
+          >
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((v) => !v)}
+              data-testid="instellingen-advanced-toggle"
+              aria-expanded={advancedOpen}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 18,
+                fontWeight: 600,
+                color: "#111827",
+              }}
+            >
+              <span aria-hidden="true">{advancedOpen ? "▼" : "▶"}</span>
+              Geavanceerde instellingen
+            </button>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {advancedHelp
+                || "Power-user knoppen achter een accordion. Pas alleen aan als je weet wat je doet — verkeerde waarden kunnen voorspellingen of order-uitleg uit balans brengen."}
+            </p>
+            {advancedOpen ? (
+              <>
+                <div className="grid one-column" style={{ marginTop: 10 }}>
+                  <label>
+                    Ensemble-strategie
+                    <select
+                      data-testid="instellingen-advanced-ensemble"
+                      value={advancedForm.ensemble_weight_strategy}
+                      onChange={(e) =>
+                        setAdvancedForm((p) => ({
+                          ...p,
+                          ensemble_weight_strategy: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="equal_weight">
+                        Equal weight (standaard)
+                      </option>
+                      <option value="auto">
+                        Auto (per-predictor calibratie)
+                      </option>
+                    </select>
+                    <span className="help-text">
+                      Hoe het systeem voorspellingen van verschillende
+                      modellen combineert. Equal weight = elke predictor
+                      telt even zwaar. Auto = gewicht op basis van recente
+                      calibratie.
+                    </span>
+                  </label>
+                  <label>
+                    GBM drift-venster (dagen)
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      data-testid="instellingen-advanced-gbm-window"
+                      value={
+                        advancedForm.gbm_drift_window_days == null
+                          ? ""
+                          : advancedForm.gbm_drift_window_days
+                      }
+                      onChange={(e) =>
+                        setAdvancedForm((p) => ({
+                          ...p,
+                          gbm_drift_window_days:
+                            e.target.value === ""
+                              ? null
+                              : Number(e.target.value),
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Hoeveel dagen historie het GBM-model gebruikt om
+                      drift (verwacht rendement) te schatten. Leeg laten
+                      = volledige lookback. Hoger = stabieler, lager =
+                      reactiever.
+                    </span>
+                  </label>
+                  <label>
+                    Goedkeuringsvenster Action Draft (minuten)
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      data-testid="instellingen-advanced-approval-minutes"
+                      value={advancedForm.action_draft_approval_valid_minutes}
+                      onChange={(e) =>
+                        setAdvancedForm((p) => ({
+                          ...p,
+                          action_draft_approval_valid_minutes: Number(
+                            e.target.value,
+                          ),
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Hoe lang een goedgekeurde Action Draft geldig blijft
+                      voor IBKR-submit. Standaard 5 minuten. Hoger = meer
+                      tijd om te reviewen, lager = strakker tegen slippage.
+                    </span>
+                  </label>
+                  <label>
+                    AI-uitleg provider
+                    <select
+                      data-testid="instellingen-advanced-ai-provider"
+                      value={advancedForm.ai_explanation_provider_code}
+                      onChange={(e) =>
+                        setAdvancedForm((p) => ({
+                          ...p,
+                          ai_explanation_provider_code: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="stub">Stub (gratis, deterministisch)</option>
+                      <option value="claude">
+                        Claude (betaald, natuurlijke taal)
+                      </option>
+                    </select>
+                    <span className="help-text">
+                      Welke provider de Nederlandse uitleg-tekst onder
+                      elke suggestie genereert. Stub kost niets, Claude
+                      gebruikt je maandbudget.
+                    </span>
+                  </label>
+                </div>
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveAdvanced()}
+                    disabled={advancedSaving}
+                    data-testid="instellingen-advanced-save"
+                    style={{
+                      background: "#1f2937",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "6px 14px",
+                      borderRadius: 4,
+                      cursor: advancedSaving ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                    }}
+                  >
+                    {advancedSaving ? "Opslaan…" : "Geavanceerd opslaan"}
+                  </button>
+                  {advancedSaved ? (
+                    <span style={{ color: "#15803d", fontSize: 13 }}>
+                      {advancedSaved}
+                    </span>
+                  ) : null}
+                  {advancedError ? (
+                    <span
+                      data-testid="instellingen-advanced-error"
+                      style={{ color: "#b91c1c", fontSize: 13 }}
+                    >
+                      {advancedError}
+                    </span>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
           </section>
 
           {/* Section 4 — Connection + AI (editable). */}

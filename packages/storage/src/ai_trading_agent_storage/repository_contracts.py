@@ -315,6 +315,11 @@ class RuntimeConfigRecord:
     sweep_retry_backoff_seconds: Decimal | None = None
     sweep_alert_after_consecutive_errors: int | None = None
     eodhd_rate_limit_per_second: int | None = None
+    # Settings UI PR E — Tier-2 advanced overlay. ``None`` = env-var.
+    ensemble_weight_strategy: str | None = None
+    gbm_drift_window_days: int | None = None
+    action_draft_approval_valid_minutes: int | None = None
+    ai_explanation_provider_code: str | None = None
 
 
 @dataclass(frozen=True)

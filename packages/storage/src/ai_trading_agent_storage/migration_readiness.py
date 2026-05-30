@@ -721,6 +721,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "neemt de operatorwaarde over bij de volgende worker-restart."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0061_runtime_config_advanced",
+        previous_revision_id="0060_runtime_config_worker_sweeps",
+        filename="0061_runtime_config_advanced.py",
+        label_nl="Tier-2 geavanceerde instellingen in runtime_config",
+        description_nl=(
+            "Voegt vier kolommen toe voor power-user knoppen die tot nu "
+            "toe alleen via env-var instelbaar waren: "
+            "``ensemble_weight_strategy``, ``gbm_drift_window_days``, "
+            "``action_draft_approval_valid_minutes`` en "
+            "``ai_explanation_provider_code``. Null in elk veld: "
+            "terugvallen op de env-var of ingebouwde default."
+        ),
+    ),
 )
 
 

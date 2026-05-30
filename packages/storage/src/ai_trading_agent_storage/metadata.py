@@ -1367,6 +1367,11 @@ runtime_config = Table(
     Column("sweep_retry_backoff_seconds", MONEY_NUMERIC, nullable=True),
     Column("sweep_alert_after_consecutive_errors", Integer, nullable=True),
     Column("eodhd_rate_limit_per_second", Integer, nullable=True),
+    # Tier-2 advanced overlay (Settings UI PR E). Null = use env-var.
+    Column("ensemble_weight_strategy", Text, nullable=True),
+    Column("gbm_drift_window_days", Integer, nullable=True),
+    Column("action_draft_approval_valid_minutes", Integer, nullable=True),
+    Column("ai_explanation_provider_code", Text, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown
