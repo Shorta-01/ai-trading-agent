@@ -14,6 +14,7 @@ times to the dashboard badge.
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -420,31 +421,41 @@ class PortfolioScheduler:
         provider = StorageConnectionProvider(
             build_database_connection_settings(self._storage_settings.database_url)
         )
+        # Bind narrowed locals before the closure — mypy doesn't carry
+        # attribute narrowing into nested functions.
+        order_adapter = self._order_adapter
+        gateway = self._gateway
         try:
             with provider.checked_connection(require_writable=True) as checked:
                 lock = _build_lock(checked.connection)
-                # ``result`` is one of two distinct dataclasses depending on
-                # ``kind`` — both expose ``.mode`` and ``.error_message`` but
-                # mypy can't unify their concrete types across the if-else,
-                # so the variable is widened to ``Any``.
-                result: Any
-                if kind == "submission":
-                    result = build_submission_sweep(
+
+                # The sweep is rebuilt on every attempt (fresh queries
+                # against the new connection-bound state) — that's the
+                # whole point of an in-tick retry: each ``.tick()`` is
+                # a clean re-evaluation, not a cached one.
+                def _attempt() -> Any:
+                    if kind == "submission":
+                        return build_submission_sweep(
+                            connection=checked.connection,
+                            readiness=checked.readiness,
+                            gateway=gateway,
+                            order_adapter=order_adapter,
+                            ibkr_account_id=account_id,
+                            lock=lock,
+                        ).tick()
+                    return build_cancel_sweep(
                         connection=checked.connection,
                         readiness=checked.readiness,
-                        gateway=self._gateway,
-                        order_adapter=self._order_adapter,
+                        order_adapter=order_adapter,
                         ibkr_account_id=account_id,
                         lock=lock,
                     ).tick()
-                else:
-                    result = build_cancel_sweep(
-                        connection=checked.connection,
-                        readiness=checked.readiness,
-                        order_adapter=self._order_adapter,
-                        ibkr_account_id=account_id,
-                        lock=lock,
-                    ).tick()
+
+                result = _run_sweep_with_backoff(
+                    attempt=_attempt,
+                    max_attempts=self._ibkr_settings.sweep_retry_max_attempts,
+                    base_backoff_seconds=self._ibkr_settings.sweep_retry_backoff_seconds,
+                )
                 logger.info("%s sweep tick: mode=%s", kind, result.mode)
                 self._track_sweep_outcome(
                     kind=kind,
@@ -602,6 +613,35 @@ def _build_lock(connection: Any) -> SingleFlightLockProtocol:
     """
 
     return PostgresAdvisoryLock(connection)
+
+
+def _run_sweep_with_backoff(
+    *,
+    attempt: Callable[[], Any],
+    max_attempts: int,
+    base_backoff_seconds: float,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> Any:
+    """Re-attempt ``attempt()`` (a sweep's ``.tick()`` call) until it
+    returns a non-error result or ``max_attempts`` is reached.
+
+    Sleeps ``base_backoff_seconds * 2 ** (attempt - 1)`` between tries
+    (exponential backoff: 2s, 4s, 8s with the defaults). A transient
+    IBKR hiccup that resolves in ~5s is recovered inside the same
+    tick instead of waiting a full ``sweep_interval_seconds`` for the
+    next scheduled fire. ``sleep_fn`` is injectable so tests don't
+    actually sleep.
+    """
+
+    max_attempts = max(1, max_attempts)
+    base_backoff_seconds = max(0.0, base_backoff_seconds)
+    result = attempt()
+    for n in range(1, max_attempts):
+        if result.mode != "error":
+            return result
+        sleep_fn(base_backoff_seconds * (2 ** (n - 1)))
+        result = attempt()
+    return result
 
 
 def _is_pre_briefing_run(fire_time: datetime) -> bool:

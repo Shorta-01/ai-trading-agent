@@ -184,7 +184,7 @@ Each system-decision item is a single row with a clear question and the user's d
 
 ## 8. Performance review (separate screen)
 
-A separate screen, not the dashboard. The user visits it when they choose to. (doctrine §11) See `docs/reality/functionality/performance-review.md` (T-021b) for the screen spec.
+A separate screen, not the dashboard. The user visits it when they choose to. (doctrine §11)
 
 Shows:
 - Time-weighted return vs benchmark
@@ -238,12 +238,3 @@ All of the above are tracked in doctrine §15.
 ---
 
 **Doctrine:** `docs/intent/_trading-system-doctrine.md`
-**Phase 1 tasks that consume this spec:**
-- `T-008` — Reality docs for the frontend (pages, shared components, feature grids)
-- `T-011c` — Reality doc `dashboard-composition.md`
-- `T-013` — Reality doc `ibkr-readonly-sync-positions-cash.md`
-- `T-018` — Reality doc `action-draft-composition-and-approval.md`
-- `T-025` — Reality doc `user-confirm-starter-watchlist.md`
-- `T-026` — Reality doc `user-approve-action-draft.md`
-- `T-029` — Reality doc `user-edit-trading-settings.md`
-- `T-030` — Reality doc `user-review-decision-package-detail.md`

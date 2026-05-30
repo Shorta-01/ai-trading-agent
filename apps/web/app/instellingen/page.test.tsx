@@ -1,5 +1,12 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -7,6 +14,17 @@ import type {
   RiskLimitsResponse,
   TradingSettingsResponse,
 } from "@/lib/apiClient";
+
+// Page-under-test uses useQuery; wrap render in a fresh QueryClientProvider
+// so the test runs in isolation and the cache doesn't carry across cases.
+function render(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 const getRiskLimits = vi.fn();
 const updateRiskLimits = vi.fn();

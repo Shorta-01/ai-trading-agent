@@ -39,7 +39,7 @@ through the entire V1.1 refactor — no morning-chain downtime.
 - Task 159 completed: deterministic Dutch label translator + Suggestions foundation (Slice 4 of the V1 critical path). `baseline_label_translator` rules engine in `packages/portfolio`, new `asset_suggestions` table (migration 0028) + repo, `suggestion_sync` orchestrator, `POST /suggestions/compute` + `GET /suggestions/latest` routes, Portefeuille "Actie" badge column. AI never decides; disabled-by-default; no action drafts; no orders.
 - Task 158 completed: baseline forecast engine end-to-end via lognormal GBM (Slice 3 of the V1 critical path, V1.1 stage). `compute_baseline_forecast` math in `packages/portfolio`, new `market_data_bars` + `asset_forecasts` tables (migration 0027), `EodhdClient.fetch_eod_bars`, `forecast_sync` orchestrator, `POST /forecasts/compute` + `GET /forecasts/latest` routes, Portefeuille "Verwachte richting" badge. Disabled-by-default; no AI, no suggestions, no orders.
 - Task 157 completed: real market-data + FX provider via EODHD (Slice 2 of the V1 critical path). `EodhdClient` + `sync_market_data_and_fx` orchestrator + `build_market_data_provider` factory + `POST /market-data/sync` route. Disabled-by-default; no orders/suggestions/action drafts/broker execution added.
-- Task 156 completed: real IBKR paper read-only sync runtime (Slice 1 of the V1 critical path). `IbapiReadOnlySyncClient` + `build_real_sync_adapter` factory + route wiring with context-managed `close()`. Disabled-by-default; no orders/suggestions/market-data/FX runtime added.
+- Task 156 completed: real IBKR paper read-only sync runtime (Slice 1 of the V1 critical path). `IbapiReadOnlySyncClient` + `build_real_sync_adapter` factory + route wiring with context-managed `close`. Disabled-by-default; no orders/suggestions/market-data/FX runtime added.
 - Task 152-R6 completed: repair-only merged-red CI fix after Task 152-R5 for the `api` job `pytest` failures; fake-client execution helpers now enable the full Task 152 prerequisite gate set in tests, including dummy `ibkr_sync_host`, `ibkr_sync_port`, and `ibkr_sync_client_id` values alongside `ibkr_tws_readonly_real_client_enabled=True`. Missing host/port/client-id blockers remain tested for default/real configuration gaps, default-blocked tests still verify disabled-by-default safety-gated behavior, no-secret checks remain strict (no raw config/account payload leaks), and no production runtime behavior was widened (runtime default-disabled, readiness never connects, no sync/market-data/FX/suggestions/actions/orders/broker execution, no auto-connect/reconnect/persistent session manager, no schema/migrations, no `ib_insync`).
 - Task 152-R5 completed: repair-only merged-red CI fix after Task 152-R4 for the `api` job `pytest` failures; fake-client execution helpers now enable the full Task 152 gate set including `ibkr_tws_readonly_real_client_enabled=True`, and remaining fake-client execution/error-path tests that still used `_settings(...)` were corrected to use `_fake_client_ready_settings(...)`. Default-blocked tests still prove disabled-by-default and safety-gated behavior. No production runtime widening: runtime remains disabled by default, readiness endpoint never connects, no account/portfolio sync, no positions/cash/open-orders/executions sync, no market-data runtime, no FX runtime, no suggestions/action drafts/orders/broker execution, no auto-connect/reconnect loop, no persistent session manager, no schema/migrations, no `ib_insync`, and no secret/raw broker payload exposure.
 - Task 152-R4 — **Completed (repair-only):** repaired merged-red API `pytest` failures after Task 152-R3 by aligning stale fake-client manual status-check tests with Task 152 gate model (fake-client execution tests now enable all required prerequisite gates before expecting connect/check/disconnect), preserving default-blocked behavior checks, and tightening no-secret checks to reject exact raw configured values while allowing safe diagnostic code names (`missing_host`, `missing_port`, `missing_client_id`); no runtime behavior widening.
@@ -91,7 +91,7 @@ through the entire V1.1 refactor — no morning-chain downtime.
 
 - [x] Task 133B — Completed: minimale IBKR read-only sync readiness/preflight status gate via pure statusbuilder + exposure op `GET /ibkr/sync/status`; geen real sync runtime of TWS/Gateway network runtime, geen account/portfolio sync runtime, geen market-data runtime, geen suggesties/action drafts/orders/broker execution, geen financiële berekeningen en geen fake data toegevoegd.
 
-- [x] Task 132B — Completed: document-first selectie van de volgende veilige Milestone B IBKR read-only sync foundation batch vastgelegd in `docs/product/ibkr-read-only-sync-foundation-batch-selection-task-132b.md`; selectie wijst naar Task 133B; geen runtime/API/storage/migratie/netwerk/sync/market-data/suggesties/action drafts/orders/broker execution/financiële berekeningen/fake data toegevoegd.
+- [x] Task 132B — Completed: document-first selectie van de volgende veilige Milestone B IBKR read-only sync foundation batch vastgelegd; selectie wijst naar Task 133B; geen runtime/API/storage/migratie/netwerk/sync/market-data/suggesties/action drafts/orders/broker execution/financiële berekeningen/fake data toegevoegd.
 
 - [x] Task 125V — Completed: Task 125U wording-catalogus toegepast op read-only valuation readiness UI labels/helpteksten; alleen UI copy/helptekst/fallback updates; geen API/storage/migratie/runtime fetch/berekeningen/suggesties/action drafts/orders/broker execution/fake waarden en geen browser-side money/P&L parsing.
 - [x] Task 125K — Completed: pure Decimal-only conversion-total calculator module + unit tests op opgeslagen inputs; geen API wiring, geen endpointgedragwijziging, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
@@ -123,15 +123,15 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 
 ## A) Completed foundations
 
-- [x] Task 137 — Completed: planning/documentation-only selectie van de volgende milestone-sized Milestone B implementatieslices vastgelegd in `docs/product/milestone-b-next-implementation-slices-task-137.md`; Task 138 geselecteerd als volgende implementatiestap; geen runtime/API/web/storage/migratie/netwerk/suggestie/order/broker-execution wijzigingen.
+- [x] Task 137 — Completed: planning/documentation-only selectie van de volgende milestone-sized Milestone B implementatieslices vastgelegd; Task 138 geselecteerd als volgende implementatiestap; geen runtime/API/web/storage/migratie/netwerk/suggestie/order/broker-execution wijzigingen.
 - [x] Task 131B-R — Completed: repair na merged Task 131B voor wrong-account-mode status regression in API pytest (`account_mode_status` was `unknown` i.p.v. `mismatch`); normalisatie hersteld zonder runtime-scope-uitbreiding (geen echte IBKR-netwerkadapter/auto-connect/sync/market-data runtime/suggesties/action drafts/Decision Packages/orders/broker execution/financiële berekeningen/fake data).
 - [x] Task 129 — Completed: Milestone B IBKR read-only runtime slice selectie/documentatie afgerond (`milestone-b-ibkr-read-only-runtime-slice-selection-task-129.md`); Task 130 geselecteerd als volgende kleine implementatieslice; planning-only, geen runtime/API/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
 - [x] Task 128 — Completed: workflow accelerationlaag toegevoegd (nieuwe procesdocs, task template, milestone queue, red/green CI workflow en optionele lokale helper scripts); Task 125W micro-audit pad gedeferreerd/vervangen; geen runtime/API/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
 - [x] Task 128-R — Completed: product-tracking drift repair op `current-state.md` marker + kleine checker-hardening voor stale `Huidige toestand` detectie; Task 129 blijft volgende taak; geen runtime/API/web/storage/migratie/fetch/calc/suggestion/action-draft/order/broker/fake-data wijzigingen.
 
-- [x] Task 125G — Completed: document-first/read-only FX snapshot storage contract preflight toegevoegd (`docs/product/fx-snapshot-storage-contract-preflight-task-125g.md`); geen migraties of runtime implementatie toegevoegd.
+- [x] Task 125G — Completed: document-first/read-only FX snapshot storage contract preflight toegevoegd; geen migraties of runtime implementatie toegevoegd.
 
-- Task 109 completed: documentatie/design-only preflight voor request logs + provider/source metadata + freshness-audit records (`docs/product/request-log-provider-freshness-contract-preflight-task-109.md`). Candidate veldcatalogi + status/reason-code voorstellen + traceability-linking vastgelegd. Geen storagetabellen/migrations/endpoints/schedulers/runtime-fetching/latest-price fetching/forecast runtime/AI runtime/suggesties/Decision Packages runtime/actiedrafts/orders/fake data toegevoegd; Task 107 tracking-drift preventieregel gevolgd.
+- Task 109 completed: documentatie/design-only preflight voor request logs + provider/source metadata + freshness-audit records. Candidate veldcatalogi + status/reason-code voorstellen + traceability-linking vastgelegd. Geen storagetabellen/migrations/endpoints/schedulers/runtime-fetching/latest-price fetching/forecast runtime/AI runtime/suggesties/Decision Packages runtime/actiedrafts/orders/fake data toegevoegd; Task 107 tracking-drift preventieregel gevolgd.
 - repository/API/worker/web/docker/CI skeleton
 - settings/status foundations
 - system events foundation
@@ -218,9 +218,7 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Task 69 completed: gate outcome + freshness policy foundation als storage/API basis (audit/status-only, geen suggestion unlock).
 - Task 69B completed: repair op Task 69 met CI terug groen en zonder runtimegedrag te wijzigen.
 
-
 - Task 70 completed: source conflict detection foundation (storage/API) als audit/status records; geen suggestion unlock.
-
 
 ## E) Post-Task 72/72B/72C sync status
 
@@ -236,7 +234,6 @@ Zie ook de einddoelarchitectuur in `docs/product/final-solution-vision.md`.
 - Suggestion engine runtime: **runtime pending**.
 - Probabilistic forecast runtime: **runtime pending**.
 - IBKR runtime: **runtime pending**.
-
 
 ## F) Release 1 functional workflow capabilities (locked, not implemented yet)
 
@@ -257,7 +254,6 @@ Volgende capabilities zijn verplicht voor Release 1 volgens `docs/product/releas
 
 Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; deze PR voegt geen runtimecode toe.
 
-
 ## G) Task 74 update
 
 - Moderne GUI shell + dashboard foundation is toegevoegd.
@@ -273,7 +269,6 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 78B — CI-repair na Task 78 (API ruff-formatting + storage stale migration/metadata expectations); geen runtimegedrag gewijzigd en geen nieuwe features toegevoegd.
 
 - [x] Task 80 — Asset Master search/picker UI foundation (read-only/reference-only; voltooid).
-
 
 ## Task 81 lock — required work before market-data runtime (not implemented yet)
 
@@ -294,8 +289,7 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - Task 82 completed: read-only IBKR contract search/validation foundation (identity/reference-only) toegevoegd; Volglijst add-flow conversie naar verplichte contractpicker blijft open voor Task 83.
 
 - [x] Task 84 — IBKR watchlist import foundation (read-only adapter boundary, conid-normalisatie, import-candidates; geen write naar IBKR).
-- [x] Task 84C — CI-repair na PR #163: API pytest test setup gecorrigeerd (`Settings.model_copy(update=...)` i.p.v. `dataclasses.replace()` en expliciete IBKR settings patch voor configured-path). Geen runtimewijzigingen, geen scope-uitbreiding; Task 85 pas na groene CI.
-
+- [x] Task 84C — CI-repair na PR #163: API pytest test setup gecorrigeerd (`Settings.model_copy(update=...)` i.p.v. `dataclasses.replace` en expliciete IBKR settings patch voor configured-path). Geen runtimewijzigingen, geen scope-uitbreiding; Task 85 pas na groene CI.
 
 ## Task 85 update
 
@@ -310,7 +304,6 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 
 - [x] Task 87 — Conservatieve watchlist/readiness inspectieverbetering (read-only): duidelijkere Nederlandse blocked/missing-snapshot statusuitleg en auditvelden toegevoegd; geen market-data runtime/historical/scheduler/AI/suggesties/Decision Packages/action drafts/IBKR-ordergedrag/fake data.
 
-
 - [x] Task 88 — Conservatieve readiness-contract consolidatie (API-only, read-only): typed readiness responsemodellen/helpers gecentraliseerd, regressietests uitgebreid; geen runtimegedrag toegevoegd.
 - [x] Task 88B — CI-repair na Task 88: import-boundary/type-fix in readiness-contract module (protocol i.p.v. route-model import), zonder runtimewijzigingen of scope-uitbreiding.
 - [x] Task 88G — Documenteer CI-platformblokkade na PR #171: 6 normale CI jobs + CI Diagnostic falen; diagnostische workflow faalt vóór logs/artifacts; geen geverifieerde application-code root cause.
@@ -320,9 +313,7 @@ Belangrijk: dit zijn functionele werkitems voor toekomstige implementatietaken; 
 - [x] Task 91 — conservatieve market-data readiness status enum-normalisatie + regressiehardening (read-only/API-contract/tests/docs): expliciete typed list/detail readiness-statussen en stabiele NL help/status regressietests; latest-snapshot varianten behouden en getest; geen runtime fetching/historical/scheduler/AI/suggesties/Decision Packages/action drafts/orders/fake data.
 - [x] Task 92 — conservatieve market-data readiness explainability + boundary-consistency hardening (read-only/API-contract/tests/docs): stabiele NL explainability/helptekst, expliciete `analysis_ready=false`/`suggestions_allowed=false`/`action_drafts_allowed=false`, deterministische blocked/ready/snapshot regressies incl. detail/latest-snapshot non-implication coverage; geen runtime fetching/historical/scheduler/AI/suggesties/Decision Packages/action drafts/orders/fake data.
 
-
 - [x] Task 88H — tijdelijke CI-diagnostische workflow verwijderd (`.github/workflows/ci-diagnostic.yml`) na bevestiging dat failure buiten normale project test/lint/build-output ligt; CI-blokkade blijft gedocumenteerd, normale CI blijft rood en Task 89 blijft geblokkeerd tot CI groen is.
-
 
 ## Accepted architecture-audit todo items (Task 88I)
 
@@ -361,26 +352,21 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - [x] Task 94 — Conservatieve AssetListing-to-watchlist readiness wiring (API/tests/docs, read-only): watchlist list/detail response bevat typed AssetListing readiness/status via `ibkr_conid`; missing/unvalidated listings blijven blocked voor market data/analysis/suggesties/action drafts; gevalideerde listing blijft status-only zonder runtime unlock. Geen market-data runtime/fetching/historical/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data toegevoegd.
 - [x] Task 95 — Conservatieve market-data readiness AssetListing validation-gate harmonisatie (API/tests/docs, read-only): readiness list/detail tonen nu expliciete typed `asset_listing_gate` (`storage_unavailable`, `missing_ibkr_conid`, `missing_listing`, `unvalidated_listing`, `validated_listing`) met geharmoniseerde NL teksten; missing/unvalidated blijft blocked, validated blijft status-only. Geen storage migratie/tabel en geen runtime market-data fetch/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data.
 
-
 - Task 96 afgerond: read-only terminologie/contract harmonisatie voor readiness/watchlist/latest-snapshot; geen runtime-uitbreidingen toegevoegd.
-- Task 100 afgerond: beperkte product-doc terminologie-audit + tracking-harmonisatie buiten UI/API-inventaris (`docs/product/read-only-readiness-product-doc-terminology-audit.md`), zonder runtime-activatie.
-- Task 103 afgerond: conservatieve product-doc consistentie follow-up na Task 102 met check tegen vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift hersteld en compacte notitie toegevoegd (`docs/product/read-only-readiness-consistency-check-task-103.md`), zonder runtime-activatie.
-- Task 104 afgerond: conservatieve documentatie/review-hardening mini-follow-up op post-Task-103 trackingconsistentie tegen `locked-decisions.md`; kleine trackingdrift gecorrigeerd en compacte notitie toegevoegd (`docs/product/read-only-readiness-tracking-consistency-task-104.md`), zonder runtime-activatie.
-- Task 105 afgerond: conservatieve documentatie/review-hardening terminology lock check follow-up na Task 104 tegen `locked-decisions.md`; kleine tracking/wordingdrift gericht hersteld (current-state post-Task-104 tracking) en compacte notitie toegevoegd (`docs/product/read-only-readiness-terminology-lock-check-task-105.md`), zonder runtime-activatie.
-- Task 106 afgerond: conservatieve documentatie/review-hardening terminology lock discipline follow-up na Task 105 tegen `locked-decisions.md`; kleine tracking/wordingdrift gericht hersteld (current-state titel + samenvattingsregel naar post-Task-105 status) en compacte notitie toegevoegd (`docs/product/read-only-readiness-terminology-discipline-check-task-106.md`), zonder runtime-activatie.
+- Task 100 afgerond: beperkte product-doc terminologie-audit + tracking-harmonisatie buiten UI/API-inventaris, zonder runtime-activatie.
+- Task 103 afgerond: conservatieve product-doc consistentie follow-up na Task 102 met check tegen vergrendelde read-only terminology in `locked-decisions.md`; kleine tracking/wordingdrift hersteld en compacte notitie toegevoegd, zonder runtime-activatie.
+- Task 104 afgerond: conservatieve documentatie/review-hardening mini-follow-up op post-Task-103 trackingconsistentie tegen `locked-decisions.md`; kleine trackingdrift gecorrigeerd en compacte notitie toegevoegd, zonder runtime-activatie.
+- Task 105 afgerond: conservatieve documentatie/review-hardening terminology lock check follow-up na Task 104 tegen `locked-decisions.md`; kleine tracking/wordingdrift gericht hersteld (current-state post-Task-104 tracking) en compacte notitie toegevoegd, zonder runtime-activatie.
+- Task 106 afgerond: conservatieve documentatie/review-hardening terminology lock discipline follow-up na Task 105 tegen `locked-decisions.md`; kleine tracking/wordingdrift gericht hersteld (current-state titel + samenvattingsregel naar post-Task-105 status) en compacte notitie toegevoegd, zonder runtime-activatie.
 - Task 107 afgerond: conservatieve documentatie/review-hardening sustainability-check na Task 106, inclusief driftcorrectie in current-state en compacte tracking-drift preventieregel in productdocs; geen runtime-activatie.
-- Task 108 afgerond: grote non-runtime implementatie-prep audit gedocumenteerd in `docs/product/non-runtime-foundation-preflight-task-108.md`; exact één conservatieve Task 109 geselecteerd (request-log/provider-metadata/freshness-audit storage/API contract preflight, documentatie/design-only), zonder runtime-activatie.
+- Task 108 afgerond: grote non-runtime implementatie-prep audit gedocumenteerd; exact één conservatieve Task 109 geselecteerd (request-log/provider-metadata/freshness-audit storage/API contract preflight, documentatie/design-only), zonder runtime-activatie.
 - Volgende conservatieve stap: Task 109 — request-log/provider-metadata/freshness-audit storage/API contract preflight (documentation/design-only, geen runtime unlock).
-
 
 - [x] Task 98 — Read-only readiness UI/API contractinventaris (documentatie-only): nieuw inventarisdocument voor resterende UI-schermen + API/client contracten met veilige/onveilige labelpatronen en conservatieve follow-up governance; geen runtime market-data/latest-price fetching/scheduler/forecast/AI/suggesties/Decision Packages/action drafts/orders/fake data.
 
-
 - [x] Task 99 — documentatie/review-guardrail-only: compacte read-only readiness PR-checklist + term-review rubric toegevoegd en gekoppeld in productdocumentatie; geen runtime market-data fetching/latest-price fetching/scheduler/forecast runtime/AI runtime/suggesties/Decision Packages/action drafts/orders/fake data.
 
-
 - Task 113 afgerond: read-only audit summary/count contracten + usability verbeteringen; geen runtime-unlock.
-
 
 - Task 114 afgerond: read-only audit linked-record coverage/navigation hardening en web type-alignment; geen runtimegedrag toegevoegd.
 
@@ -389,11 +375,9 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 
 - Task 125D: **completed** — read-only portfolio valuation voorbereiding toegevoegd vanuit duurzame IBKR sync snapshots, met expliciete blocked/control-needed status bij ontbrekende of verouderde marktdata. Geen market-data runtime, geen suggesties, geen action drafts, geen broker orders/execution en geen fake prijzen toegevoegd.
 
-
 - Task 125H afgerond: FX snapshot durable storage foundation (read-only, no runtime fetch).
 
 - Task 125I voltooid (read-only FX snapshot consumption in valuation readiness); vervolg blijft conservatief zonder runtime provider fetch.
-
 
 - Task 125L afgerond: read-only wiring van Decimal-only conversion-total calculator in valuation readiness endpoint; alleen opgeslagen inputs, zonder runtime FX/provider fetch, zonder market-data runtime en zonder suggestions/action drafts/orders.
 - Task 125N afgerond: read-only web/API-client display support voor valuation conversion totals toegevoegd; bestaande valuation readiness endpoint hergebruikt; simpele Nederlandse labels toegepast; geen browserberekeningen; geen API/runtime/storage changes; geen suggesties/action drafts/orders en geen fake totals.
@@ -405,7 +389,7 @@ Toegevoegd als verplichte implementatieblokken (nog runtime pending):
 - Task 125T afgerond: read-only advanced row-level trace/details display voor kostbasis en ongerealiseerde winst/verlies readiness toegevoegd met uitsluitend bestaande API-readiness tracevelden; geen browser-side berekeningen en geen runtime/API/storage/migratie-uitbreiding.
 - Task 125U afgerond: document-first review/preflight voor valuation readiness UI-teksten en helpteksten toegevoegd met consistent eenvoudig Nederlands + checklist voor ontbrekende invoer en trace-empty staten; geen runtime/API/web behavior/storage/migraties/fetch/suggesties/action drafts/orders/broker execution/fake waarden.
 - Task 125S afgerond: read-only web/API-client display support voor bestaande kostbasis en ongerealiseerde winst/verlies readiness-velden toegevoegd, zonder browser-side berekeningen en zonder runtime/API/storage/migratie-uitbreiding.
-- Task 125M afgerond: document-first/read-only UI/API display contract preflight voor valuation conversion totals toegevoegd (`docs/product/valuation-conversion-total-display-contract-preflight-task-125m.md`); geen web UI behavior changes, geen API behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
+- Task 125M afgerond: document-first/read-only UI/API display contract preflight voor valuation conversion totals toegevoegd; geen web UI behavior changes, geen API behavior changes, geen runtime FX/provider fetch, geen market-data runtime, geen suggesties/action drafts/orders en geen fake FX-rates/converted totals.
 
 ## Workflow update na Task 130P
 - Manual owner-testing verschuift naar volledige Version 1 release candidate.

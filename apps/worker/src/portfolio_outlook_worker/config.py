@@ -55,6 +55,16 @@ class IbkrSettings(BaseModel):
     # /systeemmeldingen surfaces the problem instead of it living
     # only in the log file. Reset on the next non-error tick.
     sweep_alert_after_consecutive_errors: int = 3
+    # In-tick retry-with-backoff: when ``.tick()`` returns
+    # ``mode="error"`` (the existing transient-failure shape) the
+    # scheduler immediately re-attempts the sweep up to
+    # ``sweep_retry_max_attempts`` times, sleeping
+    # ``sweep_retry_backoff_seconds * 2**(attempt-1)`` between
+    # attempts. With the defaults a transient IBKR hiccup is recovered
+    # within one tick (~6s of waiting) instead of waiting a full
+    # ``sweep_interval_seconds`` for the next scheduled fire.
+    sweep_retry_max_attempts: int = 3
+    sweep_retry_backoff_seconds: float = 2.0
 
 
 class EodhdSettings(BaseModel):

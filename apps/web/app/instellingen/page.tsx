@@ -24,7 +24,8 @@
  * shared option metadata lives in ``@/lib/instellingenOptions``.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { HelpTooltip } from "@/components/HelpTooltip";
 import {
@@ -295,9 +296,26 @@ function connectionStateFromResponse(
   };
 }
 
+const RISK_LIMITS_KEY = ["instellingen", "risk-limits"] as const;
+const TRADING_SETTINGS_KEY = ["instellingen", "trading-settings"] as const;
+const CONNECTION_SETTINGS_KEY = ["instellingen", "connection-settings"] as const;
+
+// Server reads that seed editable form fields use these options: never
+// auto-refetch (window focus, reconnect, polling) — a refetch silently
+// resets the user's in-progress edits. Refreshes are explicit, fired
+// after each successful save so the form re-syncs with the server's
+// normalized response.
+const FORM_QUERY_OPTIONS = {
+  staleTime: Infinity,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchOnMount: false,
+} as const;
+
 export default function Page() {
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  // ``loading`` and ``loadError`` are derived from the three queries below
+  // (see further down), so they don't need their own useState slots.
 
   // Section 1 — risk limits.
   const [riskLimits, setRiskLimits] =
@@ -328,12 +346,18 @@ export default function Page() {
   const [connectionSaved, setConnectionSaved] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  const loadRiskLimits = useCallback(async () => {
-    const result = await apiClient.getRiskLimits();
-    if (!result.ok) return false;
-    applyRiskLimits(result.data);
-    return true;
-  }, []);
+  const riskQuery = useQuery({
+    queryKey: RISK_LIMITS_KEY,
+    queryFn: async () => {
+      const result = await apiClient.getRiskLimits();
+      if (!result.ok) throw new Error("risk-limits-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    if (riskQuery.data) applyRiskLimits(riskQuery.data);
+  }, [riskQuery.data]);
 
   function applyRiskLimits(data: RiskLimitsResponse) {
     setRiskAccountId(data.ibkr_account_id);
@@ -350,12 +374,18 @@ export default function Page() {
     });
   }
 
-  const loadTrading = useCallback(async () => {
-    const result = await apiClient.getTradingSettings();
-    if (!result.ok) return false;
-    applyTrading(result.data);
-    return true;
-  }, []);
+  const tradingQuery = useQuery({
+    queryKey: TRADING_SETTINGS_KEY,
+    queryFn: async () => {
+      const result = await apiClient.getTradingSettings();
+      if (!result.ok) throw new Error("trading-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    if (tradingQuery.data) applyTrading(tradingQuery.data);
+  }, [tradingQuery.data]);
 
   function applyTrading(data: TradingSettingsResponse) {
     setTrading(data);
@@ -383,12 +413,18 @@ export default function Page() {
     );
   }
 
-  const loadConnection = useCallback(async () => {
-    const result = await apiClient.getConnectionSettings();
-    if (!result.ok) return false;
-    applyConnection(result.data);
-    return true;
-  }, []);
+  const connectionQuery = useQuery({
+    queryKey: CONNECTION_SETTINGS_KEY,
+    queryFn: async () => {
+      const result = await apiClient.getConnectionSettings();
+      if (!result.ok) throw new Error("connection-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    if (connectionQuery.data) applyConnection(connectionQuery.data);
+  }, [connectionQuery.data]);
 
   function applyConnection(data: ConnectionSettingsResponse) {
     setConnection(connectionStateFromResponse(data));
@@ -398,23 +434,12 @@ export default function Page() {
     setConnectionKeyInput("");
   }
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    const [riskOk, tradingOk, connectionOk] = await Promise.all([
-      loadRiskLimits(),
-      loadTrading(),
-      loadConnection(),
-    ]);
-    setLoading(false);
-    if (!riskOk && !tradingOk && !connectionOk) {
-      setLoadError("Instellingen konden niet worden geladen.");
-    }
-  }, [loadRiskLimits, loadTrading, loadConnection]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const loading =
+    riskQuery.isPending || tradingQuery.isPending || connectionQuery.isPending;
+  const loadError =
+    riskQuery.isError && tradingQuery.isError && connectionQuery.isError
+      ? "Instellingen konden niet worden geladen."
+      : null;
 
   function setRiskField(
     key: keyof RiskLimitsUpdateInput,
@@ -440,6 +465,7 @@ export default function Page() {
       return;
     }
     applyRiskLimits(result.data);
+    queryClient.setQueryData(RISK_LIMITS_KEY, result.data);
     setRiskSaved("Risico-limieten opgeslagen.");
   }
 
@@ -475,6 +501,7 @@ export default function Page() {
       return;
     }
     applyTrading(result.data);
+    queryClient.setQueryData(TRADING_SETTINGS_KEY, result.data);
     setStrategySaved("Strategie opgeslagen.");
   }
 
@@ -500,6 +527,7 @@ export default function Page() {
       return;
     }
     applyTrading(result.data);
+    queryClient.setQueryData(TRADING_SETTINGS_KEY, result.data);
     setUniverseSaved("Beleggingsuniversum opgeslagen.");
   }
 
@@ -555,6 +583,7 @@ export default function Page() {
       return;
     }
     applyConnection(result.data);
+    queryClient.setQueryData(CONNECTION_SETTINGS_KEY, result.data);
     setConnectionSaved("Verbinding & AI opgeslagen.");
   }
 
