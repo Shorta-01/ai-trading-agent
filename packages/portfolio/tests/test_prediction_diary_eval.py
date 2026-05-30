@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import Decimal
 
 from portfolio_outlook_portfolio.prediction_diary_eval import (
@@ -121,52 +122,33 @@ def test_zero_or_negative_issued_price_returns_zero_pct() -> None:
 # ---- #5 — live Brier history from diary outcomes ------------------------
 
 
+@dataclass(frozen=True)
+class _StubDiaryEntry:
+    """Duck-typed stand-in for ``PredictionDiaryEntryRecord``.
+
+    The portfolio package is a leaf (no dependency on storage), so the
+    test must not import the real record class — that would only resolve
+    when storage happens to be installed in the dev env. The function
+    under test takes a ``Protocol`` (``_DiaryEntryLike``) reading only
+    four attributes, and this stub provides exactly those.
+    """
+
+    forecast_id: str | None
+    outcome_label_1d: str | None = None
+    outcome_label_1w: str | None = None
+    outcome_label_1m: str | None = None
+
+
 def _diary_entry(
     *,
     entry_id: str,
     forecast_id: str | None,
     outcome_1m: str | None,
-):  # type: ignore[no-untyped-def]
-    """Minimal diary entry stub for the Brier-aggregation function."""
-
-    from datetime import UTC, datetime
-    from decimal import Decimal as _D
-
-    from ai_trading_agent_storage import PredictionDiaryEntryRecord
-
-    return PredictionDiaryEntryRecord(
-        entry_id=entry_id,
-        suggestion_id=f"sug_{entry_id}",
-        forecast_id=forecast_id,
-        ibkr_conid="100",
-        symbol="ASML",
-        currency="EUR",
-        issued_at=datetime(2026, 5, 1, tzinfo=UTC),
-        issued_action_label="Kopen",
-        issued_action_label_nl="Kopen",
-        issued_confidence_label="Hoog",
-        issued_horizon_days=30,
-        issued_price=_D("100"),
-        issued_p10_price=_D("90"),
-        issued_p50_price=_D("105"),
-        issued_p90_price=_D("120"),
-        issued_prob_gain=_D("0.8"),
-        issued_prob_loss=_D("0.2"),
-        user_decision=None,
-        realized_price_1d=None,
-        realized_price_1w=None,
-        realized_price_1m=None,
-        realized_return_pct_1d=None,
-        realized_return_pct_1w=None,
-        realized_return_pct_1m=None,
-        outcome_label_1d=None,
-        outcome_label_1w=None,
-        outcome_label_1m=outcome_1m,
-        outcome_explanation_nl="test",
-        last_evaluated_at=datetime(2026, 5, 30, tzinfo=UTC),
-        created_at=datetime(2026, 5, 1, tzinfo=UTC),
-        updated_at=datetime(2026, 5, 30, tzinfo=UTC),
-    )
+) -> _StubDiaryEntry:
+    # ``entry_id`` is kept on the signature for test readability even
+    # though the aggregator never reads it.
+    del entry_id
+    return _StubDiaryEntry(forecast_id=forecast_id, outcome_label_1m=outcome_1m)
 
 
 def test_compute_live_brier_returns_empty_dict_with_no_entries() -> None:
@@ -243,47 +225,15 @@ def test_compute_live_brier_honors_horizon_key() -> None:
     """The function defaults to the 1m horizon but lets the caller
     pick 1d or 1w when they prefer faster feedback."""
 
-    from datetime import UTC, datetime
-    from decimal import Decimal as _D
-
-    from ai_trading_agent_storage import PredictionDiaryEntryRecord
-
     from portfolio_outlook_portfolio.prediction_diary_eval import (
         compute_live_brier_history_from_diary,
     )
 
-    entry = PredictionDiaryEntryRecord(
-        entry_id="e",
-        suggestion_id="s",
+    entry = _StubDiaryEntry(
         forecast_id="f1",
-        ibkr_conid="100",
-        symbol="ASML",
-        currency="EUR",
-        issued_at=datetime(2026, 5, 1, tzinfo=UTC),
-        issued_action_label="Kopen",
-        issued_action_label_nl="Kopen",
-        issued_confidence_label="Hoog",
-        issued_horizon_days=30,
-        issued_price=_D("100"),
-        issued_p10_price=_D("90"),
-        issued_p50_price=_D("105"),
-        issued_p90_price=_D("120"),
-        issued_prob_gain=_D("0.8"),
-        issued_prob_loss=_D("0.2"),
-        user_decision=None,
-        realized_price_1d=None,
-        realized_price_1w=None,
-        realized_price_1m=None,
-        realized_return_pct_1d=None,
-        realized_return_pct_1w=None,
-        realized_return_pct_1m=None,
         outcome_label_1d="right",
         outcome_label_1w="wrong",
         outcome_label_1m=None,
-        outcome_explanation_nl="test",
-        last_evaluated_at=datetime(2026, 5, 30, tzinfo=UTC),
-        created_at=datetime(2026, 5, 1, tzinfo=UTC),
-        updated_at=datetime(2026, 5, 30, tzinfo=UTC),
     )
     via_1d = compute_live_brier_history_from_diary(
         diary_entries=(entry,),
