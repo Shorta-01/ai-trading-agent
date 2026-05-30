@@ -2012,7 +2012,7 @@ export default function Page() {
                     </span>
                   </label>
                   <label>
-                    Sharpe-drempel "sterke beweging"
+                    Sharpe-drempel &ldquo;sterke beweging&rdquo;
                     <input
                       type="number"
                       step="0.1"
@@ -2028,14 +2028,14 @@ export default function Page() {
                     />
                     <span className="help-text">
                       Boven welke risico-gecorrigeerde score (Sharpe) een
-                      voorspelling als "sterke stijging/daling" wordt
+                      voorspelling als &ldquo;sterke stijging/daling&rdquo; wordt
                       gelabeld. Standaard 1.0 ≈ ~84% kans op de
                       voorspelde richting. Hoger = strikter, lager =
-                      sneller "sterk" stempel.
+                      sneller &ldquo;sterk&rdquo; stempel.
                     </span>
                   </label>
                   <label>
-                    Sharpe-drempel "lichte beweging"
+                    Sharpe-drempel &ldquo;lichte beweging&rdquo;
                     <input
                       type="number"
                       step="0.1"
@@ -2050,10 +2050,10 @@ export default function Page() {
                       }
                     />
                     <span className="help-text">
-                      Onderste drempel voor "lichte stijging/daling".
+                      Onderste drempel voor &ldquo;lichte stijging/daling&rdquo;.
                       Standaard 0.3 ≈ ~62% kans. Tussen deze waarde en
-                      0 valt het label terug op "Geen duidelijke
-                      richting". Moet lager zijn dan de sterke drempel.
+                      0 valt het label terug op &ldquo;Geen duidelijke
+                      richting&rdquo;. Moet lager zijn dan de sterke drempel.
                     </span>
                   </label>
                 </div>
