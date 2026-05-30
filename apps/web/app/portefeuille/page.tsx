@@ -132,18 +132,21 @@ export default function PortfolioPage() {
   const schedulerQuery = useQuery({
     queryKey: ["portefeuille-scheduler"],
     queryFn: async () => {
-      const [jobsRes, runRes] = await Promise.all([
+      const [jobsRes, runRes, recentRes] = await Promise.all([
         apiClient.getSchedulerJobs(),
         apiClient.getLatestSchedulerRun(),
+        apiClient.getRecentSchedulerRuns(10),
       ]);
       return {
         schedulerJobs: jobsRes.ok ? jobsRes.data : null,
         latestSchedulerRun: runRes.ok ? runRes.data.item : null,
+        recentSchedulerRuns: recentRes.ok ? recentRes.data.items : [],
       };
     },
   });
   const schedulerJobs: SchedulerJobsResponse | null = schedulerQuery.data?.schedulerJobs ?? null;
   const latestSchedulerRun: SchedulerRunResponse | null = schedulerQuery.data?.latestSchedulerRun ?? null;
+  const recentSchedulerRuns: SchedulerRunResponse[] = schedulerQuery.data?.recentSchedulerRuns ?? [];
 
   const loadExplanation = async (decisionPackageId: string) => {
     const res = await apiClient.getDecisionPackageExplanation(decisionPackageId);
@@ -394,6 +397,35 @@ export default function PortfolioPage() {
         ) : (
           <EmptyState title="Scheduler info niet beschikbaar" message="Endpoint nog niet geladen." />
         )}
+        <div data-testid="scheduler-recent-runs" style={{ marginTop: "0.75rem" }}>
+          <strong style={{ fontSize: "0.9rem" }}>Recente daily-briefing runs</strong>
+          {recentSchedulerRuns.length === 0 ? (
+            <p style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
+              Nog geen runs.
+            </p>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, marginTop: 4 }}>
+              <thead>
+                <tr style={{ background: "#f3f4f6" }}>
+                  <th style={{ textAlign: "left", padding: 6 }}>Gestart</th>
+                  <th style={{ textAlign: "left", padding: 6 }}>Status</th>
+                  <th style={{ textAlign: "left", padding: 6 }}>Fout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentSchedulerRuns.map((row) => (
+                  <tr key={row.run_id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <td style={{ padding: 6, fontFamily: "monospace" }}>{row.started_at}</td>
+                    <td style={{ padding: 6 }}>{row.status}</td>
+                    <td style={{ padding: 6, color: row.error_text ? "#b91c1c" : "#6b7280" }}>
+                      {row.error_text ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </section>
 
       <section className="dashboard-panel">

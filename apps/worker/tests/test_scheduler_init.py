@@ -194,3 +194,85 @@ def test_next_runs_lists_both_jobs_after_start() -> None:
 def test_next_runs_empty_when_scheduler_not_started() -> None:
     scheduler = _build()
     assert scheduler.next_runs() == []
+
+
+# ---- explicit job guards (max_instances / coalesce / misfire_grace_time)
+#      + jitter + configurable sweep interval -----------------------------
+
+
+def _assert_explicit_guards(job) -> None:  # type: ignore[no-untyped-def]
+    """Every job registered by the worker scheduler must explicitly
+    set the single-instance + coalesce + misfire guards rather than
+    relying on APScheduler's defaults."""
+
+    assert job.max_instances == 1, f"{job.id} should pin max_instances=1"
+    assert job.coalesce is True, f"{job.id} should set coalesce=True"
+    assert job.misfire_grace_time is not None and job.misfire_grace_time > 0, (
+        f"{job.id} should set misfire_grace_time"
+    )
+
+
+def test_cron_jobs_have_explicit_guards() -> None:
+    scheduler = _build()
+    try:
+        scheduler.start()
+        _assert_explicit_guards(scheduler._scheduler.get_job(_PRE_BRIEFING_JOB_ID))
+        _assert_explicit_guards(scheduler._scheduler.get_job(_HOURLY_JOB_ID))
+    finally:
+        scheduler.stop()
+
+
+def test_heartbeat_job_has_explicit_guards_and_jitter() -> None:
+    scheduler = _build()
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job("heartbeat")
+        assert job is not None
+        _assert_explicit_guards(job)
+        assert getattr(job.trigger, "jitter", None) is not None, (
+            "heartbeat interval should carry jitter so multi-replica deploys "
+            "don't fire in lockstep"
+        )
+    finally:
+        scheduler.stop()
+
+
+def test_submission_sweep_honors_configurable_interval_and_jitter() -> None:
+    scheduler = _build_with_sweeps(
+        order_adapter=object(),
+        ibkr_settings=IbkrSettings(
+            account_id="DU1234567",
+            submission_sweep_enabled=True,
+            sweep_interval_seconds=45,
+        ),
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job(_SUBMISSION_SWEEP_JOB_ID)
+        assert job is not None
+        _assert_explicit_guards(job)
+        # IntervalTrigger.interval is a timedelta in seconds.
+        assert int(job.trigger.interval.total_seconds()) == 45
+        assert getattr(job.trigger, "jitter", None) is not None
+    finally:
+        scheduler.stop()
+
+
+def test_cancel_sweep_honors_configurable_interval_and_jitter() -> None:
+    scheduler = _build_with_sweeps(
+        order_adapter=object(),
+        ibkr_settings=IbkrSettings(
+            account_id="DU1234567",
+            cancel_sweep_enabled=True,
+            sweep_interval_seconds=30,
+        ),
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job(_CANCEL_SWEEP_JOB_ID)
+        assert job is not None
+        _assert_explicit_guards(job)
+        assert int(job.trigger.interval.total_seconds()) == 30
+        assert getattr(job.trigger, "jitter", None) is not None
+    finally:
+        scheduler.stop()

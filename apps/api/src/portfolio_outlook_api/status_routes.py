@@ -3169,6 +3169,63 @@ def read_latest_scheduler_run(job_name: str | None = None) -> dict[str, object]:
         return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
 
 
+@router.get("/scheduler/runs")
+def read_recent_scheduler_runs(limit: int = 20) -> dict[str, object]:
+    """Return the most recent ``daily_briefing`` scheduler runs (audit list).
+
+    Mirrors ``/scheduler/runs/latest`` but surfaces a window so the
+    portefeuille page can show whether recent morning-chain fires
+    succeeded — until now ``scheduler_runs`` was internal-only and a
+    failing daily briefing was invisible in the UI.
+    """
+
+    bounded_limit = max(1, min(int(limit or 20), 200))
+    base: dict[str, object] = {
+        "items": [],
+        "limit": bounded_limit,
+        "help_nl": (
+            "Recente audit-rows voor de daily-briefing scheduler. "
+            "Een succesvolle run promoveert nooit naar een order."
+        ),
+        "safe_for_action_drafts": False,
+        "safe_for_orders": False,
+    }
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return base | {"status": "not_configured", "status_nl": "Opslag niet geconfigureerd"}
+
+    storage_provider = StorageConnectionProvider(
+        build_database_connection_settings(storage.database_url)
+    )
+    try:
+        with storage_provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemySchedulerRunRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.list_scheduler_runs(limit=bounded_limit)
+            return base | {
+                "status": "ok",
+                "status_nl": f"{len(result.records)} scheduler-runs opgehaald",
+                "items": [
+                    {
+                        "run_id": record.run_id,
+                        "job_name": record.job_name,
+                        "scheduled_at": record.scheduled_at.isoformat(),
+                        "started_at": record.started_at.isoformat(),
+                        "finished_at": (
+                            record.finished_at.isoformat() if record.finished_at else None
+                        ),
+                        "status": record.status,
+                        "error_text": record.error_text,
+                        "triggered_by": record.triggered_by,
+                    }
+                    for record in result.records
+                ],
+            }
+    except StorageConnectionError:
+        return base | {"status": "storage_unavailable", "status_nl": "Opslag niet bereikbaar"}
+
+
 @router.post("/scheduler/runs/morning-chain")
 def run_morning_chain_manually() -> dict[str, object]:
     """Run the V1 morning chain (market-data → forecast → suggestions

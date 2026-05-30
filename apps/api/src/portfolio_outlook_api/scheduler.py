@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from ai_trading_agent_storage import SchedulerRunRecord
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -33,6 +34,20 @@ logger = logging.getLogger(__name__)
 
 DAILY_BRIEFING_JOB_NAME = "daily_briefing"
 IBKR_SYNC_JOB_NAME = "ibkr_sync"
+
+# Per-job APScheduler guards. ``max_instances=1`` + ``coalesce=True``
+# prevent a slow run from queueing a parallel one; ``misfire_grace_time``
+# bounds how late a "missed" fire is still acceptable. Jitter on the
+# interval job decorrelates fires across replicas.
+_DAILY_BRIEFING_MISFIRE_GRACE_SECONDS = 900
+_IBKR_SYNC_MISFIRE_GRACE_SECONDS = 300
+_IBKR_SYNC_JITTER_SECONDS = 30
+
+# The worker process owns the locked 06:00 pre-briefing slot. Letting
+# the API daily-briefing land on the same minute would create a
+# double-fire of the morning chain. Validation lives in :func:`_parse_cron`.
+_WORKER_PRE_BRIEFING_HOUR = 6
+_WORKER_PRE_BRIEFING_MINUTE = 0
 
 STATUS_RUNNING = "running"
 STATUS_SUCCEEDED = "succeeded"
@@ -59,7 +74,12 @@ class JobInfo:
 
 
 def _parse_cron(expression: str, timezone: str) -> CronTrigger:
-    """Parse a 5-field cron (``minute hour day month day_of_week``) into a CronTrigger."""
+    """Parse a 5-field cron (``minute hour day month day_of_week``) into a CronTrigger.
+
+    Also rejects expressions whose next fire collides with the worker
+    process's locked 06:00 pre-briefing slot — running the morning
+    chain twice in the same minute is never what the operator wanted.
+    """
 
     parts = (expression or "").strip().split()
     if len(parts) != 5:
@@ -67,7 +87,7 @@ def _parse_cron(expression: str, timezone: str) -> CronTrigger:
             f"scheduler_daily_briefing_cron must be a 5-field cron, got {expression!r}"
         )
     minute, hour, day, month, day_of_week = parts
-    return CronTrigger(
+    trigger = CronTrigger(
         minute=minute,
         hour=hour,
         day=day,
@@ -75,6 +95,39 @@ def _parse_cron(expression: str, timezone: str) -> CronTrigger:
         day_of_week=day_of_week,
         timezone=timezone,
     )
+    _reject_worker_pre_briefing_collision(trigger, expression, timezone)
+    return trigger
+
+
+def _reject_worker_pre_briefing_collision(
+    trigger: CronTrigger, expression: str, timezone: str
+) -> None:
+    """Raise ``ValueError`` if ``trigger`` ever fires at the worker's
+    locked 06:00 slot in the configured timezone.
+
+    The check picks a deterministic reference one minute before
+    06:00 on a fixed date and asks the trigger when its next fire
+    is. Any cron whose hour pattern includes 6 and whose minute
+    pattern includes 0 will land on 06:00 from that reference,
+    catching the obvious operator footgun (``"0 6 * * *"``) and
+    less obvious ones (``"0 */2 * * *"``, ``"0 6 * * 1"``).
+    """
+
+    try:
+        tz = ZoneInfo(timezone)
+    except Exception as exc:  # pragma: no cover — caught by CronTrigger first
+        raise ValueError(f"scheduler_timezone {timezone!r} is not a known zone") from exc
+    reference = datetime(2026, 1, 1, 5, 59, tzinfo=tz)
+    next_fire = trigger.get_next_fire_time(None, reference)
+    if (
+        next_fire is not None
+        and next_fire.hour == _WORKER_PRE_BRIEFING_HOUR
+        and next_fire.minute == _WORKER_PRE_BRIEFING_MINUTE
+    ):
+        raise ValueError(
+            f"scheduler_daily_briefing_cron {expression!r} collides with the "
+            f"worker's locked 06:00 pre-briefing slot; pick a different minute."
+        )
 
 
 def _record_job_run(
@@ -288,6 +341,9 @@ def install_default_jobs(
         id=DAILY_BRIEFING_JOB_NAME,
         name=DAILY_BRIEFING_JOB_NAME,
         replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=_DAILY_BRIEFING_MISFIRE_GRACE_SECONDS,
     )
 
     # Scheduled IBKR read-only sync — registered only when sync is enabled, so
@@ -301,11 +357,15 @@ def install_default_jobs(
         scheduler.add_job(
             sync_fire,
             trigger=IntervalTrigger(
-                minutes=max(1, runtime_settings.ibkr_sync_interval_minutes)
+                minutes=max(1, runtime_settings.ibkr_sync_interval_minutes),
+                jitter=_IBKR_SYNC_JITTER_SECONDS,
             ),
             id=IBKR_SYNC_JOB_NAME,
             name=IBKR_SYNC_JOB_NAME,
             replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=_IBKR_SYNC_MISFIRE_GRACE_SECONDS,
         )
 
 
