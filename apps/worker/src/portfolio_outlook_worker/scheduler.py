@@ -29,6 +29,10 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 
+from portfolio_outlook_worker.api_trigger import (
+    trigger_ibkr_sync,
+    trigger_morning_chain,
+)
 from portfolio_outlook_worker.config import (
     IbkrSettings,
     SchedulerSettings,
@@ -52,6 +56,8 @@ _PRE_BRIEFING_JOB_ID = "pre_briefing"
 _HOURLY_JOB_ID = "hourly"
 _SUBMISSION_SWEEP_JOB_ID = "submission_sweep"
 _CANCEL_SWEEP_JOB_ID = "cancel_sweep"
+_MORNING_CHAIN_JOB_ID = "morning_chain_trigger"
+_IBKR_SYNC_JOB_ID = "ibkr_sync_trigger"
 
 # Per-job APScheduler guards. ``max_instances=1`` and ``coalesce=True``
 # stop a slow run from spawning a parallel one; ``misfire_grace_time``
@@ -144,6 +150,18 @@ class PortfolioScheduler:
         self._order_adapter = order_adapter
         self._scheduler: Any | None = None
         self._started: bool = False
+        # #8 — per-kind consecutive sweep-error counters. A single
+        # error tick is normal IBKR noise (timeouts, transient
+        # disconnects); N consecutive errors should reach the
+        # operator. Reset to 0 on the next non-error tick.
+        self._sweep_error_streak: dict[str, int] = {
+            "submission": 0,
+            "cancel": 0,
+        }
+        self._sweep_alert_fired: dict[str, bool] = {
+            "submission": False,
+            "cancel": False,
+        }
 
     @property
     def worker_id(self) -> str:
@@ -192,6 +210,7 @@ class PortfolioScheduler:
             misfire_grace_time=_INTERVAL_MISFIRE_GRACE_SECONDS,
         )
         self._register_order_sweeps()
+        self._register_api_triggers()
         # Auto-capture: any job that raises lands in the central error log.
         from apscheduler.events import EVENT_JOB_ERROR
 
@@ -247,9 +266,100 @@ class PortfolioScheduler:
 
     def _on_pre_briefing(self) -> None:
         self._run("pre_briefing")
+        # #2 — signal chaining: when configured, fire the morning chain
+        # immediately after the 06:00 pre-briefing audit lands. This
+        # replaces the old clock-based 30-minute gap with an explicit
+        # ordering, so a slow pre-briefing can never let the morning
+        # chain run against stale state.
+        if (
+            self._scheduler_settings.morning_chain_trigger_enabled
+            and self._scheduler_settings.morning_chain_after_pre_briefing
+        ):
+            try:
+                trigger_morning_chain(
+                    base_url=self._scheduler_settings.api_base_url,
+                    timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+                )
+            except Exception:  # noqa: BLE001 — already best-effort
+                logger.exception("post-pre-briefing morning chain trigger failed")
 
     def _on_hourly(self) -> None:
         self._run("hourly_delta")
+
+    # ---- API-trigger jobs (#1, #2) --------------------------------
+
+    def _register_api_triggers(self) -> None:
+        """Register the worker-side cron + interval that POST to the API.
+
+        Both are off by default; turning them on is the deliberate
+        migration switch from the legacy API-process cron to the new
+        worker-owned scheduling.
+        """
+
+        if self._scheduler is None:
+            return
+        # Morning chain — opt-in via ``morning_chain_trigger_enabled``,
+        # skipped when ``morning_chain_after_pre_briefing`` is set
+        # (pre-briefing tail-call takes over to avoid double fires).
+        if (
+            self._scheduler_settings.morning_chain_trigger_enabled
+            and not self._scheduler_settings.morning_chain_after_pre_briefing
+        ):
+            trigger = self._build_morning_chain_trigger()
+            self._scheduler.add_job(
+                self._on_morning_chain_trigger,
+                trigger=trigger,
+                id=_MORNING_CHAIN_JOB_ID,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
+            )
+        if self._scheduler_settings.ibkr_sync_trigger_enabled:
+            self._scheduler.add_job(
+                self._on_ibkr_sync_trigger,
+                "interval",
+                minutes=max(1, self._scheduler_settings.ibkr_sync_interval_minutes),
+                jitter=_INTERVAL_JITTER_SECONDS,
+                id=_IBKR_SYNC_JOB_ID,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_INTERVAL_MISFIRE_GRACE_SECONDS,
+            )
+
+    def _build_morning_chain_trigger(self) -> Any:
+        """Parse the configured 5-field cron into a CronTrigger."""
+
+        from apscheduler.triggers.cron import CronTrigger
+
+        parts = (self._scheduler_settings.morning_chain_cron or "").strip().split()
+        if len(parts) != 5:
+            raise ValueError(
+                "scheduler.morning_chain_cron must be a 5-field cron, got "
+                f"{self._scheduler_settings.morning_chain_cron!r}"
+            )
+        minute, hour, day, month, day_of_week = parts
+        return CronTrigger(
+            minute=minute,
+            hour=hour,
+            day=day,
+            month=month,
+            day_of_week=day_of_week,
+            timezone=self._scheduler_settings.timezone,
+        )
+
+    def _on_morning_chain_trigger(self) -> None:
+        trigger_morning_chain(
+            base_url=self._scheduler_settings.api_base_url,
+            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        )
+
+    def _on_ibkr_sync_trigger(self) -> None:
+        trigger_ibkr_sync(
+            base_url=self._scheduler_settings.api_base_url,
+            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        )
 
     # ---- order sweeps (T-045 §1-3, gated + default-off) -----------
 
@@ -314,25 +424,72 @@ class PortfolioScheduler:
             with provider.checked_connection(require_writable=True) as checked:
                 lock = _build_lock(checked.connection)
                 if kind == "submission":
-                    mode = build_submission_sweep(
+                    result = build_submission_sweep(
                         connection=checked.connection,
                         readiness=checked.readiness,
                         gateway=self._gateway,
                         order_adapter=self._order_adapter,
                         ibkr_account_id=account_id,
                         lock=lock,
-                    ).tick().mode
+                    ).tick()
                 else:
-                    mode = build_cancel_sweep(
+                    result = build_cancel_sweep(
                         connection=checked.connection,
                         readiness=checked.readiness,
                         order_adapter=self._order_adapter,
                         ibkr_account_id=account_id,
                         lock=lock,
-                    ).tick().mode
-                logger.info("%s sweep tick: mode=%s", kind, mode)
+                    ).tick()
+                logger.info("%s sweep tick: mode=%s", kind, result.mode)
+                self._track_sweep_outcome(
+                    kind=kind,
+                    mode=result.mode,
+                    error_message=getattr(result, "error_message", None),
+                )
         except StorageConnectionError as exc:
             logger.warning("%s sweep could not open storage: %s", kind, exc)
+
+    def _track_sweep_outcome(
+        self, *, kind: str, mode: str, error_message: str | None
+    ) -> None:
+        """#8 — surface persistent sweep failures to /systeemmeldingen.
+
+        A single error tick is normal IBKR noise (timeouts, transient
+        disconnects). N consecutive errors are not; once the streak
+        reaches the configured threshold the worker writes a
+        ``SystemEvent`` so the dashboard surfaces the problem. The
+        alert is debounced — further consecutive errors don't keep
+        firing it — and the streak + debounce both reset on the next
+        non-error tick.
+        """
+
+        threshold = max(
+            1, self._ibkr_settings.sweep_alert_after_consecutive_errors
+        )
+        if mode == "error":
+            self._sweep_error_streak[kind] += 1
+            if (
+                self._sweep_error_streak[kind] >= threshold
+                and not self._sweep_alert_fired[kind]
+            ):
+                record_worker_error(
+                    storage_settings=self._storage_settings,
+                    source_component=f"scheduler:{kind}_sweep",
+                    event_code="sweep_persistent_error",
+                    message=(
+                        f"{kind} sweep is {self._sweep_error_streak[kind]} ticks in a "
+                        f"row in mode=error"
+                        + (f": {error_message}" if error_message else "")
+                    ),
+                    technical_summary=error_message,
+                    stack_trace=None,
+                )
+                self._sweep_alert_fired[kind] = True
+            return
+        # Any non-error mode resets the streak + clears the debounce so a
+        # future failure run can re-alert.
+        self._sweep_error_streak[kind] = 0
+        self._sweep_alert_fired[kind] = False
 
     def _run(self, run_type: RunType) -> None:
         if not self._storage_settings.enabled or not self._storage_settings.database_url:

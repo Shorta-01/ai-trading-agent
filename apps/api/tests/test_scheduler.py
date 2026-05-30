@@ -23,6 +23,11 @@ from portfolio_outlook_api.scheduler import (
 
 def _settings(**overrides: object) -> Settings:
     base = Settings()
+    # The new default is "worker owns cron, API skips registration"; the
+    # existing tests in this file exercise the legacy in-process path that
+    # still ships behind the flag, so flip it on here. Tests for the new
+    # default override this explicitly.
+    base.scheduler_api_legacy_cron = True
     for key, value in overrides.items():
         setattr(base, key, value)
     return base
@@ -347,3 +352,36 @@ def test_ibkr_sync_job_has_jitter_and_guards_when_enabled() -> None:
     assert job.misfire_grace_time is not None and job.misfire_grace_time > 0
     # IntervalTrigger exposes the jitter as a public attribute.
     assert getattr(job.trigger, "jitter", None) is not None
+
+
+# ---- new default: API skips cron registration (worker owns it) ----------
+
+
+def test_install_default_jobs_skips_registration_under_new_default() -> None:
+    """With the new default ``scheduler_api_legacy_cron=False`` the API
+    no longer owns the daily-briefing cron — the worker triggers it via
+    HTTP POST instead. The cron string is still parsed so a malformed
+    env var still fails startup, but no jobs land on the scheduler."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    # Default Settings() has scheduler_api_legacy_cron=False; override the
+    # test helper's flip with an explicit fresh Settings.
+    base = Settings()
+    base.scheduler_enabled = True  # type: ignore[misc]
+    install_default_jobs(scheduler, base)
+    assert list_jobs(scheduler) == ()
+
+
+def test_install_default_jobs_still_validates_cron_under_new_default() -> None:
+    """Even when the API skips registration, the cron string is parsed
+    so a malformed env var still raises at startup — operators get the
+    same error as before instead of a silently-broken deployment."""
+
+    scheduler = build_scheduler(_settings(scheduler_enabled=True))
+    assert scheduler is not None
+    base = Settings()
+    base.scheduler_enabled = True  # type: ignore[misc]
+    base.scheduler_daily_briefing_cron = "bogus"  # type: ignore[misc]
+    with pytest.raises(ValueError, match="5-field cron"):
+        install_default_jobs(scheduler, base)

@@ -176,6 +176,12 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = False
     scheduler_timezone: str = "Europe/Brussels"
     scheduler_daily_briefing_cron: str = "30 6 * * *"
+    # Legacy flag: when False (the new default) the API stops owning
+    # cron registration — the worker triggers /scheduler/runs/morning-chain
+    # and /ibkr/sync/run via HTTP instead. This avoids the multi-replica
+    # race on the lock-less scheduler_runs table. Operators that still
+    # rely on the API-process cron must set this to True explicitly.
+    scheduler_api_legacy_cron: bool = False
     universe_scan_sync_enabled: bool = False
     universe_scan_max_tickers_per_run: int = 50
     universe_scan_history_lookback_days: int = 400
