@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from portfolio_outlook_worker import api_trigger
 
 
