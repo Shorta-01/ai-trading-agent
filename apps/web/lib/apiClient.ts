@@ -240,6 +240,21 @@ export type ForecastMarketSettingsUpdateInput = {
   ibkr_market_data_type: string;
 };
 
+export type ExecutionGateSettingsResponse = {
+  ibkr_paper_order_submission_enabled: boolean;
+  submission_sweep_enabled: boolean;
+  cancel_sweep_enabled: boolean;
+  morning_chain_after_pre_briefing: boolean;
+  help_nl: string;
+};
+
+export type ExecutionGateSettingsUpdateInput = {
+  ibkr_paper_order_submission_enabled: boolean;
+  submission_sweep_enabled: boolean;
+  cancel_sweep_enabled: boolean;
+  morning_chain_after_pre_briefing: boolean;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -1986,6 +2001,15 @@ export const apiClient = {
   ) =>
     putJson<ForecastMarketSettingsResponse>(
       "/settings/forecast-market",
+      payload,
+    ),
+  getExecutionGateSettings: () =>
+    getJson<ExecutionGateSettingsResponse>("/settings/execution-gates"),
+  updateExecutionGateSettings: (
+    payload: ExecutionGateSettingsUpdateInput,
+  ) =>
+    putJson<ExecutionGateSettingsResponse>(
+      "/settings/execution-gates",
       payload,
     ),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),

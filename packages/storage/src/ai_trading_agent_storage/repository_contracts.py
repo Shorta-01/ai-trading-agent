@@ -332,6 +332,11 @@ class RuntimeConfigRecord:
     market_data_sync_enabled: bool | None = None
     ibkr_market_data_enabled: bool | None = None
     ibkr_market_data_type: str | None = None
+    # Settings UI PR H — execution gates. ``None`` = env-var.
+    ibkr_paper_order_submission_enabled: bool | None = None
+    submission_sweep_enabled: bool | None = None
+    cancel_sweep_enabled: bool | None = None
+    morning_chain_after_pre_briefing: bool | None = None
 
 
 @dataclass(frozen=True)

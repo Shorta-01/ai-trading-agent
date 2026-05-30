@@ -427,6 +427,21 @@ export default function Page() {
   const [forecastMarketError, setForecastMarketError] = useState<string | null>(
     null,
   );
+  // Settings UI PR H — execution gates (safety-critical).
+  const [executionGateForm, setExecutionGateForm] = useState({
+    ibkr_paper_order_submission_enabled: false,
+    submission_sweep_enabled: false,
+    cancel_sweep_enabled: false,
+    morning_chain_after_pre_briefing: false,
+  });
+  const [executionGateHelp, setExecutionGateHelp] = useState<string>("");
+  const [executionGateSaving, setExecutionGateSaving] = useState(false);
+  const [executionGateSaved, setExecutionGateSaved] = useState<string | null>(
+    null,
+  );
+  const [executionGateError, setExecutionGateError] = useState<string | null>(
+    null,
+  );
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -722,6 +737,46 @@ export default function Page() {
     setForecastMarketSaved("Voorspellings- en marktdata-instellingen opgeslagen.");
   }
 
+  // Settings UI PR H — execution gates query + save.
+  const executionGateQuery = useQuery({
+    queryKey: ["instellingen", "execution-gates"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getExecutionGateSettings();
+      if (!result.ok) throw new Error("execution-gates-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = executionGateQuery.data;
+    if (!data) return;
+    setExecutionGateForm({
+      ibkr_paper_order_submission_enabled:
+        data.ibkr_paper_order_submission_enabled,
+      submission_sweep_enabled: data.submission_sweep_enabled,
+      cancel_sweep_enabled: data.cancel_sweep_enabled,
+      morning_chain_after_pre_briefing: data.morning_chain_after_pre_briefing,
+    });
+    setExecutionGateHelp(data.help_nl);
+  }, [executionGateQuery.data]);
+
+  async function handleSaveExecutionGates() {
+    setExecutionGateSaving(true);
+    setExecutionGateError(null);
+    setExecutionGateSaved(null);
+    const result =
+      await apiClient.updateExecutionGateSettings(executionGateForm);
+    setExecutionGateSaving(false);
+    if (!result.ok) {
+      setExecutionGateError(
+        "Opslaan mislukt. Controleer dat alle waarden correct zijn.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "execution-gates"], result.data);
+    setExecutionGateSaved("Uitvoerings-poorten opgeslagen.");
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -822,7 +877,8 @@ export default function Page() {
     || dataWindowQuery.isPending
     || workerSweepQuery.isPending
     || advancedQuery.isPending
-    || forecastMarketQuery.isPending;
+    || forecastMarketQuery.isPending
+    || executionGateQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -1935,6 +1991,164 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {workerSweepError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4i — Uitvoerings-poorten (PR H). Safety-critical;
+              rendered with a red-bordered warning callout. */}
+          <section
+            style={{
+              ...SECTION_STYLE,
+              border: "2px solid #fca5a5",
+              background: "#fef2f2",
+            }}
+            data-testid="instellingen-execution-gates-section"
+          >
+            <h2 style={{ margin: 0, color: "#991b1b" }}>
+              Uitvoerings-poorten
+            </h2>
+            <p
+              style={{
+                marginTop: 4,
+                color: "#7f1d1d",
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              WAARSCHUWING — veiligheids-kritisch. Deze toggles openen
+              stap voor stap de weg van suggestie naar live IBKR-order.
+              Schakel alleen in als je het volledig begrijpt.
+            </p>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {executionGateHelp
+                || "Veiligheids-kritische uitvoerings-poorten. Sweep- en morgen-chain-toggles zijn worker-zijde en gelden vanaf de eerstvolgende worker-restart."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-execution-paper-submit"
+                  checked={
+                    executionGateForm.ibkr_paper_order_submission_enabled
+                  }
+                  onChange={(e) =>
+                    setExecutionGateForm((p) => ({
+                      ...p,
+                      ibkr_paper_order_submission_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                IBKR paper-order submit inschakelen (API)
+                <span className="help-text">
+                  Master switch voor alle order-submissies naar IBKR
+                  (paper-account). Uit (standaard) = de API plaatst nooit
+                  een order, ook niet na goedkeuring. Aan = goedgekeurde
+                  Action Drafts worden via TWS verzonden.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-execution-submission-sweep"
+                  checked={executionGateForm.submission_sweep_enabled}
+                  onChange={(e) =>
+                    setExecutionGateForm((p) => ({
+                      ...p,
+                      submission_sweep_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Worker-submission-sweep inschakelen
+                <span className="help-text">
+                  Uit (standaard) = worker doet geen periodieke order-
+                  submissies. Aan = worker checkt elke sweep-tick of er
+                  klaarstaande goedgekeurde drafts zijn en stuurt die
+                  naar IBKR. Werkt alleen als de API-toggle hierboven
+                  ook aan staat.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-execution-cancel-sweep"
+                  checked={executionGateForm.cancel_sweep_enabled}
+                  onChange={(e) =>
+                    setExecutionGateForm((p) => ({
+                      ...p,
+                      cancel_sweep_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Worker-cancel-sweep inschakelen
+                <span className="help-text">
+                  Uit (standaard) = worker stuurt geen cancel-instructies
+                  naar IBKR. Aan = openstaande cancels worden periodiek
+                  doorgestuurd. Vereist een actieve order-sessie.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-execution-morning-chain"
+                  checked={
+                    executionGateForm.morning_chain_after_pre_briefing
+                  }
+                  onChange={(e) =>
+                    setExecutionGateForm((p) => ({
+                      ...p,
+                      morning_chain_after_pre_briefing: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Morgen-chain direct na pre-briefing
+                <span className="help-text">
+                  Uit (standaard) = morgen-chain (sync → forecast →
+                  suggesties) draait alleen op de eigen cron. Aan = de
+                  chain wordt ook direct na elke pre-briefing getrigger,
+                  zodat een nieuwe briefing meteen verse suggesties geeft.
+                </span>
+              </label>
+            </div>
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => void handleSaveExecutionGates()}
+                disabled={executionGateSaving}
+                data-testid="instellingen-execution-gates-save"
+                style={{
+                  background: "#991b1b",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: executionGateSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {executionGateSaving
+                  ? "Opslaan…"
+                  : "Uitvoerings-poorten opslaan"}
+              </button>
+              {executionGateSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {executionGateSaved}
+                </span>
+              ) : null}
+              {executionGateError ? (
+                <span
+                  data-testid="instellingen-execution-gates-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {executionGateError}
                 </span>
               ) : null}
             </div>

@@ -82,6 +82,20 @@ def apply_worker_runtime_config_overlay(settings_obj: Settings) -> None:
         settings_obj.eodhd.rate_limit_per_second = (
             record.eodhd_rate_limit_per_second
         )
+    # Settings UI PR H — worker-side execution gates. Applied at worker
+    # startup so the next scheduler tick / sweep registration picks up
+    # the operator's choices. The API-side
+    # ``ibkr_paper_order_submission_enabled`` field is overlaid on the
+    # API settings singleton by ``apply_runtime_config_overlay`` and is
+    # not consumed by the worker.
+    if record.submission_sweep_enabled is not None:
+        ibkr.submission_sweep_enabled = record.submission_sweep_enabled
+    if record.cancel_sweep_enabled is not None:
+        ibkr.cancel_sweep_enabled = record.cancel_sweep_enabled
+    if record.morning_chain_after_pre_briefing is not None:
+        settings_obj.scheduler.morning_chain_after_pre_briefing = (
+            record.morning_chain_after_pre_briefing
+        )
 
 
 __all__ = ["apply_worker_runtime_config_overlay"]

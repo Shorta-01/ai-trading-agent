@@ -1384,6 +1384,13 @@ runtime_config = Table(
     Column("market_data_sync_enabled", Boolean, nullable=True),
     Column("ibkr_market_data_enabled", Boolean, nullable=True),
     Column("ibkr_market_data_type", Text, nullable=True),
+    # Execution-gate overlay (Settings UI PR H). Null = env-var. The
+    # ``ibkr_paper_order_submission_enabled`` field is API-side; the
+    # other three are read by the worker at startup.
+    Column("ibkr_paper_order_submission_enabled", Boolean, nullable=True),
+    Column("submission_sweep_enabled", Boolean, nullable=True),
+    Column("cancel_sweep_enabled", Boolean, nullable=True),
+    Column("morning_chain_after_pre_briefing", Boolean, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown
