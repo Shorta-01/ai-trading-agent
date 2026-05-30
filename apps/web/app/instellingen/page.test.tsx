@@ -48,6 +48,8 @@ const getForecastMarketSettings = vi.fn();
 const updateForecastMarketSettings = vi.fn();
 const getExecutionGateSettings = vi.fn();
 const updateExecutionGateSettings = vi.fn();
+const getPredictorTuningSettings = vi.fn();
+const updatePredictorTuningSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -87,6 +89,10 @@ vi.mock("@/lib/apiClient", () => ({
       getExecutionGateSettings(...a),
     updateExecutionGateSettings: (...a: unknown[]) =>
       updateExecutionGateSettings(...a),
+    getPredictorTuningSettings: (...a: unknown[]) =>
+      getPredictorTuningSettings(...a),
+    updatePredictorTuningSettings: (...a: unknown[]) =>
+      updatePredictorTuningSettings(...a),
   },
 }));
 
@@ -228,6 +234,15 @@ const EXECUTION_GATES = {
   help_nl: "Veiligheids-kritische uitvoerings-poorten.",
 };
 
+const PREDICTOR_TUNING = {
+  forecast_valid_minutes: 1440,
+  decision_packages_valid_minutes: 1440,
+  prediction_diary_inconclusive_tolerance_pct: "0.25",
+  gbm_regime_shift_enabled: false,
+  gbm_regime_shift_threshold_pct: "5.0",
+  help_nl: "Power-user voorspeller-tuning.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -251,6 +266,8 @@ beforeEach(() => {
   updateForecastMarketSettings.mockReset();
   getExecutionGateSettings.mockReset();
   updateExecutionGateSettings.mockReset();
+  getPredictorTuningSettings.mockReset();
+  updatePredictorTuningSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -262,6 +279,7 @@ beforeEach(() => {
   getAdvancedSettings.mockReturnValue(ok(ADVANCED));
   getForecastMarketSettings.mockReturnValue(ok(FORECAST_MARKET));
   getExecutionGateSettings.mockReturnValue(ok(EXECUTION_GATES));
+  getPredictorTuningSettings.mockReturnValue(ok(PREDICTOR_TUNING));
 });
 
 afterEach(() => cleanup());
@@ -732,5 +750,44 @@ describe("InstellingenPage", () => {
     expect(payload.submission_sweep_enabled).toBe(true);
     expect(payload.cancel_sweep_enabled).toBe(false);
     expect(payload.morning_chain_after_pre_briefing).toBe(false);
+  });
+
+  it("renders the predictor-tuning accordion + saves when expanded", async () => {
+    updatePredictorTuningSettings.mockReturnValue(
+      ok({
+        ...PREDICTOR_TUNING,
+        forecast_valid_minutes: 720,
+        gbm_regime_shift_enabled: true,
+      }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-predictor-tuning-section"),
+    ).toBeInTheDocument();
+    const toggle = screen.getByTestId(
+      "instellingen-predictor-tuning-toggle",
+    );
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByTestId("instellingen-predictor-forecast-ttl"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    const ttl = screen.getByTestId("instellingen-predictor-forecast-ttl");
+    expect(ttl).toHaveValue(1440);
+    await userEvent.clear(ttl);
+    await userEvent.type(ttl, "720");
+    await userEvent.click(
+      screen.getByTestId("instellingen-predictor-regime-enabled"),
+    );
+    await userEvent.click(
+      screen.getByTestId("instellingen-predictor-tuning-save"),
+    );
+    await waitFor(() =>
+      expect(updatePredictorTuningSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updatePredictorTuningSettings.mock.calls[0][0];
+    expect(payload.forecast_valid_minutes).toBe(720);
+    expect(payload.gbm_regime_shift_enabled).toBe(true);
+    expect(payload.decision_packages_valid_minutes).toBe(1440);
   });
 });

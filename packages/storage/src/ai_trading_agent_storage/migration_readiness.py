@@ -777,6 +777,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "elk veld: terugvallen op de env-var of ingebouwde default."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0065_runtime_config_predictor_tuning",
+        previous_revision_id="0064_runtime_config_execution_gates",
+        filename="0065_runtime_config_predictor_tuning.py",
+        label_nl="Voorspeller-tuning-kolommen in runtime_config",
+        description_nl=(
+            "Voegt vijf kolommen toe voor power-user predictor-tuning: "
+            "``forecast_valid_minutes``, ``decision_packages_valid_minutes``, "
+            "``prediction_diary_inconclusive_tolerance_pct``, "
+            "``gbm_regime_shift_enabled`` en "
+            "``gbm_regime_shift_threshold_pct``. Null in elk veld: "
+            "terugvallen op de env-var of ingebouwde default."
+        ),
+    ),
 )
 
 

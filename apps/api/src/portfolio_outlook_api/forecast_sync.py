@@ -201,6 +201,8 @@ def sync_forecasts(
     brier_history: dict[str, Decimal] | None = None,
     sharpe_strong_threshold: float = 1.0,
     sharpe_slight_threshold: float = 0.3,
+    gbm_regime_shift_enabled: bool = False,
+    gbm_regime_shift_threshold_pct: float = 5.0,
 ) -> ForecastSyncReport:
     """Run one full forecast cycle and persist every successful row.
 
@@ -383,6 +385,8 @@ def sync_forecasts(
                 brier_history=brier_history,
                 sharpe_strong_threshold=sharpe_strong_threshold,
                 sharpe_slight_threshold=sharpe_slight_threshold,
+                gbm_regime_shift_enabled=gbm_regime_shift_enabled,
+                gbm_regime_shift_threshold_pct=gbm_regime_shift_threshold_pct,
             )
             forecast_record = adapt_ensemble_to_forecast_record(
                 position=position,
@@ -403,6 +407,8 @@ def sync_forecasts(
                 minimum_bars_required=minimum_bars_required,
                 sharpe_strong_threshold=sharpe_strong_threshold,
                 sharpe_slight_threshold=sharpe_slight_threshold,
+                regime_shift_enabled=gbm_regime_shift_enabled,
+                regime_shift_threshold_pct=gbm_regime_shift_threshold_pct,
             )
             forecast_record = _build_forecast_record(
                 position=position,

@@ -442,6 +442,23 @@ export default function Page() {
   const [executionGateError, setExecutionGateError] = useState<string | null>(
     null,
   );
+  // Settings UI PR I — predictor tuning (power-user).
+  const [predictorTuningForm, setPredictorTuningForm] = useState({
+    forecast_valid_minutes: 1440,
+    decision_packages_valid_minutes: 1440,
+    prediction_diary_inconclusive_tolerance_pct: "0.25",
+    gbm_regime_shift_enabled: false,
+    gbm_regime_shift_threshold_pct: "5.0",
+  });
+  const [predictorTuningHelp, setPredictorTuningHelp] = useState<string>("");
+  const [predictorTuningSaving, setPredictorTuningSaving] = useState(false);
+  const [predictorTuningSaved, setPredictorTuningSaved] = useState<string | null>(
+    null,
+  );
+  const [predictorTuningError, setPredictorTuningError] = useState<string | null>(
+    null,
+  );
+  const [predictorTuningOpen, setPredictorTuningOpen] = useState(false);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -777,6 +794,50 @@ export default function Page() {
     setExecutionGateSaved("Uitvoerings-poorten opgeslagen.");
   }
 
+  // Settings UI PR I — predictor tuning query + save.
+  const predictorTuningQuery = useQuery({
+    queryKey: ["instellingen", "predictor-tuning"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getPredictorTuningSettings();
+      if (!result.ok) throw new Error("predictor-tuning-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = predictorTuningQuery.data;
+    if (!data) return;
+    setPredictorTuningForm({
+      forecast_valid_minutes: data.forecast_valid_minutes,
+      decision_packages_valid_minutes: data.decision_packages_valid_minutes,
+      prediction_diary_inconclusive_tolerance_pct:
+        data.prediction_diary_inconclusive_tolerance_pct,
+      gbm_regime_shift_enabled: data.gbm_regime_shift_enabled,
+      gbm_regime_shift_threshold_pct: data.gbm_regime_shift_threshold_pct,
+    });
+    setPredictorTuningHelp(data.help_nl);
+  }, [predictorTuningQuery.data]);
+
+  async function handleSavePredictorTuning() {
+    setPredictorTuningSaving(true);
+    setPredictorTuningError(null);
+    setPredictorTuningSaved(null);
+    const result =
+      await apiClient.updatePredictorTuningSettings(predictorTuningForm);
+    setPredictorTuningSaving(false);
+    if (!result.ok) {
+      setPredictorTuningError(
+        "Opslaan mislukt. Controleer dat alle waarden binnen het toegestane bereik liggen.",
+      );
+      return;
+    }
+    queryClient.setQueryData(
+      ["instellingen", "predictor-tuning"],
+      result.data,
+    );
+    setPredictorTuningSaved("Voorspeller-tuning opgeslagen.");
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -878,7 +939,8 @@ export default function Page() {
     || workerSweepQuery.isPending
     || advancedQuery.isPending
     || forecastMarketQuery.isPending
-    || executionGateQuery.isPending;
+    || executionGateQuery.isPending
+    || predictorTuningQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -2593,6 +2655,206 @@ export default function Page() {
                       style={{ color: "#b91c1c", fontSize: 13 }}
                     >
                       {advancedError}
+                    </span>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </section>
+
+          {/* Section 4j — Voorspeller-tuning (PR I). Collapsed accordion
+              for power-user predictor tuning. */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-predictor-tuning-section"
+          >
+            <button
+              type="button"
+              onClick={() => setPredictorTuningOpen((v) => !v)}
+              data-testid="instellingen-predictor-tuning-toggle"
+              aria-expanded={predictorTuningOpen}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 18,
+                fontWeight: 600,
+                color: "#111827",
+              }}
+            >
+              <span aria-hidden="true">{predictorTuningOpen ? "▼" : "▶"}</span>
+              Voorspeller-tuning
+            </button>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {predictorTuningHelp
+                || "Power-user voorspeller-tuning. Beheert TTLs, dagboek-tolerantie en GBM regime-shift drift-blending."}
+            </p>
+            {predictorTuningOpen ? (
+              <>
+                <div className="grid one-column" style={{ marginTop: 10 }}>
+                  <label>
+                    Voorspelling-TTL (minuten)
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      data-testid="instellingen-predictor-forecast-ttl"
+                      value={predictorTuningForm.forecast_valid_minutes}
+                      onChange={(e) =>
+                        setPredictorTuningForm((p) => ({
+                          ...p,
+                          forecast_valid_minutes: Number(e.target.value),
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Hoe lang een opgeslagen voorspelling geldig blijft
+                      voordat de morgen-chain hem opnieuw moet
+                      berekenen. Standaard 1440 (24u). Korter = vaker
+                      recompute, hoger = minder EODHD-calls.
+                    </span>
+                  </label>
+                  <label>
+                    Beslissings-pakket-TTL (minuten)
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      data-testid="instellingen-predictor-dp-ttl"
+                      value={
+                        predictorTuningForm.decision_packages_valid_minutes
+                      }
+                      onChange={(e) =>
+                        setPredictorTuningForm((p) => ({
+                          ...p,
+                          decision_packages_valid_minutes: Number(
+                            e.target.value,
+                          ),
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Hoe lang een Decision Package geldig blijft. Komt
+                      typisch overeen met de voorspelling-TTL hierboven.
+                    </span>
+                  </label>
+                  <label>
+                    Dagboek &ldquo;onbeslist&rdquo;-tolerantie (%)
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      data-testid="instellingen-predictor-diary-tolerance"
+                      value={
+                        predictorTuningForm.prediction_diary_inconclusive_tolerance_pct
+                      }
+                      onChange={(e) =>
+                        setPredictorTuningForm((p) => ({
+                          ...p,
+                          prediction_diary_inconclusive_tolerance_pct:
+                            e.target.value,
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Tussen ±deze waarde wordt een voorspellings-
+                      uitkomst als &ldquo;onbeslist&rdquo; geclassificeerd in
+                      het prediction-diary. Standaard 0.25%. Strakker =
+                      meer harde verdicts, ruimer = meer onbeslist.
+                    </span>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      data-testid="instellingen-predictor-regime-enabled"
+                      checked={
+                        predictorTuningForm.gbm_regime_shift_enabled
+                      }
+                      onChange={(e) =>
+                        setPredictorTuningForm((p) => ({
+                          ...p,
+                          gbm_regime_shift_enabled: e.target.checked,
+                        }))
+                      }
+                    />{" "}
+                    GBM regime-shift drift-blending inschakelen
+                    <span className="help-text">
+                      Uit (standaard) = drift = volle-historie gemiddelde.
+                      Aan = de drift blendt korte- en lange-window
+                      gemiddeldes als ze meer dan de drempel hieronder
+                      afwijken, zodat een regime-verschuiving sneller
+                      doorwerkt.
+                    </span>
+                  </label>
+                  <label>
+                    Regime-shift drempel (%)
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      data-testid="instellingen-predictor-regime-threshold"
+                      value={
+                        predictorTuningForm.gbm_regime_shift_threshold_pct
+                      }
+                      onChange={(e) =>
+                        setPredictorTuningForm((p) => ({
+                          ...p,
+                          gbm_regime_shift_threshold_pct: e.target.value,
+                        }))
+                      }
+                    />
+                    <span className="help-text">
+                      Onder welke procentuele afwijking tussen korte- en
+                      lange-window drift de blend niet ingrijpt.
+                      Standaard 5.0. Alleen actief als de toggle
+                      hierboven aan staat.
+                    </span>
+                  </label>
+                </div>
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => void handleSavePredictorTuning()}
+                    disabled={predictorTuningSaving}
+                    data-testid="instellingen-predictor-tuning-save"
+                    style={{
+                      background: "#1f2937",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "6px 14px",
+                      borderRadius: 4,
+                      cursor: predictorTuningSaving
+                        ? "not-allowed"
+                        : "pointer",
+                      fontSize: 14,
+                    }}
+                  >
+                    {predictorTuningSaving
+                      ? "Opslaan…"
+                      : "Voorspeller-tuning opslaan"}
+                  </button>
+                  {predictorTuningSaved ? (
+                    <span style={{ color: "#15803d", fontSize: 13 }}>
+                      {predictorTuningSaved}
+                    </span>
+                  ) : null}
+                  {predictorTuningError ? (
+                    <span
+                      data-testid="instellingen-predictor-tuning-error"
+                      style={{ color: "#b91c1c", fontSize: 13 }}
+                    >
+                      {predictorTuningError}
                     </span>
                   ) : null}
                 </div>

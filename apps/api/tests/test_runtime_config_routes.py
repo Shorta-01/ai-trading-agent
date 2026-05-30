@@ -53,7 +53,7 @@ def _seed(tmp_path) -> None:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0064_runtime_config_execution_gates')"
+                "('0065_runtime_config_predictor_tuning')"
             )
         )
 

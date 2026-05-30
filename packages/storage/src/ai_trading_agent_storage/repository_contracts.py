@@ -337,6 +337,12 @@ class RuntimeConfigRecord:
     submission_sweep_enabled: bool | None = None
     cancel_sweep_enabled: bool | None = None
     morning_chain_after_pre_briefing: bool | None = None
+    # Settings UI PR I — predictor-tuning overlay. ``None`` = env-var.
+    forecast_valid_minutes: int | None = None
+    decision_packages_valid_minutes: int | None = None
+    prediction_diary_inconclusive_tolerance_pct: Decimal | None = None
+    gbm_regime_shift_enabled: bool | None = None
+    gbm_regime_shift_threshold_pct: Decimal | None = None
 
 
 @dataclass(frozen=True)

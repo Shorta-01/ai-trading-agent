@@ -255,6 +255,23 @@ export type ExecutionGateSettingsUpdateInput = {
   morning_chain_after_pre_briefing: boolean;
 };
 
+export type PredictorTuningSettingsResponse = {
+  forecast_valid_minutes: number;
+  decision_packages_valid_minutes: number;
+  prediction_diary_inconclusive_tolerance_pct: string;
+  gbm_regime_shift_enabled: boolean;
+  gbm_regime_shift_threshold_pct: string;
+  help_nl: string;
+};
+
+export type PredictorTuningSettingsUpdateInput = {
+  forecast_valid_minutes: number;
+  decision_packages_valid_minutes: number;
+  prediction_diary_inconclusive_tolerance_pct: string;
+  gbm_regime_shift_enabled: boolean;
+  gbm_regime_shift_threshold_pct: string;
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -2010,6 +2027,15 @@ export const apiClient = {
   ) =>
     putJson<ExecutionGateSettingsResponse>(
       "/settings/execution-gates",
+      payload,
+    ),
+  getPredictorTuningSettings: () =>
+    getJson<PredictorTuningSettingsResponse>("/settings/predictor-tuning"),
+  updatePredictorTuningSettings: (
+    payload: PredictorTuningSettingsUpdateInput,
+  ) =>
+    putJson<PredictorTuningSettingsResponse>(
+      "/settings/predictor-tuning",
       payload,
     ),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),

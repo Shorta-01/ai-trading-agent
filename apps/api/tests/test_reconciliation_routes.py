@@ -35,7 +35,7 @@ from portfolio_outlook_api.status_routes import settings as api_settings
 
 client = TestClient(app)
 
-_LATEST = "0064_runtime_config_execution_gates"
+_LATEST = "0065_runtime_config_predictor_tuning"
 # Seed relative to the real clock: the /reconciliation/status route computes
 # its "last 24h" window from datetime.now(UTC) (reconciliation.py), so a fixed
 # past _NOW makes the seeded healed-event age out of the window over time.
