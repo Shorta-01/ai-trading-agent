@@ -323,6 +323,15 @@ class RuntimeConfigRecord:
     # Settings UI PR F — Sharpe direction-label thresholds. ``None`` = env-var.
     sharpe_strong_threshold: Decimal | None = None
     sharpe_slight_threshold: Decimal | None = None
+    # Settings UI PR G — forecast & market-behaviour overlay. ``None`` = env-var.
+    forecast_horizon_trading_days: int | None = None
+    forecast_ensemble_enabled: bool | None = None
+    suggestions_risk_profile: str | None = None
+    universe_set: str | None = None
+    market_data_provider: str | None = None
+    market_data_sync_enabled: bool | None = None
+    ibkr_market_data_enabled: bool | None = None
+    ibkr_market_data_type: str | None = None
 
 
 @dataclass(frozen=True)

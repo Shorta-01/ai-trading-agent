@@ -6158,6 +6158,14 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "ai_explanation_provider_code": record.ai_explanation_provider_code,
             "sharpe_strong_threshold": record.sharpe_strong_threshold,
             "sharpe_slight_threshold": record.sharpe_slight_threshold,
+            "forecast_horizon_trading_days": record.forecast_horizon_trading_days,
+            "forecast_ensemble_enabled": record.forecast_ensemble_enabled,
+            "suggestions_risk_profile": record.suggestions_risk_profile,
+            "universe_set": record.universe_set,
+            "market_data_provider": record.market_data_provider,
+            "market_data_sync_enabled": record.market_data_sync_enabled,
+            "ibkr_market_data_enabled": record.ibkr_market_data_enabled,
+            "ibkr_market_data_type": record.ibkr_market_data_type,
         }
         existing = (
             self._connection.execute(
@@ -6281,6 +6289,30 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
             if row.get("sharpe_slight_threshold") is not None
             else None
         ),
+        forecast_horizon_trading_days=(
+            int(row["forecast_horizon_trading_days"])
+            if row.get("forecast_horizon_trading_days") is not None
+            else None
+        ),
+        forecast_ensemble_enabled=(
+            bool(row["forecast_ensemble_enabled"])
+            if row.get("forecast_ensemble_enabled") is not None
+            else None
+        ),
+        suggestions_risk_profile=row.get("suggestions_risk_profile"),
+        universe_set=row.get("universe_set"),
+        market_data_provider=row.get("market_data_provider"),
+        market_data_sync_enabled=(
+            bool(row["market_data_sync_enabled"])
+            if row.get("market_data_sync_enabled") is not None
+            else None
+        ),
+        ibkr_market_data_enabled=(
+            bool(row["ibkr_market_data_enabled"])
+            if row.get("ibkr_market_data_enabled") is not None
+            else None
+        ),
+        ibkr_market_data_type=row.get("ibkr_market_data_type"),
     )
 
 

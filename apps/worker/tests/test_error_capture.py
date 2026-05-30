@@ -24,8 +24,8 @@ def _report() -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0062_runtime_config_sharpe_thresholds",
-        database_revision_id="0062_runtime_config_sharpe_thresholds",
+        latest_expected_revision_id="0063_runtime_config_forecast_market",
+        database_revision_id="0063_runtime_config_forecast_market",
         persistence_allowed=True,
         blocks_runtime_writes=False,
         explanation_nl="test",
@@ -43,7 +43,7 @@ def _seed(tmp_path) -> StorageSettings:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0062_runtime_config_sharpe_thresholds')"
+                "('0063_runtime_config_forecast_market')"
             )
         )
     return StorageSettings(enabled=True, database_url=db_url, writes_enabled=True)

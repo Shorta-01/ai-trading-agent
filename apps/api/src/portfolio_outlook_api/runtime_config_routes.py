@@ -543,6 +543,28 @@ def update_order_policy_settings(
                 sharpe_slight_threshold=(
                     existing.sharpe_slight_threshold if existing else None
                 ),
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -716,6 +738,28 @@ def update_scheduler_settings(
                 ),
                 sharpe_slight_threshold=(
                     existing.sharpe_slight_threshold if existing else None
+                ),
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
                 ),
             )
             repo.upsert(record)
@@ -910,6 +954,28 @@ def update_data_window_settings(
                 ),
                 sharpe_slight_threshold=(
                     existing.sharpe_slight_threshold if existing else None
+                ),
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
                 ),
             )
             repo.upsert(record)
@@ -1140,6 +1206,28 @@ def update_worker_sweep_settings(
                 ),
                 sharpe_slight_threshold=(
                     existing.sharpe_slight_threshold if existing else None
+                ),
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
                 ),
             )
             repo.upsert(record)
@@ -1385,6 +1473,28 @@ def update_advanced_settings(
                 ai_explanation_provider_code=payload.ai_explanation_provider_code,
                 sharpe_strong_threshold=payload.sharpe_strong_threshold,
                 sharpe_slight_threshold=payload.sharpe_slight_threshold,
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -1403,6 +1513,289 @@ def update_advanced_settings(
             status_code=503, detail="Opslag is niet beschikbaar."
         ) from exc
     return _advanced_payload(record)
+
+
+# ---- Forecast & market behaviour (Settings UI PR G) --------------------
+
+
+_ALLOWED_UNIVERSE_SETS = ("SP500", "EU600", "ALL_5K")
+_ALLOWED_RISK_PROFILES = ("Voorzichtig", "Gebalanceerd", "Groei")
+_ALLOWED_MARKET_DATA_PROVIDERS = ("none", "eodhd", "ibkr")
+_ALLOWED_IBKR_MARKET_DATA_TYPES = ("delayed", "realtime", "delayed_frozen", "frozen")
+
+
+class ForecastMarketSettingsResponse(BaseModel):
+    """Operator-facing forecast horizon, ensemble toggle, risk profile,
+    locked-universe pick, and market-data feed toggles. Each value falls
+    back to the env-var default when no DB row has been saved."""
+
+    forecast_horizon_trading_days: int
+    forecast_ensemble_enabled: bool
+    suggestions_risk_profile: str
+    universe_set: str
+    market_data_provider: str
+    market_data_sync_enabled: bool
+    ibkr_market_data_enabled: bool
+    ibkr_market_data_type: str
+    help_nl: str
+
+
+class UpdateForecastMarketSettingsRequest(BaseModel):
+    forecast_horizon_trading_days: int
+    forecast_ensemble_enabled: bool
+    suggestions_risk_profile: str
+    universe_set: str
+    market_data_provider: str
+    market_data_sync_enabled: bool
+    ibkr_market_data_enabled: bool
+    ibkr_market_data_type: str
+
+
+_FORECAST_MARKET_HELP_NL = (
+    "Voorspellings- en marktdata-instellingen. Horizon bepaalt hoe ver "
+    "vooruit de modellen kijken; ensemble combineert meerdere predictors. "
+    "Universum-set en marktdata-feeds bepalen welke prijzen het systeem "
+    "gebruikt voor scans en suggesties."
+)
+
+
+def _forecast_market_payload(
+    record: RuntimeConfigRecord | None,
+) -> ForecastMarketSettingsResponse:
+    horizon = (
+        record.forecast_horizon_trading_days
+        if record is not None and record.forecast_horizon_trading_days is not None
+        else settings.forecast_horizon_trading_days
+    )
+    ensemble = (
+        record.forecast_ensemble_enabled
+        if record is not None and record.forecast_ensemble_enabled is not None
+        else settings.forecast_ensemble_enabled
+    )
+    risk_profile = (
+        record.suggestions_risk_profile
+        if record is not None and record.suggestions_risk_profile is not None
+        else settings.suggestions_risk_profile
+    )
+    universe = (
+        record.universe_set
+        if record is not None and record.universe_set is not None
+        else settings.universe_set
+    )
+    md_provider = (
+        record.market_data_provider
+        if record is not None and record.market_data_provider is not None
+        else settings.market_data_provider
+    )
+    md_sync = (
+        record.market_data_sync_enabled
+        if record is not None and record.market_data_sync_enabled is not None
+        else settings.market_data_sync_enabled
+    )
+    ibkr_md_enabled = (
+        record.ibkr_market_data_enabled
+        if record is not None and record.ibkr_market_data_enabled is not None
+        else settings.ibkr_market_data_enabled
+    )
+    ibkr_md_type = (
+        record.ibkr_market_data_type
+        if record is not None and record.ibkr_market_data_type is not None
+        else settings.ibkr_market_data_type
+    )
+    return ForecastMarketSettingsResponse(
+        forecast_horizon_trading_days=horizon,
+        forecast_ensemble_enabled=ensemble,
+        suggestions_risk_profile=risk_profile,
+        universe_set=universe,
+        market_data_provider=md_provider,
+        market_data_sync_enabled=md_sync,
+        ibkr_market_data_enabled=ibkr_md_enabled,
+        ibkr_market_data_type=ibkr_md_type,
+        help_nl=_FORECAST_MARKET_HELP_NL,
+    )
+
+
+@router.get(
+    "/settings/forecast-market",
+    response_model=ForecastMarketSettingsResponse,
+)
+def get_forecast_market_settings() -> ForecastMarketSettingsResponse:
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _forecast_market_payload(current)
+
+
+@router.put(
+    "/settings/forecast-market",
+    response_model=ForecastMarketSettingsResponse,
+)
+def update_forecast_market_settings(
+    payload: UpdateForecastMarketSettingsRequest,
+) -> ForecastMarketSettingsResponse:
+    if payload.forecast_horizon_trading_days < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Voorspellings-horizon moet ≥ 1 handelsdag zijn.",
+        )
+    if payload.suggestions_risk_profile not in _ALLOWED_RISK_PROFILES:
+        raise HTTPException(
+            status_code=422,
+            detail="Risico-profiel moet 'Voorzichtig', 'Gebalanceerd' of 'Groei' zijn.",
+        )
+    if payload.universe_set not in _ALLOWED_UNIVERSE_SETS:
+        raise HTTPException(
+            status_code=422,
+            detail="Universum-set moet 'SP500', 'EU600' of 'ALL_5K' zijn.",
+        )
+    if payload.market_data_provider not in _ALLOWED_MARKET_DATA_PROVIDERS:
+        raise HTTPException(
+            status_code=422,
+            detail="Marktdata-provider moet 'none', 'eodhd' of 'ibkr' zijn.",
+        )
+    if payload.ibkr_market_data_type not in _ALLOWED_IBKR_MARKET_DATA_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "IBKR marktdata-type moet 'delayed', 'realtime', "
+                "'delayed_frozen' of 'frozen' zijn."
+            ),
+        )
+
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=(
+                    existing.universe_scan_index_codes if existing else None
+                ),
+                default_buy_value_eur=(
+                    existing.default_buy_value_eur if existing else None
+                ),
+                default_top_up_pct=(
+                    existing.default_top_up_pct if existing else None
+                ),
+                default_reduce_pct=(
+                    existing.default_reduce_pct if existing else None
+                ),
+                max_sector_pct=existing.max_sector_pct if existing else None,
+                cost_dominates_ratio=(
+                    existing.cost_dominates_ratio if existing else None
+                ),
+                suggestion_valid_minutes=(
+                    existing.suggestion_valid_minutes if existing else None
+                ),
+                scheduler_daily_briefing_cron=(
+                    existing.scheduler_daily_briefing_cron if existing else None
+                ),
+                ibkr_sync_interval_minutes=(
+                    existing.ibkr_sync_interval_minutes if existing else None
+                ),
+                forecast_history_lookback_days=(
+                    existing.forecast_history_lookback_days if existing else None
+                ),
+                forecast_minimum_bars_required=(
+                    existing.forecast_minimum_bars_required if existing else None
+                ),
+                daily_briefing_lookback_hours=(
+                    existing.daily_briefing_lookback_hours if existing else None
+                ),
+                universe_scan_cache_ttl_hours=(
+                    existing.universe_scan_cache_ttl_hours if existing else None
+                ),
+                sweep_interval_seconds=(
+                    existing.sweep_interval_seconds if existing else None
+                ),
+                sweep_retry_max_attempts=(
+                    existing.sweep_retry_max_attempts if existing else None
+                ),
+                sweep_retry_backoff_seconds=(
+                    existing.sweep_retry_backoff_seconds if existing else None
+                ),
+                sweep_alert_after_consecutive_errors=(
+                    existing.sweep_alert_after_consecutive_errors
+                    if existing
+                    else None
+                ),
+                eodhd_rate_limit_per_second=(
+                    existing.eodhd_rate_limit_per_second if existing else None
+                ),
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
+                ),
+                forecast_horizon_trading_days=payload.forecast_horizon_trading_days,
+                forecast_ensemble_enabled=payload.forecast_ensemble_enabled,
+                suggestions_risk_profile=payload.suggestions_risk_profile,
+                universe_set=payload.universe_set,
+                market_data_provider=payload.market_data_provider,
+                market_data_sync_enabled=payload.market_data_sync_enabled,
+                ibkr_market_data_enabled=payload.ibkr_market_data_enabled,
+                ibkr_market_data_type=payload.ibkr_market_data_type,
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+            settings.forecast_horizon_trading_days = (
+                payload.forecast_horizon_trading_days
+            )
+            settings.forecast_ensemble_enabled = payload.forecast_ensemble_enabled
+            settings.suggestions_risk_profile = payload.suggestions_risk_profile
+            settings.universe_set = payload.universe_set
+            settings.market_data_provider = payload.market_data_provider
+            settings.market_data_sync_enabled = payload.market_data_sync_enabled
+            settings.ibkr_market_data_enabled = payload.ibkr_market_data_enabled
+            settings.ibkr_market_data_type = payload.ibkr_market_data_type
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _forecast_market_payload(record)
 
 
 def apply_runtime_config_overlay(
@@ -1498,3 +1891,23 @@ def apply_runtime_config_overlay(
         settings_obj.sharpe_strong_threshold = float(record.sharpe_strong_threshold)
     if record.sharpe_slight_threshold is not None:
         settings_obj.sharpe_slight_threshold = float(record.sharpe_slight_threshold)
+    # Settings UI PR G — forecast & market-behaviour overlay. Each null
+    # leaves the env-default in place.
+    if record.forecast_horizon_trading_days is not None:
+        settings_obj.forecast_horizon_trading_days = (
+            record.forecast_horizon_trading_days
+        )
+    if record.forecast_ensemble_enabled is not None:
+        settings_obj.forecast_ensemble_enabled = record.forecast_ensemble_enabled
+    if record.suggestions_risk_profile is not None:
+        settings_obj.suggestions_risk_profile = record.suggestions_risk_profile
+    if record.universe_set is not None:
+        settings_obj.universe_set = record.universe_set
+    if record.market_data_provider is not None:
+        settings_obj.market_data_provider = record.market_data_provider
+    if record.market_data_sync_enabled is not None:
+        settings_obj.market_data_sync_enabled = record.market_data_sync_enabled
+    if record.ibkr_market_data_enabled is not None:
+        settings_obj.ibkr_market_data_enabled = record.ibkr_market_data_enabled
+    if record.ibkr_market_data_type is not None:
+        settings_obj.ibkr_market_data_type = record.ibkr_market_data_type
