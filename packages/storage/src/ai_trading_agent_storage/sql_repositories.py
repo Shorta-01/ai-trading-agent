@@ -6166,6 +6166,14 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "market_data_sync_enabled": record.market_data_sync_enabled,
             "ibkr_market_data_enabled": record.ibkr_market_data_enabled,
             "ibkr_market_data_type": record.ibkr_market_data_type,
+            "ibkr_paper_order_submission_enabled": (
+                record.ibkr_paper_order_submission_enabled
+            ),
+            "submission_sweep_enabled": record.submission_sweep_enabled,
+            "cancel_sweep_enabled": record.cancel_sweep_enabled,
+            "morning_chain_after_pre_briefing": (
+                record.morning_chain_after_pre_briefing
+            ),
         }
         existing = (
             self._connection.execute(
@@ -6313,6 +6321,26 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
             else None
         ),
         ibkr_market_data_type=row.get("ibkr_market_data_type"),
+        ibkr_paper_order_submission_enabled=(
+            bool(row["ibkr_paper_order_submission_enabled"])
+            if row.get("ibkr_paper_order_submission_enabled") is not None
+            else None
+        ),
+        submission_sweep_enabled=(
+            bool(row["submission_sweep_enabled"])
+            if row.get("submission_sweep_enabled") is not None
+            else None
+        ),
+        cancel_sweep_enabled=(
+            bool(row["cancel_sweep_enabled"])
+            if row.get("cancel_sweep_enabled") is not None
+            else None
+        ),
+        morning_chain_after_pre_briefing=(
+            bool(row["morning_chain_after_pre_briefing"])
+            if row.get("morning_chain_after_pre_briefing") is not None
+            else None
+        ),
     )
 
 

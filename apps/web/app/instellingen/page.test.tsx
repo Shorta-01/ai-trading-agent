@@ -46,6 +46,8 @@ const getAdvancedSettings = vi.fn();
 const updateAdvancedSettings = vi.fn();
 const getForecastMarketSettings = vi.fn();
 const updateForecastMarketSettings = vi.fn();
+const getExecutionGateSettings = vi.fn();
+const updateExecutionGateSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -81,6 +83,10 @@ vi.mock("@/lib/apiClient", () => ({
       getForecastMarketSettings(...a),
     updateForecastMarketSettings: (...a: unknown[]) =>
       updateForecastMarketSettings(...a),
+    getExecutionGateSettings: (...a: unknown[]) =>
+      getExecutionGateSettings(...a),
+    updateExecutionGateSettings: (...a: unknown[]) =>
+      updateExecutionGateSettings(...a),
   },
 }));
 
@@ -214,6 +220,14 @@ const FORECAST_MARKET = {
   help_nl: "Voorspellings- en marktdata-instellingen.",
 };
 
+const EXECUTION_GATES = {
+  ibkr_paper_order_submission_enabled: false,
+  submission_sweep_enabled: false,
+  cancel_sweep_enabled: false,
+  morning_chain_after_pre_briefing: false,
+  help_nl: "Veiligheids-kritische uitvoerings-poorten.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -235,6 +249,8 @@ beforeEach(() => {
   updateAdvancedSettings.mockReset();
   getForecastMarketSettings.mockReset();
   updateForecastMarketSettings.mockReset();
+  getExecutionGateSettings.mockReset();
+  updateExecutionGateSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -245,6 +261,7 @@ beforeEach(() => {
   getWorkerSweepSettings.mockReturnValue(ok(WORKER_SWEEPS));
   getAdvancedSettings.mockReturnValue(ok(ADVANCED));
   getForecastMarketSettings.mockReturnValue(ok(FORECAST_MARKET));
+  getExecutionGateSettings.mockReturnValue(ok(EXECUTION_GATES));
 });
 
 afterEach(() => cleanup());
@@ -680,5 +697,40 @@ describe("InstellingenPage", () => {
     expect(payload.forecast_ensemble_enabled).toBe(true);
     expect(payload.universe_set).toBe("EU600");
     expect(payload.suggestions_risk_profile).toBe("Gebalanceerd");
+  });
+
+  it("renders the execution-gates section + flips toggles + saves", async () => {
+    updateExecutionGateSettings.mockReturnValue(
+      ok({
+        ...EXECUTION_GATES,
+        ibkr_paper_order_submission_enabled: true,
+        submission_sweep_enabled: true,
+      }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-execution-gates-section"),
+    ).toBeInTheDocument();
+    const paperSubmit = screen.getByTestId(
+      "instellingen-execution-paper-submit",
+    );
+    const submissionSweep = screen.getByTestId(
+      "instellingen-execution-submission-sweep",
+    );
+    expect(paperSubmit).not.toBeChecked();
+    expect(submissionSweep).not.toBeChecked();
+    await userEvent.click(paperSubmit);
+    await userEvent.click(submissionSweep);
+    await userEvent.click(
+      screen.getByTestId("instellingen-execution-gates-save"),
+    );
+    await waitFor(() =>
+      expect(updateExecutionGateSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateExecutionGateSettings.mock.calls[0][0];
+    expect(payload.ibkr_paper_order_submission_enabled).toBe(true);
+    expect(payload.submission_sweep_enabled).toBe(true);
+    expect(payload.cancel_sweep_enabled).toBe(false);
+    expect(payload.morning_chain_after_pre_briefing).toBe(false);
   });
 });

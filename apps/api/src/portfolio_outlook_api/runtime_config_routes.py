@@ -565,6 +565,22 @@ def update_order_policy_settings(
                 ibkr_market_data_type=(
                     existing.ibkr_market_data_type if existing else None
                 ),
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -760,6 +776,22 @@ def update_scheduler_settings(
                 ),
                 ibkr_market_data_type=(
                     existing.ibkr_market_data_type if existing else None
+                ),
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
                 ),
             )
             repo.upsert(record)
@@ -976,6 +1008,22 @@ def update_data_window_settings(
                 ),
                 ibkr_market_data_type=(
                     existing.ibkr_market_data_type if existing else None
+                ),
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
                 ),
             )
             repo.upsert(record)
@@ -1228,6 +1276,22 @@ def update_worker_sweep_settings(
                 ),
                 ibkr_market_data_type=(
                     existing.ibkr_market_data_type if existing else None
+                ),
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
                 ),
             )
             repo.upsert(record)
@@ -1494,6 +1558,22 @@ def update_advanced_settings(
                 ),
                 ibkr_market_data_type=(
                     existing.ibkr_market_data_type if existing else None
+                ),
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
                 ),
             )
             repo.upsert(record)
@@ -1778,6 +1858,22 @@ def update_forecast_market_settings(
                 market_data_sync_enabled=payload.market_data_sync_enabled,
                 ibkr_market_data_enabled=payload.ibkr_market_data_enabled,
                 ibkr_market_data_type=payload.ibkr_market_data_type,
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -1796,6 +1892,246 @@ def update_forecast_market_settings(
             status_code=503, detail="Opslag is niet beschikbaar."
         ) from exc
     return _forecast_market_payload(record)
+
+
+# ---- Execution gates (Settings UI PR H) --------------------------------
+
+
+class ExecutionGateSettingsResponse(BaseModel):
+    """Safety-critical execution toggles. ``ibkr_paper_order_submission_enabled``
+    is the API-side master switch for IBKR order submission; the other three
+    are worker-side and take effect at the next worker restart."""
+
+    ibkr_paper_order_submission_enabled: bool
+    submission_sweep_enabled: bool
+    cancel_sweep_enabled: bool
+    morning_chain_after_pre_briefing: bool
+    help_nl: str
+
+
+class UpdateExecutionGateSettingsRequest(BaseModel):
+    ibkr_paper_order_submission_enabled: bool
+    submission_sweep_enabled: bool
+    cancel_sweep_enabled: bool
+    morning_chain_after_pre_briefing: bool
+
+
+_EXECUTION_GATE_HELP_NL = (
+    "Veiligheids-kritische uitvoerings-poorten. Met deze toggles open je "
+    "stap voor stap de weg van suggestie naar live IBKR-order. Sweep- en "
+    "morgen-chain-toggles zijn worker-zijde en gelden vanaf de "
+    "eerstvolgende worker-restart."
+)
+
+
+# Worker-side defaults (mirrors the worker's IbkrSettings / Scheduler defaults
+# so the GET response stays meaningful when no DB row has been saved yet).
+_DEFAULT_SUBMISSION_SWEEP_ENABLED = False
+_DEFAULT_CANCEL_SWEEP_ENABLED = False
+_DEFAULT_MORNING_CHAIN_AFTER_PRE_BRIEFING = False
+
+
+def _execution_gate_payload(
+    record: RuntimeConfigRecord | None,
+) -> ExecutionGateSettingsResponse:
+    api_submit = (
+        record.ibkr_paper_order_submission_enabled
+        if record is not None
+        and record.ibkr_paper_order_submission_enabled is not None
+        else settings.ibkr_paper_order_submission_enabled
+    )
+    submission_sweep = (
+        record.submission_sweep_enabled
+        if record is not None and record.submission_sweep_enabled is not None
+        else _DEFAULT_SUBMISSION_SWEEP_ENABLED
+    )
+    cancel_sweep = (
+        record.cancel_sweep_enabled
+        if record is not None and record.cancel_sweep_enabled is not None
+        else _DEFAULT_CANCEL_SWEEP_ENABLED
+    )
+    morning_chain = (
+        record.morning_chain_after_pre_briefing
+        if record is not None
+        and record.morning_chain_after_pre_briefing is not None
+        else _DEFAULT_MORNING_CHAIN_AFTER_PRE_BRIEFING
+    )
+    return ExecutionGateSettingsResponse(
+        ibkr_paper_order_submission_enabled=api_submit,
+        submission_sweep_enabled=submission_sweep,
+        cancel_sweep_enabled=cancel_sweep,
+        morning_chain_after_pre_briefing=morning_chain,
+        help_nl=_EXECUTION_GATE_HELP_NL,
+    )
+
+
+@router.get(
+    "/settings/execution-gates",
+    response_model=ExecutionGateSettingsResponse,
+)
+def get_execution_gate_settings() -> ExecutionGateSettingsResponse:
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _execution_gate_payload(current)
+
+
+@router.put(
+    "/settings/execution-gates",
+    response_model=ExecutionGateSettingsResponse,
+)
+def update_execution_gate_settings(
+    payload: UpdateExecutionGateSettingsRequest,
+) -> ExecutionGateSettingsResponse:
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=(
+                    existing.universe_scan_index_codes if existing else None
+                ),
+                default_buy_value_eur=(
+                    existing.default_buy_value_eur if existing else None
+                ),
+                default_top_up_pct=(
+                    existing.default_top_up_pct if existing else None
+                ),
+                default_reduce_pct=(
+                    existing.default_reduce_pct if existing else None
+                ),
+                max_sector_pct=existing.max_sector_pct if existing else None,
+                cost_dominates_ratio=(
+                    existing.cost_dominates_ratio if existing else None
+                ),
+                suggestion_valid_minutes=(
+                    existing.suggestion_valid_minutes if existing else None
+                ),
+                scheduler_daily_briefing_cron=(
+                    existing.scheduler_daily_briefing_cron if existing else None
+                ),
+                ibkr_sync_interval_minutes=(
+                    existing.ibkr_sync_interval_minutes if existing else None
+                ),
+                forecast_history_lookback_days=(
+                    existing.forecast_history_lookback_days if existing else None
+                ),
+                forecast_minimum_bars_required=(
+                    existing.forecast_minimum_bars_required if existing else None
+                ),
+                daily_briefing_lookback_hours=(
+                    existing.daily_briefing_lookback_hours if existing else None
+                ),
+                universe_scan_cache_ttl_hours=(
+                    existing.universe_scan_cache_ttl_hours if existing else None
+                ),
+                sweep_interval_seconds=(
+                    existing.sweep_interval_seconds if existing else None
+                ),
+                sweep_retry_max_attempts=(
+                    existing.sweep_retry_max_attempts if existing else None
+                ),
+                sweep_retry_backoff_seconds=(
+                    existing.sweep_retry_backoff_seconds if existing else None
+                ),
+                sweep_alert_after_consecutive_errors=(
+                    existing.sweep_alert_after_consecutive_errors
+                    if existing
+                    else None
+                ),
+                eodhd_rate_limit_per_second=(
+                    existing.eodhd_rate_limit_per_second if existing else None
+                ),
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
+                ),
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
+                ),
+                ibkr_paper_order_submission_enabled=(
+                    payload.ibkr_paper_order_submission_enabled
+                ),
+                submission_sweep_enabled=payload.submission_sweep_enabled,
+                cancel_sweep_enabled=payload.cancel_sweep_enabled,
+                morning_chain_after_pre_briefing=(
+                    payload.morning_chain_after_pre_briefing
+                ),
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+            settings.ibkr_paper_order_submission_enabled = (
+                payload.ibkr_paper_order_submission_enabled
+            )
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _execution_gate_payload(record)
 
 
 def apply_runtime_config_overlay(
@@ -1911,3 +2247,10 @@ def apply_runtime_config_overlay(
         settings_obj.ibkr_market_data_enabled = record.ibkr_market_data_enabled
     if record.ibkr_market_data_type is not None:
         settings_obj.ibkr_market_data_type = record.ibkr_market_data_type
+    # Settings UI PR H — execution-gate overlay (API-side). The three
+    # worker-side gates are applied by apply_worker_runtime_config_overlay
+    # at worker startup; here we only overlay the API-read field.
+    if record.ibkr_paper_order_submission_enabled is not None:
+        settings_obj.ibkr_paper_order_submission_enabled = (
+            record.ibkr_paper_order_submission_enabled
+        )

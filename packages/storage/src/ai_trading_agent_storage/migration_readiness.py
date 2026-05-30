@@ -764,6 +764,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "de env-var of ingebouwde default."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0064_runtime_config_execution_gates",
+        previous_revision_id="0063_runtime_config_forecast_market",
+        filename="0064_runtime_config_execution_gates.py",
+        label_nl="Uitvoerings-poorten in runtime_config",
+        description_nl=(
+            "Voegt vier kolommen toe voor veiligheids-kritische uitvoerings-"
+            "toggles: ``ibkr_paper_order_submission_enabled`` (API-zijde), "
+            "``submission_sweep_enabled``, ``cancel_sweep_enabled`` en "
+            "``morning_chain_after_pre_briefing`` (worker-zijde). Null in "
+            "elk veld: terugvallen op de env-var of ingebouwde default."
+        ),
+    ),
 )
 
 
