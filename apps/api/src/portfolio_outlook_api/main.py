@@ -55,6 +55,9 @@ from portfolio_outlook_api.market_events_routes import (
 from portfolio_outlook_api.notification_routes import (
     router as notification_router,
 )
+from portfolio_outlook_api.portfolio_nav_history_routes import (
+    router as portfolio_nav_history_router,
+)
 from portfolio_outlook_api.reconciliation import (
     router as reconciliation_router,
 )
@@ -191,6 +194,7 @@ app.include_router(decision_package_routes_router)
 app.include_router(action_draft_router)
 app.include_router(ibkr_submission_router)
 app.include_router(reconciliation_router)
+app.include_router(portfolio_nav_history_router)
 app.include_router(error_log_router)
 app.include_router(risk_limits_router)
 app.include_router(runtime_config_router)
