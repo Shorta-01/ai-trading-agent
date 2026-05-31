@@ -108,19 +108,20 @@ def test_public_surface_matches_api_copy() -> None:
     """The worker + api email senders are duplicated by design; this
     parity guard asserts the public symbol set + dataclass fields
     stay in sync so a divergence is caught in CI rather than at
-    runtime."""
+    runtime.
 
+    Skipped when the API package isn't installed: the worker CI job
+    doesn't install ``apps/api`` (only storage), but the local dev
+    venv usually has both, so the guard still fires locally.
+    """
+
+    pytest.importorskip("portfolio_outlook_api")
     from importlib import import_module
 
     api_module = import_module("portfolio_outlook_api.email_sender")
     worker_module = import_module("portfolio_outlook_worker.email_sender")
-    api_exports = {name for name in dir(api_module) if not name.startswith("_")}
-    worker_exports = {
-        name for name in dir(worker_module) if not name.startswith("_")
-    }
-    # Drop ``logger``/``logging``/``smtplib`` etc. that vary by module.
-    api_public = {name for name in api_module.__all__}
-    worker_public = {name for name in worker_module.__all__}
+    api_public = set(api_module.__all__)
+    worker_public = set(worker_module.__all__)
     assert api_public == worker_public, (
         f"Public surfaces diverged: api={api_public}, worker={worker_public}"
     )
@@ -128,5 +129,3 @@ def test_public_surface_matches_api_copy() -> None:
         api_module.SmtpTransportConfig.__dataclass_fields__.keys()
         == worker_module.SmtpTransportConfig.__dataclass_fields__.keys()
     )
-    # Silence unused-variable lint.
-    _ = api_exports, worker_exports
