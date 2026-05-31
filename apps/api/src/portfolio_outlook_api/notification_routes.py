@@ -107,8 +107,10 @@ def _notification_payload(
 ) -> NotificationSettingsResponse:
     def _str(name: str, default: str | None = None) -> str | None:
         if record is not None and getattr(record, name, None) is not None:
-            return getattr(record, name)
-        return getattr(settings, name, default)
+            value = getattr(record, name)
+            return str(value) if value is not None else None
+        fallback = getattr(settings, name, default)
+        return str(fallback) if fallback is not None else None
 
     def _int(name: str, default: int) -> int:
         if record is not None and getattr(record, name, None) is not None:
