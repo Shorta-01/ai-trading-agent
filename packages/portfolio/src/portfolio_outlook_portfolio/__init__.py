@@ -46,6 +46,20 @@ from .ai_explanation_guards import (
     ExplanationValidationResult,
     validate_explanation_output,
 )
+from .ai_extraction_guards import (
+    BLOCKING_REASON_EMPTY_OUTPUT as EXTRACTION_BLOCKING_REASON_EMPTY_OUTPUT,
+)
+from .ai_extraction_guards import (
+    BLOCKING_REASON_FACT_EMPTY,
+    BLOCKING_REASON_FACT_TOO_LONG,
+    BLOCKING_REASON_HALLUCINATED_FACTS,
+    BLOCKING_REASON_TOO_MANY_FACTS,
+    EXTRACTION_STATUS_BLOCKED,
+    EXTRACTION_STATUS_FAILED,
+    EXTRACTION_STATUS_GENERATED,
+    ExtractionValidationResult,
+    validate_extracted_facts,
+)
 from .ai_ts_predictor import (
     BLOCKING_REASON_INVALID_CONFIDENCE as AI_TS_BLOCKING_REASON_INVALID_CONFIDENCE,
 )
@@ -590,6 +604,16 @@ __all__ = [
     "BLOCKING_REASON_OUTPUT_TOO_LONG",
     "ExplanationValidationResult",
     "validate_explanation_output",
+    "EXTRACTION_STATUS_GENERATED",
+    "EXTRACTION_STATUS_BLOCKED",
+    "EXTRACTION_STATUS_FAILED",
+    "EXTRACTION_BLOCKING_REASON_EMPTY_OUTPUT",
+    "BLOCKING_REASON_FACT_EMPTY",
+    "BLOCKING_REASON_FACT_TOO_LONG",
+    "BLOCKING_REASON_HALLUCINATED_FACTS",
+    "BLOCKING_REASON_TOO_MANY_FACTS",
+    "ExtractionValidationResult",
+    "validate_extracted_facts",
     "TobSecurityClass",
     "TobRateInfo",
     "TOB_RATE_BOND",

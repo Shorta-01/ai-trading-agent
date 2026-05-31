@@ -59,6 +59,9 @@ from portfolio_outlook_api.reconciliation import (
     router as reconciliation_router,
 )
 from portfolio_outlook_api.request_audit import router as request_audit_router
+from portfolio_outlook_api.research_ai_extraction_routes import (
+    router as research_ai_extraction_router,
+)
 from portfolio_outlook_api.research_sources import router as research_sources_router
 from portfolio_outlook_api.risk_limits_routes import (
     router as risk_limits_router,
@@ -174,6 +177,7 @@ def read_health() -> HealthResponse:
 
 app.include_router(status_router)
 app.include_router(research_sources_router)
+app.include_router(research_ai_extraction_router)
 app.include_router(asset_master_router)
 app.include_router(asset_listings_router)
 app.include_router(watchlist_router)
