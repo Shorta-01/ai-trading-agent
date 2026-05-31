@@ -2350,6 +2350,35 @@ class SqlAlchemyAssetSuggestionRepository(_Base):
             f"{len(ordered)} assetsuggesties opgehaald.",
         )
 
+    def list_asset_suggestions_generated_since(
+        self, cutoff: datetime
+    ) -> StorageListResult[AssetSuggestionRecord]:
+        """Return every persisted suggestion whose ``generated_at >= cutoff``.
+
+        Used by the V1 suggestions grid to compute day-over-day diff
+        (NIEUW / Gewijzigd) — the caller groups the rows by conid and
+        compares the two most recent per asset.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(asset_suggestions)
+                .where(asset_suggestions.c.generated_at >= cutoff)
+                .order_by(
+                    asset_suggestions.c.ibkr_conid.asc(),
+                    asset_suggestions.c.generated_at.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(_suggestion_from_row(row) for row in rows)
+        return StorageListResult(
+            records,
+            asset_suggestions.name,
+            f"{len(records)} assetsuggesties opgehaald sinds {cutoff.isoformat()}.",
+        )
+
     def expire_stale_asset_suggestions(self, *, now: datetime) -> int:
         """Flip every ``status='ready'`` row whose ``valid_until`` has
         passed to ``status='expired'`` with a stable blocking_reason.

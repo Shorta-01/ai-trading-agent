@@ -272,6 +272,59 @@ export type PredictorTuningSettingsUpdateInput = {
   gbm_regime_shift_threshold_pct: string;
 };
 
+export type SuggestionsGridItem = {
+  suggestion_id: string;
+  ibkr_conid: string;
+  symbol: string;
+  currency: string;
+  forecast_id: string | null;
+  generated_at: string;
+  valid_until: string;
+  valid_until_age_minutes: number;
+  risk_profile: string;
+  has_position: boolean;
+  action_label: string;
+  action_label_nl: string;
+  confidence_label: string;
+  confidence_label_nl: string;
+  confidence_score: string;
+  rationale_nl: string;
+  drivers: string[];
+  blockers: string[];
+  status: string;
+  blocking_reason: string | null;
+  branch_reason_nl: string | null;
+  downgrade_reason_nl: string | null;
+  top_driver_nl: string | null;
+  blocking_reason_nl: string | null;
+  expected_return_pct: string | null;
+  prob_gain_pct: string | null;
+  diff_status: "nieuw" | "gewijzigd" | "ongewijzigd";
+  previous_action_label_nl: string | null;
+};
+
+export type SuggestionsGridSection = {
+  action_label_nl: string;
+  section_title_nl: string;
+  item_count: number;
+  items: SuggestionsGridItem[];
+};
+
+export type SuggestionsGridResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  risk_profile: string;
+  actions_allowed: boolean;
+  safe_for_orders: boolean;
+  generated_at: string | null;
+  section_count: number;
+  total_item_count: number;
+  new_count: number;
+  changed_count: number;
+  sections: SuggestionsGridSection[];
+};
+
 export type ConnectionSettingsResponse = {
   ibkr_enabled: boolean;
   ibkr_account_id: string | null;
@@ -2038,6 +2091,8 @@ export const apiClient = {
       "/settings/predictor-tuning",
       payload,
     ),
+  getSuggestionsGrid: () =>
+    getJson<SuggestionsGridResponse>("/suggestions/grid"),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

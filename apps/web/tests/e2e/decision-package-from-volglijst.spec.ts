@@ -280,15 +280,14 @@ test.describe("Decision Package navigation from Volglijst", () => {
     await expect(page.getByTestId("dp-label-badge")).toHaveText("Bekijken");
   });
 
-  test("Suggesties page shows the explainer-only empty state", async ({
-    page,
-  }) => {
+  test("Suggesties page renders the v1 grid header", async ({ page }) => {
     await page.goto("/suggesties");
-    await expect(
-      page.getByTestId("suggesties-empty-state-explainer"),
-    ).toContainText("Suggesties komen binnenkort");
-    await expect(
-      page.getByTestId("suggesties-empty-state-explainer"),
-    ).toContainText("Bekijk Decision Package");
+    await expect(page.getByTestId("suggesties-page")).toBeVisible();
+    // Page header is locked to the v1 grid title; either the loading
+    // placeholder or the final status copy is acceptable as the test
+    // runs with whatever storage state the dev fixture provides.
+    await expect(page.getByRole("heading", { level: 2 })).toContainText(
+      "Suggesties",
+    );
   });
 });

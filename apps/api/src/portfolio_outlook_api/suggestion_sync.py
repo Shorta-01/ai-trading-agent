@@ -17,6 +17,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Protocol
 from uuid import uuid4
 
@@ -108,6 +109,10 @@ def _build_suggestion_record(
     generated_at: datetime,
     valid_until: datetime,
 ) -> AssetSuggestionRecord:
+    # Mirror the headline forecast numbers onto the suggestion so the V1
+    # grid can render without a forecast join.
+    expected_return = getattr(forecast, "expected_return_pct", None)
+    prob_gain = getattr(forecast, "prob_gain", None)
     return AssetSuggestionRecord(
         suggestion_id=f"suggestion_{uuid4().hex}",
         ibkr_conid=forecast.ibkr_conid,
@@ -130,6 +135,18 @@ def _build_suggestion_record(
         blockers_json=decision.blockers or None,
         status=decision.status,
         blocking_reason=decision.blocking_reason,
+        branch_reason_nl=decision.branch_reason_nl,
+        downgrade_reason_nl=decision.downgrade_reason_nl,
+        top_driver_nl=decision.top_driver_nl,
+        blocking_reason_nl=decision.blocking_reason_nl,
+        expected_return_pct=(
+            Decimal(str(expected_return)) if expected_return is not None else None
+        ),
+        prob_gain_pct=(
+            (Decimal(str(prob_gain)) * Decimal("100"))
+            if prob_gain is not None
+            else None
+        ),
     )
 
 
@@ -279,6 +296,20 @@ def serialize_suggestion_for_response(
         "blockers": list(record.blockers_json or ()),
         "status": record.status,
         "blocking_reason": record.blocking_reason,
+        "branch_reason_nl": record.branch_reason_nl,
+        "downgrade_reason_nl": record.downgrade_reason_nl,
+        "top_driver_nl": record.top_driver_nl,
+        "blocking_reason_nl": record.blocking_reason_nl,
+        "expected_return_pct": (
+            str(record.expected_return_pct)
+            if record.expected_return_pct is not None
+            else None
+        ),
+        "prob_gain_pct": (
+            str(record.prob_gain_pct)
+            if record.prob_gain_pct is not None
+            else None
+        ),
         "safe_for_action_drafts": False,
         "safe_for_orders": False,
         "safe_for_broker_submission": False,

@@ -159,6 +159,13 @@ class SuggestionDecision:
     has_position: bool
     model_code: str = MODEL_CODE
     model_version: str = MODEL_VERSION
+    # Suggestion-grid display fields (V1 grid). Each populated by the
+    # locked label rules; rendered inline in the suggestions grid so
+    # the operator gets the WHY without opening the Decision Package.
+    branch_reason_nl: str | None = None
+    downgrade_reason_nl: str | None = None
+    top_driver_nl: str | None = None
+    blocking_reason_nl: str | None = None
 
 
 # ---- Internal helpers ------------------------------------------------------
@@ -216,6 +223,97 @@ def _rationale(label_nl: str, forecast: BaselineForecast, profile: str) -> str:
     )
 
 
+# ---- V1 grid display helpers -----------------------------------------------
+
+_DIRECTION_NL: Final[dict[str, str]] = {
+    "strong_up": "sterke stijging",
+    "slight_up": "lichte stijging",
+    "neutral": "geen duidelijke richting",
+    "slight_down": "lichte daling",
+    "strong_down": "sterke daling",
+}
+
+_BLOCKING_REASON_NL: Final[dict[str, str]] = {
+    "gate_failures": "Eerst controle nodig: niet alle gates zijn geslaagd",
+    "forecast_not_ready": "Voorspelling nog niet beschikbaar",
+    "insufficient_history": "Te weinig koershistorie voor een betrouwbare voorspelling",
+    "invalid_current_price": "Huidige prijs ontbreekt of is niet positief",
+    "invalid_horizon": "Voorspellings-horizon is ongeldig",
+    "invalid_bar_price": "Koersdata bevat een ongeldige prijs",
+    "zero_volatility": "Volatiliteit is nul; geen verdeling te berekenen",
+    "portfolio_context_gate": "Portfoliogates houden de aankoop tegen",
+}
+
+_GATE_REASON_NL: Final[dict[str, str]] = {
+    "over_max_position_pct": "positie zit al op de maximum-grens",
+    "over_max_sector_pct": "sector zit al op de maximum-grens",
+    "cost_exceeds_gain": "kosten overschrijden de verwachte winst",
+}
+
+
+def _direction_label_nl(direction: str) -> str:
+    return _DIRECTION_NL.get(direction, direction)
+
+
+def _translate_blocking_reason(reason: str | None) -> str | None:
+    if reason is None:
+        return None
+    return _BLOCKING_REASON_NL.get(reason, reason)
+
+
+def _top_driver_for_ready(
+    forecast: BaselineForecast, label: str
+) -> str:
+    """One-line Dutch summary rendered inline in the suggestions grid."""
+
+    direction_nl = _direction_label_nl(forecast.direction_label)
+    prob_pct = forecast.prob_gain * Decimal("100")
+    return_sign = "+" if forecast.expected_return_pct >= 0 else ""
+    return (
+        f"{direction_nl.capitalize()} verwacht; "
+        f"{return_sign}{forecast.expected_return_pct:.1f}% verwacht "
+        f"rendement; {prob_pct:.0f}% kans op winst."
+    )
+
+
+def _branch_reason_for_held(
+    forecast: BaselineForecast,
+    risk_profile: str,
+    confidence_label_nl: str,
+    label: str,
+) -> str:
+    direction_nl = _direction_label_nl(forecast.direction_label)
+    return (
+        f"Reeds in bezit + {direction_nl} + betrouwbaarheid "
+        f"{confidence_label_nl.lower()} + profiel {risk_profile} → {label}."
+    )
+
+
+def _branch_reason_for_cold_start(
+    forecast: BaselineForecast,
+    risk_profile: str,
+    confidence_label_nl: str,
+    label: str,
+) -> str:
+    direction_nl = _direction_label_nl(forecast.direction_label)
+    return (
+        f"Niet in bezit + {direction_nl} + betrouwbaarheid "
+        f"{confidence_label_nl.lower()} + profiel {risk_profile} → {label}."
+    )
+
+
+def _format_gate_reasons_nl(blockers: Iterable[str]) -> str:
+    """Pretty-print a list of gate-blocker codes as a Dutch sentence."""
+
+    pieces = [_GATE_REASON_NL.get(b, b) for b in blockers]
+    if not pieces:
+        return ""
+    if len(pieces) == 1:
+        return pieces[0].capitalize() + "."
+    head = ", ".join(pieces[:-1])
+    return f"{head.capitalize()} en {pieces[-1]}."
+
+
 # ---- Public translator -----------------------------------------------------
 
 
@@ -251,6 +349,12 @@ def translate_forecast_to_label(inputs: SuggestionInputs) -> SuggestionDecision:
             blocking_reason="gate_failures",
             risk_profile=profile,
             has_position=inputs.has_position,
+            branch_reason_nl="Pre-flight gates niet geslaagd → Bekijken",
+            top_driver_nl=(
+                "Eerst controle nodig: een of meer pre-flight gates "
+                "zijn niet geslaagd."
+            ),
+            blocking_reason_nl=_translate_blocking_reason("gate_failures"),
         )
 
     # 2. A blocked forecast cannot drive a label by itself.
@@ -273,11 +377,26 @@ def translate_forecast_to_label(inputs: SuggestionInputs) -> SuggestionDecision:
             blocking_reason=reason,
             risk_profile=profile,
             has_position=inputs.has_position,
+            branch_reason_nl=(
+                f"Voorspelling niet beschikbaar ({reason}) → Geblokkeerd"
+            ),
+            top_driver_nl=_translate_blocking_reason(reason),
+            blocking_reason_nl=_translate_blocking_reason(reason),
         )
 
     # 3. Apply held-position vs cold-start rules.
     label = _label_for_held(forecast, profile, confidence_label) if inputs.has_position else (
         _label_for_cold_start(forecast, profile, confidence_label)
+    )
+
+    branch_reason = (
+        _branch_reason_for_held(
+            forecast, profile, confidence_label_nl, label
+        )
+        if inputs.has_position
+        else _branch_reason_for_cold_start(
+            forecast, profile, confidence_label_nl, label
+        )
     )
 
     return SuggestionDecision(
@@ -293,6 +412,8 @@ def translate_forecast_to_label(inputs: SuggestionInputs) -> SuggestionDecision:
         blocking_reason=None,
         risk_profile=profile,
         has_position=inputs.has_position,
+        branch_reason_nl=branch_reason,
+        top_driver_nl=_top_driver_for_ready(forecast, label),
     )
 
 
@@ -444,6 +565,7 @@ def apply_portfolio_context_gates(
         return decision
 
     combined_blockers = _format_blockers((*decision.blockers, *blockers))
+    downgrade_nl = _format_gate_reasons_nl(blockers)
     return SuggestionDecision(
         action_label=LABEL_BEKIJKEN,
         action_label_nl=LABEL_BEKIJKEN,
@@ -464,4 +586,11 @@ def apply_portfolio_context_gates(
         has_position=decision.has_position,
         model_code=decision.model_code,
         model_version=decision.model_version,
+        branch_reason_nl=(
+            f"Voorspelling was {decision.action_label}, maar afgeschaald "
+            f"naar Bekijken door portfoliogaten."
+        ),
+        downgrade_reason_nl=downgrade_nl,
+        top_driver_nl=decision.top_driver_nl,
+        blocking_reason_nl=_translate_blocking_reason("portfolio_context_gate"),
     )

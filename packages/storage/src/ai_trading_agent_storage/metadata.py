@@ -2102,6 +2102,14 @@ asset_suggestions = Table(
     Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
     Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
     Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    # Suggestion-grid display fields (migration 0066). All nullable so
+    # the grid degrades gracefully for rows persisted before this slice.
+    Column("branch_reason_nl", Text, nullable=True),
+    Column("downgrade_reason_nl", Text, nullable=True),
+    Column("top_driver_nl", Text, nullable=True),
+    Column("blocking_reason_nl", Text, nullable=True),
+    Column("expected_return_pct", Numeric(10, 4), nullable=True),
+    Column("prob_gain_pct", Numeric(10, 4), nullable=True),
 )
 
 

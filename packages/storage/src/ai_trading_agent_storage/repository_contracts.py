@@ -2084,6 +2084,15 @@ class AssetSuggestionRecord:
     safe_for_action_drafts: bool = False
     safe_for_orders: bool = False
     safe_for_broker_submission: bool = False
+    # Suggestion-grid display fields (migration 0066). All optional so
+    # the contract degrades gracefully for legacy rows persisted before
+    # the grid landed.
+    branch_reason_nl: str | None = None
+    downgrade_reason_nl: str | None = None
+    top_driver_nl: str | None = None
+    blocking_reason_nl: str | None = None
+    expected_return_pct: Decimal | None = None
+    prob_gain_pct: Decimal | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
