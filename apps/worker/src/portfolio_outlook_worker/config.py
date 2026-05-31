@@ -116,6 +116,16 @@ class SchedulerSettings(BaseModel):
     # legitimately take minutes; tune for the longest expected run.
     api_request_timeout_seconds: float = 300.0
 
+    # AI morning explanation batch — fires after the daily morning
+    # chain so Claude's Dutch paraphrase is ready for every held-
+    # position Decision Package before the operator opens the
+    # dashboard. Disabled by default; the API-side opt-in
+    # (``ai_explanation_morning_batch_enabled``) is the second gate.
+    # Default cron: 06:45 local time, ~15 min after the chain trigger
+    # so Decision Packages have had time to land.
+    morning_explanation_batch_trigger_enabled: bool = False
+    morning_explanation_batch_cron: str = "45 6 * * *"
+
     # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
     # cadence). When ``per_market_close_digest_enabled`` is True the
     # worker registers one cron fire per active market (see

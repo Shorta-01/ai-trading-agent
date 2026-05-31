@@ -33,6 +33,7 @@ from ai_trading_agent_storage import (
 from portfolio_outlook_worker.api_trigger import (
     trigger_ibkr_sync,
     trigger_morning_chain,
+    trigger_morning_explanation_batch,
 )
 from portfolio_outlook_worker.config import (
     IbkrSettings,
@@ -57,6 +58,7 @@ _PRE_BRIEFING_JOB_ID = "pre_briefing"
 _SUBMISSION_SWEEP_JOB_ID = "submission_sweep"
 _CANCEL_SWEEP_JOB_ID = "cancel_sweep"
 _MORNING_CHAIN_JOB_ID = "morning_chain_trigger"
+_MORNING_EXPLANATION_BATCH_JOB_ID = "morning_explanation_batch_trigger"
 _IBKR_SYNC_JOB_ID = "ibkr_sync_trigger"
 # Market-aware fires (one per active market session, see market_hours).
 # Job ids follow ``market_close_<EXCHANGE_CODE>`` so they're stable
@@ -459,6 +461,21 @@ class PortfolioScheduler:
                 coalesce=True,
                 misfire_grace_time=_INTERVAL_MISFIRE_GRACE_SECONDS,
             )
+        # Morning explanation batch — fires ~15 min after the morning
+        # chain so Claude's Dutch paraphrase is ready for every held-
+        # position Decision Package before the operator opens the
+        # dashboard. Opt-in via ``morning_explanation_batch_trigger_enabled``
+        # (worker) AND ``ai_explanation_morning_batch_enabled`` (API).
+        if self._scheduler_settings.morning_explanation_batch_trigger_enabled:
+            self._scheduler.add_job(
+                self._on_morning_explanation_batch_trigger,
+                trigger=self._build_morning_explanation_batch_trigger(),
+                id=_MORNING_EXPLANATION_BATCH_JOB_ID,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
+            )
 
     def _build_morning_chain_trigger(self) -> Any:
         """Parse the configured 5-field cron into a CronTrigger."""
@@ -489,6 +506,35 @@ class PortfolioScheduler:
 
     def _on_ibkr_sync_trigger(self) -> None:
         trigger_ibkr_sync(
+            base_url=self._scheduler_settings.api_base_url,
+            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        )
+
+    def _build_morning_explanation_batch_trigger(self) -> Any:
+        """Parse the configured 5-field cron into a CronTrigger."""
+
+        from apscheduler.triggers.cron import CronTrigger
+
+        parts = (
+            self._scheduler_settings.morning_explanation_batch_cron or ""
+        ).strip().split()
+        if len(parts) != 5:
+            raise ValueError(
+                "scheduler.morning_explanation_batch_cron must be a 5-field cron, got "
+                f"{self._scheduler_settings.morning_explanation_batch_cron!r}"
+            )
+        minute, hour, day, month, day_of_week = parts
+        return CronTrigger(
+            minute=minute,
+            hour=hour,
+            day=day,
+            month=month,
+            day_of_week=day_of_week,
+            timezone=self._scheduler_settings.timezone,
+        )
+
+    def _on_morning_explanation_batch_trigger(self) -> None:
+        trigger_morning_explanation_batch(
             base_url=self._scheduler_settings.api_base_url,
             timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
         )

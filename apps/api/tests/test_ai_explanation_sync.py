@@ -27,7 +27,9 @@ from portfolio_outlook_api.ai_explanation_provider import (
     StubExplanationProvider,
 )
 from portfolio_outlook_api.ai_explanation_sync import (
+    MorningBatchReport,
     generate_explanation,
+    generate_explanations_for_morning_batch,
     serialize_explanation_for_response,
 )
 
@@ -330,3 +332,105 @@ def test_serializer_strips_internals_and_emits_safety_flags_false() -> None:
     assert payload["safe_for_orders"] is False
     assert payload["risk_disclaimer_nl"] == LOCKED_RISK_DISCLAIMER_NL
     assert payload["hallucinated_numbers"] == []
+
+
+# ---- morning batch ----------------------------------------------------
+
+
+def test_morning_batch_persists_one_explanation_per_package() -> None:
+    repo = FakeExplanationRepo()
+    packages = [
+        _package(decision_package_id="dp-aapl", content_hash="h-aapl", symbol="AAPL"),
+        _package(decision_package_id="dp-msft", content_hash="h-msft", symbol="MSFT"),
+    ]
+    sources_by_symbol = {"AAPL": (_research_source(),), "MSFT": ()}
+
+    report = generate_explanations_for_morning_batch(
+        decision_packages=packages,
+        research_sources_for_symbol=lambda sym: sources_by_symbol.get(sym, ()),
+        provider=StubExplanationProvider(),
+        repo=repo,
+        max_output_chars=2000,
+    )
+
+    assert isinstance(report, MorningBatchReport)
+    assert report.package_count == 2
+    assert report.generated_count == 2
+    assert report.blocked_count == 0
+    assert report.skipped_count == 0
+    assert report.blocking_reasons == ()
+    assert len(repo.saved_explanations) == 2
+
+
+def test_morning_batch_short_circuits_when_provider_unavailable() -> None:
+    repo = FakeExplanationRepo()
+    packages = [_package(), _package(decision_package_id="dp-2", content_hash="h-2")]
+
+    report = generate_explanations_for_morning_batch(
+        decision_packages=packages,
+        research_sources_for_symbol=lambda _sym: (),
+        provider=ExplanationProviderUnavailable(
+            reason="budget_exceeded",
+            detail_nl="Maandbudget overschreden.",
+        ),
+        repo=repo,
+        max_output_chars=2000,
+    )
+
+    assert report.package_count == 2
+    assert report.generated_count == 0
+    assert report.blocked_count == 0
+    assert report.skipped_count == 2
+    assert report.blocking_reasons == ("budget_exceeded",)
+    # Nothing persisted — the underlying generate_explanation returned early.
+    assert len(repo.saved_explanations) == 0
+
+
+def test_morning_batch_counts_blocked_and_dedupes_reasons() -> None:
+    class _HallucinatingProvider:
+        def generate(
+            self, inputs: ExplanationProviderInputs
+        ) -> ExplanationProviderResult:
+            return ExplanationProviderResult(
+                output_text=f"Doelprijs 999. {LOCKED_RISK_DISCLAIMER_NL}",
+                model_provider_code="evil",
+                model_name="x",
+                model_version="v1",
+            )
+
+    repo = FakeExplanationRepo()
+    packages = [
+        _package(decision_package_id="dp-1", content_hash="h-1", symbol="AAPL"),
+        _package(decision_package_id="dp-2", content_hash="h-2", symbol="MSFT"),
+        _package(decision_package_id="dp-3", content_hash="h-3", symbol="GOOG"),
+    ]
+
+    report = generate_explanations_for_morning_batch(
+        decision_packages=packages,
+        research_sources_for_symbol=lambda _sym: (),
+        provider=_HallucinatingProvider(),
+        repo=repo,
+        max_output_chars=2000,
+    )
+
+    assert report.package_count == 3
+    assert report.generated_count == 0
+    assert report.blocked_count == 3
+    # Same blocking reason for all three packages → deduped to one entry.
+    assert report.blocking_reasons == (BLOCKING_REASON_HALLUCINATED_NUMBERS,)
+
+
+def test_morning_batch_with_empty_package_list_is_a_no_op() -> None:
+    repo = FakeExplanationRepo()
+    report = generate_explanations_for_morning_batch(
+        decision_packages=(),
+        research_sources_for_symbol=lambda _sym: (),
+        provider=StubExplanationProvider(),
+        repo=repo,
+        max_output_chars=2000,
+    )
+    assert report.package_count == 0
+    assert report.generated_count == 0
+    assert report.blocked_count == 0
+    assert report.skipped_count == 0
+    assert report.blocking_reasons == ()

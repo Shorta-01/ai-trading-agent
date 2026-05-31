@@ -281,6 +281,12 @@ class Settings(BaseSettings):
     notification_send_on_nav_drop: bool = True
     notification_send_on_position_drop: bool = True
     notification_send_on_high_confidence_sell: bool = True
+    # AI integration: pre-compute explanations for held-position
+    # Decision Packages each morning so the dashboard shows Claude's
+    # paraphrase immediately instead of generating lazily on click.
+    # Default OFF — opt in so the operator who hasn't configured
+    # Claude doesn't trigger budget-exceeded errors every morning.
+    ai_explanation_morning_batch_enabled: bool = False
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False

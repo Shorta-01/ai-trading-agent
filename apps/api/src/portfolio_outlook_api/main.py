@@ -33,6 +33,9 @@ from portfolio_outlook_api.error_routes import (
 from portfolio_outlook_api.error_routes import (
     unhandled_exception_handler,
 )
+from portfolio_outlook_api.explanation_batch_routes import (
+    router as explanation_batch_router,
+)
 from portfolio_outlook_api.forecast_routes import (
     router as forecast_routes_router,
 )
@@ -191,6 +194,7 @@ app.include_router(suggestions_grid_router)
 app.include_router(market_events_router)
 app.include_router(digest_router)
 app.include_router(notification_router)
+app.include_router(explanation_batch_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

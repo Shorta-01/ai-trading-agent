@@ -430,6 +430,87 @@ def test_ibkr_sync_trigger_job_registered_with_interval_and_jitter() -> None:
         scheduler.stop()
 
 
+def _build_with_explanation_batch_trigger(
+    *,
+    morning_explanation_batch_trigger_enabled: bool = False,
+    morning_explanation_batch_cron: str = "45 6 * * *",
+    api_base_url: str | None = "http://api:8000",
+) -> PortfolioScheduler:
+    return PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            api_base_url=api_base_url,
+            morning_explanation_batch_trigger_enabled=(
+                morning_explanation_batch_trigger_enabled
+            ),
+            morning_explanation_batch_cron=morning_explanation_batch_cron,
+        ),
+        worker_id="worker-test-explanation",
+        scheduler_factory=_scheduler_factory,
+    )
+
+
+def test_morning_explanation_batch_job_not_registered_by_default() -> None:
+    scheduler = _build_with_explanation_batch_trigger()
+    try:
+        scheduler.start()
+        assert (
+            scheduler._scheduler.get_job("morning_explanation_batch_trigger") is None
+        )
+    finally:
+        scheduler.stop()
+
+
+def test_morning_explanation_batch_job_registered_when_enabled() -> None:
+    scheduler = _build_with_explanation_batch_trigger(
+        morning_explanation_batch_trigger_enabled=True,
+        morning_explanation_batch_cron="45 6 * * *",
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job("morning_explanation_batch_trigger")
+        assert job is not None
+        cron_repr = repr(job.trigger)
+        assert "hour='6'" in cron_repr
+        assert "minute='45'" in cron_repr
+        assert "Europe/Brussels" in cron_repr
+        _assert_explicit_guards(job)
+    finally:
+        scheduler.stop()
+
+
+def test_morning_explanation_batch_handler_calls_trigger(monkeypatch) -> None:
+    captured: list[dict[str, object]] = []
+    from portfolio_outlook_worker import scheduler as sched_mod
+
+    def _stub_trigger(*, base_url, timeout_seconds):
+        captured.append({"base_url": base_url, "timeout": timeout_seconds})
+        return {"status": "ok"}
+
+    monkeypatch.setattr(
+        sched_mod, "trigger_morning_explanation_batch", _stub_trigger
+    )
+
+    scheduler = _build_with_explanation_batch_trigger(
+        morning_explanation_batch_trigger_enabled=True,
+        api_base_url="http://api.local",
+    )
+    try:
+        scheduler.start()
+        scheduler._on_morning_explanation_batch_trigger()
+        assert len(captured) == 1
+        assert captured[0]["base_url"] == "http://api.local"
+    finally:
+        scheduler.stop()
+
+
 def test_pre_briefing_tail_calls_morning_chain_when_configured(monkeypatch) -> None:
     """#2 — signal chaining: when ``morning_chain_after_pre_briefing`` is
     on, the pre-briefing handler must fire the morning chain trigger
