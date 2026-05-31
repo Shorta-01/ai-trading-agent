@@ -9,6 +9,7 @@ import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget"
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
+import { TodaysActionsCounter } from "@/components/TodaysActionsCounter";
 import { TriageStrip } from "@/components/TriageStrip";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { EmptyState } from "@/components/EmptyState";
@@ -81,6 +82,7 @@ export default function HomePage() {
   return (
     <main className="page-wrap">
       <TriageStrip />
+      <TodaysActionsCounter />
       <section style={{ marginBottom: "0.75rem", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <SchedulerStatusBadge />
         <CalibrationCoverageBadge />
