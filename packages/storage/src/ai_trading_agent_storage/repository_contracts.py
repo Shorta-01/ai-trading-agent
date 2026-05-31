@@ -361,6 +361,13 @@ class RuntimeConfigRecord:
     notification_send_on_nav_drop: bool | None = None
     notification_send_on_position_drop: bool | None = None
     notification_send_on_high_confidence_sell: bool | None = None
+    # Settings UI PR L — AI feature toggles. Each ``None`` means the
+    # operator hasn't customised the default; the env-var / code
+    # constant applies. The three flags below sit alongside the existing
+    # ``ai_explanation_enabled`` master toggle.
+    ai_explanation_morning_batch_enabled: bool | None = None
+    ai_email_summary_enabled: bool | None = None
+    research_ai_extraction_enabled: bool | None = None
 
 
 @dataclass(frozen=True)

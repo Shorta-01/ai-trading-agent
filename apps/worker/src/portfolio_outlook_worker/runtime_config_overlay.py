@@ -146,6 +146,13 @@ def apply_worker_runtime_config_overlay(settings_obj: Settings) -> None:
         notifications.send_on_high_confidence_sell = (
             record.notification_send_on_high_confidence_sell
         )
+    # Settings UI PR L — AI email summary toggle. Lives on
+    # ``NotificationSettings`` worker-side (the runner reads it before
+    # POSTing to the API's compose endpoint).
+    if record.ai_email_summary_enabled is not None:
+        notifications.ai_email_summary_enabled = (
+            record.ai_email_summary_enabled
+        )
 
 
 __all__ = ["apply_worker_runtime_config_overlay"]

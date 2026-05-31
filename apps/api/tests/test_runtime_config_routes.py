@@ -53,7 +53,7 @@ def _seed(tmp_path) -> None:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0069_runtime_config_notifications')"
+                "('0070_runtime_config_ai_features')"
             )
         )
 
@@ -262,3 +262,173 @@ def test_apply_runtime_config_overlay_keeps_defaults_on_null_values() -> None:
     assert dummy.claude_ai_budget_monthly_eur == Decimal("50")
     # ...but the non-null boolean column always wins.
     assert dummy.ai_explanation_enabled is False
+
+
+# ---- Settings UI PR L — AI feature toggles --------------------------------
+
+
+def test_get_returns_env_defaults_for_new_ai_feature_flags(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    _seed(tmp_path)
+    api_settings.ai_explanation_morning_batch_enabled = True
+    api_settings.ai_email_summary_enabled = False
+    api_settings.research_ai_extraction_enabled = False
+
+    body = client.get("/settings/connection").json()
+    assert body["ai_explanation_morning_batch_enabled"] is True
+    assert body["ai_email_summary_enabled"] is False
+    assert body["research_ai_extraction_enabled"] is False
+
+
+def test_put_persists_ai_feature_flags_and_get_reflects(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    _seed(tmp_path)
+    payload = {
+        "ibkr_enabled": False,
+        "ibkr_account_id": "DU3333333",
+        "ibkr_host": "127.0.0.1",
+        "ibkr_port": 7497,
+        "ibkr_client_id": 1,
+        "ai_explanation_enabled": True,
+        "claude_ai_explanation_model": "claude-haiku-4-5",
+        "claude_ai_budget_monthly_eur": "25",
+        "ai_explanation_morning_batch_enabled": True,
+        "ai_email_summary_enabled": True,
+        "research_ai_extraction_enabled": True,
+    }
+    put = client.put("/settings/connection", json=payload)
+    assert put.status_code == 200
+    saved = put.json()
+    assert saved["ai_explanation_morning_batch_enabled"] is True
+    assert saved["ai_email_summary_enabled"] is True
+    assert saved["research_ai_extraction_enabled"] is True
+
+    body = client.get("/settings/connection").json()
+    assert body["ai_explanation_morning_batch_enabled"] is True
+    assert body["ai_email_summary_enabled"] is True
+    assert body["research_ai_extraction_enabled"] is True
+    # The PUT also reflects the operator's choice on the live settings
+    # singleton so the next request picks it up immediately.
+    assert api_settings.ai_explanation_morning_batch_enabled is True
+    assert api_settings.ai_email_summary_enabled is True
+    assert api_settings.research_ai_extraction_enabled is True
+
+
+def test_connection_put_preserves_smtp_and_notification_prefs(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    """Pre-existing bug fix: saving the connection page must not wipe
+    notification settings saved via the notifications endpoint. We
+    simulate that by seeding a row with notification fields populated
+    then putting connection-only fields and asserting the notification
+    columns survive."""
+
+    from datetime import UTC, datetime
+
+    from ai_trading_agent_storage import (
+        RuntimeConfigRecord,
+        SqlAlchemyRuntimeConfigRepository,
+        StorageConnectionProvider,
+        build_database_connection_settings,
+    )
+
+    _seed(tmp_path)
+
+    provider = StorageConnectionProvider(
+        build_database_connection_settings(api_settings.storage.database_url)
+    )
+    with provider.checked_connection(require_writable=True) as checked:
+        repo = SqlAlchemyRuntimeConfigRepository(
+            checked.connection, checked.readiness
+        )
+        repo.upsert(
+            RuntimeConfigRecord(
+                config_id="default",
+                ibkr_enabled=False,
+                ibkr_account_id=None,
+                ibkr_host=None,
+                ibkr_port=None,
+                ibkr_client_id=None,
+                ai_explanation_enabled=False,
+                claude_ai_explanation_model=None,
+                claude_ai_budget_monthly_eur=None,
+                claude_ai_api_key=None,
+                updated_at=datetime.now(UTC),
+                smtp_host="smtp.example.com",
+                smtp_port=587,
+                smtp_from="alerts@example.com",
+                smtp_to="ops@example.com",
+                smtp_use_tls=True,
+                notifications_email_enabled=True,
+                notification_send_on_nav_drop=True,
+            )
+        )
+        checked.connection.commit()
+
+    payload = {
+        "ibkr_enabled": True,
+        "ibkr_account_id": "DU9999999",
+        "ibkr_host": "127.0.0.1",
+        "ibkr_port": 7497,
+        "ibkr_client_id": 1,
+        "ai_explanation_enabled": False,
+        "ai_explanation_morning_batch_enabled": False,
+        "ai_email_summary_enabled": False,
+        "research_ai_extraction_enabled": False,
+    }
+    put = client.put("/settings/connection", json=payload)
+    assert put.status_code == 200
+
+    # Re-read the row directly via the repo to verify notification
+    # fields survived the connection PUT.
+    with provider.checked_connection(require_writable=False) as checked:
+        repo = SqlAlchemyRuntimeConfigRepository(
+            checked.connection, checked.readiness
+        )
+        row = repo.get()
+    assert row is not None
+    assert row.smtp_host == "smtp.example.com"
+    assert row.smtp_from == "alerts@example.com"
+    assert row.smtp_to == "ops@example.com"
+    assert row.notifications_email_enabled is True
+    assert row.notification_send_on_nav_drop is True
+
+
+def test_apply_runtime_config_overlay_applies_ai_feature_flags() -> None:
+    from datetime import UTC, datetime
+
+    from ai_trading_agent_storage import RuntimeConfigRecord
+
+    class _Dummy:
+        ibkr_account_id_hint: str | None = None
+        claude_ai_api_key: str | None = None
+        claude_ai_explanation_model: str = "x"
+        claude_ai_budget_monthly_eur: Decimal = Decimal("50")
+        ai_explanation_enabled: bool = False
+        ai_explanation_morning_batch_enabled: bool = False
+        ai_email_summary_enabled: bool = False
+        research_ai_extraction_enabled: bool = False
+
+    dummy = _Dummy()
+    record = RuntimeConfigRecord(
+        config_id="default",
+        ibkr_enabled=False,
+        ibkr_account_id=None,
+        ibkr_host=None,
+        ibkr_port=None,
+        ibkr_client_id=None,
+        ai_explanation_enabled=False,
+        claude_ai_explanation_model=None,
+        claude_ai_budget_monthly_eur=None,
+        claude_ai_api_key=None,
+        updated_at=datetime.now(UTC),
+        ai_explanation_morning_batch_enabled=True,
+        ai_email_summary_enabled=True,
+        research_ai_extraction_enabled=True,
+    )
+    apply_runtime_config_overlay(dummy, record)
+    assert dummy.ai_explanation_morning_batch_enabled is True
+    assert dummy.ai_email_summary_enabled is True
+    assert dummy.research_ai_extraction_enabled is True
