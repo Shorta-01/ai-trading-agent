@@ -109,3 +109,128 @@ def test_locked_session_catalog_matches_worker_module() -> None:
     assert api_codes == worker_codes, (
         "API and worker locked-session catalogs drifted; update both."
     )
+
+
+# ---------------------------------------------------------------------------
+# /markets/hours-now — dashboard widget feed
+# ---------------------------------------------------------------------------
+
+
+def _at_utc(year: int, month: int, day: int, hour: int, minute: int) -> object:
+    from datetime import UTC, datetime
+
+    return datetime(year, month, day, hour, minute, tzinfo=UTC)
+
+
+def test_hours_now_returns_empty_markets_when_no_universe_selected() -> None:
+    r = client.get("/markets/hours-now")
+    body = r.json()
+    assert r.status_code == 200
+    assert body["universe_codes_selected"] == []
+    assert body["markets"] == []
+    assert "universe-scan" in body["help_nl"]
+
+
+def test_hours_now_returns_one_entry_per_resolved_session(monkeypatch) -> None:
+    """A universe with BEL20 + DAX40 resolves to two market sessions
+    (Euronext + Xetra) — the widget gets one row per session, not per
+    index code."""
+
+    api_settings.universe_scan_index_codes = "BEL20,DAX40"
+    # Mid-week, post-open: makes the assertions on state stable.
+    monkeypatch.setattr(
+        market_events_routes,
+        "datetime",
+        _PinnedDatetime(_at_utc(2026, 6, 3, 10, 0)),
+    )
+    r = client.get("/markets/hours-now")
+    body = r.json()
+    assert r.status_code == 200
+    codes = [m["market_code"] for m in body["markets"]]
+    assert codes == ["EURONEXT", "XETRA"]
+    for m in body["markets"]:
+        # Both Euronext + Xetra open 09:00 and close 17:30 local;
+        # 10:00 UTC = 12:00 Brussels (CEST is UTC+2 in June).
+        assert m["open_local_hhmm"] == "09:00"
+        assert m["close_local_hhmm"] == "17:30"
+        assert m["state"] == "open"
+        assert m["next_event_kind"] == "close"
+
+
+def test_hours_now_reports_pre_open_before_local_open(monkeypatch) -> None:
+    api_settings.universe_scan_index_codes = "BEL20"
+    # 06:00 UTC = 08:00 Brussels (CEST), before the 09:00 local open.
+    monkeypatch.setattr(
+        market_events_routes,
+        "datetime",
+        _PinnedDatetime(_at_utc(2026, 6, 3, 6, 0)),
+    )
+    body = client.get("/markets/hours-now").json()
+    market = body["markets"][0]
+    assert market["state"] == "pre_open"
+    assert market["next_event_kind"] == "open"
+    assert "Opent vandaag" in market["state_nl"]
+
+
+def test_hours_now_reports_post_close_after_local_close(monkeypatch) -> None:
+    api_settings.universe_scan_index_codes = "BEL20"
+    # 18:00 UTC = 20:00 Brussels (CEST), after the 17:30 local close.
+    monkeypatch.setattr(
+        market_events_routes,
+        "datetime",
+        _PinnedDatetime(_at_utc(2026, 6, 3, 18, 0)),
+    )
+    body = client.get("/markets/hours-now").json()
+    market = body["markets"][0]
+    assert market["state"] == "post_close"
+    assert market["next_event_kind"] == "open"
+
+
+def test_hours_now_reports_weekend_when_local_date_is_saturday(monkeypatch) -> None:
+    api_settings.universe_scan_index_codes = "BEL20"
+    # 2026-06-06 is a Saturday.
+    monkeypatch.setattr(
+        market_events_routes,
+        "datetime",
+        _PinnedDatetime(_at_utc(2026, 6, 6, 10, 0)),
+    )
+    body = client.get("/markets/hours-now").json()
+    market = body["markets"][0]
+    assert market["state"] == "weekend"
+    assert market["next_event_kind"] == "open"
+    assert "weekend" in market["state_nl"].lower()
+
+
+def test_hours_now_handles_us_session_with_correct_timezone(monkeypatch) -> None:
+    api_settings.universe_scan_index_codes = "SP100"
+    # 14:00 UTC = 10:00 EDT, NYSE is open (09:30 EDT open).
+    monkeypatch.setattr(
+        market_events_routes,
+        "datetime",
+        _PinnedDatetime(_at_utc(2026, 6, 3, 14, 0)),
+    )
+    body = client.get("/markets/hours-now").json()
+    market = body["markets"][0]
+    assert market["market_code"] == "US_EQUITIES"
+    assert market["timezone"] == "America/New_York"
+    assert market["open_local_hhmm"] == "09:30"
+    assert market["close_local_hhmm"] == "16:00"
+    assert market["state"] == "open"
+
+
+class _PinnedDatetime:
+    """Helper that swaps in a fixed ``datetime.now()`` while delegating
+    every other attribute (UTC, timezone, etc.) to the real module so
+    the rest of the code keeps working unchanged."""
+
+    def __init__(self, fixed_now):
+        from datetime import datetime as _real_datetime
+
+        self._real = _real_datetime
+        self._fixed = fixed_now
+
+    def now(self, tz=None):  # noqa: ARG002 — matches the real signature
+        return self._fixed
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)

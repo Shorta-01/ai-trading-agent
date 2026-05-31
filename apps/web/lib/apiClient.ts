@@ -74,6 +74,26 @@ export type OnlineStorageStatusResponse = {
   migration_readiness_status: string;
   writes_status_nl: string;
 };
+// PR N — dashboard market-hours widget feed.
+export type MarketHoursEntry = {
+  market_code: string;
+  market_label_nl: string;
+  timezone: string;
+  open_at_utc: string;
+  close_at_utc: string;
+  open_local_hhmm: string;
+  close_local_hhmm: string;
+  state: "pre_open" | "open" | "post_close" | "weekend";
+  state_nl: string;
+  next_event_kind: "open" | "close" | null;
+  next_event_at_utc: string | null;
+};
+export type MarketHoursNowResponse = {
+  now_utc: string;
+  universe_codes_selected: string[];
+  markets: MarketHoursEntry[];
+  help_nl: string;
+};
 export type IntegrationCard = { key: string; label_nl: string; status_nl: string; help_nl: string; configured: boolean; connected: boolean; blocks_related_jobs: boolean; };
 export type IntegrationsSummary = { title_nl: string; help_nl: string; cards: IntegrationCard[]; };
 
@@ -1856,6 +1876,8 @@ export const apiClient = {
     getJson<OnlineStorageStatusResponse>("/storage/status/online"),
   getApiHealth: () =>
     getJson<{ status: string; service: string }>("/health"),
+  getMarketHoursNow: () =>
+    getJson<MarketHoursNowResponse>("/markets/hours-now"),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),
