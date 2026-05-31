@@ -296,6 +296,17 @@ class Settings(BaseSettings):
     # path uses — the AI cannot introduce new numbers, only paraphrase
     # what the deterministic template already contains.
     ai_email_summary_enabled: bool = False
+    # PR 3 — AI extraction of research source documents. Off by
+    # default; the new ``POST /research/sources/{id}/ai-extract``
+    # endpoint short-circuits to ``status="disabled"`` unless this
+    # flag AND a valid provider code are set. The substring-based
+    # hallucination guard (validate_extracted_facts) refuses any AI
+    # output that introduces ungrounded facts, so the operator
+    # surface can never display an invented quote.
+    research_ai_extraction_enabled: bool = False
+    research_ai_extraction_provider_code: str = "stub"
+    research_ai_extraction_max_facts: int = 12
+    research_ai_extraction_max_fact_chars: int = 500
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False
