@@ -791,6 +791,23 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "terugvallen op de env-var of ingebouwde default."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0066_asset_suggestions_grid_columns",
+        previous_revision_id="0065_runtime_config_predictor_tuning",
+        filename="0066_asset_suggestions_grid_columns.py",
+        label_nl="Display-kolommen voor de suggesties-grid",
+        description_nl=(
+            "Voegt zes kolommen toe aan ``asset_suggestions`` zodat de "
+            "V1 suggesties-grid kan renderen zonder forecast-join: "
+            "``branch_reason_nl`` (welke beslissingstak vuurde), "
+            "``downgrade_reason_nl`` (waarom een Kopen werd "
+            "afgeschaald), ``top_driver_nl`` (één-regel waarom), "
+            "``blocking_reason_nl`` (Nederlandse versie van "
+            "blocking_reason), ``expected_return_pct`` en "
+            "``prob_gain_pct`` (gemirrord vanuit de forecast). Alle "
+            "nullable zodat oudere rijen blijven werken."
+        ),
+    ),
 )
 
 
