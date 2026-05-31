@@ -26,7 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
@@ -347,8 +347,109 @@ def serialize_explanation_for_response(
     }
 
 
+@dataclass(frozen=True)
+class MorningBatchReport:
+    """Aggregate result of the per-Decision-Package explanation batch.
+
+    Returned by :func:`generate_explanations_for_morning_batch`. The
+    counts let the operator audit how many explanations Claude
+    generated overnight without scrolling per-package responses.
+    """
+
+    requested_at: datetime
+    completed_at: datetime
+    package_count: int
+    generated_count: int
+    blocked_count: int
+    skipped_count: int
+    blocking_reasons: tuple[str, ...]
+
+
+def generate_explanations_for_morning_batch(
+    *,
+    decision_packages: Sequence[AssetDecisionPackageRecord],
+    research_sources_for_symbol: Callable[
+        [str], tuple[ResearchSourceRecord, ...]
+    ],
+    provider: ExplanationProviderProtocol | ExplanationProviderUnavailable,
+    repo: _ExplanationRepoProtocol,
+    max_output_chars: int,
+    now_provider: Callable[[], datetime] = lambda: datetime.now(UTC),
+) -> MorningBatchReport:
+    """Pre-compute one Claude explanation per Decision Package.
+
+    Iterates ``decision_packages`` in order; for each, fetches research
+    sources via the callback + calls :func:`generate_explanation`. Per-
+    package errors don't abort the batch — they're folded into the
+    ``blocked_count`` + ``blocking_reasons`` counters.
+
+    The provider-unavailable case (budget exceeded, real-client off,
+    etc.) short-circuits: every package is reported as ``skipped`` so
+    the operator sees a single deterministic reason in the audit row
+    rather than N copies.
+    """
+
+    requested_at = now_provider()
+
+    # Short-circuit: a single provider-unavailable bubble lets the
+    # caller see ONE reason instead of N copies. We still report the
+    # package count so the audit row reflects what would have been
+    # attempted.
+    if isinstance(provider, ExplanationProviderUnavailable):
+        return MorningBatchReport(
+            requested_at=requested_at,
+            completed_at=now_provider(),
+            package_count=len(decision_packages),
+            generated_count=0,
+            blocked_count=0,
+            skipped_count=len(decision_packages),
+            blocking_reasons=(provider.reason,),
+        )
+
+    generated = 0
+    blocked = 0
+    reasons: list[str] = []
+    for package in decision_packages:
+        sources = research_sources_for_symbol(package.symbol)
+        report = generate_explanation(
+            package=package,
+            research_sources=sources,
+            provider=provider,
+            repo=repo,
+            max_output_chars=max_output_chars,
+        )
+        if report.status == "generated":
+            generated += 1
+            continue
+        blocked += 1
+        if report.blocking_reason:
+            reasons.append(report.blocking_reason)
+
+    # De-duplicate reasons but preserve insertion order — easier to
+    # eyeball in the audit row than a sorted set.
+    seen: set[str] = set()
+    deduped_reasons: list[str] = []
+    for reason in reasons:
+        if reason in seen:
+            continue
+        seen.add(reason)
+        deduped_reasons.append(reason)
+
+    return MorningBatchReport(
+        requested_at=requested_at,
+        completed_at=now_provider(),
+        package_count=len(decision_packages),
+        generated_count=generated,
+        blocked_count=blocked,
+        skipped_count=0,
+        blocking_reasons=tuple(deduped_reasons),
+    )
+
+
 __all__ = [
     "ExplanationReport",
+    "MorningBatchReport",
     "generate_explanation",
+    "generate_explanations_for_morning_batch",
     "serialize_explanation_for_response",
 ]

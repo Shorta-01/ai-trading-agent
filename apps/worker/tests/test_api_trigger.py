@@ -101,3 +101,39 @@ def test_trigger_ibkr_sync_targets_correct_path(monkeypatch) -> None:
     )
     api_trigger.trigger_ibkr_sync(base_url="http://api:8000", timeout_seconds=1.0)
     assert captured["url"] == "http://api:8000/ibkr/sync/run"
+
+
+def test_trigger_morning_explanation_batch_targets_correct_path(monkeypatch) -> None:
+    captured: dict[str, str] = {}
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout: (captured.__setitem__("url", url) or _StubResponse()),
+    )
+    api_trigger.trigger_morning_explanation_batch(
+        base_url="http://api:8000", timeout_seconds=1.0
+    )
+    assert captured["url"] == "http://api:8000/explanations/morning-batch"
+
+
+def test_trigger_morning_explanation_batch_noops_without_base_url() -> None:
+    assert api_trigger.trigger_morning_explanation_batch(
+        base_url=None, timeout_seconds=1.0
+    ) is None
+
+
+def test_trigger_morning_explanation_batch_returns_none_on_http_error(
+    monkeypatch,
+) -> None:
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout: _StubResponse(status_code=503, payload={"err": "down"}),
+    )
+    assert api_trigger.trigger_morning_explanation_batch(
+        base_url="http://api:8000", timeout_seconds=1.0
+    ) is None

@@ -41,6 +41,22 @@ def trigger_ibkr_sync(
     return _post(base_url, "/ibkr/sync/run", timeout_seconds)
 
 
+def trigger_morning_explanation_batch(
+    *, base_url: str | None, timeout_seconds: float
+) -> dict[str, Any] | None:
+    """POST ``/explanations/morning-batch`` on the API.
+
+    Fired after the daily morning chain so Claude's Dutch paraphrase
+    is ready for every held-position Decision Package before the
+    operator opens the dashboard. Honours the API-side opt-in flag
+    (``ai_explanation_morning_batch_enabled``) — when off, the API
+    returns ``status="disabled"`` and the call is a deterministic
+    no-op.
+    """
+
+    return _post(base_url, "/explanations/morning-batch", timeout_seconds)
+
+
 def _post(
     base_url: str | None, path: str, timeout_seconds: float
 ) -> dict[str, Any] | None:
@@ -70,4 +86,8 @@ def _post(
     return None
 
 
-__all__ = ["trigger_morning_chain", "trigger_ibkr_sync"]
+__all__ = [
+    "trigger_ibkr_sync",
+    "trigger_morning_chain",
+    "trigger_morning_explanation_batch",
+]

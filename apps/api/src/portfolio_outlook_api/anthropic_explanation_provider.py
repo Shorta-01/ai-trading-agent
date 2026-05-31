@@ -20,9 +20,13 @@ swap is transparent. Locked by §22.2 of the V1.1 doctrine:
   same Slice-10 validation pass (``validate_explanation_output``);
   any number not in the source Decision Package fails the call.
 
-V1.1 §22.2 lock: this provider is **only invoked by the daily
-morning chain** — no on-demand UI path. The factory still respects
-the existing Slice-10 gate
+V1.1 §22.2 lock: this provider has two invocation paths today:
+(1) on-demand via ``POST /api/explanation/{decision_package_id}``
+when the operator opens a Decision Package in the dashboard, and
+(2) the morning explanation-batch (``POST /explanations/morning-batch``)
+fired by the worker after the daily chain so explanations for held
+positions are pre-computed before the operator opens the dashboard.
+The factory still respects the existing Slice-10 gate
 (`ai_explanation_real_client_enabled=true`) plus the new
 `claude_ai_api_key` requirement.
 """
