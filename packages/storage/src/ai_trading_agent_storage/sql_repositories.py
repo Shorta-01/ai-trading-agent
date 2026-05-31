@@ -6174,6 +6174,17 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "morning_chain_after_pre_briefing": (
                 record.morning_chain_after_pre_briefing
             ),
+            "forecast_valid_minutes": record.forecast_valid_minutes,
+            "decision_packages_valid_minutes": (
+                record.decision_packages_valid_minutes
+            ),
+            "prediction_diary_inconclusive_tolerance_pct": (
+                record.prediction_diary_inconclusive_tolerance_pct
+            ),
+            "gbm_regime_shift_enabled": record.gbm_regime_shift_enabled,
+            "gbm_regime_shift_threshold_pct": (
+                record.gbm_regime_shift_threshold_pct
+            ),
         }
         existing = (
             self._connection.execute(
@@ -6339,6 +6350,31 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         morning_chain_after_pre_briefing=(
             bool(row["morning_chain_after_pre_briefing"])
             if row.get("morning_chain_after_pre_briefing") is not None
+            else None
+        ),
+        forecast_valid_minutes=(
+            int(row["forecast_valid_minutes"])
+            if row.get("forecast_valid_minutes") is not None
+            else None
+        ),
+        decision_packages_valid_minutes=(
+            int(row["decision_packages_valid_minutes"])
+            if row.get("decision_packages_valid_minutes") is not None
+            else None
+        ),
+        prediction_diary_inconclusive_tolerance_pct=(
+            Decimal(str(row["prediction_diary_inconclusive_tolerance_pct"]))
+            if row.get("prediction_diary_inconclusive_tolerance_pct") is not None
+            else None
+        ),
+        gbm_regime_shift_enabled=(
+            bool(row["gbm_regime_shift_enabled"])
+            if row.get("gbm_regime_shift_enabled") is not None
+            else None
+        ),
+        gbm_regime_shift_threshold_pct=(
+            Decimal(str(row["gbm_regime_shift_threshold_pct"]))
+            if row.get("gbm_regime_shift_threshold_pct") is not None
             else None
         ),
     )

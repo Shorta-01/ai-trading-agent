@@ -1391,6 +1391,16 @@ runtime_config = Table(
     Column("submission_sweep_enabled", Boolean, nullable=True),
     Column("cancel_sweep_enabled", Boolean, nullable=True),
     Column("morning_chain_after_pre_briefing", Boolean, nullable=True),
+    # Predictor-tuning overlay (Settings UI PR I). Null = env-var.
+    Column("forecast_valid_minutes", Integer, nullable=True),
+    Column("decision_packages_valid_minutes", Integer, nullable=True),
+    Column(
+        "prediction_diary_inconclusive_tolerance_pct",
+        Numeric(8, 4),
+        nullable=True,
+    ),
+    Column("gbm_regime_shift_enabled", Boolean, nullable=True),
+    Column("gbm_regime_shift_threshold_pct", Numeric(8, 4), nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

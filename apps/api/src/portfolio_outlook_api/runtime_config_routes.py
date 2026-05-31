@@ -581,6 +581,27 @@ def update_order_policy_settings(
                     if existing
                     else None
                 ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
+                    if existing
+                    else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -790,6 +811,27 @@ def update_scheduler_settings(
                 ),
                 morning_chain_after_pre_briefing=(
                     existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
                     if existing
                     else None
                 ),
@@ -1022,6 +1064,27 @@ def update_data_window_settings(
                 ),
                 morning_chain_after_pre_briefing=(
                     existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
                     if existing
                     else None
                 ),
@@ -1290,6 +1353,27 @@ def update_worker_sweep_settings(
                 ),
                 morning_chain_after_pre_briefing=(
                     existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
                     if existing
                     else None
                 ),
@@ -1572,6 +1656,27 @@ def update_advanced_settings(
                 ),
                 morning_chain_after_pre_briefing=(
                     existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
                     if existing
                     else None
                 ),
@@ -1874,6 +1979,27 @@ def update_forecast_market_settings(
                     if existing
                     else None
                 ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
+                    if existing
+                    else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -2121,6 +2247,27 @@ def update_execution_gate_settings(
                 morning_chain_after_pre_briefing=(
                     payload.morning_chain_after_pre_briefing
                 ),
+                forecast_valid_minutes=(
+                    existing.forecast_valid_minutes if existing else None
+                ),
+                decision_packages_valid_minutes=(
+                    existing.decision_packages_valid_minutes
+                    if existing
+                    else None
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    existing.prediction_diary_inconclusive_tolerance_pct
+                    if existing
+                    else None
+                ),
+                gbm_regime_shift_enabled=(
+                    existing.gbm_regime_shift_enabled if existing else None
+                ),
+                gbm_regime_shift_threshold_pct=(
+                    existing.gbm_regime_shift_threshold_pct
+                    if existing
+                    else None
+                ),
             )
             repo.upsert(record)
             checked.connection.commit()
@@ -2132,6 +2279,299 @@ def update_execution_gate_settings(
             status_code=503, detail="Opslag is niet beschikbaar."
         ) from exc
     return _execution_gate_payload(record)
+
+
+# ---- Predictor tuning (Settings UI PR I) -------------------------------
+
+
+class PredictorTuningSettingsResponse(BaseModel):
+    """Power-user predictor knobs surfaced behind the "Voorspeller-tuning"
+    accordion. Each value falls back to the env-default when no DB row
+    has been saved."""
+
+    forecast_valid_minutes: int
+    decision_packages_valid_minutes: int
+    prediction_diary_inconclusive_tolerance_pct: str
+    gbm_regime_shift_enabled: bool
+    gbm_regime_shift_threshold_pct: str
+    help_nl: str
+
+
+class UpdatePredictorTuningSettingsRequest(BaseModel):
+    forecast_valid_minutes: int
+    decision_packages_valid_minutes: int
+    prediction_diary_inconclusive_tolerance_pct: Decimal
+    gbm_regime_shift_enabled: bool
+    gbm_regime_shift_threshold_pct: Decimal
+
+
+_PREDICTOR_TUNING_HELP_NL = (
+    "Power-user voorspeller-tuning. Beheert hoe lang voorspellingen en "
+    "beslissings-pakketten geldig blijven, de tolerantie voor "
+    "'onbeslist' uitkomsten in het dagboek, en de GBM regime-shift "
+    "drift-blending. Verkeerde waarden kunnen voorspellings-kwaliteit "
+    "of TTL-druk uit balans brengen."
+)
+
+
+def _predictor_tuning_payload(
+    record: RuntimeConfigRecord | None,
+) -> PredictorTuningSettingsResponse:
+    forecast_min = (
+        record.forecast_valid_minutes
+        if record is not None and record.forecast_valid_minutes is not None
+        else settings.forecast_valid_minutes
+    )
+    dp_min = (
+        record.decision_packages_valid_minutes
+        if record is not None
+        and record.decision_packages_valid_minutes is not None
+        else settings.decision_packages_valid_minutes
+    )
+    tolerance = (
+        record.prediction_diary_inconclusive_tolerance_pct
+        if record is not None
+        and record.prediction_diary_inconclusive_tolerance_pct is not None
+        else Decimal(str(settings.prediction_diary_inconclusive_tolerance_pct))
+    )
+    regime_enabled = (
+        record.gbm_regime_shift_enabled
+        if record is not None and record.gbm_regime_shift_enabled is not None
+        else settings.gbm_regime_shift_enabled
+    )
+    regime_threshold = (
+        record.gbm_regime_shift_threshold_pct
+        if record is not None
+        and record.gbm_regime_shift_threshold_pct is not None
+        else Decimal(str(settings.gbm_regime_shift_threshold_pct))
+    )
+    return PredictorTuningSettingsResponse(
+        forecast_valid_minutes=forecast_min,
+        decision_packages_valid_minutes=dp_min,
+        prediction_diary_inconclusive_tolerance_pct=_decimal_text(tolerance),
+        gbm_regime_shift_enabled=regime_enabled,
+        gbm_regime_shift_threshold_pct=_decimal_text(regime_threshold),
+        help_nl=_PREDICTOR_TUNING_HELP_NL,
+    )
+
+
+@router.get(
+    "/settings/predictor-tuning",
+    response_model=PredictorTuningSettingsResponse,
+)
+def get_predictor_tuning_settings() -> PredictorTuningSettingsResponse:
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            current = repo.get()
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _predictor_tuning_payload(current)
+
+
+@router.put(
+    "/settings/predictor-tuning",
+    response_model=PredictorTuningSettingsResponse,
+)
+def update_predictor_tuning_settings(
+    payload: UpdatePredictorTuningSettingsRequest,
+) -> PredictorTuningSettingsResponse:
+    if payload.forecast_valid_minutes < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Voorspelling-TTL moet ≥ 1 minuut zijn.",
+        )
+    if payload.decision_packages_valid_minutes < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Beslissings-pakket-TTL moet ≥ 1 minuut zijn.",
+        )
+    if payload.prediction_diary_inconclusive_tolerance_pct < Decimal("0"):
+        raise HTTPException(
+            status_code=422,
+            detail="Onbeslist-tolerantie moet ≥ 0 zijn.",
+        )
+    if payload.gbm_regime_shift_threshold_pct <= Decimal("0"):
+        raise HTTPException(
+            status_code=422,
+            detail="Regime-shift drempel moet > 0 zijn.",
+        )
+
+    now = datetime.now(UTC)
+    provider = _storage_provider()
+    try:
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyRuntimeConfigRepository(
+                checked.connection, checked.readiness
+            )
+            existing = repo.get()
+            record = RuntimeConfigRecord(
+                config_id=_CONFIG_ID,
+                ibkr_enabled=existing.ibkr_enabled if existing else False,
+                ibkr_account_id=existing.ibkr_account_id if existing else None,
+                ibkr_host=existing.ibkr_host if existing else None,
+                ibkr_port=existing.ibkr_port if existing else None,
+                ibkr_client_id=existing.ibkr_client_id if existing else None,
+                ai_explanation_enabled=(
+                    existing.ai_explanation_enabled if existing else False
+                ),
+                claude_ai_explanation_model=(
+                    existing.claude_ai_explanation_model if existing else None
+                ),
+                claude_ai_budget_monthly_eur=(
+                    existing.claude_ai_budget_monthly_eur if existing else None
+                ),
+                claude_ai_api_key=existing.claude_ai_api_key if existing else None,
+                updated_at=now,
+                universe_scan_index_codes=(
+                    existing.universe_scan_index_codes if existing else None
+                ),
+                default_buy_value_eur=(
+                    existing.default_buy_value_eur if existing else None
+                ),
+                default_top_up_pct=(
+                    existing.default_top_up_pct if existing else None
+                ),
+                default_reduce_pct=(
+                    existing.default_reduce_pct if existing else None
+                ),
+                max_sector_pct=existing.max_sector_pct if existing else None,
+                cost_dominates_ratio=(
+                    existing.cost_dominates_ratio if existing else None
+                ),
+                suggestion_valid_minutes=(
+                    existing.suggestion_valid_minutes if existing else None
+                ),
+                scheduler_daily_briefing_cron=(
+                    existing.scheduler_daily_briefing_cron if existing else None
+                ),
+                ibkr_sync_interval_minutes=(
+                    existing.ibkr_sync_interval_minutes if existing else None
+                ),
+                forecast_history_lookback_days=(
+                    existing.forecast_history_lookback_days if existing else None
+                ),
+                forecast_minimum_bars_required=(
+                    existing.forecast_minimum_bars_required if existing else None
+                ),
+                daily_briefing_lookback_hours=(
+                    existing.daily_briefing_lookback_hours if existing else None
+                ),
+                universe_scan_cache_ttl_hours=(
+                    existing.universe_scan_cache_ttl_hours if existing else None
+                ),
+                sweep_interval_seconds=(
+                    existing.sweep_interval_seconds if existing else None
+                ),
+                sweep_retry_max_attempts=(
+                    existing.sweep_retry_max_attempts if existing else None
+                ),
+                sweep_retry_backoff_seconds=(
+                    existing.sweep_retry_backoff_seconds if existing else None
+                ),
+                sweep_alert_after_consecutive_errors=(
+                    existing.sweep_alert_after_consecutive_errors
+                    if existing
+                    else None
+                ),
+                eodhd_rate_limit_per_second=(
+                    existing.eodhd_rate_limit_per_second if existing else None
+                ),
+                ensemble_weight_strategy=(
+                    existing.ensemble_weight_strategy if existing else None
+                ),
+                gbm_drift_window_days=(
+                    existing.gbm_drift_window_days if existing else None
+                ),
+                action_draft_approval_valid_minutes=(
+                    existing.action_draft_approval_valid_minutes
+                    if existing
+                    else None
+                ),
+                ai_explanation_provider_code=(
+                    existing.ai_explanation_provider_code if existing else None
+                ),
+                sharpe_strong_threshold=(
+                    existing.sharpe_strong_threshold if existing else None
+                ),
+                sharpe_slight_threshold=(
+                    existing.sharpe_slight_threshold if existing else None
+                ),
+                forecast_horizon_trading_days=(
+                    existing.forecast_horizon_trading_days if existing else None
+                ),
+                forecast_ensemble_enabled=(
+                    existing.forecast_ensemble_enabled if existing else None
+                ),
+                suggestions_risk_profile=(
+                    existing.suggestions_risk_profile if existing else None
+                ),
+                universe_set=existing.universe_set if existing else None,
+                market_data_provider=(
+                    existing.market_data_provider if existing else None
+                ),
+                market_data_sync_enabled=(
+                    existing.market_data_sync_enabled if existing else None
+                ),
+                ibkr_market_data_enabled=(
+                    existing.ibkr_market_data_enabled if existing else None
+                ),
+                ibkr_market_data_type=(
+                    existing.ibkr_market_data_type if existing else None
+                ),
+                ibkr_paper_order_submission_enabled=(
+                    existing.ibkr_paper_order_submission_enabled
+                    if existing
+                    else None
+                ),
+                submission_sweep_enabled=(
+                    existing.submission_sweep_enabled if existing else None
+                ),
+                cancel_sweep_enabled=(
+                    existing.cancel_sweep_enabled if existing else None
+                ),
+                morning_chain_after_pre_briefing=(
+                    existing.morning_chain_after_pre_briefing
+                    if existing
+                    else None
+                ),
+                forecast_valid_minutes=payload.forecast_valid_minutes,
+                decision_packages_valid_minutes=(
+                    payload.decision_packages_valid_minutes
+                ),
+                prediction_diary_inconclusive_tolerance_pct=(
+                    payload.prediction_diary_inconclusive_tolerance_pct
+                ),
+                gbm_regime_shift_enabled=payload.gbm_regime_shift_enabled,
+                gbm_regime_shift_threshold_pct=(
+                    payload.gbm_regime_shift_threshold_pct
+                ),
+            )
+            repo.upsert(record)
+            checked.connection.commit()
+            settings.forecast_valid_minutes = payload.forecast_valid_minutes
+            settings.decision_packages_valid_minutes = (
+                payload.decision_packages_valid_minutes
+            )
+            settings.prediction_diary_inconclusive_tolerance_pct = str(
+                payload.prediction_diary_inconclusive_tolerance_pct
+            )
+            settings.gbm_regime_shift_enabled = (
+                payload.gbm_regime_shift_enabled
+            )
+            settings.gbm_regime_shift_threshold_pct = (
+                payload.gbm_regime_shift_threshold_pct
+            )
+    except StorageConnectionError as exc:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return _predictor_tuning_payload(record)
 
 
 def apply_runtime_config_overlay(
@@ -2253,4 +2693,24 @@ def apply_runtime_config_overlay(
     if record.ibkr_paper_order_submission_enabled is not None:
         settings_obj.ibkr_paper_order_submission_enabled = (
             record.ibkr_paper_order_submission_enabled
+        )
+    # Settings UI PR I — predictor-tuning overlay. Decimal columns are
+    # cast back to the float/Decimal the downstream code expects.
+    if record.forecast_valid_minutes is not None:
+        settings_obj.forecast_valid_minutes = record.forecast_valid_minutes
+    if record.decision_packages_valid_minutes is not None:
+        settings_obj.decision_packages_valid_minutes = (
+            record.decision_packages_valid_minutes
+        )
+    if record.prediction_diary_inconclusive_tolerance_pct is not None:
+        # Stored as Decimal; status_routes reads via Decimal(settings.X)
+        # so keeping the string repr keeps that pattern intact.
+        settings_obj.prediction_diary_inconclusive_tolerance_pct = str(
+            record.prediction_diary_inconclusive_tolerance_pct
+        )
+    if record.gbm_regime_shift_enabled is not None:
+        settings_obj.gbm_regime_shift_enabled = record.gbm_regime_shift_enabled
+    if record.gbm_regime_shift_threshold_pct is not None:
+        settings_obj.gbm_regime_shift_threshold_pct = (
+            record.gbm_regime_shift_threshold_pct
         )
