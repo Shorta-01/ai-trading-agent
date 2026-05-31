@@ -1817,6 +1817,33 @@ explanation_evidence_ledger = Table(
 )
 
 
+# Daily end-of-day digest produced by the market_close fire (one per
+# account, market, and calendar day). Stores aggregate JSON blobs the
+# /digest UI reads whole — see migration 0068.
+daily_digests = Table(
+    "daily_digests",
+    metadata,
+    Column("digest_id", Text, primary_key=True),
+    Column("ibkr_account_ref", Text, nullable=False),
+    Column("market_code", Text, nullable=False),
+    Column("briefing_date", Date, nullable=False),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("nav_summary_json", JSON, nullable=False),
+    Column("positions_summary_json", JSON, nullable=False),
+    Column("suggestions_summary_json", JSON, nullable=False),
+    Column("action_drafts_summary_json", JSON, nullable=False),
+    Column("alerts_json", JSON, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("blocking_reason", Text, nullable=True),
+    UniqueConstraint(
+        "ibkr_account_ref",
+        "market_code",
+        "briefing_date",
+        name="uq_daily_digest_per_account_market_day",
+    ),
+)
+
+
 daily_briefings = Table(
     "daily_briefings",
     metadata,

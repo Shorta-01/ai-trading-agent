@@ -65,6 +65,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "decision_package_explanations",
         "explanation_evidence_ledger",
         "daily_briefings",
+        "daily_digests",
         "briefing_alerts",
         "scheduler_runs",
         "asset_fundamentals_snapshots",

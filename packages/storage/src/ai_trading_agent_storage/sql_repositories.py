@@ -62,6 +62,7 @@ from ai_trading_agent_storage.metadata import (
     asset_suggestions,
     briefing_alerts,
     daily_briefings,
+    daily_digests,
     decision_package_explanations,
     explanation_evidence_ledger,
     action_draft_order_conditions,
@@ -121,6 +122,7 @@ from ai_trading_agent_storage.repository_contracts import (
     AssetFundamentalsSnapshotRecord,
     BriefingAlertRecord,
     DailyBriefingRecord,
+    DailyDigestRecord,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     ActionDraftOrderConditionRecord,
@@ -3010,6 +3012,96 @@ class SqlAlchemyDailyBriefingRepository(_Base):
             briefing_alerts.name,
             True,
             "Briefing alerts verwijderd.",
+        )
+
+
+class SqlAlchemyDailyDigestRepository(_Base):
+    """One row per ``(ibkr_account_ref, market_code, briefing_date)``.
+
+    The worker's ``market_close`` fire upserts a digest at the end of
+    each followed market's session; the API surfaces them via
+    ``GET /digests/today``. Repeat fires for the same day overwrite
+    the prior row (UNIQUE constraint).
+    """
+
+    def upsert_daily_digest(
+        self, record: DailyDigestRecord
+    ) -> StorageWriteResult:
+        # Delete-then-insert keeps the upsert simple and database-portable.
+        # The UNIQUE constraint catches concurrent inserts (the worker
+        # serialises market_close fires per market, so contention is
+        # rare in practice).
+        self._connection.execute(
+            daily_digests.delete().where(
+                (daily_digests.c.ibkr_account_ref == record.ibkr_account_ref)
+                & (daily_digests.c.market_code == record.market_code)
+                & (daily_digests.c.briefing_date == record.briefing_date)
+            )
+        )
+        self._insert(daily_digests, asdict(record))
+        return StorageWriteResult(
+            True,
+            record.digest_id,
+            daily_digests.name,
+            True,
+            "Daily digest opgeslagen.",
+        )
+
+    def get_latest_daily_digest_for_account(
+        self, ibkr_account_ref: str
+    ) -> StorageReadResult[DailyDigestRecord]:
+        """Return the single most recent digest across all markets
+        for this account (the dashboard renders one digest per day; if
+        multiple markets fired we pick the latest by generated_at)."""
+
+        statement = (
+            select(daily_digests)
+            .where(daily_digests.c.ibkr_account_ref == ibkr_account_ref)
+            .order_by(daily_digests.c.generated_at.desc())
+            .limit(1)
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                daily_digests.name,
+                "Nog geen daily digest voor dit account.",
+            )
+        return StorageReadResult(
+            True,
+            DailyDigestRecord(**dict(row)),
+            daily_digests.name,
+            "Daily digest opgehaald.",
+        )
+
+    def list_daily_digests_for_account_by_date(
+        self,
+        *,
+        ibkr_account_ref: str,
+        briefing_date: date,
+    ) -> StorageListResult[DailyDigestRecord]:
+        """Return every digest for one account on one calendar day,
+        ordered by ``generated_at`` ascending (one entry per market
+        that fired)."""
+
+        rows = (
+            self._connection.execute(
+                select(daily_digests)
+                .where(
+                    (daily_digests.c.ibkr_account_ref == ibkr_account_ref)
+                    & (daily_digests.c.briefing_date == briefing_date)
+                )
+                .order_by(daily_digests.c.generated_at.asc())
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(DailyDigestRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            daily_digests.name,
+            f"{len(records)} daily digests opgehaald.",
         )
 
 

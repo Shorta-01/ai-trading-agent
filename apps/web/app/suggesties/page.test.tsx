@@ -208,4 +208,25 @@ describe("SuggestionsGridPage", () => {
     const button = await screen.findByTestId("suggesties-export-csv");
     expect(button).toBeDisabled();
   });
+
+  it("shows the 'nieuw sinds vorige bezoek' badge when localStorage has an earlier visit", async () => {
+    // Seed a visit timestamp from well before the sample's generated_at.
+    const earlier = new Date("2026-05-30T10:00:00Z").getTime();
+    window.localStorage.setItem("suggesties:lastVisitAt", String(earlier));
+    render(<Page />);
+    const badge = await screen.findByTestId("suggesties-since-last-visit");
+    expect(badge).toHaveTextContent("2 nieuw sinds je vorige bezoek");
+    window.localStorage.clear();
+  });
+
+  it("hides the badge when there is no prior visit recorded", async () => {
+    window.localStorage.clear();
+    render(<Page />);
+    expect(
+      await screen.findByTestId("suggesties-page"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suggesties-since-last-visit"),
+    ).not.toBeInTheDocument();
+  });
 });

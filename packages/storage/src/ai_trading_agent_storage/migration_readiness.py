@@ -824,6 +824,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "leeg audit-rij maakte."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0068_daily_digests",
+        previous_revision_id="0067_runtime_config_market_aware_scheduler",
+        filename="0068_daily_digests.py",
+        label_nl="Einde-dag digest tabel",
+        description_nl=(
+            "Voegt de ``daily_digests`` tabel toe. De worker schrijft "
+            "één rij per ``(ibkr_account, markt, kalenderdag)`` op de "
+            "``market_close`` fire — bevat NAV-verschil, top-winners/"
+            "losers, suggestie-tellingen en action-draft-activiteit. "
+            "UNIQUE constraint per dag voorkomt dubbele digests; "
+            "herhaalde fires upserten dezelfde rij."
+        ),
+    ),
 )
 
 

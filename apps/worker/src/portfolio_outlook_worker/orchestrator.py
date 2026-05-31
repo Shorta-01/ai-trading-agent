@@ -139,6 +139,25 @@ class _DecisionPackageRunnerProtocol(Protocol):
     ) -> dict[str, object]: ...
 
 
+class _DigestRunnerProtocol(Protocol):
+    """End-of-day digest adapter fired on ``market_close`` after the
+    market-data runner has refreshed prices.
+
+    Reads today's positions / suggestions / action drafts / NAV and
+    upserts a ``DailyDigestRecord`` for the operator's dashboard. Never
+    raises — failures fold into the returned dict and the orchestrator
+    continues.
+    """
+
+    def run(
+        self,
+        *,
+        ibkr_account_id: str,
+        market_code: str,
+        scheduled_run_id: str,
+    ) -> dict[str, object]: ...
+
+
 class _GatewayProtocol(Protocol):
     def is_connected(self) -> bool: ...
 
@@ -203,6 +222,8 @@ def run_orchestrator(
     forecasting_runner: _ForecastingRunnerProtocol | None = None,
     calibration_runner: _CalibrationRunnerProtocol | None = None,
     decision_package_runner: _DecisionPackageRunnerProtocol | None = None,
+    digest_runner: _DigestRunnerProtocol | None = None,
+    market_code: str | None = None,
 ) -> OrchestratorResult:
     """One scheduled-run cycle.
 
@@ -388,6 +409,27 @@ def run_orchestrator(
                 logger.exception("calibration_runner failed")
                 calibration_details = {"error": "calibration_runner_exception"}
 
+        # 9. End-of-day digest step (market_close only). Runs AFTER the
+        # market-data refresh so today's EOD prices are in storage
+        # before the digest summarises winners/losers.
+        digest_details: dict[str, object] | None = None
+        if (
+            digest_runner is not None
+            and mode_detected == "normal"
+            and run_type == "market_close"
+            and ibkr_account_id is not None
+            and market_code is not None
+        ):
+            try:
+                digest_details = digest_runner.run(
+                    ibkr_account_id=ibkr_account_id,
+                    market_code=market_code,
+                    scheduled_run_id=run_id,
+                )
+            except Exception:  # noqa: BLE001 — boundary
+                logger.exception("digest_runner failed")
+                digest_details = {"error": "digest_runner_exception"}
+
         duration = _duration_ms(started, now_provider())
         error_details_json: str | None = None
         audit_payload: dict[str, object] = {}
@@ -399,6 +441,8 @@ def run_orchestrator(
             audit_payload["decision_package"] = decision_package_details
         if calibration_details is not None:
             audit_payload["calibration"] = calibration_details
+        if digest_details is not None:
+            audit_payload["digest"] = digest_details
         if audit_payload:
             import json as _json
 
