@@ -67,6 +67,13 @@ class ConnectionSettingsResponse(BaseModel):
     claude_ai_budget_monthly_eur: str | None
     # Write-only key: never return the value, only whether one is stored.
     claude_ai_api_key_set: bool
+    # Settings UI PR L — AI feature toggles. Booleans, not nullable in
+    # the response shape: we always return a concrete value (operator
+    # value if persisted, env-default otherwise) so the UI checkboxes
+    # have a defined state.
+    ai_explanation_morning_batch_enabled: bool
+    ai_email_summary_enabled: bool
+    research_ai_extraction_enabled: bool
 
 
 class UpdateConnectionSettingsRequest(BaseModel):
@@ -81,6 +88,13 @@ class UpdateConnectionSettingsRequest(BaseModel):
     # Optional secret: only sent when the operator types a new key. When
     # omitted or blank, the existing stored key is preserved.
     claude_ai_api_key: str | None = None
+    # Settings UI PR L — AI feature toggles. The UI always sends a
+    # concrete bool; storage stores it as nullable to preserve the
+    # "use env-default" semantic for operators who never touched
+    # them, but PUT writes the operator's explicit choice.
+    ai_explanation_morning_batch_enabled: bool = False
+    ai_email_summary_enabled: bool = False
+    research_ai_extraction_enabled: bool = False
 
 
 def _storage_provider() -> StorageConnectionProvider:
@@ -119,6 +133,23 @@ def _serialise(record: RuntimeConfigRecord) -> ConnectionSettingsResponse:
         claude_ai_explanation_model=record.claude_ai_explanation_model,
         claude_ai_budget_monthly_eur=_budget_str(record.claude_ai_budget_monthly_eur),
         claude_ai_api_key_set=bool(record.claude_ai_api_key),
+        ai_explanation_morning_batch_enabled=(
+            record.ai_explanation_morning_batch_enabled
+            if record.ai_explanation_morning_batch_enabled is not None
+            else bool(
+                getattr(settings, "ai_explanation_morning_batch_enabled", False)
+            )
+        ),
+        ai_email_summary_enabled=(
+            record.ai_email_summary_enabled
+            if record.ai_email_summary_enabled is not None
+            else bool(getattr(settings, "ai_email_summary_enabled", False))
+        ),
+        research_ai_extraction_enabled=(
+            record.research_ai_extraction_enabled
+            if record.research_ai_extraction_enabled is not None
+            else bool(getattr(settings, "research_ai_extraction_enabled", False))
+        ),
     )
 
 
@@ -141,6 +172,15 @@ def _defaults_from_env() -> ConnectionSettingsResponse:
             getattr(settings, "claude_ai_budget_monthly_eur", None)
         ),
         claude_ai_api_key_set=bool(getattr(settings, "claude_ai_api_key", None)),
+        ai_explanation_morning_batch_enabled=bool(
+            getattr(settings, "ai_explanation_morning_batch_enabled", False)
+        ),
+        ai_email_summary_enabled=bool(
+            getattr(settings, "ai_email_summary_enabled", False)
+        ),
+        research_ai_extraction_enabled=bool(
+            getattr(settings, "research_ai_extraction_enabled", False)
+        ),
     )
 
 
@@ -196,11 +236,60 @@ def update_connection_settings(
                     claude_ai_budget_monthly_eur=payload.claude_ai_budget_monthly_eur,
                     claude_ai_api_key=stored_key,
                     updated_at=now,
+                    # Carry forward notification + email transport fields so
+                    # the connection page can't accidentally wipe the
+                    # operator's saved SMTP config or per-trigger prefs.
+                    smtp_host=existing.smtp_host if existing else None,
+                    smtp_port=existing.smtp_port if existing else None,
+                    smtp_username=(
+                        existing.smtp_username if existing else None
+                    ),
+                    smtp_password=(
+                        existing.smtp_password if existing else None
+                    ),
+                    smtp_from=existing.smtp_from if existing else None,
+                    smtp_to=existing.smtp_to if existing else None,
+                    smtp_use_tls=(
+                        existing.smtp_use_tls if existing else None
+                    ),
+                    notifications_email_enabled=(
+                        existing.notifications_email_enabled if existing else None
+                    ),
+                    notification_send_on_nav_drop=(
+                        existing.notification_send_on_nav_drop if existing else None
+                    ),
+                    notification_send_on_position_drop=(
+                        existing.notification_send_on_position_drop if existing else None
+                    ),
+                    notification_send_on_high_confidence_sell=(
+                        existing.notification_send_on_high_confidence_sell
+                        if existing else None
+                    ),
+                    # PR L — the three new AI feature toggles. The connection
+                    # endpoint owns these, so the payload value wins.
+                    ai_explanation_morning_batch_enabled=(
+                        payload.ai_explanation_morning_batch_enabled
+                    ),
+                    ai_email_summary_enabled=payload.ai_email_summary_enabled,
+                    research_ai_extraction_enabled=(
+                        payload.research_ai_extraction_enabled
+                    ),
                 )
             except (ValueError, InvalidOperation) as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             repo.upsert(record)
             checked.connection.commit()
+            # Reflect the operator's choices on the running settings
+            # singleton so the next request picks them up immediately
+            # without an API restart — same pattern the universe-scan
+            # PUT uses.
+            settings.ai_explanation_morning_batch_enabled = (
+                payload.ai_explanation_morning_batch_enabled
+            )
+            settings.ai_email_summary_enabled = payload.ai_email_summary_enabled
+            settings.research_ai_extraction_enabled = (
+                payload.research_ai_extraction_enabled
+            )
     except StorageConnectionError as exc:
         raise HTTPException(
             status_code=503, detail="Opslag is niet beschikbaar."
@@ -2757,4 +2846,18 @@ def apply_runtime_config_overlay(
     if record.notification_send_on_high_confidence_sell is not None:
         settings_obj.notification_send_on_high_confidence_sell = (
             record.notification_send_on_high_confidence_sell
+        )
+    # Settings UI PR L — AI feature toggles. Each null leaves the
+    # env-var default in place; a persisted value (True/False) overlays
+    # so the operator's UI choice takes effect on the next request
+    # without an API restart.
+    if record.ai_explanation_morning_batch_enabled is not None:
+        settings_obj.ai_explanation_morning_batch_enabled = (
+            record.ai_explanation_morning_batch_enabled
+        )
+    if record.ai_email_summary_enabled is not None:
+        settings_obj.ai_email_summary_enabled = record.ai_email_summary_enabled
+    if record.research_ai_extraction_enabled is not None:
+        settings_obj.research_ai_extraction_enabled = (
+            record.research_ai_extraction_enabled
         )

@@ -1425,6 +1425,12 @@ runtime_config = Table(
     Column(
         "notification_send_on_high_confidence_sell", Boolean, nullable=True
     ),
+    # Settings UI PR L — AI feature toggles. Mirrors alembic 0070.
+    Column(
+        "ai_explanation_morning_batch_enabled", Boolean, nullable=True
+    ),
+    Column("ai_email_summary_enabled", Boolean, nullable=True),
+    Column("research_ai_extraction_enabled", Boolean, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

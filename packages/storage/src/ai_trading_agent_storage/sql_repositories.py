@@ -6329,6 +6329,13 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "notification_send_on_high_confidence_sell": (
                 record.notification_send_on_high_confidence_sell
             ),
+            "ai_explanation_morning_batch_enabled": (
+                record.ai_explanation_morning_batch_enabled
+            ),
+            "ai_email_summary_enabled": record.ai_email_summary_enabled,
+            "research_ai_extraction_enabled": (
+                record.research_ai_extraction_enabled
+            ),
         }
         existing = (
             self._connection.execute(
@@ -6562,6 +6569,21 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         notification_send_on_high_confidence_sell=(
             bool(row["notification_send_on_high_confidence_sell"])
             if row.get("notification_send_on_high_confidence_sell") is not None
+            else None
+        ),
+        ai_explanation_morning_batch_enabled=(
+            bool(row["ai_explanation_morning_batch_enabled"])
+            if row.get("ai_explanation_morning_batch_enabled") is not None
+            else None
+        ),
+        ai_email_summary_enabled=(
+            bool(row["ai_email_summary_enabled"])
+            if row.get("ai_email_summary_enabled") is not None
+            else None
+        ),
+        research_ai_extraction_enabled=(
+            bool(row["research_ai_extraction_enabled"])
+            if row.get("research_ai_extraction_enabled") is not None
             else None
         ),
     )

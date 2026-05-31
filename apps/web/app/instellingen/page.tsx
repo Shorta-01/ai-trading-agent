@@ -267,6 +267,10 @@ type ConnectionState = {
   ai_explanation_enabled: boolean;
   claude_ai_explanation_model: string;
   claude_ai_budget_monthly_eur: string;
+  // Settings UI PR L — AI feature toggles.
+  ai_explanation_morning_batch_enabled: boolean;
+  ai_email_summary_enabled: boolean;
+  research_ai_extraction_enabled: boolean;
 };
 
 const EMPTY_CONNECTION: ConnectionState = {
@@ -278,6 +282,9 @@ const EMPTY_CONNECTION: ConnectionState = {
   ai_explanation_enabled: false,
   claude_ai_explanation_model: "",
   claude_ai_budget_monthly_eur: "",
+  ai_explanation_morning_batch_enabled: false,
+  ai_email_summary_enabled: false,
+  research_ai_extraction_enabled: false,
 };
 
 function connectionStateFromResponse(
@@ -293,6 +300,10 @@ function connectionStateFromResponse(
     ai_explanation_enabled: data.ai_explanation_enabled,
     claude_ai_explanation_model: data.claude_ai_explanation_model ?? "",
     claude_ai_budget_monthly_eur: data.claude_ai_budget_monthly_eur ?? "",
+    ai_explanation_morning_batch_enabled:
+      data.ai_explanation_morning_batch_enabled,
+    ai_email_summary_enabled: data.ai_email_summary_enabled,
+    research_ai_extraction_enabled: data.research_ai_extraction_enabled,
   };
 }
 
@@ -1269,6 +1280,10 @@ export default function Page() {
       // Only send the key when the operator typed one; omit it otherwise so
       // the previously-stored key is preserved.
       ...(trimmedKey ? { claude_ai_api_key: trimmedKey } : {}),
+      ai_explanation_morning_batch_enabled:
+        connection.ai_explanation_morning_batch_enabled,
+      ai_email_summary_enabled: connection.ai_email_summary_enabled,
+      research_ai_extraction_enabled: connection.research_ai_extraction_enabled,
     });
     setConnectionSaving(false);
     if (!result.ok) {
@@ -3661,6 +3676,72 @@ export default function Page() {
               <FieldLabel
                 label_nl="AI-uitleg ingeschakeld"
                 help_nl="Laat Claude een Nederlandstalige uitleg bij beslissingen genereren."
+              />
+            </label>
+
+            <label
+              style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: 8 }}
+              htmlFor="connection-ai_explanation_morning_batch_enabled"
+            >
+              <input
+                id="connection-ai_explanation_morning_batch_enabled"
+                data-testid="instellingen-connection-ai_explanation_morning_batch_enabled"
+                type="checkbox"
+                checked={connection.ai_explanation_morning_batch_enabled}
+                onChange={(event) =>
+                  setConnectionField(
+                    "ai_explanation_morning_batch_enabled",
+                    event.target.checked,
+                  )
+                }
+              />
+              <FieldLabel
+                label_nl="Voor-bereken Claude-uitleg per ochtend"
+                help_nl="Genereert vroeg ochtends voor elke aangehouden positie alvast de Claude-paraphrase, zodat de dashboard om 07:00 al de uitleg toont."
+              />
+            </label>
+
+            <label
+              style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: 8 }}
+              htmlFor="connection-ai_email_summary_enabled"
+            >
+              <input
+                id="connection-ai_email_summary_enabled"
+                data-testid="instellingen-connection-ai_email_summary_enabled"
+                type="checkbox"
+                checked={connection.ai_email_summary_enabled}
+                onChange={(event) =>
+                  setConnectionField(
+                    "ai_email_summary_enabled",
+                    event.target.checked,
+                  )
+                }
+              />
+              <FieldLabel
+                label_nl="AI-samenvatting bovenaan e-mails"
+                help_nl="Voegt een korte Nederlandstalige Claude-samenvatting toe boven de digest- en ochtend-alert-mails. De deterministische template blijft altijd zichtbaar; bij mislukken valt de mail terug zonder header."
+              />
+            </label>
+
+            <label
+              style={{ ...LABEL_STYLE, display: "flex", alignItems: "center", gap: 8 }}
+              htmlFor="connection-research_ai_extraction_enabled"
+            >
+              <input
+                id="connection-research_ai_extraction_enabled"
+                data-testid="instellingen-connection-research_ai_extraction_enabled"
+                type="checkbox"
+                checked={connection.research_ai_extraction_enabled}
+                onChange={(event) =>
+                  setConnectionField(
+                    "research_ai_extraction_enabled",
+                    event.target.checked,
+                  )
+                }
+              />
+              <FieldLabel
+                label_nl="AI-extractie van onderzoeksbronnen"
+                help_nl="Laat Claude korte feiten / citaten uit geüploade onderzoeksbronnen halen. Substring-bewaking blokkeert gehallucineerde feiten. Resultaten zijn alleen leeshulp — nooit veilig voor suggesties of orders."
               />
             </label>
 

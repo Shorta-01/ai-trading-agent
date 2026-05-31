@@ -854,6 +854,23 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "plaats van de waarde."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0070_runtime_config_ai_features",
+        previous_revision_id="0069_runtime_config_notifications",
+        filename="0070_runtime_config_ai_features.py",
+        label_nl="AI feature-toggles",
+        description_nl=(
+            "Voegt drie nullable boolean kolommen toe aan "
+            "``runtime_config`` voor de AI feature-toggles: "
+            "``ai_explanation_morning_batch_enabled`` (voor-bereken "
+            "Claude-paraphrase per ochtend), "
+            "``ai_email_summary_enabled`` (AI-samenvatting bovenaan "
+            "digest- en ochtend-alert-mails) en "
+            "``research_ai_extraction_enabled`` (Claude-extractie "
+            "van onderzoeksbronnen met hallucinatie-bewaking). "
+            "Null betekent: gebruik de env-var default."
+        ),
+    ),
 )
 
 

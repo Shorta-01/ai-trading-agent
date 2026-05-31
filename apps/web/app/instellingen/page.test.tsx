@@ -169,6 +169,9 @@ const CONNECTION: ConnectionSettingsResponse = {
   claude_ai_explanation_model: "claude-haiku-4-5",
   claude_ai_budget_monthly_eur: "50.0",
   claude_ai_api_key_set: true,
+  ai_explanation_morning_batch_enabled: false,
+  ai_email_summary_enabled: false,
+  research_ai_extraction_enabled: false,
 };
 
 function ok<T>(data: T) {
@@ -503,6 +506,61 @@ describe("InstellingenPage", () => {
     );
     const payload = updateConnectionSettings.mock.calls[0][0];
     expect(payload.claude_ai_api_key).toBe("sk-ant-new-key");
+  });
+
+  it("renders the three AI feature checkboxes (PR L)", async () => {
+    render(<Page />);
+    expect(
+      await screen.findByTestId(
+        "instellingen-connection-ai_explanation_morning_batch_enabled",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("instellingen-connection-ai_email_summary_enabled"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(
+        "instellingen-connection-research_ai_extraction_enabled",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("sends the AI feature toggles in the save payload", async () => {
+    updateConnectionSettings.mockReturnValue(
+      ok({
+        ...CONNECTION,
+        ai_explanation_morning_batch_enabled: true,
+        ai_email_summary_enabled: true,
+        research_ai_extraction_enabled: true,
+      }),
+    );
+    render(<Page />);
+    await userEvent.click(
+      await screen.findByTestId(
+        "instellingen-connection-ai_explanation_morning_batch_enabled",
+      ),
+    );
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-ai_email_summary_enabled"),
+    );
+    await userEvent.click(
+      screen.getByTestId(
+        "instellingen-connection-research_ai_extraction_enabled",
+      ),
+    );
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+    await waitFor(() =>
+      expect(updateConnectionSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateConnectionSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ai_explanation_morning_batch_enabled: true,
+        ai_email_summary_enabled: true,
+        research_ai_extraction_enabled: true,
+      }),
+    );
   });
 
   it("renders the scan-universe multi-select with stored selection", async () => {

@@ -420,6 +420,10 @@ export type ConnectionSettingsResponse = {
   claude_ai_explanation_model: string | null;
   claude_ai_budget_monthly_eur: string | null;
   claude_ai_api_key_set: boolean;
+  // Settings UI PR L — AI feature toggles.
+  ai_explanation_morning_batch_enabled: boolean;
+  ai_email_summary_enabled: boolean;
+  research_ai_extraction_enabled: boolean;
 };
 
 export type ConnectionSettingsUpdateInput = {
@@ -434,6 +438,10 @@ export type ConnectionSettingsUpdateInput = {
   // Optional: only sent when the operator types a new key. Omit (do not send)
   // to preserve the previously-stored key.
   claude_ai_api_key?: string;
+  // Settings UI PR L — AI feature toggles.
+  ai_explanation_morning_batch_enabled: boolean;
+  ai_email_summary_enabled: boolean;
+  research_ai_extraction_enabled: boolean;
 };
 
 

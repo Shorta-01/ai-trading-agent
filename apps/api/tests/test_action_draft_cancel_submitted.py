@@ -32,7 +32,7 @@ from portfolio_outlook_api.status_routes import settings as api_settings
 
 client = TestClient(app)
 
-_LATEST = "0069_runtime_config_notifications"
+_LATEST = "0070_runtime_config_ai_features"
 _NOW = datetime(2026, 5, 26, 10, 0, tzinfo=UTC)
 
 
