@@ -195,60 +195,63 @@ test.describe("Volglijst — Task 131 multi-asset forecast column", () => {
     );
   });
 
-  test("Voorspelling column populated for all rows with forecasts, '—' for missing", async ({
+  test("Voorspelling-band column shows quantiles for forecasts, '—' for missing", async ({
     page,
   }) => {
+    // Volglijst-cleanup PR: action labels (Kopen/Verkopen/...) no
+    // longer render on Volglijst — those moved to /suggesties.
+    // Each forecast cell still shows the quantile band, probability,
+    // and confidence so the operator can track what the model thinks.
     await page.goto("/volglijst");
-    await expect(page.getByTestId("volglijst-forecast-label-ASML")).toHaveText(
-      "Kopen",
-    );
-    await expect(page.getByTestId("volglijst-forecast-label-SAP")).toHaveText(
-      "Bekijken",
-    );
-    await expect(page.getByTestId("volglijst-forecast-label-VWCE")).toHaveText(
-      "Houden",
-    );
     await expect(
-      page.getByTestId("volglijst-forecast-label-SXR8"),
-    ).toHaveText("Geblokkeerd");
+      page.getByTestId("volglijst-forecast-interval-ASML"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("volglijst-forecast-interval-SAP"),
+    ).toBeVisible();
     // NOPE has no forecast → fallback "—".
     await expect(page.getByTestId("volglijst-forecast-cell-NOPE")).toHaveText(
       "—",
     );
-  });
-
-  test("filter=Kopen narrows the table to only Kopen rows", async ({ page }) => {
-    await page.goto("/volglijst?filter=Kopen");
+    // Action-label test ids and "Maak actie" buttons no longer exist.
     await expect(
-      page.getByTestId("volglijst-filter-banner"),
-    ).toContainText("Kopen");
-    await expect(page.getByTestId("volglijst-row-ASML")).toBeVisible();
-    await expect(page.getByTestId("volglijst-row-SAP")).toHaveCount(0);
-    await expect(page.getByTestId("volglijst-row-VWCE")).toHaveCount(0);
+      page.getByTestId("volglijst-forecast-label-ASML"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("volglijst-maak-actie-ASML"),
+    ).toHaveCount(0);
   });
 
-  test("Dashboard widget pill routes to the filtered Volglijst", async ({
+  test("Header banner links to /suggesties for actionable view", async ({
+    page,
+  }) => {
+    await page.goto("/volglijst");
+    const link = page.getByTestId("volglijst-suggesties-link");
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", "/suggesties");
+  });
+
+  test("Dashboard widget pill routes to /suggesties (not filtered Volglijst)", async ({
     page,
   }) => {
     await page.goto("/");
     const kopenPill = page.getByTestId("forecast-day-summary-pill-Kopen");
     await expect(kopenPill).toBeVisible();
     await kopenPill.click();
-    await expect(page).toHaveURL(/\/volglijst\?filter=Kopen/);
-    await expect(
-      page.getByTestId("volglijst-filter-banner"),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/suggesties$/);
   });
 
-  test("Toon alles button clears the filter", async ({ page }) => {
+  test("?filter=Kopen URL no longer narrows the table (legacy filter removed)", async ({
+    page,
+  }) => {
     await page.goto("/volglijst?filter=Kopen");
-    await expect(page.getByTestId("volglijst-filter-banner")).toBeVisible();
-    await page.getByTestId("volglijst-filter-clear").click();
+    // The legacy ?filter= URL is ignored; every row still renders.
+    await expect(page.getByTestId("volglijst-row-ASML")).toBeVisible();
+    await expect(page.getByTestId("volglijst-row-SAP")).toBeVisible();
+    await expect(page.getByTestId("volglijst-row-VWCE")).toBeVisible();
+    // The old filter banner is gone.
     await expect(
       page.getByTestId("volglijst-filter-banner"),
     ).toHaveCount(0);
-    // After clearing, all rows are visible again.
-    await expect(page.getByTestId("volglijst-row-ASML")).toBeVisible();
-    await expect(page.getByTestId("volglijst-row-SAP")).toBeVisible();
   });
 });

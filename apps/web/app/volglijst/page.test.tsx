@@ -111,4 +111,56 @@ describe("Volglijst page", () => {
     render(<Page />);
     expect(await screen.findByTestId("volglijst-row-ASML")).toBeInTheDocument();
   });
+
+  it("renders the /suggesties link banner for actionable view", async () => {
+    getWatchlistConfirmationState.mockReturnValue(ok(CONFIRMED));
+    listWatchlistItems.mockReturnValue(ok({ items: [WATCH_ITEM] }));
+    getMarketDataLatestSnapshotStatus.mockReturnValue(
+      ok({ status: "missing_snapshot", next_step_nl: "x" }),
+    );
+    getForecastsByAccount.mockReturnValue(ok({ items: [] }));
+    render(<Page />);
+    const link = await screen.findByTestId("volglijst-suggesties-link");
+    expect(link).toHaveAttribute("href", "/suggesties");
+    expect(
+      screen.getByTestId("volglijst-suggesties-link-banner"),
+    ).toHaveTextContent("actie");
+  });
+
+  it("does NOT render the action label or Maak actie button on watchlist rows", async () => {
+    getWatchlistConfirmationState.mockReturnValue(ok(CONFIRMED));
+    listWatchlistItems.mockReturnValue(ok({ items: [WATCH_ITEM] }));
+    getMarketDataLatestSnapshotStatus.mockReturnValue(
+      ok({ status: "missing_snapshot", next_step_nl: "x" }),
+    );
+    getForecastsByAccount.mockReturnValue(
+      ok({
+        items: [
+          {
+            conid: "100",
+            label: "Kopen",
+            p10_log_return: "-0.02",
+            p50_log_return: "0.05",
+            p90_log_return: "0.10",
+            prob_positive: "0.72",
+            horizon_trading_days: 21,
+            confidence_level: "Hoog",
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("volglijst-row-ASML");
+    // Action label test id is gone; suggestions live on /suggesties.
+    expect(
+      screen.queryByTestId("volglijst-forecast-label-ASML"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("volglijst-maak-actie-ASML"),
+    ).not.toBeInTheDocument();
+    // The informational quantile band still renders.
+    expect(
+      screen.getByTestId("volglijst-forecast-interval-ASML"),
+    ).toBeInTheDocument();
+  });
 });

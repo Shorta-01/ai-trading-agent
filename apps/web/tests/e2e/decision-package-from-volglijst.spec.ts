@@ -235,9 +235,12 @@ test.describe("Decision Package navigation from Volglijst", () => {
   }) => {
     await page.goto("/volglijst");
 
+    // Volglijst-cleanup PR: action labels no longer render on
+    // Volglijst rows (those moved to /suggesties). The forecast
+    // band + "Waarom?" button still live here for tracking.
     await expect(
-      page.getByTestId("volglijst-forecast-label-ASML"),
-    ).toHaveText("Bekijken");
+      page.getByTestId("volglijst-forecast-interval-ASML"),
+    ).toBeVisible();
 
     await page.getByTestId("volglijst-forecast-why-ASML").click();
 

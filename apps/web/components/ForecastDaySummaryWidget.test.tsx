@@ -128,16 +128,18 @@ describe("ForecastDaySummaryWidget", () => {
     expect(empty).toHaveTextContent("07:00");
   });
 
-  it("each pill links to /volglijst with filter query param", async () => {
+  it("each pill links to /suggesties (Volglijst-cleanup PR)", async () => {
     getForecastDaySummary.mockResolvedValue({
       ok: true as const,
       data: MIXED,
     });
     render(<ForecastDaySummaryWidget />);
+    // Suggestions are the actionable surface; the widget pills now
+    // route there instead of the legacy ?filter=<label> on Volglijst.
     const kopen = await screen.findByTestId("forecast-day-summary-pill-Kopen");
-    expect(kopen.getAttribute("href")).toBe("/volglijst?filter=Kopen");
+    expect(kopen.getAttribute("href")).toBe("/suggesties");
     const bekijken = screen.getByTestId("forecast-day-summary-pill-Bekijken");
-    expect(bekijken.getAttribute("href")).toBe("/volglijst?filter=Bekijken");
+    expect(bekijken.getAttribute("href")).toBe("/suggesties");
   });
 
   it("renders nothing on API failure", async () => {

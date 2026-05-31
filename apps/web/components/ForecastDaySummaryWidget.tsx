@@ -5,8 +5,8 @@
  *
  * Compact card showing label counts for today's forecasts. Polls
  * ``/forecast/day-summary`` every 60s. Clicking a label routes to
- * ``/volglijst?filter=<label>`` so the user can drill into the rows
- * carrying that label.
+ * ``/suggesties`` — the suggestions grid groups by label, so the
+ * user lands directly on the actionable view (Volglijst-cleanup PR).
  *
  * Empty state: "Geen voorspellingen vandaag — wacht op volgende
  * morgenrun om 07:00."
@@ -106,7 +106,7 @@ export function ForecastDaySummaryWidget() {
               return (
                 <Link
                   key={label}
-                  href={`/volglijst?filter=${encodeURIComponent(label)}`}
+                  href="/suggesties"
                   data-testid={`forecast-day-summary-pill-${label}`}
                   style={{
                     background: colors.bg,
