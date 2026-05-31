@@ -74,6 +74,19 @@ export type OnlineStorageStatusResponse = {
   migration_readiness_status: string;
   writes_status_nl: string;
 };
+// PR O — Claude AI budget pill on the dashboard triage strip.
+export type ClaudeBudgetStatusResponse = {
+  status: string; // "ok" | "not_configured" | "storage_unavailable"
+  status_nl: string;
+  help_nl: string;
+  monthly_cap_eur: string;
+  budget_month: string | null;
+  monthly_total_eur: string | null;
+  remaining_eur: string | null;
+  exceeded: boolean;
+  safe_for_action_drafts: boolean;
+  safe_for_orders: boolean;
+};
 // PR N — dashboard market-hours widget feed.
 export type MarketHoursEntry = {
   market_code: string;
@@ -1878,6 +1891,8 @@ export const apiClient = {
     getJson<{ status: string; service: string }>("/health"),
   getMarketHoursNow: () =>
     getJson<MarketHoursNowResponse>("/markets/hours-now"),
+  getClaudeBudgetStatus: () =>
+    getJson<ClaudeBudgetStatusResponse>("/claude/budget/status"),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),

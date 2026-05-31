@@ -8,6 +8,7 @@ import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
+import { TriageStrip } from "@/components/TriageStrip";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
@@ -78,6 +79,7 @@ export default function HomePage() {
   const valuationStatus = getValuationDisplayStatus(valuationReadiness);
   return (
     <main className="page-wrap">
+      <TriageStrip />
       <section style={{ marginBottom: "0.75rem", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <SchedulerStatusBadge />
         <CalibrationCoverageBadge />
