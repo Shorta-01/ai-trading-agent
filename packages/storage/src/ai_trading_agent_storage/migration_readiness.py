@@ -838,6 +838,22 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "herhaalde fires upserten dezelfde rij."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0069_runtime_config_notifications",
+        previous_revision_id="0068_daily_digests",
+        filename="0069_runtime_config_notifications.py",
+        label_nl="E-mail notificatie-instellingen",
+        description_nl=(
+            "Voegt elf kolommen toe aan ``runtime_config`` voor het "
+            "configureren van e-mailmeldingen: SMTP-transport "
+            "(host, port, username, password, from, to, use_tls) plus "
+            "een master-toggle en vier per-trigger voorkeuren "
+            "(NAV-drop, position-drop, hoge-zekerheid Verkopen). "
+            "De SMTP-password kolom is write-only via de API; de GET "
+            "response retourneert ``smtp_password_set: bool`` in "
+            "plaats van de waarde."
+        ),
+    ),
 )
 
 

@@ -1408,6 +1408,23 @@ runtime_config = Table(
     Column(
         "scheduler_per_market_open_alerts_enabled", Boolean, nullable=True
     ),
+    # Email-notification transport + preferences (PR K). All nullable
+    # so partial config + per-trigger toggles can be saved separately.
+    # ``smtp_password`` is write-only via the API (response always
+    # returns ``smtp_password_set: bool`` instead of the value).
+    Column("smtp_host", Text, nullable=True),
+    Column("smtp_port", Integer, nullable=True),
+    Column("smtp_username", Text, nullable=True),
+    Column("smtp_password", Text, nullable=True),
+    Column("smtp_from", Text, nullable=True),
+    Column("smtp_to", Text, nullable=True),
+    Column("smtp_use_tls", Boolean, nullable=True),
+    Column("notifications_email_enabled", Boolean, nullable=True),
+    Column("notification_send_on_nav_drop", Boolean, nullable=True),
+    Column("notification_send_on_position_drop", Boolean, nullable=True),
+    Column(
+        "notification_send_on_high_confidence_sell", Boolean, nullable=True
+    ),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

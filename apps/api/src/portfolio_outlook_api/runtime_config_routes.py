@@ -2725,3 +2725,36 @@ def apply_runtime_config_overlay(
         settings_obj.scheduler_per_market_open_alerts_enabled = (
             record.scheduler_per_market_open_alerts_enabled
         )
+    # Settings UI PR K — notification transport + preferences. The
+    # SMTP password mirrors the claude_ai_api_key pattern: stored
+    # plain in the DB column but never echoed back via the API.
+    if record.smtp_host is not None:
+        settings_obj.smtp_host = record.smtp_host
+    if record.smtp_port is not None:
+        settings_obj.smtp_port = record.smtp_port
+    if record.smtp_username is not None:
+        settings_obj.smtp_username = record.smtp_username
+    if record.smtp_password is not None:
+        settings_obj.smtp_password = record.smtp_password
+    if record.smtp_from is not None:
+        settings_obj.smtp_from = record.smtp_from
+    if record.smtp_to is not None:
+        settings_obj.smtp_to = record.smtp_to
+    if record.smtp_use_tls is not None:
+        settings_obj.smtp_use_tls = record.smtp_use_tls
+    if record.notifications_email_enabled is not None:
+        settings_obj.notifications_email_enabled = (
+            record.notifications_email_enabled
+        )
+    if record.notification_send_on_nav_drop is not None:
+        settings_obj.notification_send_on_nav_drop = (
+            record.notification_send_on_nav_drop
+        )
+    if record.notification_send_on_position_drop is not None:
+        settings_obj.notification_send_on_position_drop = (
+            record.notification_send_on_position_drop
+        )
+    if record.notification_send_on_high_confidence_sell is not None:
+        settings_obj.notification_send_on_high_confidence_sell = (
+            record.notification_send_on_high_confidence_sell
+        )

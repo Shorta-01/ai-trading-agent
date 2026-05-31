@@ -295,6 +295,44 @@ export type MarketEventsSettingsUpdateInput = {
   per_market_open_alerts_enabled: boolean;
 };
 
+export type NotificationSettingsResponse = {
+  smtp_host: string | null;
+  smtp_port: number;
+  smtp_username: string | null;
+  smtp_from: string | null;
+  smtp_to: string | null;
+  smtp_use_tls: boolean;
+  smtp_password_set: boolean;
+  notifications_email_enabled: boolean;
+  notifications_email_real_client_enabled: boolean;
+  notification_send_on_nav_drop: boolean;
+  notification_send_on_position_drop: boolean;
+  notification_send_on_high_confidence_sell: boolean;
+  help_nl: string;
+};
+
+export type NotificationSettingsUpdateInput = {
+  smtp_host: string | null;
+  smtp_port: number;
+  smtp_username: string | null;
+  // Blank/omitted preserves the stored password.
+  smtp_password: string | null;
+  smtp_from: string | null;
+  smtp_to: string | null;
+  smtp_use_tls: boolean;
+  notifications_email_enabled: boolean;
+  notification_send_on_nav_drop: boolean;
+  notification_send_on_position_drop: boolean;
+  notification_send_on_high_confidence_sell: boolean;
+};
+
+export type TestEmailResponse = {
+  sent: boolean;
+  status: string;
+  detail_nl: string;
+  used_host: string | null;
+};
+
 export type DigestAlert = {
   kind: string;
   severity_nl: string;
@@ -2141,6 +2179,20 @@ export const apiClient = {
   getSuggestionsGrid: () =>
     getJson<SuggestionsGridResponse>("/suggestions/grid"),
   getDigestToday: () => getJson<DigestTodayResponse>("/digests/today"),
+  getNotificationSettings: () =>
+    getJson<NotificationSettingsResponse>("/settings/notifications"),
+  updateNotificationSettings: (
+    payload: NotificationSettingsUpdateInput,
+  ) =>
+    putJson<NotificationSettingsResponse>(
+      "/settings/notifications",
+      payload,
+    ),
+  sendTestEmail: () =>
+    postJson<TestEmailResponse>(
+      "/settings/notifications/test-email",
+      undefined,
+    ),
   getMarketEventsSettings: () =>
     getJson<MarketEventsSettingsResponse>("/settings/market-events"),
   updateMarketEventsSettings: (

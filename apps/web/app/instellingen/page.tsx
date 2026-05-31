@@ -485,6 +485,38 @@ export default function Page() {
   const [marketEventsError, setMarketEventsError] = useState<string | null>(
     null,
   );
+  // Settings UI PR K — email notifications.
+  const [notificationsForm, setNotificationsForm] = useState({
+    smtp_host: "" as string | null,
+    smtp_port: 587,
+    smtp_username: "" as string | null,
+    smtp_password: "" as string | null,
+    smtp_from: "" as string | null,
+    smtp_to: "" as string | null,
+    smtp_use_tls: true,
+    notifications_email_enabled: false,
+    notification_send_on_nav_drop: true,
+    notification_send_on_position_drop: true,
+    notification_send_on_high_confidence_sell: true,
+  });
+  const [notificationsPasswordSet, setNotificationsPasswordSet] =
+    useState(false);
+  const [notificationsRealClientEnabled, setNotificationsRealClientEnabled] =
+    useState(false);
+  const [notificationsHelp, setNotificationsHelp] = useState<string>("");
+  const [notificationsSaving, setNotificationsSaving] = useState(false);
+  const [notificationsSaved, setNotificationsSaved] = useState<string | null>(
+    null,
+  );
+  const [notificationsError, setNotificationsError] = useState<string | null>(
+    null,
+  );
+  const [notificationsTestSending, setNotificationsTestSending] = useState(false);
+  const [notificationsTestResult, setNotificationsTestResult] = useState<{
+    status: string;
+    detail_nl: string;
+    sent: boolean;
+  } | null>(null);
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -905,6 +937,88 @@ export default function Page() {
     );
   }
 
+  // Settings UI PR K — notifications query + save + test.
+  const notificationsQuery = useQuery({
+    queryKey: ["instellingen", "notifications"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getNotificationSettings();
+      if (!result.ok) throw new Error("notifications-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = notificationsQuery.data;
+    if (!data) return;
+    setNotificationsForm({
+      smtp_host: data.smtp_host,
+      smtp_port: data.smtp_port,
+      smtp_username: data.smtp_username,
+      // The password is never echoed back; keep the input blank.
+      smtp_password: "",
+      smtp_from: data.smtp_from,
+      smtp_to: data.smtp_to,
+      smtp_use_tls: data.smtp_use_tls,
+      notifications_email_enabled: data.notifications_email_enabled,
+      notification_send_on_nav_drop: data.notification_send_on_nav_drop,
+      notification_send_on_position_drop:
+        data.notification_send_on_position_drop,
+      notification_send_on_high_confidence_sell:
+        data.notification_send_on_high_confidence_sell,
+    });
+    setNotificationsPasswordSet(data.smtp_password_set);
+    setNotificationsRealClientEnabled(
+      data.notifications_email_real_client_enabled,
+    );
+    setNotificationsHelp(data.help_nl);
+  }, [notificationsQuery.data]);
+
+  async function handleSaveNotifications() {
+    setNotificationsSaving(true);
+    setNotificationsError(null);
+    setNotificationsSaved(null);
+    setNotificationsTestResult(null);
+    const result =
+      await apiClient.updateNotificationSettings(notificationsForm);
+    setNotificationsSaving(false);
+    if (!result.ok) {
+      setNotificationsError(
+        "Opslaan mislukt. Controleer de waarden en probeer opnieuw.",
+      );
+      return;
+    }
+    queryClient.setQueryData(
+      ["instellingen", "notifications"],
+      result.data,
+    );
+    setNotificationsSaved(
+      "Notificaties opgeslagen. Gebruik 'Test e-mail' om SMTP te verifiëren.",
+    );
+    // Clear the password input — it's been persisted, never echo it.
+    setNotificationsForm((prev) => ({ ...prev, smtp_password: "" }));
+    setNotificationsPasswordSet(result.data.smtp_password_set);
+  }
+
+  async function handleSendTestEmail() {
+    setNotificationsTestSending(true);
+    setNotificationsTestResult(null);
+    const result = await apiClient.sendTestEmail();
+    setNotificationsTestSending(false);
+    if (!result.ok) {
+      setNotificationsTestResult({
+        sent: false,
+        status: "network_error",
+        detail_nl: "Netwerkfout bij verzenden van test-e-mail.",
+      });
+      return;
+    }
+    setNotificationsTestResult({
+      sent: result.data.sent,
+      status: result.data.status,
+      detail_nl: result.data.detail_nl,
+    });
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -1008,7 +1122,8 @@ export default function Page() {
     || forecastMarketQuery.isPending
     || executionGateQuery.isPending
     || predictorTuningQuery.isPending
-    || marketEventsQuery.isPending;
+    || marketEventsQuery.isPending
+    || notificationsQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -2671,6 +2786,339 @@ export default function Page() {
                 </span>
               ) : null}
             </div>
+          </section>
+
+          {/* Section 4k — Notificaties (PR K). Email transport + prefs. */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-notifications-section"
+          >
+            <h2 style={{ margin: 0 }}>Notificaties</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {notificationsHelp
+                || "Stel SMTP in zodat je e-mail ontvangt wanneer iets belangrijks gebeurt. Test eerst met de knop hieronder voordat je voor productie aanzet."}
+            </p>
+            {!notificationsRealClientEnabled ? (
+              <div
+                data-testid="instellingen-notifications-stub-banner"
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  background: "#fef3c7",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  color: "#92400e",
+                }}
+              >
+                Stub-modus actief: e-mails worden voorbereid maar niet
+                verzonden. Zet de env-var
+                <code> NOTIFICATIONS_EMAIL_REAL_CLIENT_ENABLED=true </code>
+                aan om SMTP daadwerkelijk te gebruiken.
+              </div>
+            ) : null}
+
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                SMTP-host
+                <input
+                  type="text"
+                  data-testid="instellingen-notifications-smtp-host"
+                  value={notificationsForm.smtp_host ?? ""}
+                  placeholder="smtp.gmail.com"
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_host: e.target.value || null,
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Het adres van je SMTP-server. Voor Gmail:
+                  <code> smtp.gmail.com</code>. Voor andere providers:
+                  zie hun documentatie.
+                </span>
+              </label>
+              <label>
+                SMTP-poort
+                <input
+                  type="number"
+                  min="1"
+                  max="65535"
+                  data-testid="instellingen-notifications-smtp-port"
+                  value={notificationsForm.smtp_port}
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_port: Number(e.target.value),
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Standaard 587 (STARTTLS). Gebruik 465 voor implicit
+                  SSL of 25 voor onbeveiligde lokale relays.
+                </span>
+              </label>
+              <label>
+                SMTP-gebruikersnaam
+                <input
+                  type="text"
+                  data-testid="instellingen-notifications-smtp-username"
+                  value={notificationsForm.smtp_username ?? ""}
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_username: e.target.value || null,
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Meestal je e-mailadres. Leeg laten voor relays die geen
+                  authenticatie vereisen.
+                </span>
+              </label>
+              <label>
+                SMTP-password
+                <input
+                  type="password"
+                  data-testid="instellingen-notifications-smtp-password"
+                  value={notificationsForm.smtp_password ?? ""}
+                  placeholder={
+                    notificationsPasswordSet
+                      ? "(opgeslagen — leeglaten om bestaande te behouden)"
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_password: e.target.value,
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Bij Gmail: gebruik een app-specifiek password, niet je
+                  account-password. Wordt versleuteld opgeslagen en nooit
+                  teruggegeven via de API.
+                </span>
+              </label>
+              <label>
+                Afzender-adres (From)
+                <input
+                  type="email"
+                  data-testid="instellingen-notifications-smtp-from"
+                  value={notificationsForm.smtp_from ?? ""}
+                  placeholder="trading-bot@example.com"
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_from: e.target.value || null,
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Het e-mailadres dat als afzender getoond wordt. Bij
+                  Gmail moet dit hetzelfde zijn als je gebruikersnaam.
+                </span>
+              </label>
+              <label>
+                Ontvanger-adres (To)
+                <input
+                  type="email"
+                  data-testid="instellingen-notifications-smtp-to"
+                  value={notificationsForm.smtp_to ?? ""}
+                  placeholder="jij@example.com"
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_to: e.target.value || null,
+                    }))
+                  }
+                />
+                <span className="help-text">
+                  Het e-mailadres waar de notificaties heen gestuurd
+                  worden. Meestal je eigen adres.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-notifications-smtp-use-tls"
+                  checked={notificationsForm.smtp_use_tls}
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      smtp_use_tls: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                TLS gebruiken (aanbevolen)
+                <span className="help-text">
+                  Aan (standaard) = de verbinding wordt versleuteld via
+                  STARTTLS (port 587) of SSL (port 465). Alleen
+                  uitschakelen voor lokale relays die geen TLS
+                  ondersteunen.
+                </span>
+              </label>
+
+              <h3 style={{ marginTop: 12, marginBottom: 4 }}>
+                Welke notificaties wil je ontvangen?
+              </h3>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-notifications-master-enabled"
+                  checked={notificationsForm.notifications_email_enabled}
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      notifications_email_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                E-mail notificaties inschakelen (master switch)
+                <span className="help-text">
+                  Master switch. Uit (standaard) = nooit een e-mail, ook
+                  niet bij ingestelde triggers. Aan = de drie toggles
+                  hieronder bepalen wat verstuurd wordt.
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-notifications-trigger-nav-drop"
+                  checked={notificationsForm.notification_send_on_nav_drop}
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      notification_send_on_nav_drop: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                E-mail bij portfolio-NAV daling ≥ 2%
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-notifications-trigger-position-drop"
+                  checked={
+                    notificationsForm.notification_send_on_position_drop
+                  }
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      notification_send_on_position_drop: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                E-mail bij positie daling ≥ 5%
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-notifications-trigger-high-conf-sell"
+                  checked={
+                    notificationsForm.notification_send_on_high_confidence_sell
+                  }
+                  onChange={(e) =>
+                    setNotificationsForm((p) => ({
+                      ...p,
+                      notification_send_on_high_confidence_sell:
+                        e.target.checked,
+                    }))
+                  }
+                />{" "}
+                E-mail bij hoge-zekerheid verkoop-suggestie
+              </label>
+            </div>
+
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => void handleSaveNotifications()}
+                disabled={notificationsSaving}
+                data-testid="instellingen-notifications-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: notificationsSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {notificationsSaving ? "Opslaan…" : "Notificaties opslaan"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSendTestEmail()}
+                disabled={notificationsTestSending}
+                data-testid="instellingen-notifications-test-email"
+                style={{
+                  background: "#ffffff",
+                  color: "#1f2937",
+                  border: "1px solid #1f2937",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: notificationsTestSending ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {notificationsTestSending ? "Versturen…" : "Test e-mail"}
+              </button>
+              {notificationsSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {notificationsSaved}
+                </span>
+              ) : null}
+              {notificationsError ? (
+                <span
+                  data-testid="instellingen-notifications-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {notificationsError}
+                </span>
+              ) : null}
+            </div>
+
+            {notificationsTestResult ? (
+              <div
+                data-testid="instellingen-notifications-test-result"
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  borderRadius: 4,
+                  fontSize: 13,
+                  background: notificationsTestResult.sent
+                    ? "#dcfce7"
+                    : notificationsTestResult.status === "stubbed"
+                      ? "#fef3c7"
+                      : "#fee2e2",
+                  color: notificationsTestResult.sent
+                    ? "#15803d"
+                    : notificationsTestResult.status === "stubbed"
+                      ? "#92400e"
+                      : "#991b1b",
+                }}
+              >
+                <strong>
+                  {notificationsTestResult.sent
+                    ? "✓ Verstuurd"
+                    : notificationsTestResult.status === "stubbed"
+                      ? "Stub-modus"
+                      : "Niet verstuurd"}
+                  :
+                </strong>{" "}
+                {notificationsTestResult.detail_nl}
+              </div>
+            ) : null}
           </section>
 
           {/* Section 4g — Geavanceerde instellingen (PR E). Collapsed by

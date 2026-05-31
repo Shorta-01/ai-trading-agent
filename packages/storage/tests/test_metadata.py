@@ -224,7 +224,12 @@ def test_no_secret_like_column_names_and_no_legacy_table_names() -> None:
     # column: the operator-editable Claude API key. The API never returns or
     # logs the value (only ``claude_ai_api_key_set: bool``), so the
     # secret-like-name guard is waived for exactly this column.
-    allowed_secret_columns = {("runtime_config", "claude_ai_api_key")}
+    # ``runtime_config.smtp_password`` (PR K) is the same pattern — write-only
+    # via the API, surfaced as ``smtp_password_set: bool`` in the response.
+    allowed_secret_columns = {
+        ("runtime_config", "claude_ai_api_key"),
+        ("runtime_config", "smtp_password"),
+    }
 
     for table_name, table in metadata.tables.items():
         table_name_lower = table_name.lower()

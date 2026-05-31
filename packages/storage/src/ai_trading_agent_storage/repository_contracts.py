@@ -346,6 +346,21 @@ class RuntimeConfigRecord:
     # Settings UI PR J — market-aware scheduler. ``None`` = env-default.
     scheduler_per_market_close_digest_enabled: bool | None = None
     scheduler_per_market_open_alerts_enabled: bool | None = None
+    # Settings UI PR K — email notification transport + per-trigger
+    # preferences. ``smtp_password`` is write-only via the API; the
+    # GET response uses ``smtp_password_set: bool`` instead of returning
+    # the value (mirrors the ``claude_ai_api_key`` pattern).
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_to: str | None = None
+    smtp_use_tls: bool | None = None
+    notifications_email_enabled: bool | None = None
+    notification_send_on_nav_drop: bool | None = None
+    notification_send_on_position_drop: bool | None = None
+    notification_send_on_high_confidence_sell: bool | None = None
 
 
 @dataclass(frozen=True)

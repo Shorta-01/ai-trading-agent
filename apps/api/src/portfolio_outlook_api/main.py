@@ -49,6 +49,9 @@ from portfolio_outlook_api.market_data_runtime_routes import (
 from portfolio_outlook_api.market_events_routes import (
     router as market_events_router,
 )
+from portfolio_outlook_api.notification_routes import (
+    router as notification_router,
+)
 from portfolio_outlook_api.reconciliation import (
     router as reconciliation_router,
 )
@@ -187,6 +190,7 @@ app.include_router(runtime_config_router)
 app.include_router(suggestions_grid_router)
 app.include_router(market_events_router)
 app.include_router(digest_router)
+app.include_router(notification_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

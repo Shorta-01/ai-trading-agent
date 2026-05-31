@@ -262,6 +262,25 @@ class Settings(BaseSettings):
     # at startup and registers per-market cron jobs accordingly.
     scheduler_per_market_close_digest_enabled: bool = True
     scheduler_per_market_open_alerts_enabled: bool = False
+    # Email notification transport + per-trigger preferences (PR K).
+    # The ``smtp_password`` field carries the secret; the API exposes
+    # ``smtp_password_set: bool`` instead of the value in GET responses.
+    # ``notifications_email_real_client_enabled`` is the master safety
+    # switch — when False the email sender stays in stub mode even if
+    # all other config is filled in, so a fresh deploy never sends
+    # accidentally on first save.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_to: str | None = None
+    smtp_use_tls: bool = True
+    notifications_email_enabled: bool = False
+    notifications_email_real_client_enabled: bool = False
+    notification_send_on_nav_drop: bool = True
+    notification_send_on_position_drop: bool = True
+    notification_send_on_high_confidence_sell: bool = True
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False

@@ -52,6 +52,9 @@ const getPredictorTuningSettings = vi.fn();
 const updatePredictorTuningSettings = vi.fn();
 const getMarketEventsSettings = vi.fn();
 const updateMarketEventsSettings = vi.fn();
+const getNotificationSettings = vi.fn();
+const updateNotificationSettings = vi.fn();
+const sendTestEmail = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -99,6 +102,11 @@ vi.mock("@/lib/apiClient", () => ({
       getMarketEventsSettings(...a),
     updateMarketEventsSettings: (...a: unknown[]) =>
       updateMarketEventsSettings(...a),
+    getNotificationSettings: (...a: unknown[]) =>
+      getNotificationSettings(...a),
+    updateNotificationSettings: (...a: unknown[]) =>
+      updateNotificationSettings(...a),
+    sendTestEmail: (...a: unknown[]) => sendTestEmail(...a),
   },
 }));
 
@@ -249,6 +257,22 @@ const PREDICTOR_TUNING = {
   help_nl: "Power-user voorspeller-tuning.",
 };
 
+const NOTIFICATIONS = {
+  smtp_host: null,
+  smtp_port: 587,
+  smtp_username: null,
+  smtp_from: null,
+  smtp_to: null,
+  smtp_use_tls: true,
+  smtp_password_set: false,
+  notifications_email_enabled: false,
+  notifications_email_real_client_enabled: false,
+  notification_send_on_nav_drop: true,
+  notification_send_on_position_drop: true,
+  notification_send_on_high_confidence_sell: true,
+  help_nl: "SMTP help text",
+};
+
 const MARKET_EVENTS = {
   per_market_close_digest_enabled: true,
   per_market_open_alerts_enabled: false,
@@ -294,6 +318,9 @@ beforeEach(() => {
   updatePredictorTuningSettings.mockReset();
   getMarketEventsSettings.mockReset();
   updateMarketEventsSettings.mockReset();
+  getNotificationSettings.mockReset();
+  updateNotificationSettings.mockReset();
+  sendTestEmail.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -307,6 +334,7 @@ beforeEach(() => {
   getExecutionGateSettings.mockReturnValue(ok(EXECUTION_GATES));
   getPredictorTuningSettings.mockReturnValue(ok(PREDICTOR_TUNING));
   getMarketEventsSettings.mockReturnValue(ok(MARKET_EVENTS));
+  getNotificationSettings.mockReturnValue(ok(NOTIFICATIONS));
 });
 
 afterEach(() => cleanup());
@@ -875,5 +903,81 @@ describe("InstellingenPage", () => {
     const payload = updateMarketEventsSettings.mock.calls[0][0];
     expect(payload.per_market_close_digest_enabled).toBe(true);
     expect(payload.per_market_open_alerts_enabled).toBe(true);
+  });
+
+  it("renders the notifications section + stub-mode banner when real client off", async () => {
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-notifications-section"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("instellingen-notifications-stub-banner"),
+    ).toHaveTextContent("Stub-modus actief");
+    expect(
+      screen.getByTestId("instellingen-notifications-smtp-host"),
+    ).toBeInTheDocument();
+  });
+
+  it("does NOT echo the smtp password back from the GET response", async () => {
+    getNotificationSettings.mockReturnValue(
+      ok({ ...NOTIFICATIONS, smtp_password_set: true }),
+    );
+    render(<Page />);
+    const passwordInput = await screen.findByTestId(
+      "instellingen-notifications-smtp-password",
+    );
+    // Input is rendered with the empty placeholder pattern, never the
+    // value — the API never returns the password.
+    expect(passwordInput).toHaveValue("");
+    expect(passwordInput).toHaveAttribute("placeholder", expect.stringContaining("opgeslagen"));
+  });
+
+  it("saves notification settings + clears password input after success", async () => {
+    updateNotificationSettings.mockReturnValue(
+      ok({
+        ...NOTIFICATIONS,
+        smtp_host: "smtp.example.com",
+        smtp_password_set: true,
+      }),
+    );
+    render(<Page />);
+    const hostInput = await screen.findByTestId(
+      "instellingen-notifications-smtp-host",
+    );
+    await userEvent.type(hostInput, "smtp.example.com");
+    const passwordInput = screen.getByTestId(
+      "instellingen-notifications-smtp-password",
+    );
+    await userEvent.type(passwordInput, "secret-value");
+    await userEvent.click(
+      screen.getByTestId("instellingen-notifications-save"),
+    );
+    await waitFor(() =>
+      expect(updateNotificationSettings).toHaveBeenCalledTimes(1),
+    );
+    // After save, the password input is cleared so a refresh doesn't
+    // re-submit the secret.
+    expect(passwordInput).toHaveValue("");
+  });
+
+  it("shows test-email result when 'Test e-mail' is clicked", async () => {
+    sendTestEmail.mockReturnValue(
+      ok({
+        sent: false,
+        status: "stubbed",
+        detail_nl: "Stub-modus: niet verzonden.",
+        used_host: "smtp.example.com",
+      }),
+    );
+    render(<Page />);
+    await userEvent.click(
+      await screen.findByTestId("instellingen-notifications-test-email"),
+    );
+    await waitFor(() => {
+      expect(sendTestEmail).toHaveBeenCalledTimes(1);
+    });
+    expect(
+      screen.getByTestId("instellingen-notifications-test-result"),
+    ).toHaveTextContent("Stub-modus");
   });
 });
