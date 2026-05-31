@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge";
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
+import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { EmptyState } from "@/components/EmptyState";
@@ -83,6 +84,9 @@ export default function HomePage() {
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <ForecastDaySummaryWidget />
+      </section>
+      <section style={{ marginBottom: "0.75rem" }}>
+        <MarketHoursWidget />
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <ReconciliationStatusWidget />

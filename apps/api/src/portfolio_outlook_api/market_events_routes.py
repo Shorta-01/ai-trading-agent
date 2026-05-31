@@ -445,9 +445,236 @@ def _carry_existing_into_record(
     )
 
 
+# ---------------------------------------------------------------------------
+# Live market hours — dashboard monitor widget feed
+# ---------------------------------------------------------------------------
+
+
+class MarketHoursEntry(BaseModel):
+    """One followed market's open/close + current state.
+
+    All times are exposed as UTC ISO so the client can render in the
+    operator's local timezone without server-side tz juggling. The
+    ``state`` enum is deterministic so the UI dot mapping never has
+    to parse Dutch text.
+    """
+
+    market_code: str
+    market_label_nl: str
+    timezone: str
+    open_at_utc: str
+    close_at_utc: str
+    open_local_hhmm: str  # e.g. "09:00"
+    close_local_hhmm: str  # e.g. "17:30"
+    state: str  # "pre_open" | "open" | "post_close" | "weekend"
+    state_nl: str
+    next_event_kind: str | None  # "open" | "close" | None when weekend
+    next_event_at_utc: str | None
+
+
+class MarketHoursNowResponse(BaseModel):
+    """Live snapshot of every followed market's hours."""
+
+    now_utc: str
+    universe_codes_selected: list[str]
+    markets: list[MarketHoursEntry]
+    help_nl: str
+
+
+_MARKET_HOURS_HELP_NL = (
+    "Toont per gevolgde markt de openings- en sluitingstijden van "
+    "vandaag plus de huidige status (pre-open, open, na-sluiting of "
+    "weekend). De selectie volgt je universe-scan in /instellingen — "
+    "voeg of verwijder beurzen daar om deze lijst aan te passen."
+)
+
+
+def _localised_today_bounds(
+    session: _MarketSession, now_utc: datetime
+) -> tuple[datetime, datetime]:
+    """Compute today's open + close datetime in UTC for ``session``.
+
+    "Today" is in the market's *local* timezone — when the operator
+    looks at the dashboard from Brussels at 23:00 their time, a market
+    in New York may still be on its previous calendar day. We anchor
+    on the market's local date and convert back to UTC for transport.
+    """
+
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo(session.timezone)
+    local_now = now_utc.astimezone(tz)
+    open_local = local_now.replace(
+        hour=session.open_hour,
+        minute=session.open_minute,
+        second=0,
+        microsecond=0,
+    )
+    close_local = local_now.replace(
+        hour=session.close_hour,
+        minute=session.close_minute,
+        second=0,
+        microsecond=0,
+    )
+    return open_local.astimezone(UTC), close_local.astimezone(UTC)
+
+
+def _market_state(
+    *,
+    now_utc: datetime,
+    open_at_utc: datetime,
+    close_at_utc: datetime,
+    session: _MarketSession,
+) -> tuple[str, str, str | None, datetime | None]:
+    """Resolve (state, state_nl, next_event_kind, next_event_at) for one market.
+
+    Weekend handling: equity markets in the locked catalog only open
+    Mon-Fri. When the local date is Sat or Sun the widget reports
+    ``weekend`` and points the operator at the next Monday's open.
+    """
+
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo(session.timezone)
+    local_now = now_utc.astimezone(tz)
+    weekday = local_now.weekday()  # Mon=0, Sun=6
+    if weekday >= 5:
+        # Compute next Monday's open in the market's timezone.
+        days_to_monday = 7 - weekday
+        next_open_local = local_now.replace(
+            hour=session.open_hour,
+            minute=session.open_minute,
+            second=0,
+            microsecond=0,
+        )
+        from datetime import timedelta
+
+        next_open_local = next_open_local + timedelta(days=days_to_monday)
+        return (
+            "weekend",
+            "Markt gesloten (weekend).",
+            "open",
+            next_open_local.astimezone(UTC),
+        )
+    if now_utc < open_at_utc:
+        return (
+            "pre_open",
+            f"Opent vandaag om {session.open_hour:02d}:{session.open_minute:02d} "
+            f"({session.timezone}).",
+            "open",
+            open_at_utc,
+        )
+    if now_utc < close_at_utc:
+        return (
+            "open",
+            f"Open; sluit om {session.close_hour:02d}:{session.close_minute:02d} "
+            f"({session.timezone}).",
+            "close",
+            close_at_utc,
+        )
+    # After close — next event is tomorrow's open (or Monday's if today
+    # is Friday).
+    from datetime import timedelta
+
+    days_ahead = 3 if weekday == 4 else 1
+    next_open_local = local_now.replace(
+        hour=session.open_hour,
+        minute=session.open_minute,
+        second=0,
+        microsecond=0,
+    ) + timedelta(days=days_ahead)
+    return (
+        "post_close",
+        "Vandaag gesloten.",
+        "open",
+        next_open_local.astimezone(UTC),
+    )
+
+
+def _build_market_hours_entry(
+    session: _MarketSession, now_utc: datetime
+) -> MarketHoursEntry:
+    open_at_utc, close_at_utc = _localised_today_bounds(session, now_utc)
+    state, state_nl, next_event_kind, next_event_at = _market_state(
+        now_utc=now_utc,
+        open_at_utc=open_at_utc,
+        close_at_utc=close_at_utc,
+        session=session,
+    )
+    return MarketHoursEntry(
+        market_code=session.code,
+        market_label_nl=session.label_nl,
+        timezone=session.timezone,
+        open_at_utc=open_at_utc.isoformat(),
+        close_at_utc=close_at_utc.isoformat(),
+        open_local_hhmm=f"{session.open_hour:02d}:{session.open_minute:02d}",
+        close_local_hhmm=(
+            f"{session.close_hour:02d}:{session.close_minute:02d}"
+        ),
+        state=state,
+        state_nl=state_nl,
+        next_event_kind=next_event_kind,
+        next_event_at_utc=(
+            next_event_at.isoformat() if next_event_at is not None else None
+        ),
+    )
+
+
+def _resolve_followed_codes() -> list[str]:
+    """Read the operator's selected index codes from storage with an
+    env-default fallback. Identical to the universe-scan + market-events
+    lookup so the widget can never surface a different set of markets
+    than the scheduler actually fires for."""
+
+    storage = settings.storage
+    raw = settings.universe_scan_index_codes
+    if storage.enabled and storage.database_url:
+        try:
+            provider = _storage_provider()
+            with provider.checked_connection(require_writable=False) as checked:
+                repo = SqlAlchemyRuntimeConfigRepository(
+                    checked.connection, checked.readiness
+                )
+                record = repo.get()
+            if record is not None and record.universe_scan_index_codes is not None:
+                raw = record.universe_scan_index_codes
+        except StorageConnectionError:
+            # Fall through to env-default; the widget should still
+            # render the env-configured markets even when storage is
+            # briefly unreachable.
+            pass
+    return [c.strip() for c in (raw or "").split(",") if c.strip()]
+
+
+@router.get(
+    "/markets/hours-now",
+    response_model=MarketHoursNowResponse,
+)
+def get_market_hours_now() -> MarketHoursNowResponse:
+    """Live open/close + current state per followed market.
+
+    Polled by the dashboard's market-hours widget. Re-reads the
+    operator's universe-scan selection on every call so a fresh save
+    in /instellingen reflects without a worker restart. Never raises:
+    a storage hiccup falls back to the env-configured codes.
+    """
+
+    now_utc = datetime.now(UTC)
+    codes = _resolve_followed_codes()
+    sessions = _resolve_sessions(codes)
+    return MarketHoursNowResponse(
+        now_utc=now_utc.isoformat(),
+        universe_codes_selected=codes,
+        markets=[_build_market_hours_entry(s, now_utc) for s in sessions],
+        help_nl=_MARKET_HOURS_HELP_NL,
+    )
+
+
 __all__ = [
     "MarketEventFire",
     "MarketEventsSettingsResponse",
+    "MarketHoursEntry",
+    "MarketHoursNowResponse",
     "UpdateMarketEventsSettingsRequest",
     "router",
 ]
