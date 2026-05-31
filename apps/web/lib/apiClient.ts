@@ -121,6 +121,27 @@ export type MarketHoursNowResponse = {
   markets: MarketHoursEntry[];
   help_nl: string;
 };
+// PR Q — predictor performance leaderboard for the dashboard.
+export type PredictorPerformanceEntry = {
+  model_code: string;
+  model_version: string;
+  sample_count: number;
+  realised_sample_count: number;
+  mean_brier_score: string | null;
+  mean_return_spread_pct: string | null;
+  mean_realised_return_pct: string | null;
+};
+export type PredictorPerformanceResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  lookback_days: number;
+  total_contributions_considered: number;
+  predictors: PredictorPerformanceEntry[];
+  best_model_code: string | null;
+  safe_for_orders: boolean;
+  safe_for_action_drafts: boolean;
+};
 export type IntegrationCard = { key: string; label_nl: string; status_nl: string; help_nl: string; configured: boolean; connected: boolean; blocks_related_jobs: boolean; };
 export type IntegrationsSummary = { title_nl: string; help_nl: string; cards: IntegrationCard[]; };
 
@@ -1909,6 +1930,10 @@ export const apiClient = {
     getJson<ClaudeBudgetStatusResponse>("/claude/budget/status"),
   getNavHistory: (days = 30) =>
     getJson<NavHistoryResponse>(`/portfolio/nav/history?days=${days}`),
+  getPredictorPerformance: (lookbackDays = 30) =>
+    getJson<PredictorPerformanceResponse>(
+      `/predictors/performance?lookback_days=${lookbackDays}`,
+    ),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),

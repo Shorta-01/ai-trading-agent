@@ -58,6 +58,9 @@ from portfolio_outlook_api.notification_routes import (
 from portfolio_outlook_api.portfolio_nav_history_routes import (
     router as portfolio_nav_history_router,
 )
+from portfolio_outlook_api.predictor_performance_routes import (
+    router as predictor_performance_router,
+)
 from portfolio_outlook_api.reconciliation import (
     router as reconciliation_router,
 )
@@ -203,6 +206,7 @@ app.include_router(market_events_router)
 app.include_router(digest_router)
 app.include_router(notification_router)
 app.include_router(explanation_batch_router)
+app.include_router(predictor_performance_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

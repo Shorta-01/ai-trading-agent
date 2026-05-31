@@ -8,6 +8,7 @@ import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { NavSparkline } from "@/components/NavSparkline";
+import { PredictorPerformanceWidget } from "@/components/PredictorPerformanceWidget";
 import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
 import { TodaysActionsCounter } from "@/components/TodaysActionsCounter";
@@ -102,6 +103,9 @@ export default function HomePage() {
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <ReconciliationStatusWidget />
+      </section>
+      <section style={{ marginBottom: "0.75rem" }}>
+        <PredictorPerformanceWidget />
       </section>
       <section className="metrics-grid">
         <MetricCard
