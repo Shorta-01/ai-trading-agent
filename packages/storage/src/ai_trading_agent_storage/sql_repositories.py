@@ -6312,6 +6312,23 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "scheduler_per_market_open_alerts_enabled": (
                 record.scheduler_per_market_open_alerts_enabled
             ),
+            "smtp_host": record.smtp_host,
+            "smtp_port": record.smtp_port,
+            "smtp_username": record.smtp_username,
+            "smtp_password": record.smtp_password,
+            "smtp_from": record.smtp_from,
+            "smtp_to": record.smtp_to,
+            "smtp_use_tls": record.smtp_use_tls,
+            "notifications_email_enabled": record.notifications_email_enabled,
+            "notification_send_on_nav_drop": (
+                record.notification_send_on_nav_drop
+            ),
+            "notification_send_on_position_drop": (
+                record.notification_send_on_position_drop
+            ),
+            "notification_send_on_high_confidence_sell": (
+                record.notification_send_on_high_confidence_sell
+            ),
         }
         existing = (
             self._connection.execute(
@@ -6512,6 +6529,39 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         scheduler_per_market_open_alerts_enabled=(
             bool(row["scheduler_per_market_open_alerts_enabled"])
             if row.get("scheduler_per_market_open_alerts_enabled") is not None
+            else None
+        ),
+        smtp_host=row.get("smtp_host"),
+        smtp_port=(
+            int(row["smtp_port"]) if row.get("smtp_port") is not None else None
+        ),
+        smtp_username=row.get("smtp_username"),
+        smtp_password=row.get("smtp_password"),
+        smtp_from=row.get("smtp_from"),
+        smtp_to=row.get("smtp_to"),
+        smtp_use_tls=(
+            bool(row["smtp_use_tls"])
+            if row.get("smtp_use_tls") is not None
+            else None
+        ),
+        notifications_email_enabled=(
+            bool(row["notifications_email_enabled"])
+            if row.get("notifications_email_enabled") is not None
+            else None
+        ),
+        notification_send_on_nav_drop=(
+            bool(row["notification_send_on_nav_drop"])
+            if row.get("notification_send_on_nav_drop") is not None
+            else None
+        ),
+        notification_send_on_position_drop=(
+            bool(row["notification_send_on_position_drop"])
+            if row.get("notification_send_on_position_drop") is not None
+            else None
+        ),
+        notification_send_on_high_confidence_sell=(
+            bool(row["notification_send_on_high_confidence_sell"])
+            if row.get("notification_send_on_high_confidence_sell") is not None
             else None
         ),
     )
