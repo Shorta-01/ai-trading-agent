@@ -66,6 +66,14 @@ export type SettingsSummary = {
 
 export type AiUsageSummary = { title_nl: string; help_nl: string; usage_available: boolean; estimated_cost_usd: number | null; estimated_cost_eur: number | null; budget_status_nl: string; budget_help_nl: string; warning_nl: string; };
 export type StorageStatusSummary = { title_nl: string; summary_nl: string; help_nl: string; selected_database_nl: string; migration_tool_nl: string; implementation_status_nl: string; first_persistence_target_nl: string; storage_ready: boolean; can_persist_paper_setup: boolean; };
+// PR M — monitoring widget reads the live storage online state.
+export type OnlineStorageStatusResponse = {
+  configured: boolean;
+  connected: boolean;
+  safe_to_write: boolean;
+  migration_readiness_status: string;
+  writes_status_nl: string;
+};
 export type IntegrationCard = { key: string; label_nl: string; status_nl: string; help_nl: string; configured: boolean; connected: boolean; blocks_related_jobs: boolean; };
 export type IntegrationsSummary = { title_nl: string; help_nl: string; cards: IntegrationCard[]; };
 
@@ -1844,6 +1852,10 @@ export const apiClient = {
   getAiUsageSummary: () => getJson<AiUsageSummary>("/usage/ai/summary"),
   getIntegrationsSummary: () => getJson<IntegrationsSummary>("/integrations/summary"),
   getStorageStatus: () => getJson<StorageStatusSummary>("/storage/status"),
+  getStorageStatusOnline: () =>
+    getJson<OnlineStorageStatusResponse>("/storage/status/online"),
+  getApiHealth: () =>
+    getJson<{ status: string; service: string }>("/health"),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),
