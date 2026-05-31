@@ -158,6 +158,25 @@ class _DigestRunnerProtocol(Protocol):
     ) -> dict[str, object]: ...
 
 
+class _MorningAlertsRunnerProtocol(Protocol):
+    """Morning-chain alerts adapter fired on ``morning_briefing`` after
+    the API's morning chain has persisted today's suggestions.
+
+    Reads today's suggestions for the operator's held positions,
+    computes alerts (high-confidence sell on held / high-confidence
+    new buy / chain failure), and emails the operator. Never raises.
+    """
+
+    def run(
+        self,
+        *,
+        ibkr_account_id: str,
+        scheduled_run_id: str,
+        chain_failed: bool = False,
+        failure_reason_nl: str | None = None,
+    ) -> dict[str, object]: ...
+
+
 class _GatewayProtocol(Protocol):
     def is_connected(self) -> bool: ...
 
@@ -223,6 +242,7 @@ def run_orchestrator(
     calibration_runner: _CalibrationRunnerProtocol | None = None,
     decision_package_runner: _DecisionPackageRunnerProtocol | None = None,
     digest_runner: _DigestRunnerProtocol | None = None,
+    morning_alerts_runner: _MorningAlertsRunnerProtocol | None = None,
     market_code: str | None = None,
 ) -> OrchestratorResult:
     """One scheduled-run cycle.
@@ -396,6 +416,49 @@ def run_orchestrator(
                     "error": "decision_package_runner_exception"
                 }
 
+        # 7c. Morning chain alerts (morning_briefing only). Runs after
+        # decision packages so the operator's alert email reflects the
+        # full chain output. ``chain_failed`` is set to True when the
+        # forecasting or decision-package step itself errored, so a
+        # silent failure can't leave the operator un-notified.
+        morning_alerts_details: dict[str, object] | None = None
+        if (
+            morning_alerts_runner is not None
+            and mode_detected == "normal"
+            and run_type == "morning_briefing"
+            and ibkr_account_id is not None
+        ):
+            chain_failed = bool(
+                (forecast_details and "error" in forecast_details)
+                or (
+                    decision_package_details
+                    and "error" in decision_package_details
+                )
+            )
+            failure_reason_nl: str | None = None
+            if chain_failed:
+                if forecast_details and "error" in forecast_details:
+                    failure_reason_nl = "Voorspellings-stap heeft een fout."
+                elif (
+                    decision_package_details
+                    and "error" in decision_package_details
+                ):
+                    failure_reason_nl = (
+                        "Decision Package-stap heeft een fout."
+                    )
+            try:
+                morning_alerts_details = morning_alerts_runner.run(
+                    ibkr_account_id=ibkr_account_id,
+                    scheduled_run_id=run_id,
+                    chain_failed=chain_failed,
+                    failure_reason_nl=failure_reason_nl,
+                )
+            except Exception:  # noqa: BLE001 — boundary
+                logger.exception("morning_alerts_runner failed")
+                morning_alerts_details = {
+                    "error": "morning_alerts_runner_exception"
+                }
+
         # 8. Task 130 calibration step (pre_briefing only).
         calibration_details: dict[str, object] | None = None
         if (
@@ -443,6 +506,8 @@ def run_orchestrator(
             audit_payload["calibration"] = calibration_details
         if digest_details is not None:
             audit_payload["digest"] = digest_details
+        if morning_alerts_details is not None:
+            audit_payload["morning_alerts"] = morning_alerts_details
         if audit_payload:
             import json as _json
 
