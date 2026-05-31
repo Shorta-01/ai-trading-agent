@@ -209,3 +209,86 @@ def test_chain_failure_alert_fires_even_with_no_suggestions(
         failure_reason_nl="Test failure.",
     )
     assert result["alert_count"] == 1
+
+
+# ---- AI summary header ------------------------------------------------
+
+
+def test_render_email_bodies_prepends_ai_summary_when_provided() -> None:
+    from portfolio_outlook_worker.morning_alerts_runner import _render_email_bodies
+
+    subject, plain, html = _render_email_bodies(
+        sendable_alerts=[
+            {
+                "severity_nl": "Hoog",
+                "title_nl": "Verkoop AAPL",
+                "body_nl": "Hoge zekerheid verkoop-suggestie.",
+            }
+        ],
+        today="2026-06-01",
+        ai_summary_nl="Eén verkoop-signaal vandaag.",
+    )
+    assert "ochtend-alerts (2026-06-01)" in subject
+    assert "AI-samenvatting" in plain
+    assert "Eén verkoop-signaal vandaag." in plain
+    assert "AI-samenvatting" in html
+
+
+def test_render_email_bodies_omits_ai_summary_when_none() -> None:
+    from portfolio_outlook_worker.morning_alerts_runner import _render_email_bodies
+
+    _, plain, html = _render_email_bodies(
+        sendable_alerts=[
+            {"severity_nl": "Hoog", "title_nl": "T", "body_nl": "B"}
+        ],
+        today="2026-06-01",
+        ai_summary_nl=None,
+    )
+    assert "AI-samenvatting" not in plain
+    assert "AI-samenvatting" not in html
+
+
+def test_maybe_compose_ai_summary_returns_none_when_flag_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from portfolio_outlook_worker import morning_alerts_runner as module
+
+    called: list[object] = []
+    monkeypatch.setattr(
+        module, "compose_alert_summary", lambda **kw: called.append(kw) or None
+    )
+    result = module._maybe_compose_ai_summary(
+        sendable_alerts=[{"severity_nl": "x", "title_nl": "t", "body_nl": "b"}],
+        today_iso="2026-06-01",
+        api_base_url="http://api:8000",
+        api_request_timeout_seconds=1.0,
+        notifications=NotificationSettings(ai_email_summary_enabled=False),
+    )
+    assert result is None
+    assert called == []
+
+
+def test_maybe_compose_ai_summary_returns_summary_on_generated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from portfolio_outlook_worker import morning_alerts_runner as module
+
+    captured: dict[str, object] = {}
+
+    def _stub_compose(**kw):
+        captured.update(kw)
+        return {"status": "generated", "summary_nl": "Eén signaal vandaag."}
+
+    monkeypatch.setattr(module, "compose_alert_summary", _stub_compose)
+    result = module._maybe_compose_ai_summary(
+        sendable_alerts=[
+            {"severity_nl": "Hoog", "title_nl": "T", "body_nl": "B"}
+        ],
+        today_iso="2026-06-01",
+        api_base_url="http://api:8000",
+        api_request_timeout_seconds=1.5,
+        notifications=NotificationSettings(ai_email_summary_enabled=True),
+    )
+    assert result == "Eén signaal vandaag."
+    assert captured["kind"] == "morning_alerts"
+    assert "2026-06-01" in str(captured["context_text"])

@@ -34,6 +34,7 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 
+from portfolio_outlook_worker.api_trigger import compose_alert_summary
 from portfolio_outlook_worker.config import (
     NotificationSettings,
     StorageSettings,
@@ -94,15 +95,25 @@ def _render_email_bodies(
     *,
     sendable_alerts: Sequence[dict[str, object]],
     today: str,
+    ai_summary_nl: str | None = None,
 ) -> tuple[str, str, str]:
+    """Render (subject, plain, html) for the morning-alerts email.
+
+    The optional ``ai_summary_nl`` is prepended above the deterministic
+    template body. A None / blocked / failed AI summary leaves the
+    email shape identical to the pre-AI version.
+    """
+
     subject = (
         f"AI Trading Agent — ochtend-alerts ({today})"
     )
 
-    plain_lines = [
-        f"Ochtend-alerts voor {today}.",
-        "",
-    ]
+    plain_lines: list[str] = []
+    if ai_summary_nl:
+        plain_lines.extend(
+            ["AI-samenvatting:", ai_summary_nl.strip(), ""]
+        )
+    plain_lines.extend([f"Ochtend-alerts voor {today}.", ""])
     for alert in sendable_alerts:
         plain_lines.append(
             f"- [{alert.get('severity_nl')}] {alert.get('title_nl')}"
@@ -122,14 +133,63 @@ def _render_email_bodies(
         f"<span style='color:#374151'>{alert.get('body_nl')}</span></li>"
         for alert in sendable_alerts
     )
+    html_summary = (
+        f"<p><strong>AI-samenvatting:</strong><br/>"
+        f"<span style='color:#1f2937'>{ai_summary_nl.strip()}</span></p>"
+        if ai_summary_nl
+        else ""
+    )
     html = (
-        f"<p>Ochtend-alerts voor <strong>{today}</strong>.</p>"
-        f"<ul>{html_items}</ul>"
-        "<p style='color:#6b7280;font-size:12px;'>"
-        "Geen automatische actie — open de dashboard /suggesties pagina.</p>"
+        html_summary
+        + f"<p>Ochtend-alerts voor <strong>{today}</strong>.</p>"
+        + f"<ul>{html_items}</ul>"
+        + "<p style='color:#6b7280;font-size:12px;'>"
+        + "Geen automatische actie — open de dashboard /suggesties pagina.</p>"
     )
 
     return subject, plain, html
+
+
+def _maybe_compose_ai_summary(
+    *,
+    sendable_alerts: Sequence[dict[str, object]],
+    today_iso: str,
+    api_base_url: str | None,
+    api_request_timeout_seconds: float,
+    notifications: NotificationSettings,
+) -> str | None:
+    """Optionally fetch a Claude-composed Dutch header. Never raises.
+
+    Returns the summary string only when the AI path produced a
+    guarded, non-empty result; ``None`` otherwise so the caller sends
+    the template-only email.
+    """
+
+    if not notifications.ai_email_summary_enabled:
+        return None
+    if not sendable_alerts:
+        return None
+    alert_lines = [
+        f"- [{a.get('severity_nl')}] {a.get('title_nl')}: {a.get('body_nl')}"
+        for a in sendable_alerts
+    ]
+    context_text = (
+        f"Ochtend-alerts voor {today_iso}. "
+        f"Aantal alerts: {len(sendable_alerts)}."
+    )
+    body = compose_alert_summary(
+        base_url=api_base_url,
+        timeout_seconds=api_request_timeout_seconds,
+        kind="morning_alerts",
+        context_text=context_text,
+        alert_lines=alert_lines,
+    )
+    if not body or body.get("status") != "generated":
+        return None
+    summary_nl = body.get("summary_nl")
+    if isinstance(summary_nl, str) and summary_nl.strip():
+        return summary_nl.strip()
+    return None
 
 
 def _send_morning_email(
@@ -137,6 +197,8 @@ def _send_morning_email(
     alerts: Sequence[dict[str, object]],
     notifications: NotificationSettings,
     today_iso: str,
+    api_base_url: str | None,
+    api_request_timeout_seconds: float,
 ) -> dict[str, object]:
     if not notifications.email_enabled:
         return {"sent": False, "reason": "email_disabled"}
@@ -153,8 +215,15 @@ def _send_morning_email(
     if config is None:
         return {"sent": False, "reason": "smtp_config_incomplete"}
 
+    ai_summary_nl = _maybe_compose_ai_summary(
+        sendable_alerts=sendable,
+        today_iso=today_iso,
+        api_base_url=api_base_url,
+        api_request_timeout_seconds=api_request_timeout_seconds,
+        notifications=notifications,
+    )
     subject, body_plain, body_html = _render_email_bodies(
-        sendable_alerts=sendable, today=today_iso
+        sendable_alerts=sendable, today=today_iso, ai_summary_nl=ai_summary_nl
     )
     result = send_email(
         config=config,
@@ -168,6 +237,7 @@ def _send_morning_email(
         "status": result.status,
         "detail_nl": result.detail_nl,
         "alerts_sent_count": len(sendable),
+        "ai_summary_used": ai_summary_nl is not None,
     }
 
 
@@ -186,10 +256,14 @@ class MorningAlertsRunner:
         storage_settings: StorageSettings,
         notifications: NotificationSettings,
         now_provider: Any = lambda: datetime.now(UTC),
+        api_base_url: str | None = None,
+        api_request_timeout_seconds: float = 30.0,
     ) -> None:
         self._storage_settings = storage_settings
         self._notifications = notifications
         self._now_provider = now_provider
+        self._api_base_url = api_base_url
+        self._api_request_timeout_seconds = api_request_timeout_seconds
 
     def run(
         self,
@@ -271,6 +345,8 @@ class MorningAlertsRunner:
             alerts=alerts,
             notifications=self._notifications,
             today_iso=now.date().isoformat(),
+            api_base_url=self._api_base_url,
+            api_request_timeout_seconds=self._api_request_timeout_seconds,
         )
 
         return {

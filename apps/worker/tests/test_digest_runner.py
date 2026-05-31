@@ -485,3 +485,213 @@ def test_action_drafts_filtered_to_today(
     assert summary["approved_today"] == 1
     assert summary["submitted_today"] == 1
     assert summary["created_today"] == 0
+
+
+# ---- AI summary header ------------------------------------------------
+
+
+def test_render_email_bodies_prepends_ai_summary_when_provided() -> None:
+    from datetime import date
+
+    from portfolio_outlook_worker.digest_runner import _render_email_bodies
+
+    @dataclass
+    class _Digest:
+        market_code: str = "EURONEXT"
+        briefing_date: date = date(2026, 5, 31)
+        nav_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        suggestions_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        action_drafts_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        alerts_json: list[dict[str, object]] = None  # type: ignore[assignment]
+
+    digest = _Digest(
+        nav_summary_json={"delta_pct": "0.50", "currency": "EUR"},
+        suggestions_summary_json={"total": 3},
+        action_drafts_summary_json={"created_today": 1},
+        alerts_json=[],
+    )
+    subject, plain, html = _render_email_bodies(
+        digest=digest,  # type: ignore[arg-type]
+        sendable_alerts=[
+            {
+                "severity_nl": "Hoog",
+                "title_nl": "NAV-daling",
+                "body_nl": "Portfolio NAV daalde met 2.5%.",
+            }
+        ],
+        ai_summary_nl="Vandaag een matige sessie met enkele aandachtspunten.",
+    )
+    assert "AI-samenvatting" in plain
+    assert "Vandaag een matige sessie" in plain
+    assert "AI-samenvatting" in html
+    assert "EURONEXT" in subject
+
+
+def test_render_email_bodies_omits_ai_summary_header_when_none() -> None:
+    from datetime import date
+
+    from portfolio_outlook_worker.digest_runner import _render_email_bodies
+
+    @dataclass
+    class _Digest:
+        market_code: str = "EURONEXT"
+        briefing_date: date = date(2026, 5, 31)
+        nav_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        suggestions_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        action_drafts_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        alerts_json: list[dict[str, object]] = None  # type: ignore[assignment]
+
+    digest = _Digest(
+        nav_summary_json={},
+        suggestions_summary_json={"total": 0},
+        action_drafts_summary_json={"created_today": 0},
+        alerts_json=[],
+    )
+    _, plain, html = _render_email_bodies(
+        digest=digest,  # type: ignore[arg-type]
+        sendable_alerts=[
+            {"severity_nl": "Hoog", "title_nl": "T", "body_nl": "B"}
+        ],
+        ai_summary_nl=None,
+    )
+    assert "AI-samenvatting" not in plain
+    assert "AI-samenvatting" not in html
+
+
+def test_maybe_compose_ai_summary_returns_none_when_flag_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from portfolio_outlook_worker import digest_runner as module
+
+    called: list[object] = []
+
+    def _stub_compose(**kw):
+        called.append(kw)
+        return None
+
+    monkeypatch.setattr(module, "compose_alert_summary", _stub_compose)
+    result = module._maybe_compose_ai_summary(
+        digest=object(),  # type: ignore[arg-type]
+        sendable_alerts=[{"severity_nl": "x", "title_nl": "t", "body_nl": "b"}],
+        api_base_url="http://api:8000",
+        api_request_timeout_seconds=1.0,
+        notifications=NotificationSettings(ai_email_summary_enabled=False),
+    )
+    assert result is None
+    assert called == []  # HTTP call never made
+
+
+def test_maybe_compose_ai_summary_returns_summary_on_generated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import date
+
+    from portfolio_outlook_worker import digest_runner as module
+
+    captured: dict[str, object] = {}
+
+    def _stub_compose(**kw):
+        captured.update(kw)
+        return {
+            "status": "generated",
+            "summary_nl": "Vandaag matig.",
+            "blocking_reason": None,
+            "hallucinated_numbers": [],
+            "safe_for_orders": False,
+        }
+
+    monkeypatch.setattr(module, "compose_alert_summary", _stub_compose)
+
+    @dataclass
+    class _Digest:
+        market_code: str = "EURONEXT"
+        briefing_date: date = date(2026, 5, 31)
+        nav_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        suggestions_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        action_drafts_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        alerts_json: list[dict[str, object]] = None  # type: ignore[assignment]
+
+    digest = _Digest(
+        nav_summary_json={"delta_pct": "0.50", "currency": "EUR"},
+        suggestions_summary_json={"total": 3},
+        action_drafts_summary_json={"created_today": 1},
+        alerts_json=[],
+    )
+    result = module._maybe_compose_ai_summary(
+        digest=digest,  # type: ignore[arg-type]
+        sendable_alerts=[
+            {"severity_nl": "Hoog", "title_nl": "T", "body_nl": "B"}
+        ],
+        api_base_url="http://api:8000",
+        api_request_timeout_seconds=2.5,
+        notifications=NotificationSettings(ai_email_summary_enabled=True),
+    )
+    assert result == "Vandaag matig."
+    assert captured["kind"] == "digest"
+    assert captured["base_url"] == "http://api:8000"
+    # The deterministic context block carries the market + NAV numbers.
+    assert "EURONEXT" in str(captured["context_text"])
+    assert "0.50%" in str(captured["context_text"])
+
+
+def _digest_stub():
+    from datetime import date
+
+    @dataclass
+    class _D:
+        market_code: str = "EURONEXT"
+        briefing_date: date = date(2026, 5, 31)
+        nav_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        suggestions_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        action_drafts_summary_json: dict[str, object] = None  # type: ignore[assignment]
+        alerts_json: list[dict[str, object]] = None  # type: ignore[assignment]
+
+    return _D(
+        nav_summary_json={"delta_pct": "0.50", "currency": "EUR"},
+        suggestions_summary_json={"total": 0},
+        action_drafts_summary_json={"created_today": 0},
+        alerts_json=[],
+    )
+
+
+def test_maybe_compose_ai_summary_returns_none_when_provider_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from portfolio_outlook_worker import digest_runner as module
+
+    monkeypatch.setattr(
+        module,
+        "compose_alert_summary",
+        lambda **_: {
+            "status": "provider_unavailable",
+            "summary_nl": None,
+            "blocking_reason": "budget_exceeded",
+        },
+    )
+    result = module._maybe_compose_ai_summary(
+        digest=_digest_stub(),  # type: ignore[arg-type]
+        sendable_alerts=[{"severity_nl": "x", "title_nl": "t", "body_nl": "b"}],
+        api_base_url="http://api:8000",
+        api_request_timeout_seconds=1.0,
+        notifications=NotificationSettings(ai_email_summary_enabled=True),
+    )
+    assert result is None
+
+
+def test_maybe_compose_ai_summary_returns_none_on_transport_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the HTTP call fails (compose returns None) the runner must
+    fall through to template-only — never crash, never block sending."""
+
+    from portfolio_outlook_worker import digest_runner as module
+
+    monkeypatch.setattr(module, "compose_alert_summary", lambda **_: None)
+    result = module._maybe_compose_ai_summary(
+        digest=_digest_stub(),  # type: ignore[arg-type]
+        sendable_alerts=[{"severity_nl": "x", "title_nl": "t", "body_nl": "b"}],
+        api_base_url="http://api:8000",
+        api_request_timeout_seconds=1.0,
+        notifications=NotificationSettings(ai_email_summary_enabled=True),
+    )
+    assert result is None

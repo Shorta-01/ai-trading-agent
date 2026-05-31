@@ -160,6 +160,15 @@ class NotificationSettings(BaseModel):
     send_on_nav_drop: bool = True
     send_on_position_drop: bool = True
     send_on_high_confidence_sell: bool = True
+    # PR 2 — AI-composed email summary header. When ON the worker's
+    # digest + morning-alerts runners POST the rendered template body
+    # to ``/notifications/compose-summary`` and prepend Claude's Dutch
+    # paraphrase to the email. Default OFF so a misconfigured Claude
+    # provider can never block the operationally-critical digest mail.
+    # The runners reuse ``SchedulerSettings.api_base_url`` /
+    # ``api_request_timeout_seconds`` for the HTTP call — the worker
+    # has one API host today, no need for a second.
+    ai_email_summary_enabled: bool = False
 
 
 class Settings(BaseSettings):

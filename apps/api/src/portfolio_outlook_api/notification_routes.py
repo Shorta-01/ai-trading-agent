@@ -400,7 +400,115 @@ def _carry_existing_into_record(
     )
 
 
+# ---- AI-composed email summary -----------------------------------------
+
+
+class ComposeAlertSummaryRequest(BaseModel):
+    """Worker-side request shape for the compose-summary endpoint.
+
+    The worker has already rendered the deterministic alert lines and
+    a short context block (market code, date, NAV delta). Those strings
+    become the AI's input evidence; the validator's hallucination guard
+    will block any number that doesn't already appear in them.
+    """
+
+    kind: str  # "digest" | "morning_alerts"
+    context_text: str
+    alert_lines: list[str]
+
+
+class ComposeAlertSummaryResponse(BaseModel):
+    status: str
+    status_nl: str
+    summary_nl: str | None
+    blocking_reason: str | None
+    hallucinated_numbers: list[str]
+    safe_for_orders: bool
+
+
+_COMPOSE_HELP_NL = (
+    "Vraagt Claude om een korte Nederlandse samenvatting bovenaan de "
+    "digest- of ochtend-alert-mail. De samenvatting paraphraseert het "
+    "deterministische template — Claude mag geen nieuwe getallen "
+    "verzinnen, alleen herformuleren wat het template al laat zien."
+)
+
+
+def _compose_empty(status: str, status_nl: str) -> ComposeAlertSummaryResponse:
+    return ComposeAlertSummaryResponse(
+        status=status,
+        status_nl=status_nl,
+        summary_nl=None,
+        blocking_reason=None,
+        hallucinated_numbers=[],
+        safe_for_orders=False,
+    )
+
+
+@router.post(
+    "/notifications/compose-summary",
+    response_model=ComposeAlertSummaryResponse,
+)
+def compose_alert_summary_endpoint(
+    payload: ComposeAlertSummaryRequest,
+) -> ComposeAlertSummaryResponse:
+    """Compose a Dutch summary header for the worker's alert emails.
+
+    Worker-only consumer. Fall-through-friendly: any failure path
+    returns ``summary_nl=None`` so the caller sends the template-only
+    email instead of crashing.
+    """
+
+    from portfolio_outlook_api.ai_explanation_provider import (
+        build_explanation_provider,
+    )
+    from portfolio_outlook_api.alert_summary_compose import (
+        compose_alert_summary,
+    )
+
+    if not settings.ai_email_summary_enabled:
+        return _compose_empty(
+            "disabled",
+            "AI e-mail samenvatting is uitgeschakeld (env-var opt-in).",
+        )
+
+    kind_str = (payload.kind or "").strip()
+    if kind_str not in {"digest", "morning_alerts"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Onbekende alert-soort: {kind_str!r}",
+        )
+
+    provider = build_explanation_provider(settings)
+    result = compose_alert_summary(
+        kind=kind_str,  # type: ignore[arg-type]  # narrowed by guard above
+        context_text=payload.context_text,
+        alert_lines=tuple(payload.alert_lines),
+        provider=provider,
+        max_output_chars=settings.ai_explanation_max_output_chars,
+    )
+
+    status_nl = {
+        "generated": "AI-samenvatting gegenereerd.",
+        "blocked": "AI-samenvatting geblokkeerd door safety-controle.",
+        "failed": "AI-samenvatting mislukt.",
+        "provider_unavailable": "AI-provider niet beschikbaar; mail wordt zonder header verstuurd.",
+        "skipped_no_alerts": "Geen alerts om samen te vatten.",
+    }.get(result.status, _COMPOSE_HELP_NL)
+
+    return ComposeAlertSummaryResponse(
+        status=result.status,
+        status_nl=status_nl,
+        summary_nl=result.summary_nl,
+        blocking_reason=result.blocking_reason,
+        hallucinated_numbers=list(result.hallucinated_numbers),
+        safe_for_orders=False,
+    )
+
+
 __all__ = [
+    "ComposeAlertSummaryRequest",
+    "ComposeAlertSummaryResponse",
     "NotificationSettingsResponse",
     "TestEmailResponse",
     "UpdateNotificationSettingsRequest",
