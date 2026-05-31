@@ -147,12 +147,24 @@ def _start_scheduler() -> None:
         return
     gateway = IbkrGateway()
     order_adapter = _maybe_open_order_adapter()
+    # End-of-day digest runner — fired by the orchestrator on every
+    # market_close event. Reads positions/suggestions/drafts/NAV from
+    # storage, computes the digest, persists it, and (when the
+    # operator has enabled email notifications + filled SMTP creds)
+    # sends the digest email.
+    from portfolio_outlook_worker.digest_runner import DailyDigestRunner
+
+    digest_runner = DailyDigestRunner(
+        storage_settings=settings.storage,
+        notifications=settings.notifications,
+    )
     scheduler = PortfolioScheduler(
         gateway=gateway,
         storage_settings=settings.storage,
         ibkr_settings=settings.ibkr,
         scheduler_settings=settings.scheduler,
         order_adapter=order_adapter,
+        digest_runner=digest_runner,
     )
     try:
         scheduler.start()

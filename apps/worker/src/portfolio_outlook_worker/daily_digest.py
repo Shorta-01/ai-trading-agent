@@ -145,7 +145,14 @@ def _action_drafts_summary(
     submitted_today = 0
     cancelled_today = 0
     for draft in drafts:
-        state = str(getattr(draft, "state", "unknown")).lower()
+        # The real ``AssetActionDraftRecord`` carries the lifecycle on
+        # ``status`` (draft / approved / submitted_to_broker / ...); the
+        # fallback to ``state`` is kept for older test fixtures and any
+        # future renames.
+        raw = getattr(draft, "status", None) or getattr(
+            draft, "state", "unknown"
+        )
+        state = str(raw).lower()
         by_state[state] += 1
         if state == "draft":
             created_today += 1

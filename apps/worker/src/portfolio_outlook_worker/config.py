@@ -128,6 +128,30 @@ class SchedulerSettings(BaseModel):
     universe_scan_index_codes: str = ""
 
 
+class NotificationSettings(BaseModel):
+    """Operator email notification config + per-trigger preferences.
+
+    Mirrors the API-side ``runtime_config`` columns (PR K). Overlaid at
+    worker startup via ``apply_worker_runtime_config_overlay`` so the
+    digest runner picks up the operator's saved values without an env
+    change. ``real_client_enabled`` stays env-var-only — a fresh deploy
+    is in stub mode regardless of saved SMTP credentials.
+    """
+
+    real_client_enabled: bool = False
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_to: str | None = None
+    smtp_use_tls: bool = True
+    email_enabled: bool = False
+    send_on_nav_drop: bool = True
+    send_on_position_drop: bool = True
+    send_on_high_confidence_sell: bool = True
+
+
 class Settings(BaseSettings):
     service_name: str = "Portfolio Outlook Manager Worker"
     environment: str = "development"
@@ -136,6 +160,7 @@ class Settings(BaseSettings):
     ibkr: IbkrSettings = IbkrSettings()
     scheduler: SchedulerSettings = SchedulerSettings()
     eodhd: EodhdSettings = EodhdSettings()
+    notifications: NotificationSettings = NotificationSettings()
 
     model_config = SettingsConfigDict(
         env_prefix="WORKER_",

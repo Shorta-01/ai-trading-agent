@@ -142,6 +142,7 @@ class PortfolioScheduler:
         worker_id: str | None = None,
         scheduler_factory: Callable[..., Any] | None = None,
         order_adapter: Any | None = None,
+        digest_runner: Any | None = None,
     ) -> None:
         self._gateway = gateway
         self._storage_settings = storage_settings
@@ -153,6 +154,10 @@ class PortfolioScheduler:
         # paper). When None the order sweeps are never registered — the
         # default. This is the activation switch for T-045 §1-3.
         self._order_adapter = order_adapter
+        # Concrete digest runner — fired on every ``market_close`` event.
+        # Stays ``None`` until main() instantiates and injects one;
+        # the orchestrator silently skips the digest step when ``None``.
+        self._digest_runner: Any | None = digest_runner
         self._scheduler: Any | None = None
         self._started: bool = False
         # #8 — per-kind consecutive sweep-error counters. A single
@@ -286,14 +291,13 @@ class PortfolioScheduler:
     def _on_market_close(self, exchange_code: str) -> None:
         """Fired a few minutes after a followed market's regular close.
 
-        Routes through the orchestrator with ``run_type="market_close"``;
-        the orchestrator runs the market-data refresh leg so the operator
-        has end-of-day prices for that exchange's holdings before the
-        next morning chain.
+        Routes through the orchestrator with ``run_type="market_close"``
+        and the exchange code as ``market_code`` so the digest runner
+        scopes its email subject + payload to the right market.
         """
 
         logger.info("Market close fire for %s", exchange_code)
-        self._run("market_close")
+        self._run("market_close", market_code=exchange_code)
 
     def _on_market_open(self, exchange_code: str) -> None:
         """Fired a few minutes after a followed market's regular open.
@@ -305,7 +309,7 @@ class PortfolioScheduler:
         """
 
         logger.info("Market open fire for %s", exchange_code)
-        self._run("market_open")
+        self._run("market_open", market_code=exchange_code)
 
     # ---- Market-aware cron registration ---------------------------
 
@@ -628,7 +632,9 @@ class PortfolioScheduler:
         self._sweep_error_streak[kind] = 0
         self._sweep_alert_fired[kind] = False
 
-    def _run(self, run_type: RunType) -> None:
+    def _run(
+        self, run_type: RunType, *, market_code: str | None = None
+    ) -> None:
         if not self._storage_settings.enabled or not self._storage_settings.database_url:
             logger.warning(
                 "Scheduled fire skipped: storage uitgeschakeld of zonder URL."
@@ -656,6 +662,8 @@ class PortfolioScheduler:
                     lock=lock,
                     brussels_hour_provider=lambda: brussels_now_hour,
                     next_scheduled_at=next_scheduled_at,
+                    digest_runner=self._digest_runner,
+                    market_code=market_code,
                 )
         except StorageConnectionError as exc:
             logger.warning("Scheduled fire could not open storage: %s", exc)
