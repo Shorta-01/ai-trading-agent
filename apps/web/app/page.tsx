@@ -7,6 +7,7 @@ import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge"
 import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
+import { NavSparkline } from "@/components/NavSparkline";
 import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
 import { TriageStrip } from "@/components/TriageStrip";
@@ -87,6 +88,9 @@ export default function HomePage() {
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <ForecastDaySummaryWidget />
+      </section>
+      <section style={{ marginBottom: "0.75rem" }}>
+        <NavSparkline />
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <MarketHoursWidget />

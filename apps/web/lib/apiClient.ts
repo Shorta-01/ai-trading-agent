@@ -87,6 +87,20 @@ export type ClaudeBudgetStatusResponse = {
   safe_for_action_drafts: boolean;
   safe_for_orders: boolean;
 };
+// PR P — NAV history sparkline feed.
+export type NavHistoryPoint = {
+  recorded_at_utc: string;
+  nav_value: string; // serialised Decimal
+};
+export type NavHistoryResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  ibkr_account_id: string | null;
+  base_currency: string | null;
+  days_requested: number;
+  points: NavHistoryPoint[];
+};
 // PR N — dashboard market-hours widget feed.
 export type MarketHoursEntry = {
   market_code: string;
@@ -1893,6 +1907,8 @@ export const apiClient = {
     getJson<MarketHoursNowResponse>("/markets/hours-now"),
   getClaudeBudgetStatus: () =>
     getJson<ClaudeBudgetStatusResponse>("/claude/budget/status"),
+  getNavHistory: (days = 30) =>
+    getJson<NavHistoryResponse>(`/portfolio/nav/history?days=${days}`),
   getTradingSettings: () => getJson<TradingSettingsResponse>("/settings/trading"),
   getIbkrStatus: () => getJson<IbkrStatusResponse>("/broker/ibkr/status"),
   getIbkrSyncStatus: () => getJson<IbkrSyncStatusResponse>("/ibkr/sync/status"),
