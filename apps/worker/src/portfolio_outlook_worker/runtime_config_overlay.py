@@ -113,5 +113,39 @@ def apply_worker_runtime_config_overlay(settings_obj: Settings) -> None:
             record.scheduler_per_market_open_alerts_enabled
         )
 
+    # PR K — email notification transport + per-trigger preferences.
+    # ``real_client_enabled`` stays env-var-only (master safety switch);
+    # everything else is overlaid from runtime_config so the operator's
+    # saved SMTP creds take effect without a worker restart for the
+    # next-tick reads. Sweep registration won't pick up changes mid-
+    # process — that's a documented limitation, same as the API side.
+    notifications = settings_obj.notifications
+    if record.smtp_host is not None:
+        notifications.smtp_host = record.smtp_host
+    if record.smtp_port is not None:
+        notifications.smtp_port = record.smtp_port
+    if record.smtp_username is not None:
+        notifications.smtp_username = record.smtp_username
+    if record.smtp_password is not None:
+        notifications.smtp_password = record.smtp_password
+    if record.smtp_from is not None:
+        notifications.smtp_from = record.smtp_from
+    if record.smtp_to is not None:
+        notifications.smtp_to = record.smtp_to
+    if record.smtp_use_tls is not None:
+        notifications.smtp_use_tls = record.smtp_use_tls
+    if record.notifications_email_enabled is not None:
+        notifications.email_enabled = record.notifications_email_enabled
+    if record.notification_send_on_nav_drop is not None:
+        notifications.send_on_nav_drop = record.notification_send_on_nav_drop
+    if record.notification_send_on_position_drop is not None:
+        notifications.send_on_position_drop = (
+            record.notification_send_on_position_drop
+        )
+    if record.notification_send_on_high_confidence_sell is not None:
+        notifications.send_on_high_confidence_sell = (
+            record.notification_send_on_high_confidence_sell
+        )
+
 
 __all__ = ["apply_worker_runtime_config_overlay"]
