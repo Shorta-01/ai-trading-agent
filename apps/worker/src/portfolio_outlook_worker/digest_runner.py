@@ -38,6 +38,7 @@ from ai_trading_agent_storage import (
     build_database_connection_settings,
 )
 
+from portfolio_outlook_worker.api_trigger import compose_alert_summary
 from portfolio_outlook_worker.config import (
     NotificationSettings,
     StorageSettings,
@@ -174,8 +175,15 @@ def _render_email_bodies(
     *,
     digest: DailyDigestRecord,
     sendable_alerts: Sequence[dict[str, object]],
+    ai_summary_nl: str | None = None,
 ) -> tuple[str, str, str]:
-    """Build (subject, plain_body, html_body) for the digest email."""
+    """Build (subject, plain_body, html_body) for the digest email.
+
+    When ``ai_summary_nl`` is non-empty it's prepended to the body as
+    a Dutch summary header. The deterministic template body is always
+    included below it, so a missing / blocked / unavailable AI summary
+    is invisible to the operator — same email shape as before.
+    """
 
     nav = digest.nav_summary_json or {}
     delta_pct = nav.get("delta_pct")
@@ -191,15 +199,19 @@ def _render_email_bodies(
         f"- [{a.get('severity_nl')}] {a.get('title_nl')}\n  {a.get('body_nl')}"
         for a in sendable_alerts
     )
+    plain_summary = (
+        f"AI-samenvatting:\n{ai_summary_nl.strip()}\n\n" if ai_summary_nl else ""
+    )
     plain = (
-        f"Einde-dag digest voor {digest.market_code} op "
-        f"{digest.briefing_date.isoformat()}.\n\n"
-        f"Portfolio-NAV verandering: {delta_str} ({currency}).\n"
-        f"Suggesties vandaag: {digest.suggestions_summary_json.get('total', 0)}.\n"
-        f"Action drafts vandaag: "
-        f"{digest.action_drafts_summary_json.get('created_today', 0)} aangemaakt.\n\n"
-        f"Aandachtspunten:\n{alert_lines or '(geen)'}\n\n"
-        "Open de dashboard /digest pagina voor het volledige overzicht."
+        plain_summary
+        + f"Einde-dag digest voor {digest.market_code} op "
+        + f"{digest.briefing_date.isoformat()}.\n\n"
+        + f"Portfolio-NAV verandering: {delta_str} ({currency}).\n"
+        + f"Suggesties vandaag: {digest.suggestions_summary_json.get('total', 0)}.\n"
+        + "Action drafts vandaag: "
+        + f"{digest.action_drafts_summary_json.get('created_today', 0)} aangemaakt.\n\n"
+        + f"Aandachtspunten:\n{alert_lines or '(geen)'}\n\n"
+        + "Open de dashboard /digest pagina voor het volledige overzicht."
     )
 
     alert_html = "".join(
@@ -208,31 +220,101 @@ def _render_email_bodies(
         f"{a.get('body_nl')}</span></li>"
         for a in sendable_alerts
     )
+    html_summary = (
+        f"<p><strong>AI-samenvatting:</strong><br/>"
+        f"<span style='color:#1f2937'>{ai_summary_nl.strip()}</span></p>"
+        if ai_summary_nl
+        else ""
+    )
     html = (
-        f"<p>Einde-dag digest voor <strong>{digest.market_code}</strong> "
-        f"op <strong>{digest.briefing_date.isoformat()}</strong>.</p>"
-        f"<ul>"
-        f"<li>Portfolio-NAV verandering: <strong>{delta_str}</strong> "
-        f"({currency})</li>"
-        f"<li>Suggesties vandaag: "
-        f"<strong>{digest.suggestions_summary_json.get('total', 0)}</strong></li>"
-        f"<li>Action drafts vandaag: "
-        f"<strong>{digest.action_drafts_summary_json.get('created_today', 0)}"
-        f"</strong> aangemaakt</li>"
-        f"</ul>"
-        f"<h3>Aandachtspunten</h3>"
+        html_summary
+        + f"<p>Einde-dag digest voor <strong>{digest.market_code}</strong> "
+        + f"op <strong>{digest.briefing_date.isoformat()}</strong>.</p>"
+        + "<ul>"
+        + f"<li>Portfolio-NAV verandering: <strong>{delta_str}</strong> "
+        + f"({currency})</li>"
+        + "<li>Suggesties vandaag: "
+        + f"<strong>{digest.suggestions_summary_json.get('total', 0)}</strong></li>"
+        + "<li>Action drafts vandaag: "
+        + f"<strong>{digest.action_drafts_summary_json.get('created_today', 0)}"
+        + "</strong> aangemaakt</li>"
+        + "</ul>"
+        + "<h3>Aandachtspunten</h3>"
         + (f"<ul>{alert_html}</ul>" if alert_html else "<p>(geen)</p>")
         + "<p style='color:#6b7280;font-size:12px;'>"
-        "Open de dashboard /digest pagina voor het volledige overzicht.</p>"
+        + "Open de dashboard /digest pagina voor het volledige overzicht.</p>"
     )
 
     return subject, plain, html
+
+
+def _build_digest_context_text(digest: DailyDigestRecord) -> str:
+    """Compose the deterministic context block used as AI input evidence.
+
+    Every number in this block must also appear in the alert lines or
+    be drawn directly from the persisted digest record — the hallucination
+    guard refuses any AI output that introduces a new numeric token.
+    """
+
+    nav = digest.nav_summary_json or {}
+    delta_pct = nav.get("delta_pct")
+    delta_str = f"{delta_pct}%" if delta_pct is not None else "—"
+    currency = nav.get("currency", "EUR")
+    return (
+        f"Markt: {digest.market_code}. "
+        f"Datum: {digest.briefing_date.isoformat()}. "
+        f"NAV verandering: {delta_str} ({currency}). "
+        f"Suggesties: {digest.suggestions_summary_json.get('total', 0)}. "
+        f"Action drafts: "
+        f"{digest.action_drafts_summary_json.get('created_today', 0)}."
+    )
+
+
+def _maybe_compose_ai_summary(
+    *,
+    digest: DailyDigestRecord,
+    sendable_alerts: Sequence[dict[str, object]],
+    api_base_url: str | None,
+    api_request_timeout_seconds: float,
+    notifications: NotificationSettings,
+) -> str | None:
+    """Optionally fetch a Claude-composed Dutch header for the email.
+
+    Returns the summary string when the AI path produced a guarded,
+    non-empty result; ``None`` in every other case so the caller sends
+    the template-only email. Never raises.
+    """
+
+    if not notifications.ai_email_summary_enabled:
+        return None
+    if not sendable_alerts:
+        return None
+    alert_lines = [
+        f"- [{a.get('severity_nl')}] {a.get('title_nl')}: {a.get('body_nl')}"
+        for a in sendable_alerts
+    ]
+    context_text = _build_digest_context_text(digest)
+    body = compose_alert_summary(
+        base_url=api_base_url,
+        timeout_seconds=api_request_timeout_seconds,
+        kind="digest",
+        context_text=context_text,
+        alert_lines=alert_lines,
+    )
+    if not body or body.get("status") != "generated":
+        return None
+    summary_nl = body.get("summary_nl")
+    if isinstance(summary_nl, str) and summary_nl.strip():
+        return summary_nl.strip()
+    return None
 
 
 def _send_digest_email(
     *,
     digest: DailyDigestRecord,
     notifications: NotificationSettings,
+    api_base_url: str | None,
+    api_request_timeout_seconds: float,
 ) -> dict[str, object]:
     """Decide whether to send + send + return audit dict. The decision
     matrix collapses to: notifications master on, at least one alert
@@ -255,8 +337,15 @@ def _send_digest_email(
     if config is None:
         return {"sent": False, "reason": "smtp_config_incomplete"}
 
+    ai_summary_nl = _maybe_compose_ai_summary(
+        digest=digest,
+        sendable_alerts=sendable,
+        api_base_url=api_base_url,
+        api_request_timeout_seconds=api_request_timeout_seconds,
+        notifications=notifications,
+    )
     subject, body_plain, body_html = _render_email_bodies(
-        digest=digest, sendable_alerts=sendable
+        digest=digest, sendable_alerts=sendable, ai_summary_nl=ai_summary_nl
     )
     result = send_email(
         config=config,
@@ -270,6 +359,7 @@ def _send_digest_email(
         "status": result.status,
         "detail_nl": result.detail_nl,
         "alerts_sent_count": len(sendable),
+        "ai_summary_used": ai_summary_nl is not None,
     }
 
 
@@ -288,10 +378,14 @@ class DailyDigestRunner:
         storage_settings: StorageSettings,
         notifications: NotificationSettings,
         now_provider: Any = lambda: datetime.now(UTC),
+        api_base_url: str | None = None,
+        api_request_timeout_seconds: float = 30.0,
     ) -> None:
         self._storage_settings = storage_settings
         self._notifications = notifications
         self._now_provider = now_provider
+        self._api_base_url = api_base_url
+        self._api_request_timeout_seconds = api_request_timeout_seconds
 
     def run(
         self,
@@ -410,6 +504,8 @@ class DailyDigestRunner:
         email_summary = _send_digest_email(
             digest=record,
             notifications=self._notifications,
+            api_base_url=self._api_base_url,
+            api_request_timeout_seconds=self._api_request_timeout_seconds,
         )
 
         return {

@@ -160,6 +160,8 @@ def _start_scheduler() -> None:
     digest_runner = DailyDigestRunner(
         storage_settings=settings.storage,
         notifications=settings.notifications,
+        api_base_url=settings.scheduler.api_base_url,
+        api_request_timeout_seconds=settings.scheduler.api_request_timeout_seconds,
     )
     # Morning-chain alerts runner — fired on morning_briefing AFTER
     # the decision-package step so it sees today's suggestions. Same
@@ -168,6 +170,8 @@ def _start_scheduler() -> None:
     morning_alerts_runner = MorningAlertsRunner(
         storage_settings=settings.storage,
         notifications=settings.notifications,
+        api_base_url=settings.scheduler.api_base_url,
+        api_request_timeout_seconds=settings.scheduler.api_request_timeout_seconds,
     )
     scheduler = PortfolioScheduler(
         gateway=gateway,

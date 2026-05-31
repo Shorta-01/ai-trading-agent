@@ -287,6 +287,15 @@ class Settings(BaseSettings):
     # Default OFF — opt in so the operator who hasn't configured
     # Claude doesn't trigger budget-exceeded errors every morning.
     ai_explanation_morning_batch_enabled: bool = False
+    # PR 2 — AI-composed email summary headers for digest + morning
+    # alerts. When OFF (the default) the worker's emails are template-
+    # only, identical to the pre-PR shape. When ON the worker POSTs to
+    # ``/notifications/compose-summary``, which returns a Dutch
+    # paraphrase header that the worker prepends to the template body.
+    # Same provider machinery + hallucination guard the explanation
+    # path uses — the AI cannot introduce new numbers, only paraphrase
+    # what the deterministic template already contains.
+    ai_email_summary_enabled: bool = False
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False

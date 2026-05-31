@@ -137,3 +137,73 @@ def test_trigger_morning_explanation_batch_returns_none_on_http_error(
     assert api_trigger.trigger_morning_explanation_batch(
         base_url="http://api:8000", timeout_seconds=1.0
     ) is None
+
+
+def test_compose_alert_summary_posts_json_body_with_alerts(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+    import httpx
+
+    def _fake_post(url, timeout, json):
+        captured["url"] = url
+        captured["timeout"] = timeout
+        captured["json"] = json
+        return _StubResponse(
+            payload={
+                "status": "generated",
+                "summary_nl": "Korte samenvatting.",
+                "blocking_reason": None,
+                "hallucinated_numbers": [],
+                "safe_for_orders": False,
+            }
+        )
+
+    monkeypatch.setattr(httpx, "post", _fake_post)
+
+    body = api_trigger.compose_alert_summary(
+        base_url="http://api:8000",
+        timeout_seconds=2.5,
+        kind="digest",
+        context_text="Markt: EURONEXT.",
+        alert_lines=["- [Hoog] X: Y"],
+    )
+    assert body == {
+        "status": "generated",
+        "summary_nl": "Korte samenvatting.",
+        "blocking_reason": None,
+        "hallucinated_numbers": [],
+        "safe_for_orders": False,
+    }
+    assert captured["url"] == "http://api:8000/notifications/compose-summary"
+    assert captured["timeout"] == 2.5
+    assert captured["json"] == {
+        "kind": "digest",
+        "context_text": "Markt: EURONEXT.",
+        "alert_lines": ["- [Hoog] X: Y"],
+    }
+
+
+def test_compose_alert_summary_returns_none_without_base_url() -> None:
+    assert api_trigger.compose_alert_summary(
+        base_url=None,
+        timeout_seconds=1.0,
+        kind="digest",
+        context_text="",
+        alert_lines=[],
+    ) is None
+
+
+def test_compose_alert_summary_returns_none_on_http_error(monkeypatch) -> None:
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout, json: _StubResponse(status_code=503, payload={}),
+    )
+    assert api_trigger.compose_alert_summary(
+        base_url="http://api:8000",
+        timeout_seconds=1.0,
+        kind="digest",
+        context_text="",
+        alert_lines=["- [Hoog] X: Y"],
+    ) is None

@@ -57,8 +57,41 @@ def trigger_morning_explanation_batch(
     return _post(base_url, "/explanations/morning-batch", timeout_seconds)
 
 
+def compose_alert_summary(
+    *,
+    base_url: str | None,
+    timeout_seconds: float,
+    kind: str,
+    context_text: str,
+    alert_lines: list[str],
+) -> dict[str, Any] | None:
+    """POST ``/notifications/compose-summary`` and return the JSON body.
+
+    Used by the digest + morning-alerts runners to fetch an AI-composed
+    Dutch summary header for the email they're about to send. Returns
+    ``None`` on transport failure / non-2xx response so the caller falls
+    through to template-only — a missing AI header must never block the
+    operational email.
+    """
+
+    return _post(
+        base_url,
+        "/notifications/compose-summary",
+        timeout_seconds,
+        json_body={
+            "kind": kind,
+            "context_text": context_text,
+            "alert_lines": list(alert_lines),
+        },
+    )
+
+
 def _post(
-    base_url: str | None, path: str, timeout_seconds: float
+    base_url: str | None,
+    path: str,
+    timeout_seconds: float,
+    *,
+    json_body: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     if not base_url:
         logger.warning("api trigger skipped: no api_base_url configured")
@@ -67,7 +100,10 @@ def _post(
 
     url = base_url.rstrip("/") + path
     try:
-        response = httpx.post(url, timeout=timeout_seconds)
+        if json_body is None:
+            response = httpx.post(url, timeout=timeout_seconds)
+        else:
+            response = httpx.post(url, timeout=timeout_seconds, json=json_body)
     except Exception:  # noqa: BLE001 — a scheduled tick must never crash
         logger.exception("api trigger %s failed (transport)", url)
         return None
@@ -87,6 +123,7 @@ def _post(
 
 
 __all__ = [
+    "compose_alert_summary",
     "trigger_ibkr_sync",
     "trigger_morning_chain",
     "trigger_morning_explanation_batch",
