@@ -7,6 +7,7 @@ import { ErrorLogBadge } from "@/components/ErrorLogBadge";
 import { FrontendErrorReporter } from "@/components/FrontendErrorReporter";
 import { Providers } from "@/components/Providers";
 import { SystemEventsIndicator } from "@/components/SystemEventsIndicator";
+import { SystemMonitorWidget } from "@/components/SystemMonitorWidget";
 
 import "./globals.css";
 
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <FrontendErrorReporter />
             {children}
           </div>
+          <SystemMonitorWidget />
         </div>
         </Providers>
       </body>
