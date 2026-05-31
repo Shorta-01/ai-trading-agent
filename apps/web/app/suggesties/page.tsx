@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
@@ -375,10 +375,17 @@ function Row({ item }: { item: SuggestionsGridItem }) {
   );
 }
 
+const LAST_VISIT_STORAGE_KEY = "suggesties:lastVisitAt";
+
 export default function Page() {
   const [diffFilter, setDiffFilter] = useState<DiffFilter>("all");
   const [confidenceFilter, setConfidenceFilter] =
     useState<ConfidenceFilter>("all");
+  // Tracks the timestamp the operator last visited this page (read at
+  // mount, then updated on the way out). Used to compute the
+  // "X nieuw sinds je vorige bezoek" badge so the operator can tell at
+  // a glance whether anything changed without scrolling the grid.
+  const [lastVisitAt, setLastVisitAt] = useState<number | null>(null);
 
   const query = useQuery({
     queryKey: SUGGESTIONS_GRID_KEY,
@@ -389,6 +396,41 @@ export default function Page() {
     },
     ...GRID_QUERY_OPTIONS,
   });
+
+  useEffect(() => {
+    // Read the previous visit BEFORE writing the new one so the badge
+    // can compare grid timestamps against the prior visit window.
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(LAST_VISIT_STORAGE_KEY);
+      const prev = raw ? Number(raw) : null;
+      if (prev != null && Number.isFinite(prev)) {
+        setLastVisitAt(prev);
+      }
+      window.localStorage.setItem(
+        LAST_VISIT_STORAGE_KEY,
+        String(Date.now()),
+      );
+    } catch {
+      // Storage unavailable (e.g. Safari private mode) — silently
+      // degrade; the badge just won't render.
+    }
+  }, []);
+
+  // Count suggestions whose generated_at is newer than the prior visit.
+  const sinceLastVisitCount = useMemo(() => {
+    if (lastVisitAt == null || !query.data) return 0;
+    let count = 0;
+    for (const section of query.data.sections) {
+      for (const item of section.items) {
+        const generatedMs = Date.parse(item.generated_at);
+        if (Number.isFinite(generatedMs) && generatedMs > lastVisitAt) {
+          count += 1;
+        }
+      }
+    }
+    return count;
+  }, [lastVisitAt, query.data]);
 
   const filteredSections = useMemo(() => {
     if (!query.data) return [];
@@ -560,6 +602,21 @@ export default function Page() {
           <span style={{ color: "#a16207" }}>
             <strong>Gewijzigd:</strong> {data.changed_count}
           </span>
+          {lastVisitAt != null && sinceLastVisitCount > 0 ? (
+            <span
+              data-testid="suggesties-since-last-visit"
+              style={{
+                background: "#1f2937",
+                color: "#ffffff",
+                padding: "2px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {sinceLastVisitCount} nieuw sinds je vorige bezoek
+            </span>
+          ) : null}
           <span>
             <strong>Risico-profiel:</strong> {data.risk_profile}
           </span>

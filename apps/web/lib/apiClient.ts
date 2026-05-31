@@ -295,6 +295,30 @@ export type MarketEventsSettingsUpdateInput = {
   per_market_open_alerts_enabled: boolean;
 };
 
+export type DigestAlert = {
+  kind: string;
+  severity_nl: string;
+  title_nl: string;
+  body_nl: string;
+  reference_kind: string | null;
+  reference_id: string | null;
+};
+
+export type DigestTodayResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  generated_at: string | null;
+  briefing_date: string | null;
+  market_code: string | null;
+  nav_summary: Record<string, unknown>;
+  positions_summary: Record<string, unknown>;
+  suggestions_summary: Record<string, unknown>;
+  action_drafts_summary: Record<string, unknown>;
+  alerts: DigestAlert[];
+  safe_for_orders: boolean;
+};
+
 export type SuggestionsGridItem = {
   suggestion_id: string;
   ibkr_conid: string;
@@ -2116,6 +2140,7 @@ export const apiClient = {
     ),
   getSuggestionsGrid: () =>
     getJson<SuggestionsGridResponse>("/suggestions/grid"),
+  getDigestToday: () => getJson<DigestTodayResponse>("/digests/today"),
   getMarketEventsSettings: () =>
     getJson<MarketEventsSettingsResponse>("/settings/market-events"),
   updateMarketEventsSettings: (

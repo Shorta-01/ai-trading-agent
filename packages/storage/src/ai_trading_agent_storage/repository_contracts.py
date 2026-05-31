@@ -462,7 +462,13 @@ class IbkrConnectionAuditRecord:
 
 # Task 127: scheduler audit + state surface.
 _LOCKED_SCHEDULED_RUN_TYPES = frozenset(
-    {"pre_briefing", "morning_briefing", "hourly_delta"}
+    {
+        "pre_briefing",
+        "morning_briefing",
+        "hourly_delta",
+        "market_open",
+        "market_close",
+    }
 )
 _LOCKED_SCHEDULED_MODE_DETECTED = frozenset(
     {
@@ -2894,6 +2900,60 @@ class DailyBriefingRecord:
             raise ValueError(
                 "Daily briefing safety booleans must remain false in V1."
             )
+
+
+@dataclass(frozen=True)
+class DailyDigestRecord:
+    """One end-of-day digest produced by the worker's ``market_close`` fire.
+
+    UNIQUE on ``(ibkr_account_ref, market_code, briefing_date)`` so the
+    same market/day cannot be summarised twice — repeated fires (e.g.
+    operator manually triggering a digest after the cron) upsert into
+    the same row.
+
+    The five ``*_json`` columns are deliberately blob-shaped: the digest
+    is read whole by the dashboard, never sub-queried, so a wide row is
+    cheaper than five child tables. The shape evolves with new metrics
+    (per-predictor accuracy, attribution analysis) without per-field
+    migrations.
+    """
+
+    digest_id: str
+    ibkr_account_ref: str
+    market_code: str
+    briefing_date: date
+    generated_at: datetime
+    nav_summary_json: dict[str, object]
+    """Today's NAV vs yesterday's: total_nav, prev_nav, delta_abs,
+    delta_pct, currency, computed_from."""
+
+    positions_summary_json: dict[str, object]
+    """Position aggregates: position_count, by_currency, top_winners,
+    top_losers (each a list of `{symbol, pnl_pct, pnl_abs}`)."""
+
+    suggestions_summary_json: dict[str, object]
+    """Suggestion counts: total, by_action_label (dict), new_today,
+    changed_today, high_confidence_count."""
+
+    action_drafts_summary_json: dict[str, object]
+    """Action-draft activity: created_today, approved_today,
+    submitted_today, cancelled_today, by_state (dict)."""
+
+    alerts_json: list[dict[str, object]]
+    """Operator-facing alerts: list of `{kind, severity_nl, title_nl,
+    body_nl, reference_kind, reference_id}` items."""
+
+    status: str  # "ready" | "blocked" | "partial"
+    blocking_reason: str | None
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "digest_id",
+            "ibkr_account_ref",
+            "market_code",
+            "status",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
 
 
 @dataclass(frozen=True)
