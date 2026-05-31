@@ -50,6 +50,8 @@ const getExecutionGateSettings = vi.fn();
 const updateExecutionGateSettings = vi.fn();
 const getPredictorTuningSettings = vi.fn();
 const updatePredictorTuningSettings = vi.fn();
+const getMarketEventsSettings = vi.fn();
+const updateMarketEventsSettings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -93,6 +95,10 @@ vi.mock("@/lib/apiClient", () => ({
       getPredictorTuningSettings(...a),
     updatePredictorTuningSettings: (...a: unknown[]) =>
       updatePredictorTuningSettings(...a),
+    getMarketEventsSettings: (...a: unknown[]) =>
+      getMarketEventsSettings(...a),
+    updateMarketEventsSettings: (...a: unknown[]) =>
+      updateMarketEventsSettings(...a),
   },
 }));
 
@@ -243,6 +249,24 @@ const PREDICTOR_TUNING = {
   help_nl: "Power-user voorspeller-tuning.",
 };
 
+const MARKET_EVENTS = {
+  per_market_close_digest_enabled: true,
+  per_market_open_alerts_enabled: false,
+  universe_codes_selected: ["BEL20", "AEX"],
+  active_sessions: ["Euronext — Brussel, Amsterdam, Parijs"],
+  fires: [
+    {
+      market_code: "EURONEXT",
+      market_label_nl: "Euronext — Brussel, Amsterdam, Parijs",
+      timezone: "Europe/Brussels",
+      event_kind: "close" as const,
+      fire_hour: 17,
+      fire_minute: 45,
+    },
+  ],
+  help_nl: "Markt-bewuste scheduler.",
+};
+
 beforeEach(() => {
   getRiskLimits.mockReset();
   updateRiskLimits.mockReset();
@@ -268,6 +292,8 @@ beforeEach(() => {
   updateExecutionGateSettings.mockReset();
   getPredictorTuningSettings.mockReset();
   updatePredictorTuningSettings.mockReset();
+  getMarketEventsSettings.mockReset();
+  updateMarketEventsSettings.mockReset();
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -280,6 +306,7 @@ beforeEach(() => {
   getForecastMarketSettings.mockReturnValue(ok(FORECAST_MARKET));
   getExecutionGateSettings.mockReturnValue(ok(EXECUTION_GATES));
   getPredictorTuningSettings.mockReturnValue(ok(PREDICTOR_TUNING));
+  getMarketEventsSettings.mockReturnValue(ok(MARKET_EVENTS));
 });
 
 afterEach(() => cleanup());
@@ -789,5 +816,64 @@ describe("InstellingenPage", () => {
     expect(payload.forecast_valid_minutes).toBe(720);
     expect(payload.gbm_regime_shift_enabled).toBe(true);
     expect(payload.decision_packages_valid_minutes).toBe(1440);
+  });
+
+  it("renders the market-events section with active sessions + planned fires", async () => {
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-market-events-section"),
+    ).toBeInTheDocument();
+    // The resolved active-sessions list and the planned-fires list
+    // both render — the operator's universe choice has produced a
+    // scheduled close fire.
+    expect(
+      screen.getByTestId("instellingen-market-events-active-sessions"),
+    ).toHaveTextContent("Euronext");
+    expect(
+      screen.getByTestId("instellingen-market-events-fires-list"),
+    ).toHaveTextContent("17:45");
+    // The default-off open-check toggle is unchecked; the close
+    // digest toggle is checked.
+    expect(
+      screen.getByTestId("instellingen-market-events-close-enabled"),
+    ).toBeChecked();
+    expect(
+      screen.getByTestId("instellingen-market-events-open-enabled"),
+    ).not.toBeChecked();
+  });
+
+  it("shows a warning when no markets are selected and saves the toggles", async () => {
+    getMarketEventsSettings.mockReturnValue(
+      ok({
+        ...MARKET_EVENTS,
+        universe_codes_selected: [],
+        active_sessions: [],
+        fires: [],
+      }),
+    );
+    updateMarketEventsSettings.mockReturnValue(
+      ok({
+        ...MARKET_EVENTS,
+        per_market_open_alerts_enabled: true,
+      }),
+    );
+    render(<Page />);
+    expect(
+      await screen.findByTestId("instellingen-market-events-no-sessions"),
+    ).toHaveTextContent("Geen markten geselecteerd");
+
+    // Flip the open-alerts toggle and save.
+    await userEvent.click(
+      screen.getByTestId("instellingen-market-events-open-enabled"),
+    );
+    await userEvent.click(
+      screen.getByTestId("instellingen-market-events-save"),
+    );
+    await waitFor(() =>
+      expect(updateMarketEventsSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateMarketEventsSettings.mock.calls[0][0];
+    expect(payload.per_market_close_digest_enabled).toBe(true);
+    expect(payload.per_market_open_alerts_enabled).toBe(true);
   });
 });

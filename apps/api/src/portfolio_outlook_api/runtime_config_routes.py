@@ -2714,3 +2714,14 @@ def apply_runtime_config_overlay(
         settings_obj.gbm_regime_shift_threshold_pct = (
             record.gbm_regime_shift_threshold_pct
         )
+    # Settings UI PR J — market-aware scheduler toggles. The API itself
+    # doesn't consume these (the worker does), but we overlay them onto
+    # the API settings so /settings/market-events can read them back.
+    if record.scheduler_per_market_close_digest_enabled is not None:
+        settings_obj.scheduler_per_market_close_digest_enabled = (
+            record.scheduler_per_market_close_digest_enabled
+        )
+    if record.scheduler_per_market_open_alerts_enabled is not None:
+        settings_obj.scheduler_per_market_open_alerts_enabled = (
+            record.scheduler_per_market_open_alerts_enabled
+        )

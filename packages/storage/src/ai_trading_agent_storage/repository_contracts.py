@@ -343,6 +343,9 @@ class RuntimeConfigRecord:
     prediction_diary_inconclusive_tolerance_pct: Decimal | None = None
     gbm_regime_shift_enabled: bool | None = None
     gbm_regime_shift_threshold_pct: Decimal | None = None
+    # Settings UI PR J — market-aware scheduler. ``None`` = env-default.
+    scheduler_per_market_close_digest_enabled: bool | None = None
+    scheduler_per_market_open_alerts_enabled: bool | None = None
 
 
 @dataclass(frozen=True)

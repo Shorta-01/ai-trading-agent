@@ -1401,6 +1401,13 @@ runtime_config = Table(
     ),
     Column("gbm_regime_shift_enabled", Boolean, nullable=True),
     Column("gbm_regime_shift_threshold_pct", Numeric(8, 4), nullable=True),
+    # Market-aware scheduler toggles (PR J). Null = worker env-default.
+    Column(
+        "scheduler_per_market_close_digest_enabled", Boolean, nullable=True
+    ),
+    Column(
+        "scheduler_per_market_open_alerts_enabled", Boolean, nullable=True
+    ),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

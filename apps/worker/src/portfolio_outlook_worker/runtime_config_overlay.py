@@ -96,6 +96,22 @@ def apply_worker_runtime_config_overlay(settings_obj: Settings) -> None:
         settings_obj.scheduler.morning_chain_after_pre_briefing = (
             record.morning_chain_after_pre_briefing
         )
+    # Market-aware scheduler (PR J). The worker reads the operator's
+    # selected universe + the close/open toggles so the cron
+    # registration in :meth:`PortfolioScheduler._register_market_event_jobs`
+    # fires the right set per the operator's followed markets.
+    if record.universe_scan_index_codes is not None:
+        settings_obj.scheduler.universe_scan_index_codes = (
+            record.universe_scan_index_codes
+        )
+    if record.scheduler_per_market_close_digest_enabled is not None:
+        settings_obj.scheduler.per_market_close_digest_enabled = (
+            record.scheduler_per_market_close_digest_enabled
+        )
+    if record.scheduler_per_market_open_alerts_enabled is not None:
+        settings_obj.scheduler.per_market_open_alerts_enabled = (
+            record.scheduler_per_market_open_alerts_enabled
+        )
 
 
 __all__ = ["apply_worker_runtime_config_overlay"]

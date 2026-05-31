@@ -459,6 +459,32 @@ export default function Page() {
     null,
   );
   const [predictorTuningOpen, setPredictorTuningOpen] = useState(false);
+  // Settings UI PR J — market-aware scheduler (Markt-events).
+  const [marketEventsForm, setMarketEventsForm] = useState({
+    per_market_close_digest_enabled: true,
+    per_market_open_alerts_enabled: false,
+  });
+  const [marketEventsHelp, setMarketEventsHelp] = useState<string>("");
+  const [marketEventsFires, setMarketEventsFires] = useState<
+    Array<{
+      market_code: string;
+      market_label_nl: string;
+      timezone: string;
+      event_kind: "open" | "close";
+      fire_hour: number;
+      fire_minute: number;
+    }>
+  >([]);
+  const [marketEventsActiveSessions, setMarketEventsActiveSessions] = useState<
+    string[]
+  >([]);
+  const [marketEventsSaving, setMarketEventsSaving] = useState(false);
+  const [marketEventsSaved, setMarketEventsSaved] = useState<string | null>(
+    null,
+  );
+  const [marketEventsError, setMarketEventsError] = useState<string | null>(
+    null,
+  );
   const [universeScanAvailable, setUniverseScanAvailable] = useState<
     Array<{ code: string; label_nl: string }>
   >([]);
@@ -838,6 +864,47 @@ export default function Page() {
     setPredictorTuningSaved("Voorspeller-tuning opgeslagen.");
   }
 
+  // Settings UI PR J — market-aware scheduler query + save.
+  const marketEventsQuery = useQuery({
+    queryKey: ["instellingen", "market-events"] as const,
+    queryFn: async () => {
+      const result = await apiClient.getMarketEventsSettings();
+      if (!result.ok) throw new Error("market-events-settings-unavailable");
+      return result.data;
+    },
+    ...FORM_QUERY_OPTIONS,
+  });
+  useEffect(() => {
+    const data = marketEventsQuery.data;
+    if (!data) return;
+    setMarketEventsForm({
+      per_market_close_digest_enabled: data.per_market_close_digest_enabled,
+      per_market_open_alerts_enabled: data.per_market_open_alerts_enabled,
+    });
+    setMarketEventsHelp(data.help_nl);
+    setMarketEventsFires(data.fires);
+    setMarketEventsActiveSessions(data.active_sessions);
+  }, [marketEventsQuery.data]);
+
+  async function handleSaveMarketEvents() {
+    setMarketEventsSaving(true);
+    setMarketEventsError(null);
+    setMarketEventsSaved(null);
+    const result =
+      await apiClient.updateMarketEventsSettings(marketEventsForm);
+    setMarketEventsSaving(false);
+    if (!result.ok) {
+      setMarketEventsError(
+        "Opslaan mislukt. Controleer de opslag-verbinding en probeer opnieuw.",
+      );
+      return;
+    }
+    queryClient.setQueryData(["instellingen", "market-events"], result.data);
+    setMarketEventsSaved(
+      "Markt-events opgeslagen. Werkt vanaf de eerstvolgende worker-restart.",
+    );
+  }
+
   async function handleSaveDataWindows() {
     setDataWindowSaving(true);
     setDataWindowError(null);
@@ -940,7 +1007,8 @@ export default function Page() {
     || advancedQuery.isPending
     || forecastMarketQuery.isPending
     || executionGateQuery.isPending
-    || predictorTuningQuery.isPending;
+    || predictorTuningQuery.isPending
+    || marketEventsQuery.isPending;
   const loadError =
     riskQuery.isError
     && tradingQuery.isError
@@ -2433,6 +2501,173 @@ export default function Page() {
                   style={{ color: "#b91c1c", fontSize: 13 }}
                 >
                   {forecastMarketError}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Section 4j — Markt-events (PR J). Market-aware scheduler. */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-market-events-section"
+          >
+            <h2 style={{ margin: 0 }}>Markt-events</h2>
+            <p style={{ marginTop: 4, color: "#374151", fontSize: 13 }}>
+              {marketEventsHelp
+                || "Markt-bewuste scheduler: vuurt alleen wanneer een markt die je volgt opent of sluit, in plaats van elk uur."}
+            </p>
+            <div className="grid one-column" style={{ marginTop: 10 }}>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-market-events-close-enabled"
+                  checked={marketEventsForm.per_market_close_digest_enabled}
+                  onChange={(e) =>
+                    setMarketEventsForm((p) => ({
+                      ...p,
+                      per_market_close_digest_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Close-digest per gevolgde markt inschakelen
+                <span className="help-text">
+                  Aan (standaard) = na sluiting van elke gevolgde markt
+                  vuurt een fire (~15 min na slot) die marktdata
+                  ververst en een einde-dag samenvatting voorbereidt.
+                  Uit = geen close-fire (slechts de 07:00 ochtend-chain
+                  draait).
+                </span>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  data-testid="instellingen-market-events-open-enabled"
+                  checked={marketEventsForm.per_market_open_alerts_enabled}
+                  onChange={(e) =>
+                    setMarketEventsForm((p) => ({
+                      ...p,
+                      per_market_open_alerts_enabled: e.target.checked,
+                    }))
+                  }
+                />{" "}
+                Open-check per gevolgde markt inschakelen (optioneel)
+                <span className="help-text">
+                  Uit (standaard) = geen open-fire. Aan = kort na opening
+                  (~5 min) vuurt een fire die IBKR-posities ververst en
+                  eventuele overnachte gaps signaleert. Vereist een
+                  actieve IBKR-sync.
+                </span>
+              </label>
+            </div>
+
+            {marketEventsActiveSessions.length > 0 ? (
+              <div
+                data-testid="instellingen-market-events-active-sessions"
+                style={{
+                  marginTop: 12,
+                  padding: 10,
+                  background: "#f9fafb",
+                  borderRadius: 4,
+                }}
+              >
+                <strong style={{ fontSize: 13 }}>
+                  Actieve markten op basis van je universe-selectie:
+                </strong>
+                <ul style={{ margin: "6px 0 0 16px", padding: 0 }}>
+                  {marketEventsActiveSessions.map((session) => (
+                    <li
+                      key={session}
+                      style={{ fontSize: 13, color: "#374151" }}
+                    >
+                      {session}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div
+                data-testid="instellingen-market-events-no-sessions"
+                style={{
+                  marginTop: 12,
+                  padding: 10,
+                  background: "#fef3c7",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  color: "#92400e",
+                }}
+              >
+                Geen markten geselecteerd. Kies markten in de
+                Universe-scan sectie hierboven om markt-events te
+                activeren.
+              </div>
+            )}
+
+            {marketEventsFires.length > 0 ? (
+              <div
+                data-testid="instellingen-market-events-fires-list"
+                style={{ marginTop: 12 }}
+              >
+                <strong style={{ fontSize: 13 }}>
+                  Geplande fires (weekdagen):
+                </strong>
+                <ul style={{ margin: "6px 0 0 16px", padding: 0 }}>
+                  {marketEventsFires.map((fire) => (
+                    <li
+                      key={`${fire.market_code}-${fire.event_kind}`}
+                      style={{ fontSize: 13, color: "#374151" }}
+                    >
+                      {fire.market_label_nl} —{" "}
+                      {fire.event_kind === "close" ? "sluiting" : "opening"}{" "}
+                      om{" "}
+                      <strong>
+                        {String(fire.fire_hour).padStart(2, "0")}:
+                        {String(fire.fire_minute).padStart(2, "0")}
+                      </strong>{" "}
+                      <code style={{ fontSize: 11, color: "#6b7280" }}>
+                        ({fire.timezone})
+                      </code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => void handleSaveMarketEvents()}
+                disabled={marketEventsSaving}
+                data-testid="instellingen-market-events-save"
+                style={{
+                  background: "#1f2937",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "6px 14px",
+                  borderRadius: 4,
+                  cursor: marketEventsSaving ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {marketEventsSaving ? "Opslaan…" : "Markt-events opslaan"}
+              </button>
+              {marketEventsSaved ? (
+                <span style={{ color: "#15803d", fontSize: 13 }}>
+                  {marketEventsSaved}
+                </span>
+              ) : null}
+              {marketEventsError ? (
+                <span
+                  data-testid="instellingen-market-events-error"
+                  style={{ color: "#b91c1c", fontSize: 13 }}
+                >
+                  {marketEventsError}
                 </span>
               ) : null}
             </div>
