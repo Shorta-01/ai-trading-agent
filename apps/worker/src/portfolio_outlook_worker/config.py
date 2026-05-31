@@ -116,6 +116,17 @@ class SchedulerSettings(BaseModel):
     # legitimately take minutes; tune for the longest expected run.
     api_request_timeout_seconds: float = 300.0
 
+    # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
+    # cadence). When ``per_market_close_digest_enabled`` is True the
+    # worker registers one cron fire per active market (see
+    # ``market_hours.resolve_active_market_sessions``), each producing
+    # a market-close digest a few minutes after that market's close.
+    # ``universe_scan_index_codes`` is the operator's selected list of
+    # market index codes, overlaid from runtime_config at worker startup.
+    per_market_close_digest_enabled: bool = True
+    per_market_open_alerts_enabled: bool = False
+    universe_scan_index_codes: str = ""
+
 
 class Settings(BaseSettings):
     service_name: str = "Portfolio Outlook Manager Worker"

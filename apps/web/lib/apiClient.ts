@@ -272,6 +272,29 @@ export type PredictorTuningSettingsUpdateInput = {
   gbm_regime_shift_threshold_pct: string;
 };
 
+export type MarketEventFire = {
+  market_code: string;
+  market_label_nl: string;
+  timezone: string;
+  event_kind: "open" | "close";
+  fire_hour: number;
+  fire_minute: number;
+};
+
+export type MarketEventsSettingsResponse = {
+  per_market_close_digest_enabled: boolean;
+  per_market_open_alerts_enabled: boolean;
+  universe_codes_selected: string[];
+  active_sessions: string[];
+  fires: MarketEventFire[];
+  help_nl: string;
+};
+
+export type MarketEventsSettingsUpdateInput = {
+  per_market_close_digest_enabled: boolean;
+  per_market_open_alerts_enabled: boolean;
+};
+
 export type SuggestionsGridItem = {
   suggestion_id: string;
   ibkr_conid: string;
@@ -2093,6 +2116,15 @@ export const apiClient = {
     ),
   getSuggestionsGrid: () =>
     getJson<SuggestionsGridResponse>("/suggestions/grid"),
+  getMarketEventsSettings: () =>
+    getJson<MarketEventsSettingsResponse>("/settings/market-events"),
+  updateMarketEventsSettings: (
+    payload: MarketEventsSettingsUpdateInput,
+  ) =>
+    putJson<MarketEventsSettingsResponse>(
+      "/settings/market-events",
+      payload,
+    ),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),

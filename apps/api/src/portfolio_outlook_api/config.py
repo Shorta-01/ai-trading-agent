@@ -257,6 +257,11 @@ class Settings(BaseSettings):
     # instellingen" accordion.
     sharpe_strong_threshold: float = 1.0
     sharpe_slight_threshold: float = 0.3
+    # Market-aware scheduler toggles (PR J). API-side mirrors of the
+    # worker's runtime_config overlay — the worker reads its own copy
+    # at startup and registers per-market cron jobs accordingly.
+    scheduler_per_market_close_digest_enabled: bool = True
+    scheduler_per_market_open_alerts_enabled: bool = False
     # V1.1 Slice 27 Momentum rebuild knobs.
     momentum_horizon_scaled_thresholds: bool = False
     momentum_skip_week_short_horizon: bool = False

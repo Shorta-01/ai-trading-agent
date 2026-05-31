@@ -54,11 +54,15 @@ logger = logging.getLogger(__name__)
 
 
 _PRE_BRIEFING_JOB_ID = "pre_briefing"
-_HOURLY_JOB_ID = "hourly"
 _SUBMISSION_SWEEP_JOB_ID = "submission_sweep"
 _CANCEL_SWEEP_JOB_ID = "cancel_sweep"
 _MORNING_CHAIN_JOB_ID = "morning_chain_trigger"
 _IBKR_SYNC_JOB_ID = "ibkr_sync_trigger"
+# Market-aware fires (one per active market session, see market_hours).
+# Job ids follow ``market_close_<EXCHANGE_CODE>`` so they're stable
+# across restarts and visible in /scheduler/runs for audit.
+_MARKET_CLOSE_JOB_PREFIX = "market_close_"
+_MARKET_OPEN_JOB_PREFIX = "market_open_"
 
 # Per-job APScheduler guards. ``max_instances=1`` and ``coalesce=True``
 # stop a slow run from spawning a parallel one; ``misfire_grace_time``
@@ -187,18 +191,7 @@ class PortfolioScheduler:
             coalesce=True,
             misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
         )
-        self._scheduler.add_job(
-            self._on_hourly,
-            "cron",
-            hour="7-21",
-            minute=0,
-            timezone=self._scheduler_settings.timezone,
-            id=_HOURLY_JOB_ID,
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-            misfire_grace_time=_HOURLY_MISFIRE_GRACE_SECONDS,
-        )
+        self._register_market_event_jobs()
         self._scheduler.add_job(
             self._heartbeat,
             "interval",
@@ -237,15 +230,21 @@ class PortfolioScheduler:
             logger.info("Scheduler gestopt (worker_id=%s)", self._worker_id)
 
     def next_runs(self) -> list[datetime]:
-        """Next two scheduled fire times (pre-briefing + hourly)."""
+        """Next scheduled fire times across pre-briefing + market events.
+
+        Returns every registered job's ``next_run_time`` sorted earliest
+        first. The market-event jobs are dynamic (one per active
+        session), so a fixed lookup list isn't sufficient — we walk
+        every job and collect the ones with a known next fire.
+        """
 
         if self._scheduler is None:
             return []
         runs: list[datetime] = []
-        for job_id in (_PRE_BRIEFING_JOB_ID, _HOURLY_JOB_ID):
-            job = self._scheduler.get_job(job_id)
-            if job is not None and job.next_run_time is not None:
-                runs.append(job.next_run_time)
+        for job in self._scheduler.get_jobs():
+            next_time = getattr(job, "next_run_time", None)
+            if next_time is not None:
+                runs.append(next_time)
         runs.sort()
         return runs
 
@@ -284,8 +283,130 @@ class PortfolioScheduler:
             except Exception:  # noqa: BLE001 — already best-effort
                 logger.exception("post-pre-briefing morning chain trigger failed")
 
-    def _on_hourly(self) -> None:
-        self._run("hourly_delta")
+    def _on_market_close(self, exchange_code: str) -> None:
+        """Fired a few minutes after a followed market's regular close.
+
+        Routes through the orchestrator with ``run_type="market_close"``;
+        the orchestrator runs the market-data refresh leg so the operator
+        has end-of-day prices for that exchange's holdings before the
+        next morning chain.
+        """
+
+        logger.info("Market close fire for %s", exchange_code)
+        self._run("market_close")
+
+    def _on_market_open(self, exchange_code: str) -> None:
+        """Fired a few minutes after a followed market's regular open.
+
+        Routes through the orchestrator with ``run_type="market_open"``.
+        Lightweight: refresh IBKR position snapshots so any overnight
+        gap-up/gap-down is visible in the dashboard. No full forecast
+        regeneration — that happens once per day in the morning chain.
+        """
+
+        logger.info("Market open fire for %s", exchange_code)
+        self._run("market_open")
+
+    # ---- Market-aware cron registration ---------------------------
+
+    def _register_market_event_jobs(self) -> None:
+        """Register one cron job per active market session for close /
+        open events. Replaces the legacy ``hour="7-21"`` dumb hourly
+        cadence — fires only when a market the operator actually
+        follows has an event.
+
+        Reads the operator's ``universe_scan_index_codes`` and the two
+        feature toggles (``per_market_close_digest_enabled`` /
+        ``per_market_open_alerts_enabled``) from
+        :class:`SchedulerSettings`. Best-effort: a malformed index code
+        is silently skipped (the API validates before persisting, so
+        bad codes shouldn't reach us).
+        """
+
+        from portfolio_outlook_worker.market_hours import (
+            close_digest_minute,
+            open_check_minute,
+            resolve_active_market_sessions,
+        )
+
+        if self._scheduler is None:  # pragma: no cover — invariant
+            return
+
+        codes = [
+            c.strip()
+            for c in (
+                self._scheduler_settings.universe_scan_index_codes or ""
+            ).split(",")
+            if c.strip()
+        ]
+        if not codes:
+            logger.info(
+                "Geen markten geselecteerd; skip market-event "
+                "cron-registratie."
+            )
+            return
+
+        sessions = resolve_active_market_sessions(codes)
+        if not sessions:
+            logger.info(
+                "Geen actieve marktsessies herkend in %s; skip market-"
+                "event cron-registratie.",
+                codes,
+            )
+            return
+
+        close_enabled = self._scheduler_settings.per_market_close_digest_enabled
+        open_enabled = self._scheduler_settings.per_market_open_alerts_enabled
+
+        for session in sessions:
+            if close_enabled:
+                close_hour, close_minute = close_digest_minute(session)
+                self._scheduler.add_job(
+                    self._on_market_close,
+                    "cron",
+                    day_of_week="mon-fri",
+                    hour=close_hour,
+                    minute=close_minute,
+                    timezone=session.timezone,
+                    id=f"{_MARKET_CLOSE_JOB_PREFIX}{session.code}",
+                    args=(session.code,),
+                    replace_existing=True,
+                    max_instances=1,
+                    coalesce=True,
+                    misfire_grace_time=_HOURLY_MISFIRE_GRACE_SECONDS,
+                )
+                logger.info(
+                    "Market-close fire geregistreerd voor %s om "
+                    "%02d:%02d %s (weekdagen).",
+                    session.code,
+                    close_hour,
+                    close_minute,
+                    session.timezone,
+                )
+            if open_enabled:
+                open_hour, open_minute = open_check_minute(session)
+                self._scheduler.add_job(
+                    self._on_market_open,
+                    "cron",
+                    day_of_week="mon-fri",
+                    hour=open_hour,
+                    minute=open_minute,
+                    timezone=session.timezone,
+                    id=f"{_MARKET_OPEN_JOB_PREFIX}{session.code}",
+                    args=(session.code,),
+                    replace_existing=True,
+                    max_instances=1,
+                    coalesce=True,
+                    misfire_grace_time=_HOURLY_MISFIRE_GRACE_SECONDS,
+                )
+                logger.info(
+                    "Market-open fire geregistreerd voor %s om "
+                    "%02d:%02d %s (weekdagen).",
+                    session.code,
+                    open_hour,
+                    open_minute,
+                    session.timezone,
+                )
 
     # ---- API-trigger jobs (#1, #2) --------------------------------
 
@@ -662,5 +783,6 @@ __all__ = [
     "PortfolioScheduler",
     "PostgresAdvisoryLock",
     "_PRE_BRIEFING_JOB_ID",
-    "_HOURLY_JOB_ID",
+    "_MARKET_CLOSE_JOB_PREFIX",
+    "_MARKET_OPEN_JOB_PREFIX",
 ]

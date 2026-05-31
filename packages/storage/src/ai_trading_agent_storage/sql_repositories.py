@@ -6214,6 +6214,12 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "gbm_regime_shift_threshold_pct": (
                 record.gbm_regime_shift_threshold_pct
             ),
+            "scheduler_per_market_close_digest_enabled": (
+                record.scheduler_per_market_close_digest_enabled
+            ),
+            "scheduler_per_market_open_alerts_enabled": (
+                record.scheduler_per_market_open_alerts_enabled
+            ),
         }
         existing = (
             self._connection.execute(
@@ -6404,6 +6410,16 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         gbm_regime_shift_threshold_pct=(
             Decimal(str(row["gbm_regime_shift_threshold_pct"]))
             if row.get("gbm_regime_shift_threshold_pct") is not None
+            else None
+        ),
+        scheduler_per_market_close_digest_enabled=(
+            bool(row["scheduler_per_market_close_digest_enabled"])
+            if row.get("scheduler_per_market_close_digest_enabled") is not None
+            else None
+        ),
+        scheduler_per_market_open_alerts_enabled=(
+            bool(row["scheduler_per_market_open_alerts_enabled"])
+            if row.get("scheduler_per_market_open_alerts_enabled") is not None
             else None
         ),
     )

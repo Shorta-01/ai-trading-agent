@@ -47,7 +47,13 @@ from portfolio_outlook_worker.single_flight_lock import (
 
 logger = logging.getLogger(__name__)
 
-RunType = Literal["pre_briefing", "morning_briefing", "hourly_delta"]
+RunType = Literal[
+    "pre_briefing",
+    "morning_briefing",
+    "hourly_delta",
+    "market_open",
+    "market_close",
+]
 ModeDetected = Literal[
     "cold_start",
     "normal",
@@ -310,15 +316,15 @@ def run_orchestrator(
                 mode_detected = "awaiting_watchlist_confirmation"
 
         # 6. Task 129 market-data fetch.
-        # Only on normal fires that are also pre_briefing or
-        # morning_briefing. Hourly delta fires never re-fetch — EOD
-        # prices don't change intraday. The runner returns a small
-        # dict folded into the audit row.
+        # Pre-briefing + morning-briefing use yesterday's close; the
+        # market-close fire grabs today's close once a followed market
+        # finishes its regular session. ``hourly_delta`` (legacy) and
+        # ``market_open`` skip the fetch — EOD data hasn't changed yet.
         market_data_details: dict[str, object] | None = None
         if (
             market_data_runner is not None
             and mode_detected == "normal"
-            and run_type in ("pre_briefing", "morning_briefing")
+            and run_type in ("pre_briefing", "morning_briefing", "market_close")
             and ibkr_account_id is not None
         ):
             try:

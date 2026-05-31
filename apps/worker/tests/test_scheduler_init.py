@@ -21,7 +21,7 @@ from portfolio_outlook_worker.config import (
 )
 from portfolio_outlook_worker.scheduler import (
     _CANCEL_SWEEP_JOB_ID,
-    _HOURLY_JOB_ID,
+    _MARKET_CLOSE_JOB_PREFIX,
     _PRE_BRIEFING_JOB_ID,
     _SUBMISSION_SWEEP_JOB_ID,
     PortfolioScheduler,
@@ -138,16 +138,66 @@ def test_start_registers_pre_briefing_job_with_06_00_cron() -> None:
         scheduler.stop()
 
 
-def test_start_registers_hourly_job_with_07_through_21_cron() -> None:
+def test_legacy_hourly_job_is_no_longer_registered() -> None:
+    """The naive ``hour="7-21"`` hourly fire is gone — replaced by the
+    market-aware scheduler (per-followed-market open / close fires).
+    With no markets selected, no market fires register either."""
+
     scheduler = _build()
     try:
         scheduler.start()
-        job = scheduler._scheduler.get_job(_HOURLY_JOB_ID)
-        assert job is not None
-        cron_repr = repr(job.trigger)
-        assert "hour='7-21'" in cron_repr
-        assert "minute='0'" in cron_repr
+        # No legacy ``hourly`` job lives in the scheduler anymore.
+        assert scheduler._scheduler.get_job("hourly") is None
+        # And with no universe selected we register zero market fires.
+        market_jobs = [
+            j
+            for j in scheduler._scheduler.get_jobs()
+            if j.id.startswith(_MARKET_CLOSE_JOB_PREFIX)
+        ]
+        assert market_jobs == []
+    finally:
+        scheduler.stop()
+
+
+def test_market_close_fires_registered_for_selected_universe() -> None:
+    """When the operator picks BEL20 + AEX + DAX40, register two
+    close fires (Euronext + Xetra) on weekdays only, in the right
+    timezones."""
+
+    scheduler = PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            universe_scan_index_codes="BEL20,AEX,DAX40",
+            per_market_close_digest_enabled=True,
+            per_market_open_alerts_enabled=False,
+        ),
+        worker_id="worker-test-markets",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        euronext = scheduler._scheduler.get_job(
+            f"{_MARKET_CLOSE_JOB_PREFIX}EURONEXT"
+        )
+        xetra = scheduler._scheduler.get_job(
+            f"{_MARKET_CLOSE_JOB_PREFIX}XETRA"
+        )
+        assert euronext is not None
+        assert xetra is not None
+        cron_repr = repr(euronext.trigger)
+        # +15min buffer past the 17:30 Euronext close → 17:45.
+        assert "hour='17'" in cron_repr
+        assert "minute='45'" in cron_repr
         assert "Europe/Brussels" in cron_repr
+        # Weekday-only — explicit ``day_of_week=mon-fri``.
+        assert "day_of_week='mon-fri'" in cron_repr
     finally:
         scheduler.stop()
 
@@ -213,11 +263,30 @@ def _assert_explicit_guards(job) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_cron_jobs_have_explicit_guards() -> None:
-    scheduler = _build()
+    scheduler = PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            # Force the market-close fire to register so we can assert
+            # its guards alongside pre-briefing.
+            universe_scan_index_codes="BEL20",
+            per_market_close_digest_enabled=True,
+        ),
+        worker_id="worker-test-guards",
+        scheduler_factory=_scheduler_factory,
+    )
     try:
         scheduler.start()
         _assert_explicit_guards(scheduler._scheduler.get_job(_PRE_BRIEFING_JOB_ID))
-        _assert_explicit_guards(scheduler._scheduler.get_job(_HOURLY_JOB_ID))
+        _assert_explicit_guards(
+            scheduler._scheduler.get_job(f"{_MARKET_CLOSE_JOB_PREFIX}EURONEXT")
+        )
     finally:
         scheduler.stop()
 

@@ -808,6 +808,22 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "nullable zodat oudere rijen blijven werken."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0067_runtime_config_market_aware_scheduler",
+        previous_revision_id="0066_asset_suggestions_grid_columns",
+        filename="0067_runtime_config_market_aware_scheduler.py",
+        label_nl="Markt-bewuste scheduler-toggles",
+        description_nl=(
+            "Voegt twee booleankolommen toe aan ``runtime_config`` zodat "
+            "de operator de markt-bewuste scheduler kan in- of "
+            "uitschakelen: ``scheduler_per_market_close_digest_enabled`` "
+            "(per markt een close-digest fire na de slottime, default "
+            "aan) en ``scheduler_per_market_open_alerts_enabled`` (per "
+            "markt een open-check fire kort na opening, default uit). "
+            "Vervangt de oude ``hour=\"7-21\"`` cadens die elk uur een "
+            "leeg audit-rij maakte."
+        ),
+    ),
 )
 
 
