@@ -153,8 +153,19 @@ def _start_scheduler() -> None:
     # operator has enabled email notifications + filled SMTP creds)
     # sends the digest email.
     from portfolio_outlook_worker.digest_runner import DailyDigestRunner
+    from portfolio_outlook_worker.morning_alerts_runner import (
+        MorningAlertsRunner,
+    )
 
     digest_runner = DailyDigestRunner(
+        storage_settings=settings.storage,
+        notifications=settings.notifications,
+    )
+    # Morning-chain alerts runner — fired on morning_briefing AFTER
+    # the decision-package step so it sees today's suggestions. Same
+    # email transport as the digest; uses the same notification
+    # preferences (send_on_high_confidence_sell).
+    morning_alerts_runner = MorningAlertsRunner(
         storage_settings=settings.storage,
         notifications=settings.notifications,
     )
@@ -165,6 +176,7 @@ def _start_scheduler() -> None:
         scheduler_settings=settings.scheduler,
         order_adapter=order_adapter,
         digest_runner=digest_runner,
+        morning_alerts_runner=morning_alerts_runner,
     )
     try:
         scheduler.start()

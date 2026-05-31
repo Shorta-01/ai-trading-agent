@@ -143,6 +143,7 @@ class PortfolioScheduler:
         scheduler_factory: Callable[..., Any] | None = None,
         order_adapter: Any | None = None,
         digest_runner: Any | None = None,
+        morning_alerts_runner: Any | None = None,
     ) -> None:
         self._gateway = gateway
         self._storage_settings = storage_settings
@@ -158,6 +159,11 @@ class PortfolioScheduler:
         # Stays ``None`` until main() instantiates and injects one;
         # the orchestrator silently skips the digest step when ``None``.
         self._digest_runner: Any | None = digest_runner
+        # Concrete morning-alerts runner — fired on every
+        # ``morning_briefing`` event after decision packages are
+        # composed. Same shape as digest_runner: ``None`` is a safe
+        # no-op (the orchestrator's branch short-circuits).
+        self._morning_alerts_runner: Any | None = morning_alerts_runner
         self._scheduler: Any | None = None
         self._started: bool = False
         # #8 — per-kind consecutive sweep-error counters. A single
@@ -663,6 +669,7 @@ class PortfolioScheduler:
                     brussels_hour_provider=lambda: brussels_now_hour,
                     next_scheduled_at=next_scheduled_at,
                     digest_runner=self._digest_runner,
+                    morning_alerts_runner=self._morning_alerts_runner,
                     market_code=market_code,
                 )
         except StorageConnectionError as exc:
