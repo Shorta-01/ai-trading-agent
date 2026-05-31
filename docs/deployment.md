@@ -145,6 +145,32 @@ Audit-pad (verplicht voor V1 acceptatie):
    integratie. De manual approval-gate blijft altijd actief; een groene
    scorecard autoriseert geen order.
 
+### Cold-start smoke test
+
+Na een verse install (of na een grote upgrade) gebruik
+`scripts/smoke_test.py` om in één commando te verifiëren dat de hele
+stack functioneert. Het script bevraagt de live API op vijf bestaande
+status-endpoints (`/health`, `/storage/status/online`,
+`/scheduler/v127/status`, `/ibkr/sync/status`, `/system/events/active`)
+en geeft per concern één Nederlandse verdict-regel.
+
+```
+python scripts/smoke_test.py --api-url http://127.0.0.1:8000
+```
+
+Exit-codes:
+
+| Code | Betekenis |
+|------|-----------|
+| 0    | Alles groen — install klaar voor paper-testing. |
+| 1    | Alleen warnings (bv. IBKR niet geconfigureerd, geen events). |
+| 2    | Kritieke fout (DB niet verbonden, migraties achter, blokkerende systeemmelding). |
+
+Optionele flags: `--skip-ibkr` (handig voor een eerste install zonder
+IBKR), `--skip-events`, `--no-colour`. Het script eindigt met exit-code
+2 zodra ook maar één kritieke check faalt, zodat het in CI / cron
+gebruikt kan worden als gatekeeper.
+
 ### V1 scope-lock
 
 Slice 22 sluit de V1 expansion queue af. Post-V1 widening-ideeën
