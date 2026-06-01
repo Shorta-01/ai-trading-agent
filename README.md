@@ -34,36 +34,102 @@ AI Trading Agent is een **volledig handelssysteem**. Het analyseert markten, gen
 
 ## Lokale development (technische skeleton)
 
-### API
+### Vereisten
+
+- **Python 3.12** — backend (API + worker) en alle Python-packages targeten 3.12. Eerdere versies (3.10, 3.11) missen syntax-features die de codebase gebruikt.
+- **Node 20+** — frontend (Next.js 14).
+- **PostgreSQL 16** — gestructureerde opslag. Een Docker Compose-versie zit klaar in `infra/docker/docker-compose.yml`.
+- **IBKR TWS of Gateway** (optioneel) — paper- of live-account. Vereist alleen wanneer je echte broker-sync of orderflow wilt testen; de stack start ook zonder.
+- **EODHD API-key** (optioneel) — voor market-data + fundamentals. Zonder key valt market-data-leg terug op de stub.
+- **Anthropic API-key** (optioneel) — voor Claude AI-uitleg + explainer batches. Zonder key blijft de stub-provider actief.
+
+### Stap 0: environment-bestand
+
+Kopieer het voorbeeld en pas de waarden aan voor je lokale install. Het bestand is bewust niet in git opgenomen.
+
+```bash
+cp infra/docker/.env.example infra/docker/.env
+# Bewerk infra/docker/.env: POSTGRES_PASSWORD, STORAGE_DATABASE_URL,
+# EODHD_API_KEY, CLAUDE_AI_API_KEY, IBKR_SYNC_HOST/PORT, etc.
+```
+
+Voor lokaal draaien zonder Docker exporteer je dezelfde variabelen in je shell of plaats je een `.env` naast `apps/api/` en `apps/worker/`.
+
+### Stap 1: PostgreSQL via Docker
+
+```bash
+cd infra/docker
+docker compose up -d postgres
+```
+
+Dit start alleen Postgres (poort 5432). Wacht tot `docker compose ps` rapporteert dat de healthcheck slaagt.
+
+### Stap 2: Migraties uitvoeren
+
+```bash
+cd packages/storage
+python -m venv .venv && source .venv/bin/activate
+pip install -e .[dev]
+alembic upgrade head
+```
+
+Dit zet alle tabellen (runtime_config, ibkr_*, asset_*, scheduler_*, prediction_diary_*) op en zet `alembic_version` op de meest recente revisie.
+
+### Stap 3: API-backend
+
 ```bash
 cd apps/api
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -e .[dev]
-uvicorn portfolio_outlook_api.main:app --reload --app-dir src
+uvicorn portfolio_outlook_api.main:app --reload --app-dir src --port 8000
 ```
 
-### Worker
+De API draait nu op `http://127.0.0.1:8000`. Health-check: `curl http://127.0.0.1:8000/health` moet `{"status":"ok","service":"api"}` retourneren.
+
+### Stap 4: Worker
+
 ```bash
 cd apps/worker
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -e .[dev]
-python src/portfolio_outlook_worker/main.py
+python -m portfolio_outlook_worker.main
 ```
 
-### Web
+De worker start de APScheduler met de geconfigureerde cron-fires (morning chain 06:30, market-close digests, optionele order-sweeps). Hij schrijft elke 60s een heartbeat naar `scheduler_state`.
+
+### Stap 5: Frontend
+
 ```bash
 cd apps/web
 npm install
-npm run dev
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 ```
 
-### Docker Compose
+Dashboard staat klaar op `http://127.0.0.1:3000`. De `NEXT_PUBLIC_API_BASE_URL` env-var laat de frontend weten waar de API draait — in dev wijst die naar je lokale uvicorn, in productie naar de geïnstalleerde API-host.
+
+### Stap 6 (aanbevolen): cold-start smoke test
+
+Verifieer in één commando of de hele stack gezond is opgekomen:
+
+```bash
+python scripts/smoke_test.py --api-url http://127.0.0.1:8000
+```
+
+Exit-code `0` = alles groen en klaar voor paper-testing. `1` = warnings (bv. IBKR niet geconfigureerd). `2` = kritieke fout (DB onbereikbaar, migraties achter, blokkerende systeemmelding). Zie `docs/deployment.md` voor de volledige uitleg.
+
+### Alles tegelijk via Docker Compose
+
 ```bash
 cd infra/docker
 docker compose up --build
 ```
+
+Dit start Postgres + API + worker + web in één commando. Migraties draaien automatisch tijdens de API-startup.
+
+### Settings achteraf wijzigen
+
+Veel knoppen — IBKR-host, Claude-key, SMTP, AI-features, market-event toggles — zijn niet alleen env-vars maar ook persistent in `runtime_config` en bewerkbaar via de UI op `/instellingen`. Een save daar overschrijft de env-default; verwijderen valt terug op de env-waarde.
+
 
 ## Product-governance documentatie
 - Version 1 scope register: `docs/product/version-1-scope-register.md`
