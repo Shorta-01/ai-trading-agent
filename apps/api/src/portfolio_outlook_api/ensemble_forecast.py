@@ -268,6 +268,40 @@ def latest_brier_by_model_code(
     return latest
 
 
+def merge_live_brier_over_backtest(
+    *,
+    live_history: dict[str, Decimal],
+    backtest_history: dict[str, Decimal],
+) -> dict[str, Decimal]:
+    """V1.2 §D: prefer live Brier scores, fall back to backtest per model.
+
+    The auto-weight strategy reads the merged dict. For each predictor:
+
+    * If the live diary has ≥ ``min_sample_size`` realised contributions
+      (the floor is enforced inside
+      :func:`compute_brier_history_from_contributions`), use the
+      empirical mean Brier — this is the highest-fidelity signal
+      because it reflects actual operator-observed performance on the
+      operator's actual universe.
+    * Otherwise fall back to the cold-start backtest Brier so the
+      predictor still carries a meaningful weight while live data
+      accrues.
+    * Predictors absent from both maps get no entry; the ensemble
+      combiner's equal-weight floor applies.
+
+    The merge is intentionally not an average: live and backtest
+    measure different things (one is operator-realised, the other is
+    historical walk-forward), and weighting their average would
+    introduce a bias whose direction depends on backtest length vs
+    live tenure. The senior-quant rule is "use the most-relevant
+    signal you have," and live always beats backtest once it exists.
+    """
+
+    merged = dict(backtest_history)
+    merged.update(live_history)
+    return merged
+
+
 def adapt_ensemble_to_forecast_record(
     *,
     position: IbkrPositionSnapshotRecord,

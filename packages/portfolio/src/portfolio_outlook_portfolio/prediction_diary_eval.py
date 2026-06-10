@@ -24,8 +24,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
-from typing import Final, Protocol
+from typing import Final, Protocol, runtime_checkable
 
 
 class _DiaryEntryLike(Protocol):
@@ -258,4 +259,85 @@ def compute_live_brier_history_from_diary(
     return {
         model: (sums[model] / Decimal(counts[model])).quantize(Decimal("0.000001"))
         for model in sums
+    }
+
+
+@runtime_checkable
+class _ContributionLike(Protocol):
+    """Subset of ``PredictionDiaryPredictorContributionRecord`` we read.
+
+    Tests only need to mock these four fields, not the whole record.
+    Decorated ``@runtime_checkable`` so structural matching with the
+    concrete storage record works across module boundaries under mypy.
+    """
+
+    model_code: str
+    brier_score: Decimal | None
+    realised_return_pct: Decimal | None
+    created_at: datetime
+
+
+def compute_brier_history_from_contributions(
+    *,
+    contributions: Iterable[_ContributionLike],
+    cutoff_at: datetime | None = None,
+    min_sample_size: int = 5,
+) -> dict[str, Decimal]:
+    """Per-predictor mean of stored *true* Brier scores (V1.2 §D).
+
+    Drop-in replacement for :func:`compute_live_brier_history_from_diary`
+    that reads ``(prob_gain − indicator)²`` directly from the
+    ``prediction_diary_predictor_contributions`` rows instead of the
+    crude four-bucket outcome-label mapping. The contribution table
+    already stores these for every per-predictor outcome — the previous
+    helper was discarding information already on disk.
+
+    Why this matters: the outcome-label mapping treats every "wrong"
+    contribution as Brier = 1.0 and every "right" as 0.0, collapsing
+    the full continuous resolution of ``(prob_gain − indicator)²``. A
+    predictor that issued prob_gain = 0.51 and was right scores the
+    same as one that issued prob_gain = 0.99 and was right — both 0.0
+    in the bucket world, but 0.24 vs 0.0001 in true Brier. Auto-weights
+    built from the crude scores can't distinguish lucky from confident.
+
+    Args:
+        contributions: Iterable of contribution records. Rows without a
+            stored ``brier_score`` (no realised outcome yet, or row
+            written before the brier_score column existed) are skipped
+            silently — they contribute no signal.
+        cutoff_at: When provided, only contributions with
+            ``created_at >= cutoff_at`` are scored. Use for "last 90
+            days" rolling windows; ``None`` means "all rows in the
+            iterable".
+        min_sample_size: Predictors with fewer than this many scored
+            contributions are *omitted* from the result entirely (not
+            zeroed out). The caller's equal-weight fallback then
+            applies, which is the safe choice: weighting a predictor by
+            the inverse of an unstable mean is worse than just averaging
+            it equally with the others.
+
+    Returns: ``{model_code: mean_brier_score}`` with each value in
+    ``[0, 1]``, quantised to six decimals for repository round-trip
+    parity. Predictors below the sample-size floor are omitted.
+    """
+
+    sums: dict[str, Decimal] = {}
+    counts: dict[str, int] = {}
+    for contribution in contributions:
+        if cutoff_at is not None and contribution.created_at < cutoff_at:
+            continue
+        if contribution.brier_score is None:
+            continue
+        if contribution.realised_return_pct is None:
+            # No realised outcome → the brier_score (if any) was
+            # written defensively; skip rather than score against an
+            # absent ground truth.
+            continue
+        model_code = contribution.model_code
+        sums[model_code] = sums.get(model_code, Decimal("0")) + contribution.brier_score
+        counts[model_code] = counts.get(model_code, 0) + 1
+    return {
+        model: (sums[model] / Decimal(counts[model])).quantize(Decimal("0.000001"))
+        for model in sums
+        if counts[model] >= min_sample_size
     }
