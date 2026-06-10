@@ -643,6 +643,52 @@ def compute_baseline_forecast(
             ),
         )
 
+    # V1.2 §E: data-quality firewall. Refuses the forecast on hard
+    # integrity failures (duplicate dates, non-monotonic dates,
+    # |log-return| ≥ 40% in a single bar = missed-split signature, or
+    # calendar gaps > 14 days = multi-week outage). Soft flags
+    # (moderate jumps, normal-holiday gaps) are still folded into the
+    # explanation_nl but don't block.
+    from portfolio_outlook_portfolio.bar_integrity import (
+        validate_bar_integrity,
+    )
+
+    integrity = validate_bar_integrity(bars)
+    if not integrity.is_safe:
+        _integrity_explanations = {
+            "duplicate_bar_dates": (
+                f"Bar-serie bevat {integrity.duplicate_date_count} "
+                "dubbele datum(s); waarschijnlijk een dedup-fout van de "
+                "data-provider — voorspelling geweigerd."
+            ),
+            "non_monotonic_bar_dates": (
+                f"Bar-serie is {integrity.out_of_order_count} keer "
+                "niet-chronologisch; voorspelling geweigerd."
+            ),
+            "suspicious_single_bar_jump": (
+                f"Bar-serie bevat {integrity.suspicious_jump_count} "
+                "verdachte sprong(en) (|log-rendement| ≥ 40%); typisch "
+                "een gemiste corporate-action correctie — voorspelling "
+                "geweigerd."
+            ),
+            "excessive_calendar_gap": (
+                f"Bar-serie heeft een gat van "
+                f"{integrity.largest_gap_calendar_days} kalenderdagen "
+                "(boven de 14-dagen drempel); voorspelling geweigerd."
+            ),
+        }
+        reason_code = integrity.hard_blocking_reason or "bar_integrity_failed"
+        return _blocked_forecast(
+            current_price=current_price,
+            horizon_days=horizon_trading_days,
+            bars=bars,
+            reason=reason_code,
+            explanation_nl=_integrity_explanations.get(
+                reason_code,
+                "Bar-serie faalde de data-kwaliteit gate.",
+            ),
+        )
+
     returns = _log_returns(bars)
     if not returns:
         return _blocked_forecast(
