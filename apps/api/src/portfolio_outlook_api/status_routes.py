@@ -3,7 +3,7 @@
 from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Any, cast
 from uuid import uuid4
 
 from ai_trading_agent_storage import (
@@ -26,6 +26,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyIbkrSyncSnapshotRepository,
     SqlAlchemyMarketDataBarRepository,
     SqlAlchemyMarketDataSnapshotRepository,
+    SqlAlchemyPredictionDiaryPredictorContributionRepository,
     SqlAlchemyPredictionDiaryRepository,
     SqlAlchemyPredictorBacktestRunRepository,
     SqlAlchemyResearchSourceArchiveRepository,
@@ -1096,8 +1097,45 @@ def run_forecast_sync() -> dict[str, object]:
                     backtest_repo = SqlAlchemyPredictorBacktestRunRepository(
                         checked.connection, checked.readiness
                     )
-                    brier_history = latest_brier_by_model_code(
+                    backtest_history = latest_brier_by_model_code(
                         backtest_repo.list_recent_backtest_runs(limit=200).records
+                    )
+                    # V1.2 §D: prefer live per-predictor Brier scores
+                    # (true ``(prob_gain - indicator)²`` stored in the
+                    # contribution rows) over the crude outcome-label
+                    # mapping that the diary helper used to produce.
+                    # The live signal beats backtest as soon as it has
+                    # ≥ 5 realised contributions per predictor; until
+                    # then the backtest cold-start carries the weight.
+                    from portfolio_outlook_portfolio import (
+                        compute_brier_history_from_contributions,
+                    )
+
+                    from portfolio_outlook_api.ensemble_forecast import (
+                        merge_live_brier_over_backtest,
+                    )
+
+                    contribution_repo = (
+                        SqlAlchemyPredictionDiaryPredictorContributionRepository(
+                            checked.connection, checked.readiness
+                        )
+                    )
+                    contributions = contribution_repo.list_recent_contributions(
+                        limit=500
+                    ).records
+                    # Structural match: the storage record carries all four
+                    # fields the protocol declares (model_code, brier_score,
+                    # realised_return_pct, created_at). mypy can't auto-
+                    # verify the structural match for non-runtime_checkable
+                    # Protocols across module boundaries; cast keeps the
+                    # type-checker honest.
+                    live_history = compute_brier_history_from_contributions(
+                        contributions=cast(Any, contributions),
+                        min_sample_size=5,
+                    )
+                    brier_history = merge_live_brier_over_backtest(
+                        live_history=live_history,
+                        backtest_history=backtest_history,
                     )
             report = sync_forecasts(
                 provider=provider,

@@ -301,6 +301,8 @@ from .prediction_diary_eval import (
     OUTCOME_WRONG,
     DiaryEvaluation,
     HorizonEvaluation,
+    compute_brier_history_from_contributions,
+    compute_live_brier_history_from_diary,
     evaluate_diary_outcomes,
 )
 from .predictor_protocol import (
@@ -587,6 +589,8 @@ __all__ = [
     "HorizonEvaluation",
     "DiaryEvaluation",
     "evaluate_diary_outcomes",
+    "compute_live_brier_history_from_diary",
+    "compute_brier_history_from_contributions",
     "DEFAULT_INCONCLUSIVE_TOLERANCE_PCT",
     "OUTCOME_RIGHT",
     "OUTCOME_WRONG",
