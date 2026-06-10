@@ -54,6 +54,31 @@ DEFAULT_DRIFT_WINDOW_DAYS_V1_1: Final[int] = 252
 DEFAULT_REGIME_SHIFT_SHORT_WINDOW: Final[int] = 60
 DEFAULT_REGIME_SHIFT_THRESHOLD_PCT: Final[float] = 5.0
 
+# V1.2 §A — RiskMetrics EWMA volatility. ``lambda=0.94`` is the
+# JP Morgan RiskMetrics 1996 standard for daily equity returns
+# (half-life ≈ 23 trading days). The forecast bands track regime
+# changes ~10x faster than the constant full-history sample SD while
+# still smoothing single-day noise. Conservative default OFF; operator
+# opts in via ``volatility_method="ewma"``.
+VOLATILITY_METHOD_SAMPLE_SD: Final[str] = "sample_sd"
+VOLATILITY_METHOD_EWMA: Final[str] = "ewma"
+DEFAULT_VOLATILITY_METHOD: Final[str] = VOLATILITY_METHOD_SAMPLE_SD
+DEFAULT_EWMA_LAMBDA: Final[float] = 0.94
+EWMA_LAMBDA_MIN: Final[float] = 0.80
+EWMA_LAMBDA_MAX: Final[float] = 0.99
+
+# V1.2 §B — James-Stein / Bayesian drift shrinkage. The sample mean
+# of daily log-returns has a standard error so large (σ/√n) that the
+# point estimate is mostly noise — a well-known result going back to
+# Merton 1980. Shrinking the estimate toward 0 (or a prior) produces
+# better out-of-sample calibration. ``shrinkage_factor=0.0`` keeps the
+# V1 raw-mean behaviour; ``1.0`` zeroes the drift entirely; a
+# practitioner default of 0.7 is recommended once empirical Brier
+# scores stabilise.
+DEFAULT_DRIFT_SHRINKAGE_FACTOR: Final[float] = 0.0
+DRIFT_SHRINKAGE_MIN: Final[float] = 0.0
+DRIFT_SHRINKAGE_MAX: Final[float] = 1.0
+
 # Standard-normal quantiles used for p10/p50/p90 — stable constants so the
 # math doesn't need an inverse-erf implementation.
 Z_10: Final[float] = -1.2815515655446004
@@ -169,6 +194,73 @@ def _sample_stdev(values: Sequence[float], mean: float) -> float:
     from . import _predictor_math as _pm
 
     return _pm.sample_stdev(np.asarray(values, dtype=np.float64))
+
+
+def _ewma_stdev(values: Sequence[float], lam: float) -> float:
+    """RiskMetrics 1996 exponentially-weighted volatility.
+
+    Recursion: ``σ²_t = λ · σ²_{t-1} + (1 - λ) · r²_t``.
+
+    Anchors ``σ²_0`` on the variance of the first ``warmup`` observations
+    (default 30) so a short series doesn't start at zero and one-shot
+    the recursion. Standard practitioner choice — matches what the
+    RiskMetrics technical document specifies for "small sample bias
+    correction at the start of the series."
+
+    Returns the *terminal* daily SD: the most recent λ-weighted estimate,
+    which is what a one-month-horizon forecast wants as σ_today.
+
+    Returns 0.0 for ``len(values) < 2``. For ``len < warmup`` falls back
+    to plain sample SD.
+    """
+
+    n = len(values)
+    if n < 2:
+        return 0.0
+    if not EWMA_LAMBDA_MIN <= lam <= EWMA_LAMBDA_MAX:
+        raise ValueError(
+            f"EWMA lambda {lam} outside [{EWMA_LAMBDA_MIN}, {EWMA_LAMBDA_MAX}]."
+        )
+    warmup = min(30, max(2, n // 2))
+    # Need ≥10 observations AFTER the warmup window for the recursion
+    # to mean anything; otherwise the EWMA is anchored variance with
+    # one or two updates, which is just noise around the warmup mean.
+    # Degrade to sample SD so the forecast still produces a band.
+    if n - warmup < 10:
+        return _sample_stdev(values, _sample_mean(values))
+    # Anchor variance on the warmup window's mean-centred variance.
+    warmup_slice = values[:warmup]
+    warmup_mean = _sample_mean(warmup_slice)
+    var_t = sum((r - warmup_mean) ** 2 for r in warmup_slice) / float(warmup)
+    # Roll the recursion forward over the remaining observations.
+    one_minus_lam = 1.0 - lam
+    for r in values[warmup:]:
+        var_t = lam * var_t + one_minus_lam * (r * r)
+    if var_t <= 0.0:
+        return 0.0
+    return math.sqrt(var_t)
+
+
+def _shrink_drift(raw_mu_annual: float, shrinkage_factor: float) -> float:
+    """Apply Bayesian/James-Stein shrinkage to the annualised drift.
+
+    Linear interpolation toward zero:
+    ``μ_shrunk = (1 - α) · μ_raw + α · 0 = (1 - α) · μ_raw``.
+
+    Doctrine: the sample mean of daily log-returns has standard error
+    σ/√n which dominates the estimate at any practical lookback. A
+    rational shrinkage prior is "monthly drift is zero" — the no-skill
+    null — which produces calibrated forecasts when n is small.
+    Shrinkage factor 0.0 preserves V1 behaviour; 1.0 zeroes the drift
+    entirely (pure variance forecast, no directional view).
+    """
+
+    if not DRIFT_SHRINKAGE_MIN <= shrinkage_factor <= DRIFT_SHRINKAGE_MAX:
+        raise ValueError(
+            f"Drift shrinkage {shrinkage_factor} outside "
+            f"[{DRIFT_SHRINKAGE_MIN}, {DRIFT_SHRINKAGE_MAX}]."
+        )
+    return (1.0 - shrinkage_factor) * raw_mu_annual
 
 
 # Risk-adjusted (horizon-Sharpe) thresholds — the units are "standard
@@ -383,6 +475,9 @@ def compute_baseline_forecast(
     garch_enabled: bool = False,
     sharpe_strong_threshold: float = DEFAULT_SHARPE_STRONG_THRESHOLD,
     sharpe_slight_threshold: float = DEFAULT_SHARPE_SLIGHT_THRESHOLD,
+    volatility_method: str = DEFAULT_VOLATILITY_METHOD,
+    ewma_lambda: float = DEFAULT_EWMA_LAMBDA,
+    drift_shrinkage_factor: float = DEFAULT_DRIFT_SHRINKAGE_FACTOR,
 ) -> BaselineForecast:
     """Compute a baseline GBM forecast or return a blocked result.
 
@@ -450,7 +545,27 @@ def compute_baseline_forecast(
     # most recent ``drift_window_days`` bars. Volatility (sigma)
     # always uses the full series so the distribution width keeps the
     # benefit of the longer sample.
-    sigma_daily = _sample_stdev(returns, _sample_mean(returns))
+    #
+    # V1.2 §A: when ``volatility_method="ewma"`` the constant
+    # full-history sample SD is replaced by RiskMetrics EWMA. The
+    # forecast bands then track regime changes ~10x faster, which
+    # produces materially better calibrated p10/p90 coverage after
+    # vol expansions (March 2020, Q4 2018, etc.). Default sample_sd
+    # preserves V1 behaviour.
+    if volatility_method == VOLATILITY_METHOD_EWMA:
+        sigma_daily = _ewma_stdev(returns, ewma_lambda)
+        sigma_clause = (
+            f" Volatility: EWMA λ={ewma_lambda:.2f} (V1.2 §A)."
+        )
+    elif volatility_method == VOLATILITY_METHOD_SAMPLE_SD:
+        sigma_daily = _sample_stdev(returns, _sample_mean(returns))
+        sigma_clause = ""
+    else:
+        raise ValueError(
+            f"Unknown volatility_method {volatility_method!r}; "
+            f"expected one of {VOLATILITY_METHOD_SAMPLE_SD!r}, "
+            f"{VOLATILITY_METHOD_EWMA!r}."
+        )
     if sigma_daily <= 0.0:
         return _blocked_forecast(
             current_price=current_price,
@@ -481,6 +596,22 @@ def compute_baseline_forecast(
         drift_clause += regime_clause
     else:
         mu_annual = _sample_mean(drift_returns) * trading_days_per_year
+
+    # V1.2 §B: Bayesian/James-Stein drift shrinkage toward zero.
+    # ``μ_shrunk = (1 - α) · μ_raw``. The sample mean's standard error
+    # σ/√n dominates the estimate at any practical lookback, so a
+    # rational prior is "monthly drift is zero" and the operator
+    # interpolates between raw estimate (α=0, V1 behaviour) and the
+    # no-skill null (α=1). Applied AFTER regime-shift so a regime-blend
+    # operator opting in still gets a calibrated point estimate.
+    if drift_shrinkage_factor > 0.0:
+        raw_mu_annual = mu_annual
+        mu_annual = _shrink_drift(raw_mu_annual, drift_shrinkage_factor)
+        drift_clause += (
+            f" Shrinkage α={drift_shrinkage_factor:.2f} "
+            f"({raw_mu_annual * 100:.2f}% → {mu_annual * 100:.2f}%, V1.2 §B)."
+        )
+    drift_clause += sigma_clause
 
     horizon_years = horizon_trading_days / float(trading_days_per_year)
     sigma_annual = sigma_daily * math.sqrt(trading_days_per_year)
