@@ -85,6 +85,18 @@ Z_10: Final[float] = -1.2815515655446004
 Z_50: Final[float] = 0.0
 Z_90: Final[float] = 1.2815515655446004
 
+# V1.2 §C — Calibration feedback (conformal-prediction-lite).
+# The forecast bands are scaled by an empirical factor read from the
+# calibration diary's rolling p10-p90 coverage. If observed coverage is
+# below the 80% target, σ is multiplied by the ratio of target-Z to
+# observed-Z so the next round's bands honestly cover ~80%. Bounded so a
+# single bad lookback can't make σ blow up or collapse the band.
+DEFAULT_BAND_SCALE_FACTOR: Final[float] = 1.0
+BAND_SCALE_MIN: Final[float] = 0.5  # bands narrower than half = ignore
+BAND_SCALE_MAX: Final[float] = 2.0  # bands wider than 2x = ignore
+DEFAULT_CALIBRATION_TARGET_COVERAGE: Final[float] = 0.80
+CALIBRATION_MIN_SAMPLE_SIZE: Final[int] = 30
+
 
 @dataclass(frozen=True)
 class HistoricalBar:
@@ -239,6 +251,117 @@ def _ewma_stdev(values: Sequence[float], lam: float) -> float:
     if var_t <= 0.0:
         return 0.0
     return math.sqrt(var_t)
+
+
+def _empirical_band_scale_factor(
+    *,
+    observed_coverage: float,
+    target_coverage: float = DEFAULT_CALIBRATION_TARGET_COVERAGE,
+) -> float:
+    """Compute the σ-multiplier that makes the next band honestly cover
+    ``target_coverage`` based on what actually happened.
+
+    Derivation: under GBM the band ``[p10, p90]`` corresponds to log-
+    returns in ``[μ - 1.2816σ, μ + 1.2816σ]``. If the empirical fraction
+    of realised log-returns inside that interval is ``c``, then the
+    *empirical* z-score that covers ``c`` of the realised distribution
+    is ``Φ⁻¹((1+c)/2)`` (the symmetric two-sided quantile). To make the
+    next band cover ``target_coverage``, scale σ by ``z_target /
+    z_observed``.
+
+    Concrete examples (target = 0.80, z_target = 1.2816):
+    - observed = 0.65 (bands too narrow) → z_observed ≈ 0.935 →
+      scale ≈ 1.37 (widen by 37%)
+    - observed = 0.80 (perfectly calibrated) → scale = 1.0
+    - observed = 0.92 (bands too wide) → z_observed ≈ 1.751 →
+      scale ≈ 0.73 (narrow by 27%)
+
+    Clamped to ``[BAND_SCALE_MIN, BAND_SCALE_MAX]`` so a single bad
+    lookback (e.g. 1/30 inside the band) can't blow up σ to infinity.
+    Returns 1.0 (no scaling) for non-finite or out-of-range observed
+    coverage — the caller's job to handle "insufficient sample size"
+    before calling this.
+    """
+
+    if not 0.0 < observed_coverage < 1.0:
+        # observed = 0% or 100% are degenerate (Φ⁻¹ undefined / infinite)
+        return 1.0
+    if not 0.0 < target_coverage < 1.0:
+        raise ValueError(
+            f"target_coverage {target_coverage} must be in (0, 1)."
+        )
+
+    # Two-sided symmetric quantile: P(|Z| ≤ z) = c  ⇔  z = Φ⁻¹((1+c)/2)
+    # Inverse standard-normal CDF via the rational approximation used
+    # downstream — no external dependencies.
+    z_target = _inverse_standard_normal_cdf((1.0 + target_coverage) / 2.0)
+    z_observed = _inverse_standard_normal_cdf((1.0 + observed_coverage) / 2.0)
+    if z_observed <= 0.0:
+        return 1.0
+    raw_scale = z_target / z_observed
+    return max(BAND_SCALE_MIN, min(BAND_SCALE_MAX, raw_scale))
+
+
+def _inverse_standard_normal_cdf(p: float) -> float:
+    """Beasley-Springer-Moro inverse standard normal CDF (Φ⁻¹).
+
+    Standard rational approximation; |error| < 5e-7 over (0, 1).
+    Picked over scipy/statistics dependency so the portfolio package
+    stays leaf-pure (no SciPy, no statistics.NormalDist for symmetry
+    with the rest of the math here).
+    """
+
+    if not 0.0 < p < 1.0:
+        raise ValueError(f"Φ⁻¹ argument {p} must be in (0, 1).")
+    # Beasley-Springer-Moro coefficients.
+    a = (
+        -3.969683028665376e01,
+        2.209460984245205e02,
+        -2.759285104469687e02,
+        1.383577518672690e02,
+        -3.066479806614716e01,
+        2.506628277459239e00,
+    )
+    b = (
+        -5.447609879822406e01,
+        1.615858368580409e02,
+        -1.556989798598866e02,
+        6.680131188771972e01,
+        -1.328068155288572e01,
+    )
+    c = (
+        -7.784894002430293e-03,
+        -3.223964580411365e-01,
+        -2.400758277161838e00,
+        -2.549732539343734e00,
+        4.374664141464968e00,
+        2.938163982698783e00,
+    )
+    d = (
+        7.784695709041462e-03,
+        3.224671290700398e-01,
+        2.445134137142996e00,
+        3.754408661907416e00,
+    )
+    p_low = 0.02425
+    p_high = 1.0 - p_low
+    if p < p_low:
+        q = math.sqrt(-2.0 * math.log(p))
+        return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0
+        )
+    if p > p_high:
+        q = math.sqrt(-2.0 * math.log(1.0 - p))
+        return -(
+            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
+        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+    q = p - 0.5
+    r = q * q
+    return (
+        ((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]
+    ) * q / (
+        ((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0
+    )
 
 
 def _shrink_drift(raw_mu_annual: float, shrinkage_factor: float) -> float:
@@ -478,6 +601,7 @@ def compute_baseline_forecast(
     volatility_method: str = DEFAULT_VOLATILITY_METHOD,
     ewma_lambda: float = DEFAULT_EWMA_LAMBDA,
     drift_shrinkage_factor: float = DEFAULT_DRIFT_SHRINKAGE_FACTOR,
+    band_scale_factor: float = DEFAULT_BAND_SCALE_FACTOR,
 ) -> BaselineForecast:
     """Compute a baseline GBM forecast or return a blocked result.
 
@@ -616,9 +740,26 @@ def compute_baseline_forecast(
     horizon_years = horizon_trading_days / float(trading_days_per_year)
     sigma_annual = sigma_daily * math.sqrt(trading_days_per_year)
 
+    # V1.2 §C: empirical band scaling from the calibration diary.
+    # band_scale_factor = 1.0 (default) preserves V1 behaviour. A value
+    # > 1.0 widens the band (issued bands historically too narrow);
+    # < 1.0 narrows it (historically too wide). Clamped to
+    # [BAND_SCALE_MIN, BAND_SCALE_MAX] at the call site so a degenerate
+    # calibration history can't blow up σ. The Itô correction inside
+    # drift_log uses the UNSCALED sigma_annual because the correction
+    # is a property of the physical process, not the operator's
+    # uncertainty about it — scaling it would double-count the
+    # calibration adjustment.
+    if not BAND_SCALE_MIN <= band_scale_factor <= BAND_SCALE_MAX:
+        raise ValueError(
+            f"band_scale_factor {band_scale_factor} outside "
+            f"[{BAND_SCALE_MIN}, {BAND_SCALE_MAX}]."
+        )
+    scaled_sigma_annual = sigma_annual * band_scale_factor
+
     s0 = float(current_price)
     drift_log = (mu_annual - 0.5 * sigma_annual**2) * horizon_years
-    diffusion_log = sigma_annual * math.sqrt(horizon_years)
+    diffusion_log = scaled_sigma_annual * math.sqrt(horizon_years)
 
     p10 = s0 * math.exp(drift_log + diffusion_log * Z_10)
     p50 = s0 * math.exp(drift_log + diffusion_log * Z_50)
