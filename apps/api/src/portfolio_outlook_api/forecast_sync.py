@@ -206,6 +206,8 @@ def sync_forecasts(
     volatility_method: str = "sample_sd",
     ewma_lambda: float = 0.94,
     drift_shrinkage_factor: float = 0.0,
+    band_scale_factor_by_conid: dict[str, float] | None = None,
+    band_scale_factor_global: float = 1.0,
 ) -> ForecastSyncReport:
     """Run one full forecast cycle and persist every successful row.
 
@@ -403,6 +405,15 @@ def sync_forecasts(
             forecast_status = ensemble.forecast.status
             forecast_blocking_reason = ensemble.forecast.blocking_reason
         else:
+            # V1.2 §C: per-conid calibration band scaling, falling back
+            # to the global default. The global default is itself 1.0
+            # unless the operator's `/calibration/coverage` history is
+            # systematically miscalibrated. Per-conid takes precedence
+            # when sufficient_history flag was True at lookup time.
+            if band_scale_factor_by_conid is not None and conid in band_scale_factor_by_conid:
+                conid_band_scale = band_scale_factor_by_conid[conid]
+            else:
+                conid_band_scale = band_scale_factor_global
             forecast = compute_baseline_forecast(
                 bars=historical_bars,
                 current_price=current_price,
@@ -415,6 +426,7 @@ def sync_forecasts(
                 volatility_method=volatility_method,
                 ewma_lambda=ewma_lambda,
                 drift_shrinkage_factor=drift_shrinkage_factor,
+                band_scale_factor=conid_band_scale,
             )
             forecast_record = _build_forecast_record(
                 position=position,
