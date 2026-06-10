@@ -203,6 +203,9 @@ def sync_forecasts(
     sharpe_slight_threshold: float = 0.3,
     gbm_regime_shift_enabled: bool = False,
     gbm_regime_shift_threshold_pct: float = 5.0,
+    volatility_method: str = "sample_sd",
+    ewma_lambda: float = 0.94,
+    drift_shrinkage_factor: float = 0.0,
 ) -> ForecastSyncReport:
     """Run one full forecast cycle and persist every successful row.
 
@@ -409,6 +412,9 @@ def sync_forecasts(
                 sharpe_slight_threshold=sharpe_slight_threshold,
                 regime_shift_enabled=gbm_regime_shift_enabled,
                 regime_shift_threshold_pct=gbm_regime_shift_threshold_pct,
+                volatility_method=volatility_method,
+                ewma_lambda=ewma_lambda,
+                drift_shrinkage_factor=drift_shrinkage_factor,
             )
             forecast_record = _build_forecast_record(
                 position=position,
