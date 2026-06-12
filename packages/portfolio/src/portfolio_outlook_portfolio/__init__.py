@@ -422,6 +422,16 @@ from .risk_universe_gate import (
 from .risk_universe_gate import (
     TRADING_DAYS_PER_YEAR as RISK_UNIVERSE_TRADING_DAYS_PER_YEAR,
 )
+from .sector_concentration import (
+    BLOCKING_REASON_INVALID_BUDGET,
+    BLOCKING_REASON_INVALID_CANDIDATE_EUR,
+    BLOCKING_REASON_INVALID_MAX_PCT,
+    BLOCKING_REASON_SECTOR_CONCENTRATION_EXCEEDED,
+    UNKNOWN_SECTOR,
+    SectorAllocation,
+    SectorConcentrationResult,
+    evaluate_sector_concentration,
+)
 from .snapshot import (
     InstrumentPositionQuantity,
     InstrumentTransactionTotals,
@@ -728,6 +738,14 @@ __all__ = [
     "NewsSeverity",
     "classify_news_severity",
     "evaluate_news_exit",
+    "BLOCKING_REASON_INVALID_BUDGET",
+    "BLOCKING_REASON_INVALID_CANDIDATE_EUR",
+    "BLOCKING_REASON_INVALID_MAX_PCT",
+    "BLOCKING_REASON_SECTOR_CONCENTRATION_EXCEEDED",
+    "UNKNOWN_SECTOR",
+    "SectorAllocation",
+    "SectorConcentrationResult",
+    "evaluate_sector_concentration",
     "BLOCKING_REASON_BELOW_CONFIDENCE",
     "BLOCKING_REASON_INVALID_FORECAST",
     "CONFIDENCE_GATE_BLOCKING_REASON_ZERO_VOLATILITY",
