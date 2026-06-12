@@ -154,12 +154,45 @@ class UserStrategySettings(DomainBaseModel):
     # available_funds when sizing BUY drafts. Default €0; users can
     # raise it in the Settings UI for more conservative sizing.
     user_buffer_eur: Decimal = Decimal("0")
+    # ------------------------------------------------------------------
+    # Profit-harvest cycle parameters (V1.2 §F). The retiree-income
+    # strategy is "buy → wait for a configured net profit → sell →
+    # recycle". All inputs are exposed here so the user can adjust the
+    # full doctrine in Settings without touching code.
+    # ------------------------------------------------------------------
+    trading_target_net_pct: Decimal = Decimal("4")
+    trading_horizon_min_months: int = 3
+    trading_horizon_max_months: int = 6
+    trading_min_position_eur: Decimal = Decimal("25000")
+    trading_max_position_eur: Decimal = Decimal("100000")
+    # Minimum P(target hit within horizon) required before a name is
+    # surfaced as a suggestion. 0–100, default 70%.
+    trading_confidence_threshold_pct: Decimal = Decimal("70")
+    # Max share of the trading bucket allowed in a single sector.
+    trading_max_sector_pct: Decimal = Decimal("25")
+    # Risk-filter universe gates.
+    trading_min_market_cap_eur: Decimal = Decimal("5000000000")
+    trading_max_annual_volatility_pct: Decimal = Decimal("30")
+    # Total euro allocation earmarked for the profit-harvest cycle.
+    # Cash beyond this stays on term-deposit / sweep.
+    trading_total_budget_eur: Decimal = Decimal("1000000")
     explanation_nl: str = (
         "Dit is je voorkeurlaag voor ranking en fit, niet voor harde blokkeringen."
     )
 
     @field_validator(
-        "max_position_pct", "min_cash_reserve_pct", "user_buffer_eur", mode="before"
+        "max_position_pct",
+        "min_cash_reserve_pct",
+        "user_buffer_eur",
+        "trading_target_net_pct",
+        "trading_min_position_eur",
+        "trading_max_position_eur",
+        "trading_confidence_threshold_pct",
+        "trading_max_sector_pct",
+        "trading_min_market_cap_eur",
+        "trading_max_annual_volatility_pct",
+        "trading_total_budget_eur",
+        mode="before",
     )
     @classmethod
     def reject_float(cls, value: object) -> object:
@@ -180,6 +213,62 @@ class UserStrategySettings(DomainBaseModel):
         if value < Decimal("0"):
             raise ValueError("user_buffer_eur moet ≥ 0 zijn.")
         return value
+
+    @field_validator("trading_target_net_pct")
+    @classmethod
+    def validate_target_net_pct(cls, value: Decimal) -> Decimal:
+        # Net target below ~1% is below TOB round-trip cost; above 50%
+        # is not a profit-harvest cycle but a moonshot bet — both are
+        # outside the doctrine.
+        if value < Decimal("1") or value > Decimal("50"):
+            raise ValueError("trading_target_net_pct moet tussen 1 en 50 liggen.")
+        return value
+
+    @field_validator("trading_horizon_min_months", "trading_horizon_max_months")
+    @classmethod
+    def validate_horizon_months(cls, value: int) -> int:
+        if value < 1 or value > 24:
+            raise ValueError("Horizon moet tussen 1 en 24 maanden liggen.")
+        return value
+
+    @field_validator(
+        "trading_min_position_eur",
+        "trading_max_position_eur",
+        "trading_min_market_cap_eur",
+        "trading_total_budget_eur",
+    )
+    @classmethod
+    def validate_eur_amount_positive(cls, value: Decimal) -> Decimal:
+        if value <= Decimal("0"):
+            raise ValueError("EUR-bedrag moet > 0 zijn.")
+        return value
+
+    @field_validator(
+        "trading_confidence_threshold_pct",
+        "trading_max_sector_pct",
+        "trading_max_annual_volatility_pct",
+    )
+    @classmethod
+    def validate_pct_0_to_100(cls, value: Decimal) -> Decimal:
+        if value < Decimal("0") or value > Decimal("100"):
+            raise ValueError("Percentage moet tussen 0 en 100 liggen.")
+        return value
+
+    @model_validator(mode="after")
+    def validate_trading_cycle_consistency(self) -> "UserStrategySettings":
+        if self.trading_horizon_max_months < self.trading_horizon_min_months:
+            raise ValueError(
+                "trading_horizon_max_months moet ≥ trading_horizon_min_months zijn."
+            )
+        if self.trading_max_position_eur < self.trading_min_position_eur:
+            raise ValueError(
+                "trading_max_position_eur moet ≥ trading_min_position_eur zijn."
+            )
+        if self.trading_max_position_eur > self.trading_total_budget_eur:
+            raise ValueError(
+                "trading_max_position_eur mag niet groter zijn dan trading_total_budget_eur."
+            )
+        return self
 
 
 class AssetPermission(DomainBaseModel):
@@ -285,6 +374,91 @@ def get_user_strategy_help_texts() -> tuple[SettingHelpText, ...]:
             help_nl=(
                 "Dit bedrag wordt afgetrokken van je beschikbare cash voordat de "
                 "voorgestelde aankoophoeveelheid wordt berekend. Standaard €0."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_target_net_pct",
+            label_nl="Winstdoel per cyclus (netto %)",
+            help_nl=(
+                "Wanneer een aandeel dit netto winstpercentage haalt verkoopt het "
+                "systeem automatisch. De verkoop-LMT wordt boven dit doel gezet om "
+                "beurstaks te compenseren. Standaard 4%."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_horizon_min_months",
+            label_nl="Minimale horizon (maanden)",
+            help_nl=(
+                "Onderkant van het tijdsvenster waarin het systeem het winstdoel "
+                "verwacht te halen. Standaard 3."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_horizon_max_months",
+            label_nl="Maximale horizon (maanden)",
+            help_nl=(
+                "Bovenkant van het tijdsvenster voor het winstdoel. Het systeem "
+                "berekent de kans op +X% binnen deze periode. Standaard 6."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_min_position_eur",
+            label_nl="Minimale positie per aandeel (EUR)",
+            help_nl=(
+                "Ondergrens voor de overtuiging-gewogen positiegrootte. Bij lage "
+                "overtuiging krijgt een aandeel dit minimumbedrag. Standaard €25.000."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_max_position_eur",
+            label_nl="Maximale positie per aandeel (EUR)",
+            help_nl=(
+                "Bovengrens voor de overtuiging-gewogen positiegrootte. Bij maximale "
+                "overtuiging krijgt een aandeel dit maximumbedrag. Standaard €100.000."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_confidence_threshold_pct",
+            label_nl="Minimum overtuiging voor suggestie (%)",
+            help_nl=(
+                "Een aandeel verschijnt alleen als suggestie als het model deze kans "
+                "of meer berekent op het halen van het winstdoel binnen de horizon. "
+                "Standaard 70%."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_max_sector_pct",
+            label_nl="Maximum per sector (%)",
+            help_nl=(
+                "Begrenst hoeveel van het trading-budget in één sector mag zitten "
+                "om concentratierisico te beperken. Standaard 25%."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_min_market_cap_eur",
+            label_nl="Minimum marktkapitalisatie (EUR)",
+            help_nl=(
+                "Aandelen met een marktkapitalisatie onder deze grens worden niet "
+                "voorgesteld — small-caps en penny stocks worden uitgesloten. "
+                "Standaard €5 miljard."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_max_annual_volatility_pct",
+            label_nl="Maximum jaarvolatiliteit (%)",
+            help_nl=(
+                "Aandelen met een jaarvolatiliteit boven deze grens worden niet "
+                "voorgesteld — hoge volatiliteit verhoogt kapitaalverliesrisico. "
+                "Standaard 30%."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_total_budget_eur",
+            label_nl="Totale trading-budget (EUR)",
+            help_nl=(
+                "Totaal bedrag dat het systeem mag inzetten in de profit-harvest "
+                "strategie. Rest blijft op cash/termijnrekening. Standaard "
+                "€1.000.000."
             ),
         ),
     )
