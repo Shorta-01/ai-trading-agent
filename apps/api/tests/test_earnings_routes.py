@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import json  # noqa: F401  - used by some seeded payloads in earlier tests
 from datetime import UTC, date, datetime, timedelta
 
 from ai_trading_agent_storage.metadata import metadata
@@ -154,3 +154,87 @@ def test_upcoming_skips_past_events(tmp_path) -> None:  # type: ignore[no-untype
     client = _client(db_url)
     body = client.get("/earnings/upcoming").json()
     assert body["items"] == []
+
+
+# ---- POST /earnings/refresh (V1.2 §AJ) ----
+
+
+def test_refresh_skipped_when_storage_disabled() -> None:
+    _disable_storage()
+    client = TestClient(app)
+    response = client.post(
+        "/earnings/refresh", json={"symbols": ["AAPL.US"], "window_days": 21}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "skipped"
+    assert "Opslag" in (body.get("error_text") or "")
+
+
+def test_refresh_skipped_when_eodhd_key_missing(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    db_url = _seed_db(tmp_path)
+    api_settings.eodhd_api_key = None
+    client = _client(db_url)
+    response = client.post(
+        "/earnings/refresh", json={"symbols": ["AAPL.US"], "window_days": 21}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "skipped"
+    assert "EODHD" in (body.get("error_text") or "")
+
+
+def test_refresh_rejects_empty_symbols(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    db_url = _seed_db(tmp_path)
+    client = _client(db_url)
+    response = client.post(
+        "/earnings/refresh", json={"symbols": [], "window_days": 21}
+    )
+    assert response.status_code == 400
+
+
+def test_refresh_rejects_non_positive_window_days(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    db_url = _seed_db(tmp_path)
+    client = _client(db_url)
+    response = client.post(
+        "/earnings/refresh", json={"symbols": ["AAPL.US"], "window_days": 0}
+    )
+    assert response.status_code == 400
+
+
+def test_refresh_with_key_and_storage_runs_end_to_end(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    db_url = _seed_db(tmp_path)
+    api_settings.eodhd_api_key = "test-key"
+    client = _client(db_url)
+
+    # Patch the EodhdClient constructor on the route module so we
+    # never make a real HTTP call.
+    from portfolio_outlook_api import earnings_routes as routes_module
+
+    class _StubClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def fetch_earnings_calendar(self, *, symbols, from_date, to_date):
+            from portfolio_outlook_api.eodhd_client import EodhdEarningsEvent
+
+            return [
+                EodhdEarningsEvent(
+                    symbol="AAPL.US",
+                    event_date=date(2026, 7, 30),
+                    status="confirmed",
+                    raw_payload={"eps_estimate": "1.45"},
+                ),
+            ]
+
+    monkeypatch.setattr(routes_module, "EodhdClient", _StubClient)
+    response = client.post(
+        "/earnings/refresh",
+        json={"symbols": ["AAPL.US"], "window_days": 21},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["fetched_count"] == 1
+    assert body["upserted_count"] == 1
+    assert body["error_text"] is None

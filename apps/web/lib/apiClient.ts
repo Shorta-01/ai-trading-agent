@@ -487,6 +487,16 @@ export type EarningsUpcomingResponse = {
   items: EarningsEventRow[];
 };
 
+export type EarningsRefreshResponse = {
+  status: string;
+  fetched_count: number;
+  upserted_count: number;
+  symbols_requested: number;
+  window_days: number;
+  error_text: string | null;
+  safe_for_orders: boolean;
+};
+
 export type SuggestionsGridItem = {
   suggestion_id: string;
   ibkr_conid: string;
@@ -2349,6 +2359,14 @@ export const apiClient = {
     getJson<EarningsUpcomingResponse>(
       `/earnings/upcoming${params?.days ? `?days=${params.days}` : ""}`,
     ),
+  refreshEarnings: (payload: {
+    symbols: string[];
+    window_days?: number;
+  }) =>
+    postJson<EarningsRefreshResponse>("/earnings/refresh", {
+      symbols: payload.symbols,
+      window_days: payload.window_days ?? 21,
+    }),
   getNotificationSettings: () =>
     getJson<NotificationSettingsResponse>("/settings/notifications"),
   updateNotificationSettings: (

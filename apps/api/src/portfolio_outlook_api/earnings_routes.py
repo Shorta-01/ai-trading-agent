@@ -1,19 +1,13 @@
-"""Upcoming earnings calendar endpoint (V1.2 §AI).
+"""Earnings calendar endpoints (V1.2 §AI + §AJ).
 
-Reads the ``earnings_events`` table populated by the EODHD writer
-leg (follow-up §AJ) and surfaces the most-imminent earnings events
-within a configurable window. Powers two consumers:
+* ``GET /earnings/upcoming`` — read-side; reads the
+  ``earnings_events`` table and surfaces upcoming events.
+* ``POST /earnings/refresh`` — write-side; calls the EODHD adapter
+  for the given symbols and upserts via the repository.
 
-* The dashboard's ``EarningsThisWeekStrip`` — replaces the previous
-  workaround that filtered orchestrator verdicts for
-  ``decision == "skip_earnings_window"``.
-* The orchestrator candidate provider (via
-  :meth:`SqlAlchemyEarningsEventRepository.get_next_for_symbols`) —
-  feeds the locked earnings-window gate.
-
-Read-only; never raises except on storage-niet-beschikbaar (503).
-When the table is empty (no writer leg wired yet), the endpoint
-returns ``items=[]`` and the dashboard falls back gracefully.
+Read-side never raises except on storage failure (503). Write-side
+short-circuits with ``status="skipped"`` when the EODHD key is
+missing so the endpoint stays useful in dev/paper deployments.
 """
 
 from __future__ import annotations
@@ -31,6 +25,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.earnings_sync import refresh_earnings_calendar
+from portfolio_outlook_api.eodhd_client import EodhdClient
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +125,108 @@ def get_upcoming_earnings(
         help_nl=_HELP_NL,
         window_days=days,
         items=items,
+    )
+
+
+class EarningsRefreshRequest(BaseModel):
+    symbols: list[str]
+    window_days: int = 21
+
+
+class EarningsRefreshResponse(BaseModel):
+    status: str  # ok | skipped | error
+    fetched_count: int
+    upserted_count: int
+    symbols_requested: int
+    window_days: int
+    error_text: str | None
+    safe_for_orders: bool
+
+
+_MAX_REFRESH_WINDOW_DAYS = 90
+
+
+@router.post("/earnings/refresh", response_model=EarningsRefreshResponse)
+def post_refresh_earnings(
+    payload: EarningsRefreshRequest,
+) -> EarningsRefreshResponse:
+    """Trigger a synchronous earnings calendar refresh for the given
+    EODHD-shaped symbols (``AAPL.US``, ``ASML.AS``, …).
+
+    Short-circuits with ``skipped`` when:
+    * The operator's EODHD key is missing, or
+    * Storage is disabled.
+
+    Caps ``window_days`` at 90 so a bug in the caller doesn't burn
+    EODHD quota.
+    """
+
+    if not payload.symbols:
+        raise HTTPException(status_code=400, detail="symbols mag niet leeg zijn")
+    if payload.window_days <= 0:
+        raise HTTPException(status_code=400, detail="window_days moet > 0 zijn")
+    window_days = min(payload.window_days, _MAX_REFRESH_WINDOW_DAYS)
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return EarningsRefreshResponse(
+            status="skipped",
+            fetched_count=0,
+            upserted_count=0,
+            symbols_requested=len(payload.symbols),
+            window_days=window_days,
+            error_text="Opslag is uitgeschakeld of database_url ontbreekt.",
+            safe_for_orders=False,
+        )
+
+    api_key = getattr(settings, "eodhd_api_key", None)
+    if not api_key:
+        return EarningsRefreshResponse(
+            status="skipped",
+            fetched_count=0,
+            upserted_count=0,
+            symbols_requested=len(payload.symbols),
+            window_days=window_days,
+            error_text="EODHD api-key ontbreekt — voeg ``eodhd_api_key`` toe.",
+            safe_for_orders=False,
+        )
+
+    now = datetime.now(tz=UTC)
+    try:
+        provider_conn = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider_conn.checked_connection(require_writable=True) as checked:
+            client = EodhdClient(api_key=api_key)
+            repo = SqlAlchemyEarningsEventRepository(
+                checked.connection, checked.readiness
+            )
+            summary = refresh_earnings_calendar(
+                provider=client,
+                repository=repo,
+                symbols=payload.symbols,
+                today=now.date(),
+                window_days=window_days,
+                source="eodhd",
+                fetched_at=now,
+            )
+            # ``checked_connection`` doesn't auto-commit; the upserts
+            # must persist past the context-manager close.
+            checked.connection.commit()
+    except StorageConnectionError as exc:
+        logger.warning("earnings-refresh storage error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+
+    return EarningsRefreshResponse(
+        status="error" if summary.error_text else "ok",
+        fetched_count=summary.fetched_count,
+        upserted_count=summary.upserted_count,
+        symbols_requested=summary.symbols_requested,
+        window_days=summary.window_days,
+        error_text=summary.error_text,
+        safe_for_orders=False,
     )
 
 

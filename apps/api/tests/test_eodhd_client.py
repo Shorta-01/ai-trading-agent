@@ -44,6 +44,10 @@ def _ok(payload: dict[str, object]) -> EodhdHttpResponse:
     return EodhdHttpResponse(status_code=200, body=json.dumps(payload))
 
 
+def _ok_list(payload: list[dict[str, object]]) -> EodhdHttpResponse:
+    return EodhdHttpResponse(status_code=200, body=json.dumps(payload))
+
+
 def test_fetch_quote_returns_parsed_decimal_fields_and_timestamp() -> None:
     captured: list[str] = []
     client = EodhdClient(
@@ -303,3 +307,118 @@ def test_fetch_fundamentals_rejects_empty_symbol() -> None:
     )
     with pytest.raises(EodhdClientError):
         client.fetch_fundamentals("")
+
+
+# ---- earnings calendar (V1.2 §AJ) ----
+
+
+def test_fetch_earnings_calendar_parses_wrapped_payload() -> None:
+    from datetime import date
+
+    captured: list[str] = []
+    payload = {
+        "earnings": [
+            {
+                "code": "AAPL.US",
+                "report_date": "2026-07-30",
+                "estimated": "No",
+                "eps_estimate": "1.45",
+            },
+            {
+                "code": "MSFT.US",
+                "report_date": "2026-07-22",
+                "estimated": "Yes",
+            },
+        ]
+    }
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(_ok(payload), capture=captured),
+    )
+    events = client.fetch_earnings_calendar(
+        symbols=("AAPL.US", "MSFT.US"),
+        from_date=date(2026, 6, 12),
+        to_date=date(2026, 8, 12),
+    )
+    # Sorted by event_date asc:
+    assert [(e.symbol, e.event_date.isoformat(), e.status) for e in events] == [
+        ("MSFT.US", "2026-07-22", "estimated"),
+        ("AAPL.US", "2026-07-30", "confirmed"),
+    ]
+    assert events[1].raw_payload["eps_estimate"] == "1.45"
+    assert "symbols=AAPL.US%2CMSFT.US" in captured[0]
+    assert "from=2026-06-12" in captured[0]
+    assert "to=2026-08-12" in captured[0]
+
+
+def test_fetch_earnings_calendar_accepts_bare_list_payload() -> None:
+    from datetime import date
+
+    payload = [
+        {"code": "ABNB.US", "report_date": "2026-07-15"},
+    ]
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(_ok_list(payload)),
+    )
+    events = client.fetch_earnings_calendar(
+        symbols=("ABNB.US",),
+        from_date=date(2026, 6, 12),
+        to_date=date(2026, 8, 12),
+    )
+    assert events[0].symbol == "ABNB.US"
+    assert events[0].status == "estimated"
+
+
+def test_fetch_earnings_calendar_drops_rows_with_bad_dates() -> None:
+    from datetime import date
+
+    payload = {
+        "earnings": [
+            {"code": "BAD.US", "report_date": "not-a-date"},
+            {"code": "GOOD.US", "report_date": "2026-07-30"},
+            {"code": "", "report_date": "2026-08-01"},
+        ]
+    }
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(_ok(payload)),
+    )
+    events = client.fetch_earnings_calendar(
+        symbols=("BAD.US", "GOOD.US"),
+        from_date=date(2026, 6, 12),
+        to_date=date(2026, 8, 31),
+    )
+    assert [e.symbol for e in events] == ["GOOD.US"]
+
+
+def test_fetch_earnings_calendar_returns_empty_for_empty_input() -> None:
+    from datetime import date
+
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(),
+    )
+    assert (
+        client.fetch_earnings_calendar(
+            symbols=(),
+            from_date=date(2026, 6, 12),
+            to_date=date(2026, 6, 30),
+        )
+        == []
+    )
+
+
+def test_fetch_earnings_calendar_rejects_inverted_dates() -> None:
+    from datetime import date
+
+    client = EodhdClient(
+        api_key="test-key",
+        http_fetcher=_fetcher_returning(),
+    )
+    with pytest.raises(EodhdClientError):
+        client.fetch_earnings_calendar(
+            symbols=("AAPL.US",),
+            from_date=date(2026, 8, 1),
+            to_date=date(2026, 6, 1),
+        )
