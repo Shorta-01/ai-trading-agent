@@ -88,6 +88,25 @@ from .ai_ts_predictor import (
     TsModelProviderResult,
     TsModelProviderUnavailable,
 )
+from .analyst_revision_predictor import (
+    ANALYST_REVISION_MIN_BARS,
+    BLOCKING_REASON_NO_ANALYST_DATA,
+    AnalystRevisionEntry,
+    AnalystRevisionPredictor,
+    AnalystRevisionUniverse,
+)
+from .analyst_revision_predictor import (
+    BLOCKING_REASON_SYMBOL_NOT_IN_UNIVERSE as ANALYST_REVISION_NOT_IN_UNIVERSE,
+)
+from .analyst_revision_predictor import (
+    MAX_ANNUAL_DRIFT_PCT as ANALYST_REVISION_MAX_ANNUAL_DRIFT_PCT,
+)
+from .analyst_revision_predictor import (
+    MODEL_CODE as ANALYST_REVISION_MODEL_CODE,
+)
+from .analyst_revision_predictor import (
+    MODEL_VERSION as ANALYST_REVISION_MODEL_VERSION,
+)
 from .approval_guards import (
     build_approved_action,
     is_approval_decision_final,
@@ -586,6 +605,15 @@ __all__ = [
     "is_approval_decision_final",
     "build_approved_action",
     "require_approved_decision",
+    "ANALYST_REVISION_MIN_BARS",
+    "BLOCKING_REASON_NO_ANALYST_DATA",
+    "ANALYST_REVISION_NOT_IN_UNIVERSE",
+    "ANALYST_REVISION_MAX_ANNUAL_DRIFT_PCT",
+    "ANALYST_REVISION_MODEL_CODE",
+    "ANALYST_REVISION_MODEL_VERSION",
+    "AnalystRevisionEntry",
+    "AnalystRevisionPredictor",
+    "AnalystRevisionUniverse",
     "check_suggestion_eligible",
     "require_suggestion_eligible",
     "check_data_quality_allows_suggestions",
