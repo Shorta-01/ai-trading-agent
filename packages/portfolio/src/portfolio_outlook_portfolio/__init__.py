@@ -336,6 +336,10 @@ from .news_severity import (
     classify_news_severity,
     evaluate_news_exit,
 )
+from .orchestrator_explanation import (
+    explain_decision,
+    explain_decision_detail,
+)
 from .paper_setup_guards import (
     check_first_run_setup_request_allowed,
     check_setup_preview_safe,
@@ -787,6 +791,8 @@ __all__ = [
     "OrchestratorInputs",
     "OrchestratorResult",
     "evaluate_profit_harvest_candidate",
+    "explain_decision",
+    "explain_decision_detail",
     "BLOCKING_REASON_EARNINGS_WINDOW",
     "DEFAULT_EARNINGS_BLOCK_DAYS",
     "EarningsGateInputs",
