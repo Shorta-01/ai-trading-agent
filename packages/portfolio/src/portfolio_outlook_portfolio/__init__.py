@@ -257,6 +257,19 @@ from .lots import (
     derive_lot_status,
     validate_lot_quantities,
 )
+from .macro_regime_gate import (
+    BLOCKING_REASON_BEAR_TREND,
+    BLOCKING_REASON_VIX_TOO_HIGH,
+    DEFAULT_MA_LONG_DAYS,
+    DEFAULT_MA_SHORT_DAYS,
+    DEFAULT_VIX_THRESHOLD,
+    MacroRegimeInputs,
+    MacroRegimeResult,
+    evaluate_macro_regime,
+)
+from .macro_regime_gate import (
+    BLOCKING_REASON_INSUFFICIENT_HISTORY as MACRO_REGIME_BLOCKING_REASON_INSUFFICIENT_HISTORY,
+)
 from .mean_reversion_predictor import (
     BOLLINGER_PERIOD,
     HURST_WINDOW,
@@ -687,6 +700,15 @@ __all__ = [
     "ConfidenceGateResult",
     "evaluate_confidence_gate",
     "probability_of_target_hit",
+    "BLOCKING_REASON_BEAR_TREND",
+    "MACRO_REGIME_BLOCKING_REASON_INSUFFICIENT_HISTORY",
+    "BLOCKING_REASON_VIX_TOO_HIGH",
+    "DEFAULT_MA_LONG_DAYS",
+    "DEFAULT_MA_SHORT_DAYS",
+    "DEFAULT_VIX_THRESHOLD",
+    "MacroRegimeInputs",
+    "MacroRegimeResult",
+    "evaluate_macro_regime",
     "BLOCKING_REASON_ABOVE_MAX_VOLATILITY",
     "BLOCKING_REASON_BELOW_MIN_MARKET_CAP",
     "RISK_UNIVERSE_BLOCKING_REASON_INSUFFICIENT_BARS",
