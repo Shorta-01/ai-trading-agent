@@ -12,6 +12,7 @@ const getMarketHoursNow = vi.fn();
 const getIbkrSyncStatus = vi.fn();
 const getSchedulerJobs = vi.fn();
 const getActiveSystemEvents = vi.fn();
+const getReconciliationStatus = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -19,6 +20,7 @@ vi.mock("@/lib/apiClient", () => ({
     getIbkrSyncStatus: (...a: unknown[]) => getIbkrSyncStatus(...a),
     getSchedulerJobs: (...a: unknown[]) => getSchedulerJobs(...a),
     getActiveSystemEvents: (...a: unknown[]) => getActiveSystemEvents(...a),
+    getReconciliationStatus: (...a: unknown[]) => getReconciliationStatus(...a),
   },
 }));
 
@@ -40,6 +42,16 @@ beforeEach(() => {
   getIbkrSyncStatus.mockReset();
   getSchedulerJobs.mockReset();
   getActiveSystemEvents.mockReset();
+  getReconciliationStatus.mockReset();
+  getReconciliationStatus.mockResolvedValue(
+    ok({
+      ibkr_account_id: "DU1",
+      latest_run: null,
+      drafts_healed_last_24h: 0,
+      pending_manual_review_count: 0,
+      unresolved_unmatched_count: 0,
+    }),
+  );
 });
 
 afterEach(() => cleanup());
@@ -134,6 +146,28 @@ describe("MorningStatusStrip", () => {
       expect(
         screen.getByTestId("morning-status-strip-sync"),
       ).toHaveTextContent("IBKR-sync ontbreekt");
+    });
+  });
+
+  it("shows reconciliation mismatch count when any are pending", async () => {
+    getMarketHoursNow.mockResolvedValue(ok({ markets: [], help_nl: "", now_utc: "", universe_codes_selected: [] }));
+    getIbkrSyncStatus.mockResolvedValue(ok({ configured: true, last_sync_at: null }));
+    getSchedulerJobs.mockResolvedValue(ok({ status: "ok", items: [] }));
+    getActiveSystemEvents.mockResolvedValue(ok({ events: [] }));
+    getReconciliationStatus.mockResolvedValue(
+      ok({
+        ibkr_account_id: "DU1",
+        latest_run: null,
+        drafts_healed_last_24h: 0,
+        pending_manual_review_count: 2,
+        unresolved_unmatched_count: 1,
+      }),
+    );
+    render(<MorningStatusStrip />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("morning-status-strip-reconciliation"),
+      ).toHaveTextContent("Reconciliation: 3 mismatches");
     });
   });
 });

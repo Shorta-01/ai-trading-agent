@@ -10,8 +10,11 @@
  * een collapsible blok eronder voor diepgaander spitten.
  */
 
+import { BelgianTobYtdWidget } from "@/components/BelgianTobYtdWidget";
 import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge";
+import { EarningsThisWeekStrip } from "@/components/EarningsThisWeekStrip";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
+import { LastVisitDiffStrip } from "@/components/LastVisitDiffStrip";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { MorningStatusStrip } from "@/components/MorningStatusStrip";
 import { NavSparkline } from "@/components/NavSparkline";
@@ -34,6 +37,8 @@ export default function HomePage() {
   return (
     <main className="page-wrap">
       <MorningStatusStrip />
+      <LastVisitDiffStrip />
+      <EarningsThisWeekStrip />
       <TriageStrip />
 
       <section style={{ marginBottom: 12 }}>
@@ -82,6 +87,8 @@ export default function HomePage() {
         <OpenOrdersPanel />
         <RecentActivityPanel />
       </div>
+
+      <BelgianTobYtdWidget />
 
       <details
         data-testid="morning-detail-archive"

@@ -17,6 +17,7 @@ import {
   type ActiveSystemEventsResponse,
   type IbkrSyncStatusResponse,
   type MarketHoursNowResponse,
+  type ReconciliationStatusResponse,
   type SchedulerJobsResponse,
 } from "@/lib/apiClient";
 
@@ -130,12 +131,24 @@ export function MorningStatusStrip() {
     },
     refetchInterval: POLL_INTERVAL_MS,
   });
+  const reconciliationQuery = useQuery({
+    queryKey: ["morning-strip-reconciliation"],
+    queryFn: async (): Promise<ReconciliationStatusResponse | null> => {
+      const r = await apiClient.getReconciliationStatus();
+      return r.ok ? r.data : null;
+    },
+    refetchInterval: POLL_INTERVAL_MS,
+  });
 
   const market = marketSummary(marketQuery.data ?? null);
   const sync = syncQuery.data ?? null;
   const scheduler = schedulerQuery.data ?? null;
   const events = eventsQuery.data ?? null;
+  const reconciliation = reconciliationQuery.data ?? null;
   const alertCount = events?.events?.length ?? 0;
+  const mismatchCount =
+    (reconciliation?.pending_manual_review_count ?? 0) +
+    (reconciliation?.unresolved_unmatched_count ?? 0);
 
   const today = new Date().toLocaleDateString("nl-BE", {
     weekday: "long",
@@ -159,6 +172,13 @@ export function MorningStatusStrip() {
     alertCount === 0 ? "ok" : alertCount >= 3 ? "geblokkeerd" : "aandacht";
   const alertsLabel =
     alertCount === 0 ? "Geen actieve meldingen" : `${alertCount} actieve meldingen`;
+
+  const reconciliationTone: "ok" | "aandacht" | "geblokkeerd" =
+    mismatchCount === 0 ? "ok" : mismatchCount >= 3 ? "geblokkeerd" : "aandacht";
+  const reconciliationLabel =
+    mismatchCount === 0
+      ? "Reconciliation in orde"
+      : `Reconciliation: ${mismatchCount} mismatches`;
 
   return (
     <section
@@ -192,6 +212,11 @@ export function MorningStatusStrip() {
         testid="morning-status-strip-briefing"
       />
       <Chip label={alertsLabel} tone={alertsTone} testid="morning-status-strip-alerts" />
+      <Chip
+        label={reconciliationLabel}
+        tone={reconciliationTone}
+        testid="morning-status-strip-reconciliation"
+      />
     </section>
   );
 }

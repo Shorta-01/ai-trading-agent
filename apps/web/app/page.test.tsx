@@ -12,6 +12,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/components/MorningStatusStrip", () => ({
   MorningStatusStrip: () => <div data-testid="stub-morning-status-strip" />,
 }));
+vi.mock("@/components/LastVisitDiffStrip", () => ({
+  LastVisitDiffStrip: () => <div data-testid="stub-last-visit-diff-strip" />,
+}));
+vi.mock("@/components/EarningsThisWeekStrip", () => ({
+  EarningsThisWeekStrip: () => <div data-testid="stub-earnings-this-week-strip" />,
+}));
+vi.mock("@/components/BelgianTobYtdWidget", () => ({
+  BelgianTobYtdWidget: () => <div data-testid="stub-belgian-tob-ytd-widget" />,
+}));
 vi.mock("@/components/TriageStrip", () => ({
   TriageStrip: () => <div data-testid="stub-triage-strip" />,
 }));
@@ -129,5 +138,18 @@ describe("HomePage (morning dashboard)", () => {
     expect(details).toBeInTheDocument();
     expect(details.tagName.toLowerCase()).toBe("details");
     expect(details).toHaveTextContent("Detail");
+  });
+
+  it("renders the §AG follow-up surfaces (last-visit, earnings, TOB ytd)", () => {
+    render(<HomePage />);
+    expect(
+      screen.getByTestId("stub-last-visit-diff-strip"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("stub-earnings-this-week-strip"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("stub-belgian-tob-ytd-widget"),
+    ).toBeInTheDocument();
   });
 });
