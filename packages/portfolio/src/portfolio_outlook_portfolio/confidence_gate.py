@@ -39,6 +39,13 @@ A few practitioner notes baked into the contract:
   substantially higher than the terminal-only number — that's the
   honest reading for a take-profit LMT.
 
+* **Fat-tail correction** (V1.2 §Q). The lognormal model assumes
+  Normal log-returns; empirical equity returns are Student-t with
+  df ≈ 4-6. ``fat_tail_factor`` multiplies the horizon-scaled σ
+  before the running-max formula so the distribution honestly
+  accounts for occasional large excursions. Default 1.15 ≈ df=5
+  calibration; 1.0 reverts to pure-Normal.
+
 * **Empirical calibration upstream.** The forecast layer already runs
   a calibration feedback loop (V1.2 §C); the confidence gate inherits
   that honesty automatically by consuming its outputs.
@@ -94,6 +101,9 @@ def _normal_cdf(x: float) -> float:
     return 0.5 * (1.0 + erf(x / sqrt(2.0)))
 
 
+DEFAULT_FAT_TAIL_FACTOR: Final[Decimal] = Decimal("1.15")
+
+
 def probability_of_target_hit(
     *,
     current_price: Decimal,
@@ -101,6 +111,7 @@ def probability_of_target_hit(
     annual_volatility_pct: Decimal,
     horizon_days: int,
     target_price: Decimal,
+    fat_tail_factor: Decimal = DEFAULT_FAT_TAIL_FACTOR,
 ) -> Decimal | None:
     """Compute the GBM running-maximum probability ``P(max S_t >= K)``.
 
@@ -148,8 +159,18 @@ def probability_of_target_hit(
     if target_price <= current_price:
         return Decimal("100.00")
 
+    if fat_tail_factor <= 0:
+        return None
     sigma_annual = float(annual_volatility_pct) / 100.0
-    sigma_horizon = sigma_annual * sqrt(horizon_days / TRADING_DAYS_PER_YEAR)
+    # V1.2 §Q fat-tail adjustment — widens the effective σ to honour
+    # the empirical fact that equity log-returns have fatter tails
+    # than Normal. The running-max formula then naturally accounts
+    # for more frequent excursions to the barrier.
+    sigma_horizon = (
+        sigma_annual
+        * sqrt(horizon_days / TRADING_DAYS_PER_YEAR)
+        * float(fat_tail_factor)
+    )
     if sigma_horizon == 0.0:
         return None
 
@@ -194,6 +215,7 @@ def evaluate_confidence_gate(
     target_net_pct: Decimal,
     security_class: TobSecurityClass,
     confidence_threshold_pct: Decimal,
+    fat_tail_factor: Decimal = DEFAULT_FAT_TAIL_FACTOR,
 ) -> ConfidenceGateResult:
     """Decide whether a forecast meets the profit-harvest confidence bar.
 
@@ -286,6 +308,7 @@ def evaluate_confidence_gate(
         annual_volatility_pct=annual_volatility_pct,
         horizon_days=horizon_days,
         target_price=target_price,
+        fat_tail_factor=fat_tail_factor,
     )
     if p_hit is None:
         return ConfidenceGateResult(
