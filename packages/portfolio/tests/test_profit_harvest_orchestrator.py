@@ -195,8 +195,16 @@ def test_small_cap_short_circuits_at_risk_universe() -> None:
 
 
 def test_low_p_hit_short_circuits_at_confidence() -> None:
+    # V1.2 §P running-max upgrade: even a mildly bearish median still
+    # gives meaningful hit probability over a 6-month horizon with
+    # 20 % vol. To produce a *clear* skip we need a low-vol forecast
+    # whose median sits well below the target.
     result = evaluate_profit_harvest_candidate(
-        _make_inputs(median_forecast_price=Decimal("98"))  # below target
+        _make_inputs(
+            median_forecast_price=Decimal("90"),  # 10 % below current
+            annual_volatility_pct=Decimal("5"),  # low vol
+            horizon_days=63,  # 3 months
+        )
     )
     assert result.decision == DECISION_SKIP_CONFIDENCE
     assert result.macro is not None
@@ -329,9 +337,15 @@ def test_diagnostics_preserved_through_pipeline_on_success() -> None:
 
 def test_diagnostics_preserved_on_skip_carry_what_we_know() -> None:
     # Skip at confidence — macro and risk_universe should have been
-    # computed and surfaced.
+    # computed and surfaced. Uses the same low-vol bearish forecast
+    # as `test_low_p_hit_short_circuits_at_confidence` so the skip
+    # actually fires under the V1.2 §P running-max math.
     result = evaluate_profit_harvest_candidate(
-        _make_inputs(median_forecast_price=Decimal("98"))
+        _make_inputs(
+            median_forecast_price=Decimal("90"),
+            annual_volatility_pct=Decimal("5"),
+            horizon_days=63,
+        )
     )
     assert result.decision == DECISION_SKIP_CONFIDENCE
     assert result.macro is not None
