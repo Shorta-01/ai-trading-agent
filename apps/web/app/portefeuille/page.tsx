@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PortefeuilleRealtimeSection } from "@/components/PortefeuilleRealtimeSection";
+import { ProfitHarvestCycleWidget } from "@/components/ProfitHarvestCycleWidget";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PositionPlTraceDetails } from "@/components/PositionPlTraceDetails";
 import { ValuationTraceDetails } from "@/components/ValuationTraceDetails";
@@ -259,6 +260,7 @@ export default function PortfolioPage() {
   return (
     <main className="page-wrap">
       <PortefeuilleRealtimeSection />
+      <ProfitHarvestCycleWidget />
       <section className="dashboard-panel">
         <div className="panel-head">
           <h2>Portefeuille</h2>

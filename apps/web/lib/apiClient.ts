@@ -433,6 +433,32 @@ export type DigestTodayResponse = {
   safe_for_orders: boolean;
 };
 
+export type OrchestratorVerdictsSummaryResponse = {
+  title_nl: string;
+  help_nl: string;
+  total: number;
+  by_decision: Record<string, number>;
+  latest_generated_at: string | null;
+};
+
+export type OrchestratorVerdictRow = {
+  verdict_id: string;
+  symbol: string;
+  ibkr_conid: number | null;
+  forecast_id: string | null;
+  generated_at: string;
+  decision: string;
+  blocking_reason: string | null;
+  summary_nl: string;
+  details_json: Record<string, unknown>;
+};
+
+export type OrchestratorVerdictsListResponse = {
+  title_nl: string;
+  help_nl: string;
+  items: OrchestratorVerdictRow[];
+};
+
 export type SuggestionsGridItem = {
   suggestion_id: string;
   ibkr_conid: string;
@@ -2277,6 +2303,16 @@ export const apiClient = {
   getSuggestionsGrid: () =>
     getJson<SuggestionsGridResponse>("/suggestions/grid"),
   getDigestToday: () => getJson<DigestTodayResponse>("/digests/today"),
+  getOrchestratorVerdictsSummary: () =>
+    getJson<OrchestratorVerdictsSummaryResponse>(
+      "/orchestrator-verdicts/today",
+    ),
+  listOrchestratorVerdicts: (params?: { limit?: number }) =>
+    getJson<OrchestratorVerdictsListResponse>(
+      `/orchestrator-verdicts${
+        params?.limit ? `?limit=${params.limit}` : ""
+      }`,
+    ),
   getNotificationSettings: () =>
     getJson<NotificationSettingsResponse>("/settings/notifications"),
   updateNotificationSettings: (

@@ -8,6 +8,7 @@ import { ChartPlaceholder } from "@/components/ChartPlaceholder";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { NavSparkline } from "@/components/NavSparkline";
+import { OrchestratorVerdictsSummary } from "@/components/OrchestratorVerdictsSummary";
 import { PredictorPerformanceWidget } from "@/components/PredictorPerformanceWidget";
 import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
@@ -91,6 +92,9 @@ export default function HomePage() {
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <ForecastDaySummaryWidget />
+      </section>
+      <section style={{ marginBottom: "0.75rem" }}>
+        <OrchestratorVerdictsSummary />
       </section>
       <section style={{ marginBottom: "0.75rem" }}>
         <NavSparkline />
