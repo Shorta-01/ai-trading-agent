@@ -151,6 +151,21 @@ def test_user_strategy_settings_default_trading_cycle_parameters() -> None:
     assert settings.trading_fat_tail_factor == Decimal("1.15")
     # V1.2 §R earnings calendar pre-print exclusion window.
     assert settings.trading_earnings_block_days == 5
+    # V1.2 §S news-sentiment max boost.
+    assert settings.trading_news_buy_bias_max_boost_pct == Decimal("5")
+
+
+def test_user_strategy_settings_rejects_invalid_news_boost() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(
+            trading_news_buy_bias_max_boost_pct=Decimal("-1")
+        )
+    with pytest.raises(ValidationError):
+        UserStrategySettings(
+            trading_news_buy_bias_max_boost_pct=Decimal("25")
+        )
 
 
 def test_user_strategy_settings_rejects_invalid_earnings_block_days() -> None:
@@ -257,6 +272,7 @@ def test_user_strategy_help_texts_cover_all_trading_fields() -> None:
         "trading_total_budget_eur",
         "trading_fat_tail_factor",
         "trading_earnings_block_days",
+        "trading_news_buy_bias_max_boost_pct",
     }
     assert expected.issubset(keys)
 

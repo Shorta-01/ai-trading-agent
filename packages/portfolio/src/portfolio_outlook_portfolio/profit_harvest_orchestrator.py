@@ -57,6 +57,12 @@ from portfolio_outlook_portfolio.macro_regime_gate import (
     MacroRegimeResult,
     evaluate_macro_regime,
 )
+from portfolio_outlook_portfolio.news_sentiment import (
+    NewsSentimentScore,
+    apply_buy_bias_to_confidence,
+    compute_news_buy_bias,
+)
+from portfolio_outlook_portfolio.news_severity import NewsItem
 from portfolio_outlook_portfolio.profit_harvest import (
     conviction_weighted_position_size_eur,
 )
@@ -132,10 +138,16 @@ class OrchestratorInputs:
     min_market_cap_eur: Decimal
     max_annual_volatility_pct: Decimal
     max_sector_pct: Decimal
+    # ---- optional / defaulted (must trail non-default fields) -------
+    # V1.2 §S news sentiment inputs (default empty so existing
+    # callers that don't yet wire news data still construct cleanly).
+    candidate_news_items: Sequence[NewsItem] = ()
     # V1.2 §Q fat-tail correction for the confidence gate.
     fat_tail_factor: Decimal = Decimal("1.15")
     # V1.2 §R earnings pre-print exclusion window (calendar days).
     earnings_block_days: int = DEFAULT_EARNINGS_BLOCK_DAYS
+    # V1.2 §S maximum conviction boost from bullish news. 0 disables.
+    news_buy_bias_max_boost_pct: Decimal = Decimal("5")
 
 
 @dataclass(frozen=True)
@@ -153,6 +165,8 @@ class OrchestratorResult:
     risk_universe: RiskUniverseGateResult | None
     earnings: EarningsGateResult | None
     confidence: ConfidenceGateResult | None
+    news_sentiment: NewsSentimentScore | None
+    boosted_confidence_pct: Decimal | None
     proposed_position_eur: Decimal | None
     sector_concentration: SectorConcentrationResult | None
     pair_build: TakeProfitBuilderResult | None
@@ -184,6 +198,8 @@ def evaluate_profit_harvest_candidate(
             risk_universe=None,
             earnings=None,
             confidence=None,
+            news_sentiment=None,
+            boosted_confidence_pct=None,
             proposed_position_eur=None,
             sector_concentration=None,
             pair_build=None,
@@ -208,6 +224,8 @@ def evaluate_profit_harvest_candidate(
             risk_universe=risk,
             earnings=None,
             confidence=None,
+            news_sentiment=None,
+            boosted_confidence_pct=None,
             proposed_position_eur=None,
             sector_concentration=None,
             pair_build=None,
@@ -230,6 +248,8 @@ def evaluate_profit_harvest_candidate(
             risk_universe=risk,
             earnings=earnings,
             confidence=None,
+            news_sentiment=None,
+            boosted_confidence_pct=None,
             proposed_position_eur=None,
             sector_concentration=None,
             pair_build=None,
@@ -254,14 +274,30 @@ def evaluate_profit_harvest_candidate(
             risk_universe=risk,
             earnings=earnings,
             confidence=confidence,
+            news_sentiment=None,
+            boosted_confidence_pct=None,
             proposed_position_eur=None,
             sector_concentration=None,
             pair_build=None,
         )
 
-    # 5. Conviction-weighted sizing.
+    # 4b. News sentiment booster (V1.2 §S). Bullish news lifts the
+    # conviction percentage *before* sizing — so a candidate that
+    # passed the confidence gate AND has supportive news flow gets
+    # a slightly larger position. The boost cannot rescue a
+    # failed confidence gate (we already returned above on failure)
+    # — it only sharpens accepted ones.
+    news_sentiment = compute_news_buy_bias(inputs.candidate_news_items)
+    boosted_confidence_pct = apply_buy_bias_to_confidence(
+        base_confidence_pct=inputs.confidence_pct,
+        buy_bias=news_sentiment.buy_bias,
+        max_boost_pct=inputs.news_buy_bias_max_boost_pct,
+    )
+
+    # 5. Conviction-weighted sizing — uses the *boosted* confidence
+    # so positive news translates into a larger EUR position.
     proposed_size = conviction_weighted_position_size_eur(
-        confidence_pct=inputs.confidence_pct,
+        confidence_pct=boosted_confidence_pct,
         confidence_floor_pct=inputs.confidence_threshold_pct,
         min_position_eur=inputs.min_position_eur,
         max_position_eur=inputs.max_position_eur,
@@ -274,6 +310,8 @@ def evaluate_profit_harvest_candidate(
             risk_universe=risk,
             earnings=earnings,
             confidence=confidence,
+            news_sentiment=news_sentiment,
+            boosted_confidence_pct=boosted_confidence_pct,
             proposed_position_eur=proposed_size,
             sector_concentration=None,
             pair_build=None,
@@ -296,6 +334,8 @@ def evaluate_profit_harvest_candidate(
             risk_universe=risk,
             earnings=earnings,
             confidence=confidence,
+            news_sentiment=news_sentiment,
+            boosted_confidence_pct=boosted_confidence_pct,
             proposed_position_eur=proposed_size,
             sector_concentration=sector,
             pair_build=None,
@@ -317,6 +357,8 @@ def evaluate_profit_harvest_candidate(
             risk_universe=risk,
             earnings=earnings,
             confidence=confidence,
+            news_sentiment=news_sentiment,
+            boosted_confidence_pct=boosted_confidence_pct,
             proposed_position_eur=proposed_size,
             sector_concentration=sector,
             pair_build=pair_build,
@@ -329,6 +371,8 @@ def evaluate_profit_harvest_candidate(
         risk_universe=risk,
         earnings=earnings,
         confidence=confidence,
+        news_sentiment=news_sentiment,
+        boosted_confidence_pct=boosted_confidence_pct,
         proposed_position_eur=proposed_size,
         sector_concentration=sector,
         pair_build=pair_build,

@@ -189,6 +189,12 @@ class UserStrategySettings(DomainBaseModel):
     # Earnings releases are binary events; buying in the run-up to
     # one is gambling on the print, not on the 3-6 month drift.
     trading_earnings_block_days: int = 5
+    # V1.2 §S news-sentiment boost cap. When a candidate's news flow
+    # contains bullish content (analyst upgrades, contract wins,
+    # dividend hikes, insider buying) the orchestrator lifts the
+    # conviction confidence by up to this many percentage points
+    # before sizing. 0 disables the boost.
+    trading_news_buy_bias_max_boost_pct: Decimal = Decimal("5")
     explanation_nl: str = (
         "Dit is je voorkeurlaag voor ranking en fit, niet voor harde blokkeringen."
     )
@@ -206,6 +212,7 @@ class UserStrategySettings(DomainBaseModel):
         "trading_max_annual_volatility_pct",
         "trading_total_budget_eur",
         "trading_fat_tail_factor",
+        "trading_news_buy_bias_max_boost_pct",
         mode="before",
     )
     @classmethod
@@ -253,6 +260,17 @@ class UserStrategySettings(DomainBaseModel):
         if value < 0 or value > 30:
             raise ValueError(
                 "trading_earnings_block_days moet tussen 0 en 30 liggen."
+            )
+        return value
+
+    @field_validator("trading_news_buy_bias_max_boost_pct")
+    @classmethod
+    def validate_news_boost_pct(cls, value: Decimal) -> Decimal:
+        # Boost above 20 pp would let news override the model
+        # entirely — outside doctrine. Zero disables.
+        if value < Decimal("0") or value > Decimal("20"):
+            raise ValueError(
+                "trading_news_buy_bias_max_boost_pct moet tussen 0 en 20 liggen."
             )
         return value
 
@@ -519,6 +537,17 @@ def get_user_strategy_help_texts() -> tuple[SettingHelpText, ...]:
                 "binaire events; een aandeel kan ±20 % springen op de publicatie. "
                 "Bestaande posities worden niet verkocht — die wachten op het "
                 "winstdoel of een hard nieuwsbericht. Standaard 5 dagen."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_news_buy_bias_max_boost_pct",
+            label_nl="Nieuws-overtuiging boost (maximaal %)",
+            help_nl=(
+                "Wanneer een aandeel positieve nieuwsstroom heeft (analist-"
+                "verhoging, dividendverhoging, contractwinst, insider-aankopen) "
+                "verhoogt het systeem de overtuigingsscore met maximaal dit "
+                "percentage. Zo krijgt een aandeel met goede momentum ook een "
+                "iets grotere positie. 0 = geen boost. Standaard 5."
             ),
         ),
     )

@@ -15,6 +15,7 @@ from portfolio_outlook_portfolio import (
     DECISION_SKIP_SIZING,
     DECISION_SUGGEST,
     HistoricalBar,
+    NewsItem,
     OrchestratorInputs,
     SectorAllocation,
     TobSecurityClass,
@@ -79,6 +80,8 @@ def _make_inputs(
     max_sector_pct: Decimal = Decimal("25"),
     today: date = date(2025, 4, 15),
     next_earnings_date: date | None = None,
+    candidate_news_items: tuple[NewsItem, ...] = (),
+    news_buy_bias_max_boost_pct: Decimal = Decimal("5"),
 ) -> OrchestratorInputs:
     if candidate_bars is None:
         candidate_bars = _moderate_vol_bars(120)
@@ -101,6 +104,8 @@ def _make_inputs(
         existing_sector_allocations=existing_sector_allocations,
         today=today,
         next_earnings_date=next_earnings_date,
+        candidate_news_items=candidate_news_items,
+        news_buy_bias_max_boost_pct=news_buy_bias_max_boost_pct,
         target_net_pct=target_net_pct,
         confidence_threshold_pct=confidence_threshold_pct,
         min_position_eur=min_position_eur,
@@ -197,6 +202,57 @@ def test_small_cap_short_circuits_at_risk_universe() -> None:
 
 
 # ---- skip-at-confidence ---------------------------------------------
+
+
+def test_bullish_news_lifts_position_size() -> None:
+    # Compare same candidate with and without bullish news. With
+    # news flow the boosted confidence pushes the proposed position
+    # higher under conviction-weighted sizing.
+    base = evaluate_profit_harvest_candidate(_make_inputs())
+    boosted = evaluate_profit_harvest_candidate(
+        _make_inputs(
+            candidate_news_items=(
+                NewsItem(title="Morgan Stanley analyst upgrade"),
+                NewsItem(title="Dividend hike announced"),
+            )
+        )
+    )
+    assert base.decision == DECISION_SUGGEST
+    assert boosted.decision == DECISION_SUGGEST
+    assert base.proposed_position_eur is not None
+    assert boosted.proposed_position_eur is not None
+    assert boosted.proposed_position_eur > base.proposed_position_eur
+    assert boosted.news_sentiment is not None
+    assert boosted.news_sentiment.buy_bias > Decimal("0")
+    assert boosted.boosted_confidence_pct is not None
+    assert boosted.boosted_confidence_pct > base.boosted_confidence_pct  # type: ignore[operator]
+
+
+def test_zero_news_boost_setting_disables_lift() -> None:
+    # Setting max_boost = 0 means even bullish news doesn't change
+    # the position size.
+    base = evaluate_profit_harvest_candidate(
+        _make_inputs(news_buy_bias_max_boost_pct=Decimal("0"))
+    )
+    boosted = evaluate_profit_harvest_candidate(
+        _make_inputs(
+            candidate_news_items=(NewsItem(title="Analyst upgrade for stock"),),
+            news_buy_bias_max_boost_pct=Decimal("0"),
+        )
+    )
+    assert base.proposed_position_eur == boosted.proposed_position_eur
+
+
+def test_neutral_news_does_not_boost() -> None:
+    base = evaluate_profit_harvest_candidate(_make_inputs())
+    neutral = evaluate_profit_harvest_candidate(
+        _make_inputs(
+            candidate_news_items=(
+                NewsItem(title="Quarterly 10-Q filed with SEC"),
+            )
+        )
+    )
+    assert base.proposed_position_eur == neutral.proposed_position_eur
 
 
 def test_earnings_window_short_circuits_at_earnings() -> None:
