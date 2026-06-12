@@ -13,6 +13,7 @@ from portfolio_outlook_api.morning_chain import (
     LEG_DECISION_PACKAGE_SYNC,
     LEG_FORECAST_SYNC,
     LEG_MARKET_DATA_SYNC,
+    LEG_ORCHESTRATOR_SCORING,
     LEG_STATUS_FAILED,
     LEG_STATUS_SKIPPED,
     LEG_STATUS_SUCCEEDED,
@@ -71,6 +72,7 @@ def test_morning_chain_leg_names_are_in_locked_order() -> None:
         LEG_SUGGESTION_SYNC,
         LEG_DECISION_PACKAGE_SYNC,
         LEG_ACTION_DRAFT_SYNC,
+        LEG_ORCHESTRATOR_SCORING,
         LEG_DAILY_BRIEFING_SYNC,
     )
 
@@ -208,7 +210,7 @@ def test_default_legs_all_skipped_when_flags_are_off() -> None:
     legs = build_default_morning_chain_legs(_settings())
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
-    assert [leg.status for leg in result.legs] == [LEG_STATUS_SKIPPED] * 6
+    assert [leg.status for leg in result.legs] == [LEG_STATUS_SKIPPED] * 7
 
 
 def test_default_legs_succeed_when_all_flags_enabled() -> None:
@@ -219,12 +221,13 @@ def test_default_legs_succeed_when_all_flags_enabled() -> None:
             suggestions_sync_enabled=True,
             decision_packages_sync_enabled=True,
             action_drafts_sync_enabled=True,
+            orchestrator_scoring_enabled=True,
             daily_briefing_sync_enabled=True,
         )
     )
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
-    assert [leg.status for leg in result.legs] == [LEG_STATUS_SUCCEEDED] * 6
+    assert [leg.status for leg in result.legs] == [LEG_STATUS_SUCCEEDED] * 7
 
 
 def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
@@ -243,7 +246,33 @@ def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
         LEG_STATUS_SKIPPED,
         LEG_STATUS_SKIPPED,
         LEG_STATUS_SKIPPED,
+        LEG_STATUS_SKIPPED,
     ]
+
+
+def test_orchestrator_scoring_leg_disabled_by_default() -> None:
+    # V1.2 §Y locked default: parallel-scoring leg is OFF until the
+    # candidate-provider wiring (Slice §Z) lands.
+    legs = build_default_morning_chain_legs(_settings())
+    result = run_morning_chain(legs=legs)
+    # The leg appears in slot 5 (after action_drafts, before
+    # daily_briefing) and is skipped.
+    orchestrator_outcome = next(
+        leg for leg in result.legs if leg.leg_name == LEG_ORCHESTRATOR_SCORING
+    )
+    assert orchestrator_outcome.status == LEG_STATUS_SKIPPED
+
+
+def test_orchestrator_scoring_leg_succeeds_when_enabled() -> None:
+    legs = build_default_morning_chain_legs(
+        _settings(orchestrator_scoring_enabled=True)
+    )
+    result = run_morning_chain(legs=legs)
+    orchestrator_outcome = next(
+        leg for leg in result.legs if leg.leg_name == LEG_ORCHESTRATOR_SCORING
+    )
+    assert orchestrator_outcome.status == LEG_STATUS_SUCCEEDED
+    assert "§Z" in orchestrator_outcome.detail_nl
 
 
 # ---- Serialisation --------------------------------------------------------

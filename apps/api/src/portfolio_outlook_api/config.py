@@ -185,6 +185,10 @@ class Settings(BaseSettings):
     ai_explanation_prompt_path: str | None = None
     daily_briefing_sync_enabled: bool = False
     daily_briefing_lookback_hours: int = 24
+    # V1.2 §Y profit-harvest orchestrator parallel-scoring leg.
+    # Disabled by default so the doctrine can be validated against
+    # the live suggestion engine before the path is promoted.
+    orchestrator_scoring_enabled: bool = False
     scheduler_enabled: bool = False
     scheduler_timezone: str = "Europe/Brussels"
     scheduler_daily_briefing_cron: str = "30 6 * * *"

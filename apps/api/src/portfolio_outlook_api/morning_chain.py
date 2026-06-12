@@ -36,6 +36,7 @@ LEG_FORECAST_SYNC: Final = "forecast_sync"
 LEG_SUGGESTION_SYNC: Final = "suggestion_sync"
 LEG_DECISION_PACKAGE_SYNC: Final = "decision_package_sync"
 LEG_ACTION_DRAFT_SYNC: Final = "action_draft_sync"
+LEG_ORCHESTRATOR_SCORING: Final = "orchestrator_scoring"
 LEG_DAILY_BRIEFING_SYNC: Final = "daily_briefing_sync"
 
 
@@ -45,6 +46,7 @@ MORNING_CHAIN_LEG_NAMES: Final[tuple[str, ...]] = (
     LEG_SUGGESTION_SYNC,
     LEG_DECISION_PACKAGE_SYNC,
     LEG_ACTION_DRAFT_SYNC,
+    LEG_ORCHESTRATOR_SCORING,
     LEG_DAILY_BRIEFING_SYNC,
 )
 
@@ -296,6 +298,41 @@ def build_default_morning_chain_legs(runtime_settings: object) -> tuple[LegCalla
             detail_nl="Action draft sync uitgevoerd binnen morning chain.",
         )
 
+    def _orchestrator_scoring_leg() -> MorningChainLegOutcome:
+        """V1.2 §Y parallel-scoring leg.
+
+        Runs the profit-harvest orchestrator on the current
+        candidates and writes verdicts to
+        ``orchestrator_scoring_verdicts``. Disabled by default
+        (``orchestrator_scoring_enabled=False``) so the doctrine
+        scoring path can be validated against the live suggestion
+        engine before being promoted.
+
+        Skip path is the only V1 behavior. When enabled in a future
+        slice, the runner from
+        ``portfolio_outlook_worker.forecasting.orchestrator_scoring_runner``
+        is invoked here with the live forecast + fundamentals
+        snapshot. For now the leg is a stub that returns ``skipped``
+        when disabled and ``succeeded`` (no-op) when enabled — the
+        full wiring of candidate provider + storage writer lands
+        with Slice §Z.
+        """
+
+        if not getattr(runtime_settings, "orchestrator_scoring_enabled", False):
+            return _leg_disabled(
+                LEG_ORCHESTRATOR_SCORING,
+                setting_name="orchestrator_scoring_enabled",
+            )
+        return MorningChainLegOutcome(
+            leg_name=LEG_ORCHESTRATOR_SCORING,
+            status=LEG_STATUS_SUCCEEDED,
+            failure_code=None,
+            detail_nl=(
+                "Orchestrator scoring leg ingeschakeld; "
+                "candidate-provider wiring volgt in §Z."
+            ),
+        )
+
     def _daily_briefing_sync_leg() -> MorningChainLegOutcome:
         if not getattr(runtime_settings, "daily_briefing_sync_enabled", False):
             return _leg_disabled(
@@ -315,6 +352,7 @@ def build_default_morning_chain_legs(runtime_settings: object) -> tuple[LegCalla
         _suggestion_sync_leg,
         _decision_package_sync_leg,
         _action_draft_sync_leg,
+        _orchestrator_scoring_leg,
         _daily_briefing_sync_leg,
     )
 
@@ -352,6 +390,7 @@ __all__ = [
     "LEG_DECISION_PACKAGE_SYNC",
     "LEG_FORECAST_SYNC",
     "LEG_MARKET_DATA_SYNC",
+    "LEG_ORCHESTRATOR_SCORING",
     "LEG_STATUS_FAILED",
     "LEG_STATUS_SKIPPED",
     "LEG_STATUS_SUCCEEDED",
