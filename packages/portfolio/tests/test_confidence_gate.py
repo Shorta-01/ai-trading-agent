@@ -14,6 +14,7 @@ from portfolio_outlook_portfolio import (
     evaluate_confidence_gate,
     probability_of_target_hit,
 )
+from portfolio_outlook_portfolio.confidence_gate import DEFAULT_FAT_TAIL_FACTOR
 
 # ---- probability_of_target_hit ---------------------------------------
 
@@ -158,6 +159,46 @@ def test_p_hit_capped_at_100_on_extreme_inputs() -> None:
     )
     assert p is not None
     assert p <= Decimal("100.00")
+
+
+def test_default_fat_tail_factor_is_1_15() -> None:
+    # Lock the locked default — surfaces in docs and the operator UI.
+    assert DEFAULT_FAT_TAIL_FACTOR == Decimal("1.15")
+
+
+def test_higher_fat_tail_factor_raises_probability() -> None:
+    # With everything else equal, a wider effective σ (fatter tails)
+    # makes the running-max probability go up.
+    base = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("100"),
+        annual_volatility_pct=Decimal("20"),
+        horizon_days=126,
+        target_price=Decimal("110"),
+        fat_tail_factor=Decimal("1.0"),  # pure Gaussian
+    )
+    fat = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("100"),
+        annual_volatility_pct=Decimal("20"),
+        horizon_days=126,
+        target_price=Decimal("110"),
+        fat_tail_factor=Decimal("1.5"),
+    )
+    assert base is not None and fat is not None
+    assert fat > base
+
+
+def test_fat_tail_factor_below_or_zero_returns_none() -> None:
+    p = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("100"),
+        annual_volatility_pct=Decimal("20"),
+        horizon_days=126,
+        target_price=Decimal("110"),
+        fat_tail_factor=Decimal("0"),
+    )
+    assert p is None
 
 
 def test_p_hit_returns_none_on_invalid_inputs() -> None:

@@ -176,6 +176,14 @@ class UserStrategySettings(DomainBaseModel):
     # Total euro allocation earmarked for the profit-harvest cycle.
     # Cash beyond this stays on term-deposit / sweep.
     trading_total_budget_eur: Decimal = Decimal("1000000")
+    # V1.2 §Q fat-tail factor — multiplies forecast σ inside the
+    # confidence gate before applying the running-max formula. A
+    # factor of 1.0 = Gaussian (no adjustment); 1.15 ≈ Student-t with
+    # df ≈ 5 (empirically calibrated for daily equity returns). The
+    # default acknowledges that real markets have fatter tails than
+    # the lognormal predictor assumes; lowering to 1.0 reverts to the
+    # pure-lognormal behavior.
+    trading_fat_tail_factor: Decimal = Decimal("1.15")
     explanation_nl: str = (
         "Dit is je voorkeurlaag voor ranking en fit, niet voor harde blokkeringen."
     )
@@ -192,6 +200,7 @@ class UserStrategySettings(DomainBaseModel):
         "trading_min_market_cap_eur",
         "trading_max_annual_volatility_pct",
         "trading_total_budget_eur",
+        "trading_fat_tail_factor",
         mode="before",
     )
     @classmethod
@@ -252,6 +261,17 @@ class UserStrategySettings(DomainBaseModel):
     def validate_pct_0_to_100(cls, value: Decimal) -> Decimal:
         if value < Decimal("0") or value > Decimal("100"):
             raise ValueError("Percentage moet tussen 0 en 100 liggen.")
+        return value
+
+    @field_validator("trading_fat_tail_factor")
+    @classmethod
+    def validate_fat_tail_factor(cls, value: Decimal) -> Decimal:
+        # Below 0.5 effectively erases volatility; above 2.5 over-
+        # corrects (anything that extreme should be in vol input).
+        if value < Decimal("0.5") or value > Decimal("2.5"):
+            raise ValueError(
+                "trading_fat_tail_factor moet tussen 0.5 en 2.5 liggen."
+            )
         return value
 
     @model_validator(mode="after")
@@ -459,6 +479,19 @@ def get_user_strategy_help_texts() -> tuple[SettingHelpText, ...]:
                 "Totaal bedrag dat het systeem mag inzetten in de profit-harvest "
                 "strategie. Rest blijft op cash/termijnrekening. Standaard "
                 "€1.000.000."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_fat_tail_factor",
+            label_nl="Fat-tail correctie",
+            help_nl=(
+                "Vermenigvuldigt de volatiliteit in de kans-berekening om "
+                "rekening te houden met extreme bewegingen die in de realiteit "
+                "vaker voorkomen dan een normale verdeling voorspelt. 1.0 = "
+                "geen correctie (Gaussisch); 1.15 ≈ Student-t met df ≈ 5 "
+                "(empirisch passend voor aandelen). Hogere waardes maken het "
+                "systeem eerlijker over downside-risico maar verhogen ook de "
+                "kans op suggesties. Standaard 1.15."
             ),
         ),
     )

@@ -120,6 +120,8 @@ class OrchestratorInputs:
     min_market_cap_eur: Decimal
     max_annual_volatility_pct: Decimal
     max_sector_pct: Decimal
+    # V1.2 §Q fat-tail correction for the confidence gate.
+    fat_tail_factor: Decimal = Decimal("1.15")
 
 
 @dataclass(frozen=True)
@@ -203,6 +205,7 @@ def evaluate_profit_harvest_candidate(
         target_net_pct=inputs.target_net_pct,
         security_class=inputs.security_class,
         confidence_threshold_pct=inputs.confidence_threshold_pct,
+        fat_tail_factor=inputs.fat_tail_factor,
     )
     if not confidence.allowed:
         return OrchestratorResult(

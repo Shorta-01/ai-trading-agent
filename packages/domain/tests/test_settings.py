@@ -146,6 +146,20 @@ def test_user_strategy_settings_default_trading_cycle_parameters() -> None:
     assert settings.trading_min_market_cap_eur == Decimal("5000000000")
     assert settings.trading_max_annual_volatility_pct == Decimal("30")
     assert settings.trading_total_budget_eur == Decimal("1000000")
+    # V1.2 §Q fat-tail factor default — empirically calibrated to
+    # Student-t df ≈ 5 for daily equity returns.
+    assert settings.trading_fat_tail_factor == Decimal("1.15")
+
+
+def test_user_strategy_settings_rejects_invalid_fat_tail_factor() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_fat_tail_factor=Decimal("0.4"))
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_fat_tail_factor=Decimal("3.0"))
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_fat_tail_factor=1.15)  # type: ignore[arg-type]
 
 
 def test_user_strategy_settings_rejects_float_trading_inputs() -> None:
@@ -230,6 +244,7 @@ def test_user_strategy_help_texts_cover_all_trading_fields() -> None:
         "trading_min_market_cap_eur",
         "trading_max_annual_volatility_pct",
         "trading_total_budget_eur",
+        "trading_fat_tail_factor",
     }
     assert expected.issubset(keys)
 
