@@ -110,10 +110,23 @@ def test_upsert_event_replaces_existing_row(connection) -> None:  # type: ignore
 
 def test_list_upcoming_filters_by_date_and_excludes_past(connection) -> None:  # type: ignore[no-untyped-def]
     repo = SqlAlchemyEarningsEventRepository(connection, _readiness())
-    repo.upsert_event(_request(earnings_event_id="ev-1", symbol="A", event_date=date(2026, 7, 15)))
-    repo.upsert_event(_request(earnings_event_id="ev-2", symbol="B", event_date=date(2026, 8, 15)))
-    repo.upsert_event(_request(earnings_event_id="ev-3", symbol="C", event_date=date(2026, 5, 1), status="past"))
-    repo.upsert_event(_request(earnings_event_id="ev-4", symbol="D", event_date=date(2027, 1, 5)))
+    repo.upsert_event(
+        _request(earnings_event_id="ev-1", symbol="A", event_date=date(2026, 7, 15))
+    )
+    repo.upsert_event(
+        _request(earnings_event_id="ev-2", symbol="B", event_date=date(2026, 8, 15))
+    )
+    repo.upsert_event(
+        _request(
+            earnings_event_id="ev-3",
+            symbol="C",
+            event_date=date(2026, 5, 1),
+            status="past",
+        )
+    )
+    repo.upsert_event(
+        _request(earnings_event_id="ev-4", symbol="D", event_date=date(2027, 1, 5))
+    )
 
     upcoming = repo.list_upcoming(
         from_date=date(2026, 6, 1), to_date=date(2026, 12, 31)
