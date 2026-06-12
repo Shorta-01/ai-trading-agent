@@ -442,6 +442,17 @@ from .suggestion_guards import (
     require_data_quality_allows_suggestions,
     require_suggestion_eligible,
 )
+from .take_profit_pair import (
+    BLOCKING_REASON_INVALID_NET_TARGET,
+    BLOCKING_REASON_INVALID_POSITION_EUR,
+    BLOCKING_REASON_INVALID_PRICE,
+    BLOCKING_REASON_POSITION_TOO_SMALL,
+    ENTRY_TIF,
+    TAKE_PROFIT_TIF,
+    TakeProfitBuilderResult,
+    TakeProfitOrderPair,
+    build_take_profit_pair,
+)
 from .term_deposits import (
     build_term_deposit_projection,
     calculate_days_until_maturity,
@@ -694,6 +705,15 @@ __all__ = [
     "compute_take_profit_sell_price",
     "conviction_weighted_position_size_eur",
     "gross_pct_for_net_target_pct",
+    "BLOCKING_REASON_INVALID_NET_TARGET",
+    "BLOCKING_REASON_INVALID_POSITION_EUR",
+    "BLOCKING_REASON_INVALID_PRICE",
+    "BLOCKING_REASON_POSITION_TOO_SMALL",
+    "ENTRY_TIF",
+    "TAKE_PROFIT_TIF",
+    "TakeProfitBuilderResult",
+    "TakeProfitOrderPair",
+    "build_take_profit_pair",
     "BLOCKING_REASON_BELOW_CONFIDENCE",
     "BLOCKING_REASON_INVALID_FORECAST",
     "CONFIDENCE_GATE_BLOCKING_REASON_ZERO_VOLATILITY",
