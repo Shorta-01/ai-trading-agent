@@ -297,6 +297,14 @@ from .momentum_predictor import (
     MomentumPredictor,
 )
 from .money import add_money, ensure_same_currency, multiply_quantity_by_price, subtract_money
+from .news_severity import (
+    NewsClassificationResult,
+    NewsExitEvaluation,
+    NewsItem,
+    NewsSeverity,
+    classify_news_severity,
+    evaluate_news_exit,
+)
 from .paper_setup_guards import (
     check_first_run_setup_request_allowed,
     check_setup_preview_safe,
@@ -714,6 +722,12 @@ __all__ = [
     "TakeProfitBuilderResult",
     "TakeProfitOrderPair",
     "build_take_profit_pair",
+    "NewsClassificationResult",
+    "NewsExitEvaluation",
+    "NewsItem",
+    "NewsSeverity",
+    "classify_news_severity",
+    "evaluate_news_exit",
     "BLOCKING_REASON_BELOW_CONFIDENCE",
     "BLOCKING_REASON_INVALID_FORECAST",
     "CONFIDENCE_GATE_BLOCKING_REASON_ZERO_VOLATILITY",
