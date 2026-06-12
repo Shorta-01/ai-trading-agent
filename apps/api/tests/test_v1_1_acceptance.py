@@ -55,6 +55,7 @@ def _enable_every_flag_with_v1_1_rebuild_knobs_on() -> None:
     api_settings.action_drafts_sync_enabled = True
     api_settings.daily_briefing_sync_enabled = True
     api_settings.orchestrator_scoring_enabled = True
+    api_settings.earnings_calendar_sync_enabled = True
     api_settings.reconciliation_sync_enabled = True
     api_settings.prediction_diary_sync_enabled = True
     # V1.1 §22 ready-for-production knobs.

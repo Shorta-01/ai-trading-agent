@@ -48,6 +48,7 @@ def _enable_every_flag() -> None:
     api_settings.action_drafts_sync_enabled = True
     api_settings.daily_briefing_sync_enabled = True
     api_settings.orchestrator_scoring_enabled = True
+    api_settings.earnings_calendar_sync_enabled = True
     api_settings.reconciliation_sync_enabled = True
     api_settings.prediction_diary_sync_enabled = True
     # V1.1 §22-surface knobs at their ready-for-production values.

@@ -12,6 +12,7 @@
 
 import { BelgianTobYtdWidget } from "@/components/BelgianTobYtdWidget";
 import { CalibrationCoverageBadge } from "@/components/CalibrationCoverageBadge";
+import { EarningsRefreshButton } from "@/components/EarningsRefreshButton";
 import { EarningsThisWeekStrip } from "@/components/EarningsThisWeekStrip";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { LastVisitDiffStrip } from "@/components/LastVisitDiffStrip";
@@ -39,6 +40,7 @@ export default function HomePage() {
       <MorningStatusStrip />
       <LastVisitDiffStrip />
       <EarningsThisWeekStrip />
+      <EarningsRefreshButton />
       <TriageStrip />
 
       <section style={{ marginBottom: 12 }}>

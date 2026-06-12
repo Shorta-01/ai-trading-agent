@@ -18,6 +18,9 @@ vi.mock("@/components/LastVisitDiffStrip", () => ({
 vi.mock("@/components/EarningsThisWeekStrip", () => ({
   EarningsThisWeekStrip: () => <div data-testid="stub-earnings-this-week-strip" />,
 }));
+vi.mock("@/components/EarningsRefreshButton", () => ({
+  EarningsRefreshButton: () => <div data-testid="stub-earnings-refresh-button" />,
+}));
 vi.mock("@/components/BelgianTobYtdWidget", () => ({
   BelgianTobYtdWidget: () => <div data-testid="stub-belgian-tob-ytd-widget" />,
 }));

@@ -189,6 +189,11 @@ class Settings(BaseSettings):
     # Disabled by default so the doctrine can be validated against
     # the live suggestion engine before the path is promoted.
     orchestrator_scoring_enabled: bool = False
+    # V1.2 §AK earnings-calendar refresh leg. Disabled by default
+    # because it consumes EODHD quota every morning; the operator
+    # opts in once they want the orchestrator's earnings-window
+    # gate to bite on real upcoming dates.
+    earnings_calendar_sync_enabled: bool = False
     scheduler_enabled: bool = False
     scheduler_timezone: str = "Europe/Brussels"
     scheduler_daily_briefing_cron: str = "30 6 * * *"
