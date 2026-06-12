@@ -323,6 +323,11 @@ from .momentum_predictor import (
     MomentumPredictor,
 )
 from .money import add_money, ensure_same_currency, multiply_quantity_by_price, subtract_money
+from .news_sentiment import (
+    NewsSentimentScore,
+    apply_buy_bias_to_confidence,
+    compute_news_buy_bias,
+)
 from .news_severity import (
     NewsClassificationResult,
     NewsExitEvaluation,
@@ -802,6 +807,9 @@ __all__ = [
     "NewsSeverity",
     "classify_news_severity",
     "evaluate_news_exit",
+    "NewsSentimentScore",
+    "apply_buy_bias_to_confidence",
+    "compute_news_buy_bias",
     "BLOCKING_REASON_INVALID_BUDGET",
     "BLOCKING_REASON_INVALID_CANDIDATE_EUR",
     "BLOCKING_REASON_INVALID_MAX_PCT",
