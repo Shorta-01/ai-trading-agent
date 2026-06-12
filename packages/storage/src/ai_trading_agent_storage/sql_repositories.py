@@ -73,6 +73,7 @@ from ai_trading_agent_storage.metadata import (
     universe_scan_runs,
     market_data_bars,
     market_data_snapshots,
+    earnings_events,
     prediction_diary_entries,
     market_data_latest_snapshots,
     orchestrator_scoring_verdicts,
@@ -124,7 +125,9 @@ from ai_trading_agent_storage.repository_contracts import (
     BriefingAlertRecord,
     DailyBriefingRecord,
     DailyDigestRecord,
+    EarningsEventRecord,
     OrchestratorScoringVerdictRecord,
+    SaveEarningsEventRequest,
     SaveOrchestratorScoringVerdictRequest,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
@@ -3204,6 +3207,101 @@ class SqlAlchemyOrchestratorScoringVerdictRepository(_Base):
             orchestrator_scoring_verdicts.name,
             f"{len(records)} orchestrator-verdicts opgehaald.",
         )
+
+
+class SqlAlchemyEarningsEventRepository(_Base):
+    """One row per ``(symbol, event_date)``; refetches upsert (V1.2 §AI).
+
+    Feeds the orchestrator's earnings-window gate so a new BUY
+    suggestion can be blocked inside the configured window before
+    earnings. The morning-chain leg (follow-up §AJ) will upsert from
+    the EODHD adapter; the orchestrator candidate provider reads
+    via :meth:`get_next_for_symbols`.
+    """
+
+    def upsert_event(
+        self, request: SaveEarningsEventRequest
+    ) -> StorageWriteResult:
+        self._connection.execute(
+            earnings_events.delete().where(
+                (earnings_events.c.symbol == request.symbol)
+                & (earnings_events.c.event_date == request.event_date)
+            )
+        )
+        self._insert(earnings_events, asdict(request))
+        return StorageWriteResult(
+            True,
+            request.earnings_event_id,
+            earnings_events.name,
+            True,
+            "Earnings-event opgeslagen.",
+        )
+
+    def list_upcoming(
+        self, *, from_date: date, to_date: date, limit: int = 200
+    ) -> StorageListResult[EarningsEventRecord]:
+        """Return earnings events in the ``[from_date, to_date]``
+        window, soonest first.
+
+        Both ``confirmed`` and ``estimated`` events count; ``past``
+        events are excluded — the morning-dashboard strip only cares
+        about what's coming up.
+        """
+
+        if limit <= 0:
+            raise ValueError("limit must be > 0")
+        rows = (
+            self._connection.execute(
+                select(earnings_events)
+                .where(earnings_events.c.event_date >= from_date)
+                .where(earnings_events.c.event_date <= to_date)
+                .where(earnings_events.c.status.in_(("confirmed", "estimated")))
+                .order_by(earnings_events.c.event_date)
+                .limit(limit)
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            EarningsEventRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            earnings_events.name,
+            f"{len(records)} earnings-events opgehaald.",
+        )
+
+    def get_next_for_symbols(
+        self, *, symbols: tuple[str, ...], today: date
+    ) -> dict[str, date | None]:
+        """For each input symbol return the nearest future event date
+        (or ``None`` if the provider has no upcoming row).
+
+        Used by the orchestrator candidate provider to populate
+        ``next_earnings_by_symbol`` instead of the locked
+        ``next_earnings_date=None`` placeholder.
+        """
+
+        if not symbols:
+            return {}
+        rows = (
+            self._connection.execute(
+                select(
+                    earnings_events.c.symbol,
+                    earnings_events.c.event_date,
+                )
+                .where(earnings_events.c.symbol.in_(symbols))
+                .where(earnings_events.c.event_date >= today)
+                .where(earnings_events.c.status.in_(("confirmed", "estimated")))
+                .order_by(earnings_events.c.event_date)
+            )
+            .all()
+        )
+        next_for: dict[str, date | None] = {sym: None for sym in symbols}
+        for symbol, event_date in rows:
+            if next_for.get(symbol) is None:
+                next_for[symbol] = event_date
+        return next_for
 
 
 class SqlAlchemySchedulerRunRepository(_Base):

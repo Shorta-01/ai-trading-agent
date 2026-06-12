@@ -470,6 +470,23 @@ export type TobYearToDateResponse = {
   safe_for_orders: boolean;
 };
 
+export type EarningsEventRow = {
+  earnings_event_id: string;
+  symbol: string;
+  ibkr_conid: string | null;
+  event_date: string;
+  status: string;
+  source: string;
+  fetched_at: string;
+};
+
+export type EarningsUpcomingResponse = {
+  title_nl: string;
+  help_nl: string;
+  window_days: number;
+  items: EarningsEventRow[];
+};
+
 export type SuggestionsGridItem = {
   suggestion_id: string;
   ibkr_conid: string;
@@ -2327,6 +2344,10 @@ export const apiClient = {
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,
+    ),
+  getUpcomingEarnings: (params?: { days?: number }) =>
+    getJson<EarningsUpcomingResponse>(
+      `/earnings/upcoming${params?.days ? `?days=${params.days}` : ""}`,
     ),
   getNotificationSettings: () =>
     getJson<NotificationSettingsResponse>("/settings/notifications"),

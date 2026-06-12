@@ -9,16 +9,19 @@ import {
 import type { ReactElement } from "react";
 
 import type {
+  EarningsUpcomingResponse,
   OrchestratorVerdictRow,
   OrchestratorVerdictsListResponse,
 } from "@/lib/apiClient";
 
 const listOrchestratorVerdicts = vi.fn();
+const getUpcomingEarnings = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     listOrchestratorVerdicts: (...a: unknown[]) =>
       listOrchestratorVerdicts(...a),
+    getUpcomingEarnings: (...a: unknown[]) => getUpcomingEarnings(...a),
   },
 }));
 
@@ -69,58 +72,104 @@ function makeVerdict(
 
 const ok = <T,>(data: T) => ({ ok: true as const, data });
 
+const EMPTY_FEED: EarningsUpcomingResponse = {
+  title_nl: "Aankomende earnings",
+  help_nl: "",
+  window_days: 7,
+  items: [],
+};
+
+const FEED_SAMPLE: EarningsUpcomingResponse = {
+  title_nl: "Aankomende earnings",
+  help_nl: "",
+  window_days: 7,
+  items: [
+    {
+      earnings_event_id: "ev-1",
+      symbol: "AAPL",
+      ibkr_conid: "1",
+      event_date: "2026-06-15",
+      status: "confirmed",
+      source: "eodhd",
+      fetched_at: "2026-06-12T06:00:00Z",
+    },
+    {
+      earnings_event_id: "ev-2",
+      symbol: "MSFT",
+      ibkr_conid: "2",
+      event_date: "2026-06-17",
+      status: "estimated",
+      source: "eodhd",
+      fetched_at: "2026-06-12T06:00:00Z",
+    },
+  ],
+};
+
 beforeEach(() => {
   listOrchestratorVerdicts.mockReset();
+  getUpcomingEarnings.mockReset();
 });
 
 afterEach(() => cleanup());
 
 describe("EarningsThisWeekStrip", () => {
-  it("renders a chip per unique earnings-blocked symbol", async () => {
-    const data: OrchestratorVerdictsListResponse = {
+  it("uses the real earnings feed when /earnings/upcoming returns rows", async () => {
+    getUpcomingEarnings.mockResolvedValue(ok(FEED_SAMPLE));
+    listOrchestratorVerdicts.mockResolvedValue(
+      ok({ title_nl: "", help_nl: "", items: [] } as OrchestratorVerdictsListResponse),
+    );
+    render(<EarningsThisWeekStrip />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("earnings-this-week-strip"),
+      ).toHaveAttribute("data-mode", "feed");
+    });
+    expect(
+      screen.getByTestId("earnings-this-week-chip-AAPL"),
+    ).toHaveTextContent("AAPL");
+    expect(
+      screen.getByTestId("earnings-this-week-chip-MSFT"),
+    ).toHaveTextContent("MSFT");
+  });
+
+  it("falls back to skip_earnings_window verdicts when feed is empty", async () => {
+    getUpcomingEarnings.mockResolvedValue(ok(EMPTY_FEED));
+    const verdicts: OrchestratorVerdictsListResponse = {
       title_nl: "",
       help_nl: "",
       items: [
         makeVerdict({ verdict_id: "v1", symbol: "AAPL" }),
         makeVerdict({
           verdict_id: "v2",
-          symbol: "MSFT",
+          symbol: "NOT_BLOCKED",
+          decision: "suggest",
+          blocking_reason: null,
         }),
-        makeVerdict({ verdict_id: "v3", symbol: "OTHER", decision: "suggest" }),
-        makeVerdict({ verdict_id: "v4", symbol: "AAPL" }),
       ],
     };
-    listOrchestratorVerdicts.mockResolvedValue(ok(data));
+    listOrchestratorVerdicts.mockResolvedValue(ok(verdicts));
     render(<EarningsThisWeekStrip />);
-    await screen.findByTestId("earnings-this-week-strip");
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("earnings-this-week-strip"),
+      ).toHaveAttribute("data-mode", "fallback");
+    });
     expect(
       screen.getByTestId("earnings-this-week-chip-AAPL"),
     ).toBeInTheDocument();
     expect(
-      screen.getByTestId("earnings-this-week-chip-MSFT"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("earnings-this-week-chip-OTHER"),
+      screen.queryByTestId("earnings-this-week-chip-NOT_BLOCKED"),
     ).toBeNull();
   });
 
-  it("renders nothing when there are no earnings-blocked verdicts", async () => {
+  it("renders nothing when both feed and verdict-fallback are empty", async () => {
+    getUpcomingEarnings.mockResolvedValue(ok(EMPTY_FEED));
     listOrchestratorVerdicts.mockResolvedValue(
-      ok({
-        title_nl: "",
-        help_nl: "",
-        items: [
-          makeVerdict({
-            verdict_id: "v1",
-            symbol: "AAPL",
-            decision: "suggest",
-            blocking_reason: null,
-          }),
-        ],
-      }),
+      ok({ title_nl: "", help_nl: "", items: [] } as OrchestratorVerdictsListResponse),
     );
     const { container } = render(<EarningsThisWeekStrip />);
     await waitFor(() => {
+      expect(getUpcomingEarnings).toHaveBeenCalledTimes(1);
       expect(listOrchestratorVerdicts).toHaveBeenCalledTimes(1);
     });
     expect(

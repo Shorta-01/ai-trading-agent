@@ -1889,6 +1889,33 @@ orchestrator_scoring_verdicts = Table(
 )
 
 
+earnings_events = Table(
+    "earnings_events",
+    metadata,
+    Column("earnings_event_id", Text, primary_key=True),
+    Column("symbol", Text, nullable=False),
+    Column("ibkr_conid", Text, nullable=True),
+    Column("event_date", Date, nullable=False),
+    Column("status", Text, nullable=False),
+    Column("source", Text, nullable=False),
+    Column("fetched_at", DateTime(timezone=True), nullable=False),
+    Column("raw_json", JSON, nullable=True),
+    CheckConstraint(
+        "status IN ('confirmed', 'estimated', 'past')",
+        name="ck_earnings_events_status",
+    ),
+    UniqueConstraint(
+        "symbol", "event_date",
+        name="uq_earnings_events_symbol_date",
+    ),
+)
+Index(
+    "ix_earnings_events_symbol_date",
+    earnings_events.c.symbol,
+    earnings_events.c.event_date,
+)
+
+
 daily_briefings = Table(
     "daily_briefings",
     metadata,

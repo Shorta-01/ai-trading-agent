@@ -33,7 +33,7 @@ def _seed_db(path: str) -> str:
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0071_orchestrator_scoring_verdicts')"
+                "('0072_earnings_events')"
             )
         )
     engine.dispose()

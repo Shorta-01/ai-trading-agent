@@ -27,7 +27,7 @@ def _seed_db(tmp_path) -> str:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0071_orchestrator_scoring_verdicts')"
+                "('0072_earnings_events')"
             )
         )
     engine.dispose()
