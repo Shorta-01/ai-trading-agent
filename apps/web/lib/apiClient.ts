@@ -459,6 +459,17 @@ export type OrchestratorVerdictsListResponse = {
   items: OrchestratorVerdictRow[];
 };
 
+export type TobYearToDateResponse = {
+  title_nl: string;
+  help_nl: string;
+  year: number;
+  executions_count: number;
+  by_currency: Record<string, string>;
+  by_security_class: Record<string, Record<string, string>>;
+  note_nl: string;
+  safe_for_orders: boolean;
+};
+
 export type SuggestionsGridItem = {
   suggestion_id: string;
   ibkr_conid: string;
@@ -2312,6 +2323,10 @@ export const apiClient = {
       `/orchestrator-verdicts${
         params?.limit ? `?limit=${params.limit}` : ""
       }`,
+    ),
+  getTobYearToDate: (params?: { year?: number }) =>
+    getJson<TobYearToDateResponse>(
+      `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,
     ),
   getNotificationSettings: () =>
     getJson<NotificationSettingsResponse>("/settings/notifications"),
