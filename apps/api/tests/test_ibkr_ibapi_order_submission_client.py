@@ -340,6 +340,47 @@ def test_build_bracket_sell_inverts_child_sides() -> None:
     assert sl.action == "BUY"
 
 
+def test_build_bracket_without_stop_loss_returns_two_orders() -> None:
+    # V1.2 §U doctrine: profit-harvest take-profit pairs emit BRACKET
+    # without a stop-loss. The submission client builds only parent +
+    # take-profit (no stop-loss leg).
+    contract, orders = build_contract_and_orders(
+        _inputs(
+            order_type="BRACKET",
+            action_side="BUY",
+            limit_price=Decimal("100"),
+            bracket_take_profit_limit_price=Decimal("104.73"),
+            bracket_stop_loss_price=None,
+        )
+    )
+    assert len(orders) == 2
+    parent, take_profit = orders
+    # Parent is LMT, transmit=False (waits for take-profit to chain).
+    assert parent.orderType == "LMT"
+    assert parent.lmtPrice == Decimal("100")
+    assert parent.transmit is False
+    # Take-profit is the last leg → must transmit=True to release the
+    # bracket.
+    assert take_profit.orderType == "LMT"
+    assert take_profit.action == "SELL"
+    assert take_profit.lmtPrice == Decimal("104.73")
+    assert take_profit.transmit is True
+
+
+def test_build_bracket_rejects_negative_stop_loss_when_provided() -> None:
+    # ``None`` is a doctrinal signal; ``<= 0`` remains a caller bug.
+    with pytest.raises(ValueError, match="positive when set"):
+        build_contract_and_orders(
+            _inputs(
+                order_type="BRACKET",
+                action_side="BUY",
+                limit_price=Decimal("100"),
+                bracket_take_profit_limit_price=Decimal("110"),
+                bracket_stop_loss_price=Decimal("-1"),
+            )
+        )
+
+
 def test_build_contract_and_order_rejects_bracket() -> None:
     with pytest.raises(ValueError, match="BRACKET"):
         build_contract_and_order(
