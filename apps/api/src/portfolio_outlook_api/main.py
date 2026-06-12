@@ -89,6 +89,9 @@ from portfolio_outlook_api.status_routes import router as status_router
 from portfolio_outlook_api.suggestions_grid_routes import (
     router as suggestions_grid_router,
 )
+from portfolio_outlook_api.tob_routes import (
+    router as tob_router,
+)
 from portfolio_outlook_api.watchlist import router as watchlist_router
 from portfolio_outlook_api.watchlist_confirmation_routes import (
     router as watchlist_confirmation_router,
@@ -211,6 +214,7 @@ app.include_router(orchestrator_verdicts_router)
 app.include_router(notification_router)
 app.include_router(explanation_batch_router)
 app.include_router(predictor_performance_router)
+app.include_router(tob_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

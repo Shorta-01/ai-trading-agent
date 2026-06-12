@@ -11,13 +11,16 @@ import type { ReactElement } from "react";
 import type {
   AssetActionDraftResponse,
   LatestActionDraftsResponse,
+  TobYearToDateResponse,
 } from "@/lib/apiClient";
 
 const getLatestActionDrafts = vi.fn();
+const getTobYearToDate = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     getLatestActionDrafts: (...a: unknown[]) => getLatestActionDrafts(...a),
+    getTobYearToDate: (...a: unknown[]) => getTobYearToDate(...a),
   },
 }));
 
@@ -85,7 +88,7 @@ function makeDraft(
 
 const ok = <T,>(data: T) => ({ ok: true as const, data });
 
-const SAMPLE: LatestActionDraftsResponse = {
+const DRAFT_SAMPLE: LatestActionDraftsResponse = {
   status: "ready",
   help_nl: "",
   items: [
@@ -109,36 +112,83 @@ const SAMPLE: LatestActionDraftsResponse = {
   ],
 };
 
+const REALISED_EMPTY: TobYearToDateResponse = {
+  title_nl: "",
+  help_nl: "",
+  year: currentYear,
+  executions_count: 0,
+  by_currency: {},
+  by_security_class: {},
+  note_nl: "Nog geen IBKR-fills geregistreerd",
+  safe_for_orders: false,
+};
+
+const REALISED_SAMPLE: TobYearToDateResponse = {
+  title_nl: "",
+  help_nl: "",
+  year: currentYear,
+  executions_count: 2,
+  by_currency: { EUR: "3.50", USD: "3.50" },
+  by_security_class: { standard_stock: { EUR: "3.50", USD: "3.50" } },
+  note_nl: "V1-universe: alles standard_stock",
+  safe_for_orders: false,
+};
+
 beforeEach(() => {
   getLatestActionDrafts.mockReset();
+  getTobYearToDate.mockReset();
 });
 
 afterEach(() => cleanup());
 
 describe("BelgianTobYtdWidget", () => {
-  it("sums TOB only for approved+submitted drafts in the current year", async () => {
-    getLatestActionDrafts.mockResolvedValue(ok(SAMPLE));
+  it("uses realised TOB from /tob/year-to-date when executions exist", async () => {
+    getTobYearToDate.mockResolvedValue(ok(REALISED_SAMPLE));
+    getLatestActionDrafts.mockResolvedValue(ok(DRAFT_SAMPLE));
     render(<BelgianTobYtdWidget />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("belgian-tob-ytd-widget"),
+      ).toHaveAttribute("data-mode", "realised");
+    });
+    expect(
+      screen.getByTestId("belgian-tob-ytd-currency-EUR"),
+    ).toHaveTextContent("EUR 3.50");
+    expect(
+      screen.getByTestId("belgian-tob-ytd-currency-USD"),
+    ).toHaveTextContent("USD 3.50");
+    expect(
+      screen.getByTestId("belgian-tob-ytd-class-standard_stock-EUR"),
+    ).toHaveTextContent("standard_stock (EUR): 3.50");
+  });
+
+  it("falls back to indicative draft-based view when no realised fills", async () => {
+    getTobYearToDate.mockResolvedValue(ok(REALISED_EMPTY));
+    getLatestActionDrafts.mockResolvedValue(ok(DRAFT_SAMPLE));
+    render(<BelgianTobYtdWidget />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("belgian-tob-ytd-widget"),
+      ).toHaveAttribute("data-mode", "indicatief");
+    });
     await waitFor(() => {
       expect(screen.getByTestId("belgian-tob-ytd-total")).toHaveTextContent(
         "EUR 4.70",
       );
     });
-  });
-
-  it("breaks the total down by security class", async () => {
-    getLatestActionDrafts.mockResolvedValue(ok(SAMPLE));
-    render(<BelgianTobYtdWidget />);
     expect(
-      await screen.findByTestId("belgian-tob-ytd-class-stock"),
+      screen.getByTestId("belgian-tob-ytd-class-stock"),
     ).toHaveTextContent("stock: EUR 3.50");
     expect(
       screen.getByTestId("belgian-tob-ytd-class-bond"),
     ).toHaveTextContent("bond: EUR 1.20");
   });
 
-  it("renders a Dutch zero-state when nothing booked this year", async () => {
-    getLatestActionDrafts.mockResolvedValue(ok({ ...SAMPLE, items: [] }));
+  it("renders a Dutch zero-state when both endpoints report empty", async () => {
+    getTobYearToDate.mockResolvedValue(ok(REALISED_EMPTY));
+    getLatestActionDrafts.mockResolvedValue(
+      ok({ ...DRAFT_SAMPLE, items: [] }),
+    );
     render(<BelgianTobYtdWidget />);
     expect(
       await screen.findByText("Nog geen geboekte TOB dit jaar."),
