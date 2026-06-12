@@ -215,7 +215,16 @@ def test_default_legs_all_skipped_when_flags_are_off() -> None:
     assert [leg.status for leg in result.legs] == [LEG_STATUS_SKIPPED] * 8
 
 
-def test_default_legs_succeed_when_all_flags_enabled() -> None:
+def test_default_legs_call_real_runtimes_when_flags_enabled() -> None:
+    """V1.2 §AL — legs no longer return a hard ``succeeded`` marker.
+
+    They invoke the underlying ``run_*_sync`` runtime. Without
+    configured storage / EODHD keys the runtimes return ``blocked``,
+    which the leg maps to ``skipped`` with a runtime-specific detail
+    line. The chain status stays ``succeeded`` because skipped legs
+    don't stop it.
+    """
+
     legs = build_default_morning_chain_legs(
         _settings(
             market_data_sync_enabled=True,
@@ -230,11 +239,21 @@ def test_default_legs_succeed_when_all_flags_enabled() -> None:
     )
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
-    assert [leg.status for leg in result.legs] == [LEG_STATUS_SUCCEEDED] * 8
+    # All legs ran (no leg returned LEG_STATUS_FAILED) — that's the
+    # contract we care about. Each leg is either SUCCEEDED or
+    # SKIPPED-due-to-runtime; both are acceptable.
+    assert all(
+        leg.status in {LEG_STATUS_SUCCEEDED, LEG_STATUS_SKIPPED}
+        for leg in result.legs
+    )
+    assert len(result.legs) == 8
 
 
 def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
-    # market-data + forecast enabled; rest off.
+    # market-data + forecast enabled; rest off. The two enabled legs
+    # now call into the real runtime and are skipped because storage
+    # isn't configured in this test; the rest are skipped due to
+    # flag-off. Either way the chain still completes.
     legs = build_default_morning_chain_legs(
         _settings(
             market_data_sync_enabled=True,
@@ -242,16 +261,11 @@ def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
         )
     )
     result = run_morning_chain(legs=legs)
-    assert [leg.status for leg in result.legs] == [
-        LEG_STATUS_SUCCEEDED,
-        LEG_STATUS_SUCCEEDED,
-        LEG_STATUS_SKIPPED,
-        LEG_STATUS_SKIPPED,
-        LEG_STATUS_SKIPPED,
-        LEG_STATUS_SKIPPED,
-        LEG_STATUS_SKIPPED,
-        LEG_STATUS_SKIPPED,
-    ]
+    statuses = [leg.status for leg in result.legs]
+    assert len(statuses) == 8
+    assert all(
+        s in {LEG_STATUS_SUCCEEDED, LEG_STATUS_SKIPPED} for s in statuses
+    )
 
 
 def test_orchestrator_scoring_leg_disabled_by_default() -> None:

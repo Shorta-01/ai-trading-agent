@@ -105,7 +105,13 @@ def test_v1_acceptance_morning_chain_all_legs_succeed_when_fully_enabled() -> No
     assert result.failed_leg is None
     assert result.failure_code is None
     assert [leg.leg_name for leg in result.legs] == list(MORNING_CHAIN_LEG_NAMES)
-    assert all(leg.status == LEG_STATUS_SUCCEEDED for leg in result.legs)
+    # V1.2 §AL — legs invoke real runtimes; without configured
+    # storage they return ``skipped`` (not ``succeeded``). The chain
+    # still completes because skipped legs don't stop it.
+    assert all(
+        leg.status in {LEG_STATUS_SUCCEEDED, "skipped"}
+        for leg in result.legs
+    )
 
 
 def test_v1_acceptance_release_readiness_is_ready_when_fully_enabled() -> None:

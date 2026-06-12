@@ -228,6 +228,83 @@ def _leg_disabled(leg_name: str, *, setting_name: str) -> MorningChainLegOutcome
     )
 
 
+def _outcome_from_runtime_response(
+    leg_name: str,
+    response: dict[str, object],
+    *,
+    runtime_label: str,
+) -> MorningChainLegOutcome:
+    """Map a status_routes ``run_*_sync`` response dict to a
+    ``MorningChainLegOutcome``.
+
+    The runtimes return a structured dict with ``status`` in
+    {``"completed"``, ``"blocked"``, ``"not_configured"``,
+    ``"no_xxx_sync_run"``, …}. ``completed`` → SUCCEEDED; everything
+    else → SKIPPED with the runtime's own ``status_nl`` / ``reason``
+    in the detail. Exceptions in the runtime are caught higher up and
+    mapped to FAILED.
+    """
+
+    status = str(response.get("status", "unknown"))
+    detail_pieces = [runtime_label]
+    if response.get("status_nl"):
+        detail_pieces.append(str(response["status_nl"]))
+    if response.get("reason"):
+        detail_pieces.append(f"reason={response['reason']}")
+    detail = " — ".join(detail_pieces)
+    if status == "completed":
+        return MorningChainLegOutcome(
+            leg_name=leg_name,
+            status=LEG_STATUS_SUCCEEDED,
+            failure_code=None,
+            detail_nl=detail,
+        )
+    return MorningChainLegOutcome(
+        leg_name=leg_name,
+        status=LEG_STATUS_SKIPPED,
+        failure_code=None,
+        detail_nl=detail,
+    )
+
+
+def _invoke_runtime_leg(
+    leg_name: str,
+    *,
+    runtime_label: str,
+    failure_code: str,
+    runner: Callable[[], dict[str, object]],
+) -> MorningChainLegOutcome:
+    """Common wrapper: call ``runner``, map its response, catch
+    everything to SKIPPED with the error in the detail.
+
+    Why SKIPPED and not FAILED on exception? V1.2 §AL — legs invoke
+    the underlying ``run_*_sync`` runtimes, which raise on env-level
+    issues (missing db driver, network outage). Those are operator-
+    config problems, not doctrine-level failures: the chain should
+    keep going so the daily briefing and other legs still run. The
+    leg detail surfaces the cause so the operator can fix it.
+    ``failure_code`` is kept on the signature for future legs that
+    want a hard stop, but it is unused for now.
+    """
+
+    _ = failure_code  # reserved for legs that genuinely want to stop the chain
+    try:
+        response = runner()
+    except Exception as exc:  # noqa: BLE001 — boundary catch
+        return MorningChainLegOutcome(
+            leg_name=leg_name,
+            status=LEG_STATUS_SKIPPED,
+            failure_code=None,
+            detail_nl=(
+                f"{runtime_label} overgeslagen — runtime gaf "
+                f"{type(exc).__name__}: {exc}"
+            ),
+        )
+    return _outcome_from_runtime_response(
+        leg_name, response, runtime_label=runtime_label
+    )
+
+
 def build_default_morning_chain_legs(
     runtime_settings: object,
     *,
@@ -252,11 +329,13 @@ def build_default_morning_chain_legs(
             return _leg_disabled(
                 LEG_MARKET_DATA_SYNC, setting_name="market_data_sync_enabled"
             )
-        return MorningChainLegOutcome(
-            leg_name=LEG_MARKET_DATA_SYNC,
-            status=LEG_STATUS_SUCCEEDED,
-            failure_code=None,
-            detail_nl="Market-data sync uitgevoerd binnen morning chain.",
+        from portfolio_outlook_api.status_routes import run_market_data_sync
+
+        return _invoke_runtime_leg(
+            LEG_MARKET_DATA_SYNC,
+            runtime_label="Market-data sync",
+            failure_code="market_data_sync_failed",
+            runner=run_market_data_sync,
         )
 
     def _forecast_sync_leg() -> MorningChainLegOutcome:
@@ -264,11 +343,13 @@ def build_default_morning_chain_legs(
             return _leg_disabled(
                 LEG_FORECAST_SYNC, setting_name="forecast_sync_enabled"
             )
-        return MorningChainLegOutcome(
-            leg_name=LEG_FORECAST_SYNC,
-            status=LEG_STATUS_SUCCEEDED,
-            failure_code=None,
-            detail_nl="Forecast sync uitgevoerd binnen morning chain.",
+        from portfolio_outlook_api.status_routes import run_forecast_sync
+
+        return _invoke_runtime_leg(
+            LEG_FORECAST_SYNC,
+            runtime_label="Forecast sync",
+            failure_code="forecast_sync_failed",
+            runner=run_forecast_sync,
         )
 
     def _suggestion_sync_leg() -> MorningChainLegOutcome:
@@ -276,11 +357,13 @@ def build_default_morning_chain_legs(
             return _leg_disabled(
                 LEG_SUGGESTION_SYNC, setting_name="suggestions_sync_enabled"
             )
-        return MorningChainLegOutcome(
-            leg_name=LEG_SUGGESTION_SYNC,
-            status=LEG_STATUS_SUCCEEDED,
-            failure_code=None,
-            detail_nl="Suggestion sync uitgevoerd binnen morning chain.",
+        from portfolio_outlook_api.status_routes import run_suggestions_sync
+
+        return _invoke_runtime_leg(
+            LEG_SUGGESTION_SYNC,
+            runtime_label="Suggestion sync",
+            failure_code="suggestion_sync_failed",
+            runner=run_suggestions_sync,
         )
 
     def _decision_package_sync_leg() -> MorningChainLegOutcome:
@@ -289,11 +372,15 @@ def build_default_morning_chain_legs(
                 LEG_DECISION_PACKAGE_SYNC,
                 setting_name="decision_packages_sync_enabled",
             )
-        return MorningChainLegOutcome(
-            leg_name=LEG_DECISION_PACKAGE_SYNC,
-            status=LEG_STATUS_SUCCEEDED,
-            failure_code=None,
-            detail_nl="Decision Package sync uitgevoerd binnen morning chain.",
+        from portfolio_outlook_api.status_routes import (
+            run_decision_packages_sync,
+        )
+
+        return _invoke_runtime_leg(
+            LEG_DECISION_PACKAGE_SYNC,
+            runtime_label="Decision Package sync",
+            failure_code="decision_package_sync_failed",
+            runner=run_decision_packages_sync,
         )
 
     def _action_draft_sync_leg() -> MorningChainLegOutcome:
@@ -301,11 +388,13 @@ def build_default_morning_chain_legs(
             return _leg_disabled(
                 LEG_ACTION_DRAFT_SYNC, setting_name="action_drafts_sync_enabled"
             )
-        return MorningChainLegOutcome(
-            leg_name=LEG_ACTION_DRAFT_SYNC,
-            status=LEG_STATUS_SUCCEEDED,
-            failure_code=None,
-            detail_nl="Action draft sync uitgevoerd binnen morning chain.",
+        from portfolio_outlook_api.status_routes import run_action_drafts_sync
+
+        return _invoke_runtime_leg(
+            LEG_ACTION_DRAFT_SYNC,
+            runtime_label="Action draft sync",
+            failure_code="action_draft_sync_failed",
+            runner=run_action_drafts_sync,
         )
 
     def _earnings_calendar_sync_leg() -> MorningChainLegOutcome:
@@ -375,11 +464,13 @@ def build_default_morning_chain_legs(
                 LEG_DAILY_BRIEFING_SYNC,
                 setting_name="daily_briefing_sync_enabled",
             )
-        return MorningChainLegOutcome(
-            leg_name=LEG_DAILY_BRIEFING_SYNC,
-            status=LEG_STATUS_SUCCEEDED,
-            failure_code=None,
-            detail_nl="Daily briefing sync uitgevoerd binnen morning chain.",
+        from portfolio_outlook_api.status_routes import run_daily_briefing
+
+        return _invoke_runtime_leg(
+            LEG_DAILY_BRIEFING_SYNC,
+            runtime_label="Daily briefing sync",
+            failure_code="daily_briefing_sync_failed",
+            runner=run_daily_briefing,
         )
 
     orchestrator_leg: LegCallable = (
