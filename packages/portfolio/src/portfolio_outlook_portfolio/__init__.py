@@ -372,6 +372,25 @@ from .research_evidence_summary import (
     ResearchEvidenceSummary,
     summarize_research_for_asset,
 )
+from .risk_universe_gate import (
+    BLOCKING_REASON_ABOVE_MAX_VOLATILITY,
+    BLOCKING_REASON_BELOW_MIN_MARKET_CAP,
+    BLOCKING_REASON_LEVERAGED_OR_INVERSE,
+    BLOCKING_REASON_UNKNOWN_MARKET_CAP,
+    DEFAULT_MIN_BARS_FOR_VOLATILITY,
+    KNOWN_LEVERAGED_OR_INVERSE_TICKERS,
+    RiskUniverseGateResult,
+    RiskUniverseInputs,
+    annualized_volatility_pct,
+    evaluate_risk_universe_gate,
+    is_leveraged_or_inverse,
+)
+from .risk_universe_gate import (
+    BLOCKING_REASON_INSUFFICIENT_BARS as RISK_UNIVERSE_BLOCKING_REASON_INSUFFICIENT_BARS,
+)
+from .risk_universe_gate import (
+    TRADING_DAYS_PER_YEAR as RISK_UNIVERSE_TRADING_DAYS_PER_YEAR,
+)
 from .snapshot import (
     InstrumentPositionQuantity,
     InstrumentTransactionTotals,
@@ -652,6 +671,19 @@ __all__ = [
     "compute_take_profit_sell_price",
     "conviction_weighted_position_size_eur",
     "gross_pct_for_net_target_pct",
+    "BLOCKING_REASON_ABOVE_MAX_VOLATILITY",
+    "BLOCKING_REASON_BELOW_MIN_MARKET_CAP",
+    "RISK_UNIVERSE_BLOCKING_REASON_INSUFFICIENT_BARS",
+    "BLOCKING_REASON_LEVERAGED_OR_INVERSE",
+    "BLOCKING_REASON_UNKNOWN_MARKET_CAP",
+    "DEFAULT_MIN_BARS_FOR_VOLATILITY",
+    "KNOWN_LEVERAGED_OR_INVERSE_TICKERS",
+    "RISK_UNIVERSE_TRADING_DAYS_PER_YEAR",
+    "RiskUniverseGateResult",
+    "RiskUniverseInputs",
+    "annualized_volatility_pct",
+    "evaluate_risk_universe_gate",
+    "is_leveraged_or_inverse",
     "ALERT_KIND_NEW_SUGGESTION",
     "ALERT_KIND_NEW_DECISION_PACKAGE",
     "ALERT_KIND_NEW_ACTION_DRAFT",
