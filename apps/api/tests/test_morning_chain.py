@@ -275,6 +275,28 @@ def test_orchestrator_scoring_leg_succeeds_when_enabled() -> None:
     assert "§Z" in orchestrator_outcome.detail_nl
 
 
+def test_orchestrator_scoring_leg_override_replaces_stub() -> None:
+    # V1.2 §AB: when a real callable is injected the chain uses it
+    # in place of the stub.
+    def _fake_real() -> MorningChainLegOutcome:
+        return MorningChainLegOutcome(
+            leg_name=LEG_ORCHESTRATOR_SCORING,
+            status=LEG_STATUS_SUCCEEDED,
+            failure_code=None,
+            detail_nl="Echt: 3 verdicts geschreven.",
+        )
+
+    legs = build_default_morning_chain_legs(
+        _settings(orchestrator_scoring_enabled=True),
+        orchestrator_scoring_leg_override=_fake_real,
+    )
+    result = run_morning_chain(legs=legs)
+    orchestrator_outcome = next(
+        leg for leg in result.legs if leg.leg_name == LEG_ORCHESTRATOR_SCORING
+    )
+    assert orchestrator_outcome.detail_nl == "Echt: 3 verdicts geschreven."
+
+
 # ---- Serialisation --------------------------------------------------------
 
 

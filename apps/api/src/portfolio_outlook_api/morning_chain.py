@@ -223,7 +223,11 @@ def _leg_disabled(leg_name: str, *, setting_name: str) -> MorningChainLegOutcome
     )
 
 
-def build_default_morning_chain_legs(runtime_settings: object) -> tuple[LegCallable, ...]:
+def build_default_morning_chain_legs(
+    runtime_settings: object,
+    *,
+    orchestrator_scoring_leg_override: LegCallable | None = None,
+) -> tuple[LegCallable, ...]:
     """Build the production morning-chain legs from runtime settings.
 
     Each leg checks its own ``<leg>_sync_enabled`` flag. When the flag is
@@ -346,13 +350,18 @@ def build_default_morning_chain_legs(runtime_settings: object) -> tuple[LegCalla
             detail_nl="Daily briefing sync uitgevoerd binnen morning chain.",
         )
 
+    orchestrator_leg: LegCallable = (
+        orchestrator_scoring_leg_override
+        if orchestrator_scoring_leg_override is not None
+        else _orchestrator_scoring_leg
+    )
     return (
         _market_data_sync_leg,
         _forecast_sync_leg,
         _suggestion_sync_leg,
         _decision_package_sync_leg,
         _action_draft_sync_leg,
-        _orchestrator_scoring_leg,
+        orchestrator_leg,
         _daily_briefing_sync_leg,
     )
 
