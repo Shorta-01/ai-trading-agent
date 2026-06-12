@@ -47,6 +47,7 @@ def _enable_every_flag() -> None:
     api_settings.decision_packages_sync_enabled = True
     api_settings.action_drafts_sync_enabled = True
     api_settings.daily_briefing_sync_enabled = True
+    api_settings.orchestrator_scoring_enabled = True
     api_settings.reconciliation_sync_enabled = True
     api_settings.prediction_diary_sync_enabled = True
     # V1.1 §22-surface knobs at their ready-for-production values.
@@ -72,6 +73,7 @@ def _disable_every_flag() -> None:
     api_settings.decision_packages_sync_enabled = False
     api_settings.action_drafts_sync_enabled = False
     api_settings.daily_briefing_sync_enabled = False
+    api_settings.orchestrator_scoring_enabled = False
     api_settings.reconciliation_sync_enabled = False
     api_settings.prediction_diary_sync_enabled = False
     # V1.1 §22-surface knobs reset to their defaults.
