@@ -225,6 +225,11 @@ type StrategyState = {
   trading_min_market_cap_eur: string;
   trading_max_annual_volatility_pct: string;
   trading_total_budget_eur: string;
+  // V1.2 §Q/R/S additions surfaced alongside the original 10 cycle
+  // parameters so the user can tune the full doctrine in one place.
+  trading_fat_tail_factor: string;
+  trading_earnings_block_days: string;
+  trading_news_buy_bias_max_boost_pct: string;
 };
 
 function strategyStateFromRecord(record: Record<string, unknown>): StrategyState {
@@ -273,6 +278,12 @@ function strategyStateFromRecord(record: Record<string, unknown>): StrategyState
       "30",
     ),
     trading_total_budget_eur: str("trading_total_budget_eur", "1000000"),
+    trading_fat_tail_factor: str("trading_fat_tail_factor", "1.15"),
+    trading_earnings_block_days: str("trading_earnings_block_days", "5"),
+    trading_news_buy_bias_max_boost_pct: str(
+      "trading_news_buy_bias_max_boost_pct",
+      "5",
+    ),
   };
 }
 
@@ -1236,6 +1247,10 @@ export default function Page() {
       trading_min_market_cap_eur: strategy.trading_min_market_cap_eur,
       trading_max_annual_volatility_pct: strategy.trading_max_annual_volatility_pct,
       trading_total_budget_eur: strategy.trading_total_budget_eur,
+      trading_fat_tail_factor: strategy.trading_fat_tail_factor,
+      trading_earnings_block_days: strategy.trading_earnings_block_days,
+      trading_news_buy_bias_max_boost_pct:
+        strategy.trading_news_buy_bias_max_boost_pct,
     };
     const result = await apiClient.updateTradingSettings({
       allowed_universe: trading.allowed_universe,
@@ -1852,6 +1867,72 @@ export default function Page() {
                     setStrategy({
                       ...strategy,
                       trading_total_budget_eur: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_fat_tail_factor">
+                <FieldLabel
+                  label_nl="Fat-tail correctie"
+                  help_nl="Vermenigvuldigt de volatiliteit in de kans-berekening om rekening te houden met extreme bewegingen. 1.0 = geen correctie (Gaussisch); 1.15 ≈ Student-t met df ≈ 5 (empirisch passend voor aandelen). Standaard 1.15."
+                />
+                <input
+                  id="strategy-trading_fat_tail_factor"
+                  data-testid="instellingen-strategy-trading_fat_tail_factor"
+                  type="number"
+                  min="0.5"
+                  max="2.5"
+                  step="0.05"
+                  value={strategy.trading_fat_tail_factor}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_fat_tail_factor: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_earnings_block_days">
+                <FieldLabel
+                  label_nl="Earnings-blokkering (dagen)"
+                  help_nl="Aantal kalenderdagen vóór een earnings-publicatie waarin het systeem geen nieuwe BUY-suggesties doet. Earnings zijn binaire events; een aandeel kan ±20% springen. 0 = uit. Standaard 5."
+                />
+                <input
+                  id="strategy-trading_earnings_block_days"
+                  data-testid="instellingen-strategy-trading_earnings_block_days"
+                  type="number"
+                  min="0"
+                  max="30"
+                  step="1"
+                  value={strategy.trading_earnings_block_days}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_earnings_block_days: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_news_buy_bias_max_boost_pct">
+                <FieldLabel
+                  label_nl="Nieuws-overtuiging boost (max %)"
+                  help_nl="Bij positieve nieuwsstroom (analist-verhoging, dividendverhoging, contractwinst, insider-aankopen) verhoogt het systeem de overtuigingsscore met maximaal dit percentage. 0 = uit. Standaard 5."
+                />
+                <input
+                  id="strategy-trading_news_buy_bias_max_boost_pct"
+                  data-testid="instellingen-strategy-trading_news_buy_bias_max_boost_pct"
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="1"
+                  value={strategy.trading_news_buy_bias_max_boost_pct}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_news_buy_bias_max_boost_pct: event.target.value,
                     })
                   }
                 />

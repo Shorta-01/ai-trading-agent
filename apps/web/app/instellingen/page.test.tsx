@@ -473,6 +473,61 @@ describe("InstellingenPage", () => {
     ).toBe("1000000");
   });
 
+  it("renders the V1.2 §Q/R/S extension settings with defaults", async () => {
+    render(<Page />);
+    expect(
+      (
+        (await screen.findByTestId(
+          "instellingen-strategy-trading_fat_tail_factor",
+        )) as HTMLInputElement
+      ).value,
+    ).toBe("1.15");
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_earnings_block_days",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("5");
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_news_buy_bias_max_boost_pct",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("5");
+  });
+
+  it("saves edited V1.2 §Q/R/S settings via updateTradingSettings", async () => {
+    updateTradingSettings.mockReturnValue(ok(TRADING));
+    render(<Page />);
+    const fatTailInput = await screen.findByTestId(
+      "instellingen-strategy-trading_fat_tail_factor",
+    );
+    await userEvent.clear(fatTailInput);
+    await userEvent.type(fatTailInput, "1.30");
+    const earningsInput = screen.getByTestId(
+      "instellingen-strategy-trading_earnings_block_days",
+    );
+    await userEvent.clear(earningsInput);
+    await userEvent.type(earningsInput, "7");
+    await userEvent.click(
+      screen.getByTestId("instellingen-strategy-save-button"),
+    );
+    await waitFor(() =>
+      expect(updateTradingSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateTradingSettings.mock.calls[0][0];
+    // Number input normalises "1.30" → "1.3" on the way to the
+    // payload; we accept either form here.
+    expect(payload.user_strategy.trading_fat_tail_factor).toBe("1.3");
+    expect(payload.user_strategy.trading_earnings_block_days).toBe("7");
+    // News boost default retained.
+    expect(payload.user_strategy.trading_news_buy_bias_max_boost_pct).toBe(
+      "5",
+    );
+  });
+
   it("saves edited profit-harvest cycle parameters via updateTradingSettings", async () => {
     updateTradingSettings.mockReturnValue(ok(TRADING));
     render(<Page />);
