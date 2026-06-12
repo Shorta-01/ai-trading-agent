@@ -55,6 +55,9 @@ from portfolio_outlook_api.market_events_routes import (
 from portfolio_outlook_api.notification_routes import (
     router as notification_router,
 )
+from portfolio_outlook_api.orchestrator_verdicts_routes import (
+    router as orchestrator_verdicts_router,
+)
 from portfolio_outlook_api.portfolio_nav_history_routes import (
     router as portfolio_nav_history_router,
 )
@@ -204,6 +207,7 @@ app.include_router(runtime_config_router)
 app.include_router(suggestions_grid_router)
 app.include_router(market_events_router)
 app.include_router(digest_router)
+app.include_router(orchestrator_verdicts_router)
 app.include_router(notification_router)
 app.include_router(explanation_batch_router)
 app.include_router(predictor_performance_router)
