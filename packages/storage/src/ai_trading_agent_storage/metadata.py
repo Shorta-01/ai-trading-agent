@@ -1867,6 +1867,28 @@ daily_digests = Table(
 )
 
 
+orchestrator_scoring_verdicts = Table(
+    "orchestrator_scoring_verdicts",
+    metadata,
+    Column("verdict_id", Text, primary_key=True),
+    Column("ibkr_account_ref", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("ibkr_conid", Integer, nullable=True),
+    Column("forecast_id", Text, nullable=True),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("decision", Text, nullable=False),
+    Column("blocking_reason", Text, nullable=True),
+    Column("details_json", JSON, nullable=False),
+    Column("summary_nl", Text, nullable=False),
+    UniqueConstraint(
+        "ibkr_account_ref",
+        "symbol",
+        "forecast_id",
+        name="uq_orch_verdict_per_account_symbol_forecast",
+    ),
+)
+
+
 daily_briefings = Table(
     "daily_briefings",
     metadata,

@@ -106,6 +106,7 @@ def test_exactly_seventy_revision_files_exist_with_expected_names() -> None:
         "0068_daily_digests.py",
         "0069_runtime_config_notifications.py",
         "0070_runtime_config_ai_features.py",
+        "0071_orchestrator_scoring_verdicts.py",
     ]
 
 

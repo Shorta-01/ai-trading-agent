@@ -871,6 +871,25 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "Null betekent: gebruik de env-var default."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0071_orchestrator_scoring_verdicts",
+        previous_revision_id="0070_runtime_config_ai_features",
+        filename="0071_orchestrator_scoring_verdicts.py",
+        label_nl="Profit-harvest orchestrator parallel-scoring verdicts",
+        description_nl=(
+            "Voegt de ``orchestrator_scoring_verdicts`` tabel toe. "
+            "De profit-harvest orchestrator (V1.2 §M) draait parallel "
+            "aan de bestaande suggestion-pijplijn en schrijft één "
+            "verdict per kandidaat per forecast-cyclus. Decoupling "
+            "houdt de live suggestion-stream onaangetast tot de "
+            "doctrine wordt gepromoot. ``details_json`` is bewust "
+            "een blob — de gate-diagnostics evolueren met elke "
+            "nieuwe gate; per-veld kolommen zouden bij elke doctrine-"
+            "aanpassing migraties vragen. UNIQUE per ``(account, "
+            "symbol, forecast_id)`` zorgt dat opnieuw scoren tegen "
+            "dezelfde forecast upsert in plaats van duplicate."
+        ),
+    ),
 )
 
 
