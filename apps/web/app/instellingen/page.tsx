@@ -213,6 +213,18 @@ type StrategyState = {
   min_cash_reserve_pct: string;
   user_buffer_eur: string;
   prefer_simple_belgian_tax_admin: boolean;
+  // V1.2 profit-harvest cycle parameters — surfaced so the user can
+  // tune the doctrine without code changes.
+  trading_target_net_pct: string;
+  trading_horizon_min_months: string;
+  trading_horizon_max_months: string;
+  trading_min_position_eur: string;
+  trading_max_position_eur: string;
+  trading_confidence_threshold_pct: string;
+  trading_max_sector_pct: string;
+  trading_min_market_cap_eur: string;
+  trading_max_annual_volatility_pct: string;
+  trading_total_budget_eur: string;
 };
 
 function strategyStateFromRecord(record: Record<string, unknown>): StrategyState {
@@ -240,6 +252,27 @@ function strategyStateFromRecord(record: Record<string, unknown>): StrategyState
     user_buffer_eur: str("user_buffer_eur", "0"),
     prefer_simple_belgian_tax_admin:
       record.prefer_simple_belgian_tax_admin !== false,
+    // Profit-harvest defaults — match domain settings.py defaults so
+    // the form always renders sensible numbers on a fresh install.
+    trading_target_net_pct: str("trading_target_net_pct", "4"),
+    trading_horizon_min_months: str("trading_horizon_min_months", "3"),
+    trading_horizon_max_months: str("trading_horizon_max_months", "6"),
+    trading_min_position_eur: str("trading_min_position_eur", "25000"),
+    trading_max_position_eur: str("trading_max_position_eur", "100000"),
+    trading_confidence_threshold_pct: str(
+      "trading_confidence_threshold_pct",
+      "70",
+    ),
+    trading_max_sector_pct: str("trading_max_sector_pct", "25"),
+    trading_min_market_cap_eur: str(
+      "trading_min_market_cap_eur",
+      "5000000000",
+    ),
+    trading_max_annual_volatility_pct: str(
+      "trading_max_annual_volatility_pct",
+      "30",
+    ),
+    trading_total_budget_eur: str("trading_total_budget_eur", "1000000"),
   };
 }
 
@@ -1193,6 +1226,16 @@ export default function Page() {
       min_cash_reserve_pct: strategy.min_cash_reserve_pct,
       user_buffer_eur: strategy.user_buffer_eur,
       prefer_simple_belgian_tax_admin: strategy.prefer_simple_belgian_tax_admin,
+      trading_target_net_pct: strategy.trading_target_net_pct,
+      trading_horizon_min_months: strategy.trading_horizon_min_months,
+      trading_horizon_max_months: strategy.trading_horizon_max_months,
+      trading_min_position_eur: strategy.trading_min_position_eur,
+      trading_max_position_eur: strategy.trading_max_position_eur,
+      trading_confidence_threshold_pct: strategy.trading_confidence_threshold_pct,
+      trading_max_sector_pct: strategy.trading_max_sector_pct,
+      trading_min_market_cap_eur: strategy.trading_min_market_cap_eur,
+      trading_max_annual_volatility_pct: strategy.trading_max_annual_volatility_pct,
+      trading_total_budget_eur: strategy.trading_total_budget_eur,
     };
     const result = await apiClient.updateTradingSettings({
       allowed_universe: trading.allowed_universe,
@@ -1580,6 +1623,238 @@ export default function Page() {
                 />
                 Voorkeur voor eenvoudige Belgische fiscale administratie
                 <HelpTooltip text="Geeft voorrang aan beleggingen die je Belgische belastingaangifte eenvoudig houden." />
+              </label>
+
+              {/* V1.2 profit-harvest cycle parameters. Grouped under a
+               * sub-heading so they're visually distinct from the
+               * existing strategy preferences. */}
+              <h3
+                style={{ marginTop: 24, fontSize: 14, fontWeight: 700 }}
+                data-testid="instellingen-profit-harvest-heading"
+              >
+                Winst-cyclus instellingen
+              </h3>
+              <p style={HELP_STYLE}>
+                Parameters voor de {`"`}kopen → wachten tot +X % netto →
+                verkopen → herinvesteren{`"`} strategie. De software gebruikt
+                deze waarden om suggesties te filteren en posities te
+                grootten.
+              </p>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_target_net_pct">
+                <FieldLabel
+                  label_nl="Winstdoel per cyclus (netto %)"
+                  help_nl="Wanneer een aandeel dit netto winstpercentage haalt verkoopt het systeem automatisch. De verkoop-LMT wordt boven dit doel gezet om Belgische beurstaks te compenseren. Standaard 4 %."
+                />
+                <input
+                  id="strategy-trading_target_net_pct"
+                  data-testid="instellingen-strategy-trading_target_net_pct"
+                  type="number"
+                  min="1"
+                  max="50"
+                  step="0.1"
+                  value={strategy.trading_target_net_pct}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_target_net_pct: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_horizon_min_months">
+                <FieldLabel
+                  label_nl="Minimale horizon (maanden)"
+                  help_nl="Onderkant van het tijdsvenster waarin het systeem het winstdoel verwacht te halen. Standaard 3."
+                />
+                <input
+                  id="strategy-trading_horizon_min_months"
+                  data-testid="instellingen-strategy-trading_horizon_min_months"
+                  type="number"
+                  min="1"
+                  max="24"
+                  step="1"
+                  value={strategy.trading_horizon_min_months}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_horizon_min_months: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_horizon_max_months">
+                <FieldLabel
+                  label_nl="Maximale horizon (maanden)"
+                  help_nl="Bovenkant van het tijdsvenster voor het winstdoel. Het systeem berekent de kans op +X % binnen deze periode. Standaard 6."
+                />
+                <input
+                  id="strategy-trading_horizon_max_months"
+                  data-testid="instellingen-strategy-trading_horizon_max_months"
+                  type="number"
+                  min="1"
+                  max="24"
+                  step="1"
+                  value={strategy.trading_horizon_max_months}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_horizon_max_months: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_min_position_eur">
+                <FieldLabel
+                  label_nl="Minimale positie per aandeel (EUR)"
+                  help_nl="Ondergrens voor de overtuiging-gewogen positiegrootte. Bij lage overtuiging krijgt een aandeel dit minimumbedrag. Standaard €25.000."
+                />
+                <input
+                  id="strategy-trading_min_position_eur"
+                  data-testid="instellingen-strategy-trading_min_position_eur"
+                  type="number"
+                  min="1"
+                  step="1000"
+                  value={strategy.trading_min_position_eur}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_min_position_eur: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_max_position_eur">
+                <FieldLabel
+                  label_nl="Maximale positie per aandeel (EUR)"
+                  help_nl="Bovengrens voor de overtuiging-gewogen positiegrootte. Bij maximale overtuiging krijgt een aandeel dit maximumbedrag. Standaard €100.000."
+                />
+                <input
+                  id="strategy-trading_max_position_eur"
+                  data-testid="instellingen-strategy-trading_max_position_eur"
+                  type="number"
+                  min="1"
+                  step="1000"
+                  value={strategy.trading_max_position_eur}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_max_position_eur: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_confidence_threshold_pct">
+                <FieldLabel
+                  label_nl="Minimum overtuiging voor suggestie (%)"
+                  help_nl="Een aandeel verschijnt alleen als suggestie als het model deze kans of meer berekent op het halen van het winstdoel binnen de horizon. Standaard 70 %."
+                />
+                <input
+                  id="strategy-trading_confidence_threshold_pct"
+                  data-testid="instellingen-strategy-trading_confidence_threshold_pct"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={strategy.trading_confidence_threshold_pct}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_confidence_threshold_pct: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_max_sector_pct">
+                <FieldLabel
+                  label_nl="Maximum per sector (%)"
+                  help_nl="Begrenst hoeveel van het trading-budget in één sector mag zitten om concentratierisico te beperken. Standaard 25 %."
+                />
+                <input
+                  id="strategy-trading_max_sector_pct"
+                  data-testid="instellingen-strategy-trading_max_sector_pct"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={strategy.trading_max_sector_pct}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_max_sector_pct: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_min_market_cap_eur">
+                <FieldLabel
+                  label_nl="Minimum marktkapitalisatie (EUR)"
+                  help_nl="Aandelen met een marktkapitalisatie onder deze grens worden niet voorgesteld — small-caps en penny stocks worden uitgesloten. Standaard €5 miljard."
+                />
+                <input
+                  id="strategy-trading_min_market_cap_eur"
+                  data-testid="instellingen-strategy-trading_min_market_cap_eur"
+                  type="number"
+                  min="1"
+                  step="100000000"
+                  value={strategy.trading_min_market_cap_eur}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_min_market_cap_eur: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_max_annual_volatility_pct">
+                <FieldLabel
+                  label_nl="Maximum jaarvolatiliteit (%)"
+                  help_nl="Aandelen met een jaarvolatiliteit boven deze grens worden niet voorgesteld — hoge volatiliteit verhoogt kapitaalverliesrisico. Standaard 30 %."
+                />
+                <input
+                  id="strategy-trading_max_annual_volatility_pct"
+                  data-testid="instellingen-strategy-trading_max_annual_volatility_pct"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={strategy.trading_max_annual_volatility_pct}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_max_annual_volatility_pct: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label style={LABEL_STYLE} htmlFor="strategy-trading_total_budget_eur">
+                <FieldLabel
+                  label_nl="Totale trading-budget (EUR)"
+                  help_nl="Totaal bedrag dat het systeem mag inzetten in de profit-harvest strategie. Rest blijft op cash/termijnrekening. Standaard €1.000.000."
+                />
+                <input
+                  id="strategy-trading_total_budget_eur"
+                  data-testid="instellingen-strategy-trading_total_budget_eur"
+                  type="number"
+                  min="1"
+                  step="10000"
+                  value={strategy.trading_total_budget_eur}
+                  onChange={(event) =>
+                    setStrategy({
+                      ...strategy,
+                      trading_total_budget_eur: event.target.value,
+                    })
+                  }
+                />
               </label>
 
               <SaveBar

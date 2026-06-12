@@ -430,6 +430,78 @@ describe("InstellingenPage", () => {
     expect(payload.allowed_universe).toEqual(TRADING.allowed_universe);
   });
 
+  it("renders the V1.2 profit-harvest cycle parameters with defaults", async () => {
+    render(<Page />);
+    // Heading and the 10 trading_* inputs are present.
+    expect(
+      await screen.findByTestId("instellingen-profit-harvest-heading"),
+    ).toBeInTheDocument();
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_target_net_pct",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("4");
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_horizon_min_months",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("3");
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_horizon_max_months",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("6");
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_confidence_threshold_pct",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("70");
+    expect(
+      (
+        screen.getByTestId(
+          "instellingen-strategy-trading_total_budget_eur",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("1000000");
+  });
+
+  it("saves edited profit-harvest cycle parameters via updateTradingSettings", async () => {
+    updateTradingSettings.mockReturnValue(ok(TRADING));
+    render(<Page />);
+    const targetInput = await screen.findByTestId(
+      "instellingen-strategy-trading_target_net_pct",
+    );
+    await userEvent.clear(targetInput);
+    await userEvent.type(targetInput, "5");
+    const confInput = screen.getByTestId(
+      "instellingen-strategy-trading_confidence_threshold_pct",
+    );
+    await userEvent.clear(confInput);
+    await userEvent.type(confInput, "75");
+    await userEvent.click(
+      screen.getByTestId("instellingen-strategy-save-button"),
+    );
+    await waitFor(() =>
+      expect(updateTradingSettings).toHaveBeenCalledTimes(1),
+    );
+    const payload = updateTradingSettings.mock.calls[0][0];
+    expect(payload.user_strategy.trading_target_net_pct).toBe("5");
+    expect(payload.user_strategy.trading_confidence_threshold_pct).toBe("75");
+    // Defaults flow through for the untouched fields.
+    expect(payload.user_strategy.trading_horizon_min_months).toBe("3");
+    expect(payload.user_strategy.trading_horizon_max_months).toBe("6");
+    expect(payload.user_strategy.trading_min_position_eur).toBe("25000");
+    expect(payload.user_strategy.trading_max_position_eur).toBe("100000");
+  });
+
   it("saves a universe toggle with the merged allowed_universe", async () => {
     updateTradingSettings.mockReturnValue(ok(TRADING));
     render(<Page />);
