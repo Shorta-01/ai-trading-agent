@@ -2979,6 +2979,79 @@ class DailyDigestRecord:
 
 
 @dataclass(frozen=True)
+class OrchestratorScoringVerdictRecord:
+    """One profit-harvest orchestrator verdict for one candidate.
+
+    V1.2 §W parallel-scoring path: the orchestrator runs alongside
+    the live suggestion engine and writes one verdict per candidate
+    per forecast cycle. The verdict is *not* a suggestion — it's a
+    parallel doctrine reading. The live suggestion engine is the
+    canonical decision source until the orchestrator is promoted.
+
+    UNIQUE on ``(ibkr_account_ref, symbol, forecast_id)`` so the same
+    forecast row is scored once per orchestrator run; re-runs upsert.
+
+    ``details_json`` is intentionally a JSON blob — the diagnostics
+    shape evolves as gates are added; per-field columns would migrate
+    on every doctrine change.
+    """
+
+    verdict_id: str
+    ibkr_account_ref: str
+    symbol: str
+    ibkr_conid: int | None
+    forecast_id: str | None
+    generated_at: datetime
+    decision: str
+    blocking_reason: str | None
+    details_json: dict[str, object]
+    summary_nl: str
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "verdict_id",
+            "ibkr_account_ref",
+            "symbol",
+            "decision",
+            "summary_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        # Locked decision vocabulary from
+        # profit_harvest_orchestrator.py — keeps the storage row in
+        # sync with the doctrine.
+        allowed_decisions = {
+            "suggest",
+            "skip_macro_regime",
+            "skip_risk_universe",
+            "skip_earnings_window",
+            "skip_confidence_gate",
+            "skip_below_conviction_floor",
+            "skip_sector_concentration",
+            "skip_pair_build",
+        }
+        if self.decision not in allowed_decisions:
+            raise ValueError(
+                f"decision {self.decision!r} not in locked orchestrator vocabulary"
+            )
+
+
+@dataclass(frozen=True)
+class SaveOrchestratorScoringVerdictRequest:
+    """Upsert request for one orchestrator verdict."""
+
+    verdict_id: str
+    ibkr_account_ref: str
+    symbol: str
+    ibkr_conid: int | None
+    forecast_id: str | None
+    generated_at: datetime
+    decision: str
+    blocking_reason: str | None
+    details_json: dict[str, object]
+    summary_nl: str
+
+
+@dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.
 

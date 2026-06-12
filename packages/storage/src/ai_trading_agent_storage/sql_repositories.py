@@ -75,6 +75,7 @@ from ai_trading_agent_storage.metadata import (
     market_data_snapshots,
     prediction_diary_entries,
     market_data_latest_snapshots,
+    orchestrator_scoring_verdicts,
     paper_portfolio_setups,
     request_logs,
     provider_sources,
@@ -123,6 +124,8 @@ from ai_trading_agent_storage.repository_contracts import (
     BriefingAlertRecord,
     DailyBriefingRecord,
     DailyDigestRecord,
+    OrchestratorScoringVerdictRecord,
+    SaveOrchestratorScoringVerdictRequest,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     ActionDraftOrderConditionRecord,
@@ -3102,6 +3105,104 @@ class SqlAlchemyDailyDigestRepository(_Base):
             records,
             daily_digests.name,
             f"{len(records)} daily digests opgehaald.",
+        )
+
+
+class SqlAlchemyOrchestratorScoringVerdictRepository(_Base):
+    """One row per ``(ibkr_account_ref, symbol, forecast_id)``.
+
+    V1.2 §W: the worker's morning-chain scoring leg upserts a
+    verdict per candidate per forecast cycle. Repeat scoring against
+    the same forecast row overwrites (UNIQUE constraint).
+    """
+
+    def upsert_verdict(
+        self, request: SaveOrchestratorScoringVerdictRequest
+    ) -> StorageWriteResult:
+        # Delete-then-insert keeps the upsert simple and DB-portable;
+        # see DailyDigest repo for the same pattern.
+        self._connection.execute(
+            orchestrator_scoring_verdicts.delete().where(
+                (
+                    orchestrator_scoring_verdicts.c.ibkr_account_ref
+                    == request.ibkr_account_ref
+                )
+                & (orchestrator_scoring_verdicts.c.symbol == request.symbol)
+                & (
+                    orchestrator_scoring_verdicts.c.forecast_id
+                    == request.forecast_id
+                )
+            )
+        )
+        self._insert(orchestrator_scoring_verdicts, asdict(request))
+        return StorageWriteResult(
+            True,
+            request.verdict_id,
+            orchestrator_scoring_verdicts.name,
+            True,
+            "Orchestrator-verdict opgeslagen.",
+        )
+
+    def get_latest_verdict_for_account(
+        self, ibkr_account_ref: str
+    ) -> StorageReadResult[OrchestratorScoringVerdictRecord]:
+        """Return the single most recent verdict across all symbols
+        for this account — useful for the dashboard's "latest doctrine
+        scoring" widget."""
+
+        statement = (
+            select(orchestrator_scoring_verdicts)
+            .where(
+                orchestrator_scoring_verdicts.c.ibkr_account_ref
+                == ibkr_account_ref
+            )
+            .order_by(orchestrator_scoring_verdicts.c.generated_at.desc())
+            .limit(1)
+        )
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return StorageReadResult(
+                False,
+                None,
+                orchestrator_scoring_verdicts.name,
+                "Nog geen orchestrator-verdict voor dit account.",
+            )
+        return StorageReadResult(
+            True,
+            OrchestratorScoringVerdictRecord(**dict(row)),
+            orchestrator_scoring_verdicts.name,
+            "Orchestrator-verdict opgehaald.",
+        )
+
+    def list_verdicts_for_account(
+        self, *, ibkr_account_ref: str, limit: int = 100
+    ) -> StorageListResult[OrchestratorScoringVerdictRecord]:
+        """Return verdicts for one account, newest first, capped at
+        ``limit`` (default 100). Powers the operator UI's doctrine-
+        scoring history pane."""
+
+        if limit <= 0:
+            raise ValueError("limit must be > 0")
+        rows = (
+            self._connection.execute(
+                select(orchestrator_scoring_verdicts)
+                .where(
+                    orchestrator_scoring_verdicts.c.ibkr_account_ref
+                    == ibkr_account_ref
+                )
+                .order_by(orchestrator_scoring_verdicts.c.generated_at.desc())
+                .limit(limit)
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            OrchestratorScoringVerdictRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            orchestrator_scoring_verdicts.name,
+            f"{len(records)} orchestrator-verdicts opgehaald.",
         )
 
 
