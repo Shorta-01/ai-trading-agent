@@ -176,6 +176,16 @@ from .capabilities import (
     require_can_create_paper_order,
     require_can_create_paper_transaction,
 )
+from .confidence_gate import (
+    BLOCKING_REASON_BELOW_CONFIDENCE,
+    BLOCKING_REASON_INVALID_FORECAST,
+    ConfidenceGateResult,
+    evaluate_confidence_gate,
+    probability_of_target_hit,
+)
+from .confidence_gate import (
+    BLOCKING_REASON_ZERO_VOLATILITY as CONFIDENCE_GATE_BLOCKING_REASON_ZERO_VOLATILITY,
+)
 from .daily_briefing import (
     ALERT_KIND_CRITICAL_DRAFT_EVENT,
     ALERT_KIND_DIARY_OUTCOME_CLOSED,
@@ -671,6 +681,12 @@ __all__ = [
     "compute_take_profit_sell_price",
     "conviction_weighted_position_size_eur",
     "gross_pct_for_net_target_pct",
+    "BLOCKING_REASON_BELOW_CONFIDENCE",
+    "BLOCKING_REASON_INVALID_FORECAST",
+    "CONFIDENCE_GATE_BLOCKING_REASON_ZERO_VOLATILITY",
+    "ConfidenceGateResult",
+    "evaluate_confidence_gate",
+    "probability_of_target_hit",
     "BLOCKING_REASON_ABOVE_MAX_VOLATILITY",
     "BLOCKING_REASON_BELOW_MIN_MARKET_CAP",
     "RISK_UNIVERSE_BLOCKING_REASON_INSUFFICIENT_BARS",
