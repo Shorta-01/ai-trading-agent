@@ -336,27 +336,43 @@ def _build_orders_for_type(
             order.lmtPrice = inputs.limit_price
         return [order]
 
-    # BRACKET — parent LMT + opposite-side TP (LMT) + opposite-side SL (STP)
+    # BRACKET — parent LMT + opposite-side TP (LMT) [+ opposite-side SL (STP)]
+    #
+    # V1.2 §U: the take-profit pair (profit-harvest doctrine) emits
+    # BRACKET without a stop-loss because the no-stop-loss rule is
+    # locked in the doctrine. We detect that case here and emit a
+    # 2-leg bracket instead of the 3-leg one.
     if inputs.limit_price <= 0:
         raise ValueError("limit_price must be positive for BRACKET")
     tp = inputs.bracket_take_profit_limit_price
     sl = inputs.bracket_stop_loss_price
     if tp is None or tp <= 0:
         raise ValueError("bracket_take_profit_limit_price must be positive")
-    if sl is None or sl <= 0:
-        raise ValueError("bracket_stop_loss_price must be positive")
+    # ``sl=None`` is a deliberate doctrine signal (no stop-loss).
+    # ``sl <= 0`` is still an error — the caller meant to set it but
+    # passed garbage.
+    if sl is not None and sl <= 0:
+        raise ValueError("bracket_stop_loss_price must be positive when set")
 
     parent = _new_order(order_cls, action=action, quantity=quantity, transmit=False)
     parent.orderType = "LMT"
     parent.lmtPrice = inputs.limit_price
 
     opposite = _opposite_side(action)
+    # When there is no stop-loss leg, the take-profit IS the last
+    # leg and must transmit=True to release the bracket.
+    take_profit_transmits = sl is None
     take_profit = _new_order(
-        order_cls, action=opposite, quantity=quantity, transmit=False
+        order_cls,
+        action=opposite,
+        quantity=quantity,
+        transmit=take_profit_transmits,
     )
     take_profit.orderType = "LMT"
     take_profit.lmtPrice = tp
     take_profit.parentId = 0  # patched in submit() once parent_id is known
+    if sl is None:
+        return [parent, take_profit]
 
     stop_loss = _new_order(
         order_cls, action=opposite, quantity=quantity, transmit=True
