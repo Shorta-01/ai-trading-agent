@@ -30,7 +30,7 @@ runnable input.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
@@ -109,6 +109,11 @@ class CandidateProviderInputs:
     # Macro placeholders until live VIX + index feeds are wired.
     vix_level: Decimal | None
     index_bars: tuple[HistoricalBar, ...]
+    # V1.2 §AI — nearest future earnings date per symbol from the
+    # earnings_events table. Missing symbols stay ``None`` (locked
+    # gate semantics: missing data does not block; see
+    # earnings_calendar_gate doctrine).
+    next_earnings_by_symbol: dict[str, date | None] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -206,7 +211,7 @@ def build_candidates(
             index_bars=inputs.index_bars,
             existing_sector_allocations=sector_allocations,
             today=inputs.today,
-            next_earnings_date=None,  # Live earnings calendar TBD
+            next_earnings_date=inputs.next_earnings_by_symbol.get(symbol),
             target_net_pct=inputs.settings.target_net_pct,
             confidence_threshold_pct=inputs.settings.confidence_threshold_pct,
             min_position_eur=inputs.settings.min_position_eur,

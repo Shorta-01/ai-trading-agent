@@ -27,6 +27,9 @@ from portfolio_outlook_api.decision_package_routes import (
 from portfolio_outlook_api.digest_routes import (
     router as digest_router,
 )
+from portfolio_outlook_api.earnings_routes import (
+    router as earnings_router,
+)
 from portfolio_outlook_api.error_routes import (
     router as error_log_router,
 )
@@ -215,6 +218,7 @@ app.include_router(notification_router)
 app.include_router(explanation_batch_router)
 app.include_router(predictor_performance_router)
 app.include_router(tob_router)
+app.include_router(earnings_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

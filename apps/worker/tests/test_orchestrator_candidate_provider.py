@@ -101,6 +101,7 @@ def _inputs(
     bars: dict[str, tuple[HistoricalBar, ...]] | None = None,
     held_positions: tuple[HeldPositionRow, ...] = (),
     vix_level: Decimal | None = Decimal("15"),
+    next_earnings_by_symbol: dict[str, date | None] | None = None,
 ) -> CandidateProviderInputs:
     return CandidateProviderInputs(
         ibkr_account_ref="DU1234567",
@@ -112,6 +113,7 @@ def _inputs(
         settings=_settings(),
         vix_level=vix_level,
         index_bars=_trending_up_bars(),
+        next_earnings_by_symbol=next_earnings_by_symbol or {},
     )
 
 
@@ -297,3 +299,54 @@ def test_vix_none_passes_through() -> None:
         )
     )
     assert result.candidates[0].orchestrator_inputs.vix_level is None
+
+
+def test_next_earnings_date_threads_from_input_dict() -> None:
+    """V1.2 §AI — replaces the hardcoded ``next_earnings_date=None``.
+
+    The orchestrator's earnings-window gate refuses new BUYs inside
+    the locked window before earnings; the provider has to thread
+    the actual upcoming date in. Symbols missing from the dict stay
+    ``None`` (locked gate semantics: missing data does not block).
+    """
+
+    aapl = _forecast()
+    msft = _forecast(symbol="MSFT", forecast_id="fc-MSFT")
+    earnings_date = date(2026, 7, 15)
+    result = build_candidates(
+        _inputs(
+            forecasts=(aapl, msft),
+            fundamentals={
+                "AAPL": _fundamentals(),
+                "MSFT": _fundamentals(),
+            },
+            bars={"AAPL": _bars(), "MSFT": _bars()},
+            next_earnings_by_symbol={"AAPL": earnings_date},
+        )
+    )
+    candidates_by_symbol = {
+        c.orchestrator_inputs.ticker: c for c in result.candidates
+    }
+    assert (
+        candidates_by_symbol["AAPL"].orchestrator_inputs.next_earnings_date
+        == earnings_date
+    )
+    assert (
+        candidates_by_symbol["MSFT"].orchestrator_inputs.next_earnings_date
+        is None
+    )
+
+
+def test_next_earnings_by_symbol_defaults_to_empty_dict() -> None:
+    """Backwards-compatible default — existing callers don't have to
+    pass the new arg until the morning chain wires it up."""
+
+    fc = _forecast()
+    result = build_candidates(
+        _inputs(
+            forecasts=(fc,),
+            fundamentals={"AAPL": _fundamentals()},
+            bars={"AAPL": _bars()},
+        )
+    )
+    assert result.candidates[0].orchestrator_inputs.next_earnings_date is None

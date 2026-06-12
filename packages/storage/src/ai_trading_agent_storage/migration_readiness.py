@@ -890,6 +890,24 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "dezelfde forecast upsert in plaats van duplicate."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0072_earnings_events",
+        previous_revision_id="0071_orchestrator_scoring_verdicts",
+        filename="0072_earnings_events.py",
+        label_nl="Earnings-calendar feed",
+        description_nl=(
+            "Voegt de ``earnings_events`` tabel toe — de storage-"
+            "shape voor de aankomende-earnings-feed. Vervangt de "
+            "hardcoded ``next_earnings_date=None`` placeholder in de "
+            "orchestrator-candidate-provider. ``status`` is locked "
+            "naar confirmed/estimated/past zodat de earnings-window "
+            "gate (V1.2 §R) een strikt of soepel venster kan kiezen. "
+            "UNIQUE per ``(symbol, event_date)`` zorgt dat een "
+            "refetch upsert in plaats van duplicate. ``raw_json`` "
+            "bewaart de provider-payload voor toekomstige verrijking "
+            "(eps-estimate, eps-actual, revenue-estimate)."
+        ),
+    ),
 )
 
 

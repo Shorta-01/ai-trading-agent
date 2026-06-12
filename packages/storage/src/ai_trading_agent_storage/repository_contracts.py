@@ -3052,6 +3052,59 @@ class SaveOrchestratorScoringVerdictRequest:
 
 
 @dataclass(frozen=True)
+class EarningsEventRecord:
+    """One persisted upcoming earnings date for one symbol.
+
+    V1.2 §AI — replaces the hardcoded ``next_earnings_date=None`` in
+    ``orchestrator_candidate_provider``. The earnings-window gate
+    (V1.2 §R) refuses new BUY suggestions inside a configurable
+    window before earnings; this record is the storage shape that
+    feeds the gate.
+
+    ``status`` is locked to ``confirmed`` | ``estimated`` | ``past``
+    so the gate can pick a stricter threshold for estimated dates.
+    UNIQUE on ``(symbol, event_date)`` so refetches upsert instead
+    of duplicate.
+    """
+
+    earnings_event_id: str
+    symbol: str
+    ibkr_conid: str | None
+    event_date: date
+    status: str
+    source: str
+    fetched_at: datetime
+    raw_json: dict[str, object] | None
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "earnings_event_id",
+            "symbol",
+            "status",
+            "source",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.status not in {"confirmed", "estimated", "past"}:
+            raise ValueError(
+                f"status must be confirmed/estimated/past, got {self.status!r}"
+            )
+
+
+@dataclass(frozen=True)
+class SaveEarningsEventRequest:
+    """Upsert request for one earnings event row."""
+
+    earnings_event_id: str
+    symbol: str
+    ibkr_conid: str | None
+    event_date: date
+    status: str
+    source: str
+    fetched_at: datetime
+    raw_json: dict[str, object] | None
+
+
+@dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.
 

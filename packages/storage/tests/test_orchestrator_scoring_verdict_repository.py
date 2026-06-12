@@ -35,9 +35,9 @@ def _report(allowed: bool) -> MigrationReadinessReport:
         database_connected=allowed,
         migrations_checked_against_database=allowed,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0071_orchestrator_scoring_verdicts",
+        latest_expected_revision_id="0072_earnings_events",
         database_revision_id=(
-            "0071_orchestrator_scoring_verdicts" if allowed else None
+            "0072_earnings_events" if allowed else None
         ),
         persistence_allowed=allowed,
         blocks_runtime_writes=(not allowed),
