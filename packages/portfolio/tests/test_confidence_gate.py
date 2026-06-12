@@ -18,9 +18,12 @@ from portfolio_outlook_portfolio import (
 # ---- probability_of_target_hit ---------------------------------------
 
 
-def test_p_hit_above_50pct_when_median_equals_target() -> None:
-    # If median forecast == target, P(S_T >= target) should be 50%
-    # (it's the median of a continuous distribution).
+def test_p_hit_well_above_50pct_when_median_equals_target() -> None:
+    # Running-max upgrade (V1.2 §P): when median == target the
+    # terminal-only probability is 50 %, but the running-max picks up
+    # additional probability from paths that touched the target then
+    # came back down by horizon end. With 20 % annual vol over 6
+    # months that reflection mass pushes P > 75 %.
     p = probability_of_target_hit(
         current_price=Decimal("100"),
         median_forecast_price=Decimal("104.73"),
@@ -29,7 +32,7 @@ def test_p_hit_above_50pct_when_median_equals_target() -> None:
         target_price=Decimal("104.73"),
     )
     assert p is not None
-    assert Decimal("49.50") <= p <= Decimal("50.50")
+    assert Decimal("75") <= p <= Decimal("90")
 
 
 def test_p_hit_high_when_median_well_above_target() -> None:
@@ -45,13 +48,17 @@ def test_p_hit_high_when_median_well_above_target() -> None:
     assert p > Decimal("80")
 
 
-def test_p_hit_low_when_median_well_below_target() -> None:
-    # Median forecast below target → P should be low.
+def test_p_hit_low_when_median_well_below_target_and_low_vol() -> None:
+    # Running-max upgrade (V1.2 §P): even when the median is below
+    # target, the running-max can still be substantial if vol is
+    # high (the price can excurse up to target then retreat). To
+    # produce a *low* running-max we need both: median clearly below
+    # target AND low vol.
     p = probability_of_target_hit(
         current_price=Decimal("100"),
-        median_forecast_price=Decimal("95"),
-        annual_volatility_pct=Decimal("20"),
-        horizon_days=126,
+        median_forecast_price=Decimal("90"),
+        annual_volatility_pct=Decimal("5"),  # low vol
+        horizon_days=63,  # 3 months
         target_price=Decimal("104.73"),
     )
     assert p is not None
@@ -98,6 +105,59 @@ def test_p_hit_rises_with_horizon() -> None:
     )
     assert short is not None and long is not None
     assert long > short
+
+
+def test_target_at_or_below_current_returns_100() -> None:
+    # The take-profit LMT would trigger on entry → 100 %.
+    p = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("110"),
+        annual_volatility_pct=Decimal("20"),
+        horizon_days=126,
+        target_price=Decimal("100"),
+    )
+    assert p == Decimal("100.00")
+    p = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("110"),
+        annual_volatility_pct=Decimal("20"),
+        horizon_days=126,
+        target_price=Decimal("95"),
+    )
+    assert p == Decimal("100.00")
+
+
+def test_running_max_strictly_greater_than_terminal_only() -> None:
+    # Sanity: the running-max probability for any K > S_0 must be
+    # at least the terminal-price probability. With median ≈ S_0
+    # and target slightly above current, the gap is dramatic.
+    p = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("100"),  # flat median
+        annual_volatility_pct=Decimal("20"),
+        horizon_days=126,
+        target_price=Decimal("105"),
+    )
+    assert p is not None
+    # Terminal-only probability with median == current and target
+    # 5 % above would be roughly Φ(ln(100/105) / σ_horizon) ≈ Φ(-0.35)
+    # ≈ 36 %. Running-max is ~70 %+ — the reflection nearly doubles
+    # the chance.
+    assert p > Decimal("65")
+
+
+def test_p_hit_capped_at_100_on_extreme_inputs() -> None:
+    # Median well above target with high vol: probability must cap
+    # at 100, never overflow.
+    p = probability_of_target_hit(
+        current_price=Decimal("100"),
+        median_forecast_price=Decimal("200"),
+        annual_volatility_pct=Decimal("80"),
+        horizon_days=252,
+        target_price=Decimal("105"),
+    )
+    assert p is not None
+    assert p <= Decimal("100.00")
 
 
 def test_p_hit_returns_none_on_invalid_inputs() -> None:

@@ -1,4 +1,4 @@
-"""Confidence gate for profit-harvest suggestions (V1.2 §H).
+"""Confidence gate for profit-harvest suggestions (V1.2 §H + §P).
 
 This is the bridge between the existing forecast layer and the
 suggestion engine. Once a candidate has cleared the risk-universe
@@ -7,7 +7,7 @@ confidence gate asks the question that actually matters for the
 retiree-income doctrine:
 
     *"What probability does the model assign to the gross take-
-    profit target being hit inside the user's horizon?"*
+    profit LMT being hit *at any point* inside the user's horizon?"*
 
 If that probability is above the user's configured
 ``confidence_threshold_pct``, the candidate becomes a suggestion;
@@ -15,21 +15,30 @@ otherwise it's skipped.
 
 The math fits a lognormal terminal-price distribution to the
 forecast's median (``p50_price``) and annualised volatility, then
-applies the standard normal CDF to compute ``P(S_T >= K)`` where
-``S_T`` is the forecast price at horizon and ``K`` is the gross
-take-profit price (``current_price`` × ``(1 + gross_target_pct/100)``).
+applies the GBM first-passage / running-maximum formula to compute
+``P(max_{0<=t<=T} S_t >= K)`` where ``S_t`` is the price path and
+``K`` is the gross take-profit price.
 
 A few practitioner notes baked into the contract:
 
 * **Belgian TOB is folded in.** The gate computes the *gross* target
   from the user's *net* target via ``profit_harvest`` so the threshold
   comparison is apples-to-apples with the LMT price.
-* **Terminal-price distribution, not running-maximum.** A real take-
-  profit LMT triggers if the target is touched at *any* point during
-  the horizon, which is mathematically a higher probability than the
-  forecast's terminal-price ``P(S_T >= K)``. Using the terminal
-  probability makes the gate conservative — under-suggest beats over-
-  suggest for a retiree.
+* **Running-maximum, not terminal-price** (V1.2 §P upgrade). A real
+  take-profit LMT triggers if the target is touched at *any* point
+  during the horizon, not just at the end. The running-max formula
+  for GBM:
+
+      P(max S_t >= K) = N(-(b - m)/s) + exp(2·m·b/s²)·N(-(b + m)/s)
+
+  where ``b = ln(K / S_0)``, ``m = ln(p50 / S_0)`` is the median
+  horizon log-return, and ``s = σ * sqrt(T)`` is the horizon-scaled
+  vol. The first term equals the terminal-price probability; the
+  second is the additional probability mass from paths that hit the
+  barrier then came back down by horizon end. The total can be
+  substantially higher than the terminal-only number — that's the
+  honest reading for a take-profit LMT.
+
 * **Empirical calibration upstream.** The forecast layer already runs
   a calibration feedback loop (V1.2 §C); the confidence gate inherits
   that honesty automatically by consuming its outputs.
@@ -39,7 +48,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
-from math import erf, log, sqrt
+from math import erf, exp, log, sqrt
 from typing import Final
 
 from portfolio_outlook_portfolio.belgian_tax import TobSecurityClass
@@ -93,18 +102,33 @@ def probability_of_target_hit(
     horizon_days: int,
     target_price: Decimal,
 ) -> Decimal | None:
-    """Compute the lognormal-implied ``P(S_T >= target_price)``.
+    """Compute the GBM running-maximum probability ``P(max S_t >= K)``.
 
-    Derivation. Assume terminal log-return is Normal:
+    For a take-profit LMT this is the correct probability — the
+    order triggers if the price touches the target at *any* time
+    during the horizon, not just at horizon-end.
 
-        ln(S_T / S_0) ~ N((μ - σ²/2) * T, σ² * T)
+    Derivation. The forecast assumes log-returns are Normal:
 
-    The forecast median price is reached when the log-return equals
-    its mean, so ``(μ - σ²/2) * T = ln(p50 / S_0)``. Plug that in:
+        ln(S_t / S_0) ~ N((μ − σ²/2) · t, σ² · t)
 
-        P(S_T >= K) = Φ(ln(p50 / K) / (σ * sqrt(T)))
+    The forecast median is reached when the log-return equals its
+    mean, so ``m := ln(p50 / S_0) = (μ − σ²/2) · T``. Let
+    ``b := ln(K / S_0)`` and ``s := σ · sqrt(T)``. The first-passage
+    /running-maximum probability is:
 
-    where Φ is the standard normal CDF.
+        P(max S_t >= K) = Φ(−(b − m)/s)
+                         + exp(2 · m · b / s²) · Φ(−(b + m)/s)
+
+    The first term is the terminal-price probability ``P(S_T >= K)``.
+    The second is the additional mass from paths that touched the
+    barrier *and then came back down* by horizon end. For ``K > S_0``
+    the total is always at least as large as the terminal-only
+    number, often substantially so.
+
+    Edge case: if the target is already at or below the current
+    price (``K <= S_0``), the LMT triggers immediately on entry → P
+    is exactly 100 %.
 
     Returns ``None`` for any structural problem (non-positive prices,
     zero volatility, non-positive horizon). The caller maps that to
@@ -119,13 +143,44 @@ def probability_of_target_hit(
         or horizon_days <= 0
     ):
         return None
+
+    # Target at or below current → LMT triggers on entry, always.
+    if target_price <= current_price:
+        return Decimal("100.00")
+
     sigma_annual = float(annual_volatility_pct) / 100.0
     sigma_horizon = sigma_annual * sqrt(horizon_days / TRADING_DAYS_PER_YEAR)
     if sigma_horizon == 0.0:
         return None
-    z = log(float(median_forecast_price) / float(target_price)) / sigma_horizon
-    p = _normal_cdf(z)
-    return (Decimal(repr(p)) * Decimal("100")).quantize(
+
+    s0 = float(current_price)
+    k = float(target_price)
+    p50 = float(median_forecast_price)
+    b = log(k / s0)
+    m = log(p50 / s0)
+
+    # Terminal-price probability term.
+    terminal_term = _normal_cdf(-(b - m) / sigma_horizon)
+    # Reflection term — paths that hit the barrier then retreated.
+    # ``2*m*b/s²`` is the Girsanov-style exponent; numerically guard
+    # against overflow on degenerate inputs (very large b with very
+    # small s would blow up). We cap the exponent at +50 so the
+    # resulting probability never exceeds 1 by floating-point error;
+    # the reflection term is always non-negative and at most 1.
+    exponent = 2.0 * m * b / (sigma_horizon * sigma_horizon)
+    if exponent > 50.0:
+        # Reflection mass would effectively saturate at 1 minus the
+        # terminal term — cap the total at 1.
+        running_max = 1.0
+    else:
+        reflection = exp(exponent) * _normal_cdf(-(b + m) / sigma_horizon)
+        running_max = terminal_term + reflection
+        # Floating-point guard: the formula is mathematically
+        # bounded by 1 but rounding can push it a hair over.
+        if running_max > 1.0:
+            running_max = 1.0
+
+    return (Decimal(repr(running_max)) * Decimal("100")).quantize(
         _PCT_QUANT, rounding=ROUND_HALF_UP
     )
 
