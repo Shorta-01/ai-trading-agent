@@ -325,6 +325,11 @@ from .predictor_protocol import (
 from .predictor_protocol import (
     STATUS_READY as PREDICTOR_STATUS_READY,
 )
+from .profit_harvest import (
+    compute_take_profit_sell_price,
+    conviction_weighted_position_size_eur,
+    gross_pct_for_net_target_pct,
+)
 from .qvm_factor_predictor import (
     BLOCKING_REASON_INSUFFICIENT_FACTORS as QVM_BLOCKING_REASON_INSUFFICIENT_FACTORS,
 )
@@ -644,6 +649,9 @@ __all__ = [
     "tob_rate_info",
     "compute_tob",
     "compute_dividend_withholding",
+    "compute_take_profit_sell_price",
+    "conviction_weighted_position_size_eur",
+    "gross_pct_for_net_target_pct",
     "ALERT_KIND_NEW_SUGGESTION",
     "ALERT_KIND_NEW_DECISION_PACKAGE",
     "ALERT_KIND_NEW_ACTION_DRAFT",

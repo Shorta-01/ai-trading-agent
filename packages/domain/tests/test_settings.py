@@ -131,6 +131,109 @@ def test_cost_and_budget() -> None:
     assert remaining_budget_eur(policy=policy, estimated_cost_eur=Decimal("20")) == Decimal("0")
 
 
+def test_user_strategy_settings_default_trading_cycle_parameters() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    settings = UserStrategySettings()
+    # Locked retiree-income doctrine defaults.
+    assert settings.trading_target_net_pct == Decimal("4")
+    assert settings.trading_horizon_min_months == 3
+    assert settings.trading_horizon_max_months == 6
+    assert settings.trading_min_position_eur == Decimal("25000")
+    assert settings.trading_max_position_eur == Decimal("100000")
+    assert settings.trading_confidence_threshold_pct == Decimal("70")
+    assert settings.trading_max_sector_pct == Decimal("25")
+    assert settings.trading_min_market_cap_eur == Decimal("5000000000")
+    assert settings.trading_max_annual_volatility_pct == Decimal("30")
+    assert settings.trading_total_budget_eur == Decimal("1000000")
+
+
+def test_user_strategy_settings_rejects_float_trading_inputs() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_target_net_pct=4.0)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_min_position_eur=25000.0)  # type: ignore[arg-type]
+
+
+def test_user_strategy_settings_rejects_invalid_target_range() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    # 0% net target is below TOB round-trip cost — refuse.
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_target_net_pct=Decimal("0"))
+    # 60% is moonshot territory.
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_target_net_pct=Decimal("60"))
+
+
+def test_user_strategy_settings_rejects_invalid_horizon() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_horizon_min_months=0)
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_horizon_max_months=25)
+
+
+def test_user_strategy_settings_rejects_max_before_min_horizon() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(
+            trading_horizon_min_months=6, trading_horizon_max_months=3
+        )
+
+
+def test_user_strategy_settings_rejects_inverted_position_bounds() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(
+            trading_min_position_eur=Decimal("100000"),
+            trading_max_position_eur=Decimal("50000"),
+        )
+
+
+def test_user_strategy_settings_rejects_position_above_budget() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(
+            trading_max_position_eur=Decimal("2000000"),
+            trading_total_budget_eur=Decimal("1000000"),
+        )
+
+
+def test_user_strategy_settings_rejects_negative_eur_amounts() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_min_position_eur=Decimal("0"))
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_total_budget_eur=Decimal("-1"))
+
+
+def test_user_strategy_help_texts_cover_all_trading_fields() -> None:
+    from portfolio_outlook_domain.settings import get_user_strategy_help_texts
+
+    keys = {entry.key for entry in get_user_strategy_help_texts()}
+    expected = {
+        "trading_target_net_pct",
+        "trading_horizon_min_months",
+        "trading_horizon_max_months",
+        "trading_min_position_eur",
+        "trading_max_position_eur",
+        "trading_confidence_threshold_pct",
+        "trading_max_sector_pct",
+        "trading_min_market_cap_eur",
+        "trading_max_annual_volatility_pct",
+        "trading_total_budget_eur",
+    }
+    assert expected.issubset(keys)
+
+
 def test_usage_summary_and_connection_check_and_profile() -> None:
     from portfolio_outlook_domain.settings import ApiUsageSummary, SettingsProfile
 
