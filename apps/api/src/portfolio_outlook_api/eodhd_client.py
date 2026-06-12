@@ -123,6 +123,23 @@ class EodhdFundamentals:
     raw_payload_hash: str
 
 
+@dataclass(frozen=True)
+class EodhdEarningsEvent:
+    """One parsed row from ``/calendar/earnings``.
+
+    EODHD returns ``date``, ``code`` (symbol), and a confidence/state
+    indicator. Estimated fields (eps_estimate, revenue_estimate) are
+    kept in ``raw_payload`` for future widget enrichment.
+    """
+
+    symbol: str
+    event_date: date
+    # Locked vocabulary for the storage layer: confirmed | estimated.
+    # EODHD's "Yes"/"No"/null gets normalised below.
+    status: str
+    raw_payload: dict[str, object]
+
+
 class EodhdClientError(Exception):
     """Raised when the HTTP layer or response parsing fails."""
 
@@ -247,6 +264,39 @@ class EodhdClient:
         payload = self._get(url)
         return _parse_fundamentals(cleaned, payload)
 
+    def fetch_earnings_calendar(
+        self,
+        *,
+        symbols: tuple[str, ...],
+        from_date: date,
+        to_date: date,
+    ) -> list[EodhdEarningsEvent]:
+        """Fetch upcoming earnings events for one or more EODHD
+        symbols.
+
+        Endpoint: ``/calendar/earnings?symbols=AAPL.US,MSFT.US&
+        from=YYYY-MM-DD&to=YYYY-MM-DD``. The response is a wrapper
+        ``{"earnings": [...]}`` with one row per company×date. Symbols
+        without an upcoming print in the window simply don't appear —
+        which matches the doctrine: missing data does not block.
+        """
+
+        if not symbols:
+            return []
+        if from_date > to_date:
+            raise EodhdClientError("from_date_after_to_date")
+        symbols_param = ",".join(s.strip() for s in symbols if s.strip())
+        if not symbols_param:
+            return []
+        extra = {
+            "symbols": symbols_param,
+            "from": from_date.isoformat(),
+            "to": to_date.isoformat(),
+        }
+        url = self._build_url("calendar/earnings", extra=extra)
+        payload = self._get(url)
+        return _parse_earnings_calendar(payload)
+
     # ---- private helpers ----
 
     def _build_url(self, path: str, *, extra: dict[str, str] | None = None) -> str:
@@ -370,6 +420,65 @@ def _parse_fx_rate(
         previous_close=_decimal_or_none(payload.get("previousClose")),
         provider_as_of=_timestamp_or_none(payload.get("timestamp")),
     )
+
+
+def _normalise_eodhd_status(raw: object) -> str:
+    """Map EODHD's confidence flag to the locked storage vocabulary.
+
+    EODHD uses ``"Yes"`` / ``"No"`` (and occasionally ``None``) under
+    a few different field names (``estimated``, ``confirmation``).
+    Anything we can't read confidently maps to ``"estimated"`` — the
+    safer default for the doctrine gate, which can pick a stricter
+    threshold for estimated dates if needed.
+    """
+
+    text = str(raw or "").strip().lower()
+    if text in {"no", "false", "confirmed"}:
+        return "confirmed"
+    return "estimated"
+
+
+def _parse_earnings_calendar(payload: object) -> list[EodhdEarningsEvent]:
+    """Parse ``/calendar/earnings`` payloads.
+
+    Accepts both shapes EODHD has used historically: a bare list and
+    a wrapped ``{"earnings": [...]}`` envelope. Rows without a
+    parseable date or symbol are silently dropped.
+    """
+
+    if isinstance(payload, dict):
+        rows = payload.get("earnings")
+    else:
+        rows = payload
+    if not isinstance(rows, list):
+        raise EodhdClientError("earnings_payload_not_array")
+    events: list[EodhdEarningsEvent] = []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        date_str = str(item.get("report_date") or item.get("date") or "").strip()
+        if not date_str:
+            continue
+        try:
+            event_date = date.fromisoformat(date_str)
+        except ValueError:
+            continue
+        symbol = str(item.get("code") or item.get("symbol") or "").strip()
+        if not symbol:
+            continue
+        status = _normalise_eodhd_status(
+            item.get("estimated", item.get("confirmation"))
+        )
+        events.append(
+            EodhdEarningsEvent(
+                symbol=symbol,
+                event_date=event_date,
+                status=status,
+                raw_payload=dict(item),
+            )
+        )
+    events.sort(key=lambda e: (e.event_date, e.symbol))
+    return events
 
 
 def _parse_eod_bars(payload: object) -> list[EodhdBar]:

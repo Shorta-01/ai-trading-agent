@@ -42,6 +42,7 @@ from typing import Any
 
 from ai_trading_agent_storage import (
     AssetForecastRecord,
+    SqlAlchemyEarningsEventRepository,
     StorageConnectionProvider,
     build_database_connection_settings,
 )
@@ -162,6 +163,7 @@ def _build_inputs(
     forecasts: tuple[AssetForecastRecord, ...],
     today: date,
     ibkr_account_ref: str,
+    next_earnings_by_symbol: dict[str, date | None] | None = None,
 ) -> CandidateProviderInputs:
     """Convert live forecast records into provider inputs.
 
@@ -169,6 +171,12 @@ def _build_inputs(
     §AC. The synthetic fundamentals are configured so the
     risk-universe gate (5 B floor, 30 % vol ceiling) passes; the
     per-name confidence/sector gates remain real.
+
+    V1.2 §AJ — ``next_earnings_by_symbol`` flows from the
+    ``earnings_events`` repository into the orchestrator candidate
+    provider so the earnings-window gate finally sees real dates.
+    Missing symbols stay ``None`` (locked gate semantics: missing
+    data does not block).
     """
 
     forecast_rows = tuple(
@@ -208,6 +216,7 @@ def _build_inputs(
         settings=_DEFAULT_TRADING_SETTINGS,
         vix_level=Decimal("15"),
         index_bars=_synthetic_index_bars(),
+        next_earnings_by_symbol=next_earnings_by_symbol or {},
     )
 
 
@@ -262,10 +271,22 @@ def build_real_orchestrator_scoring_leg(
                             "beschikbaar; niets te scoren."
                         ),
                     )
+                today = datetime.now(UTC).date()
+                symbols = tuple(record.symbol for record in forecasts)
+                earnings_repo = SqlAlchemyEarningsEventRepository(
+                    checked.connection,
+                    _readiness_from(checked.readiness),
+                )
+                next_earnings_by_symbol = (
+                    earnings_repo.get_next_for_symbols(
+                        symbols=symbols, today=today,
+                    )
+                )
                 inputs = _build_inputs(
                     forecasts=forecasts,
-                    today=datetime.now(UTC).date(),
+                    today=today,
                     ibkr_account_ref=ibkr_account_ref,
+                    next_earnings_by_symbol=next_earnings_by_symbol,
                 )
                 run = run_scoring_pipeline(
                     connection=checked.connection,
