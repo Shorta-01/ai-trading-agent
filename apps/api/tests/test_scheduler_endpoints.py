@@ -293,7 +293,7 @@ def test_morning_chain_route_runs_and_persists_audit_row(monkeypatch) -> None:
     assert body["status"] == "succeeded"
     assert body["result"]["status"] == "succeeded"
     assert body["result"]["failed_leg"] is None
-    assert len(body["result"]["legs"]) == 7
+    assert len(body["result"]["legs"]) == 8
     assert body["safe_for_orders"] is False
 
     # One audit row saved (running), one updated (succeeded).

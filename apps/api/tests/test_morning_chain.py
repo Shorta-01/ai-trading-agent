@@ -11,6 +11,7 @@ from portfolio_outlook_api.morning_chain import (
     LEG_ACTION_DRAFT_SYNC,
     LEG_DAILY_BRIEFING_SYNC,
     LEG_DECISION_PACKAGE_SYNC,
+    LEG_EARNINGS_CALENDAR_SYNC,
     LEG_FORECAST_SYNC,
     LEG_MARKET_DATA_SYNC,
     LEG_ORCHESTRATOR_SCORING,
@@ -72,6 +73,7 @@ def test_morning_chain_leg_names_are_in_locked_order() -> None:
         LEG_SUGGESTION_SYNC,
         LEG_DECISION_PACKAGE_SYNC,
         LEG_ACTION_DRAFT_SYNC,
+        LEG_EARNINGS_CALENDAR_SYNC,
         LEG_ORCHESTRATOR_SCORING,
         LEG_DAILY_BRIEFING_SYNC,
     )
@@ -210,7 +212,7 @@ def test_default_legs_all_skipped_when_flags_are_off() -> None:
     legs = build_default_morning_chain_legs(_settings())
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
-    assert [leg.status for leg in result.legs] == [LEG_STATUS_SKIPPED] * 7
+    assert [leg.status for leg in result.legs] == [LEG_STATUS_SKIPPED] * 8
 
 
 def test_default_legs_succeed_when_all_flags_enabled() -> None:
@@ -221,13 +223,14 @@ def test_default_legs_succeed_when_all_flags_enabled() -> None:
             suggestions_sync_enabled=True,
             decision_packages_sync_enabled=True,
             action_drafts_sync_enabled=True,
+            earnings_calendar_sync_enabled=True,
             orchestrator_scoring_enabled=True,
             daily_briefing_sync_enabled=True,
         )
     )
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
-    assert [leg.status for leg in result.legs] == [LEG_STATUS_SUCCEEDED] * 7
+    assert [leg.status for leg in result.legs] == [LEG_STATUS_SUCCEEDED] * 8
 
 
 def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
@@ -242,6 +245,7 @@ def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
     assert [leg.status for leg in result.legs] == [
         LEG_STATUS_SUCCEEDED,
         LEG_STATUS_SUCCEEDED,
+        LEG_STATUS_SKIPPED,
         LEG_STATUS_SKIPPED,
         LEG_STATUS_SKIPPED,
         LEG_STATUS_SKIPPED,

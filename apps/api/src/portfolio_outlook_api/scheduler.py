@@ -247,12 +247,22 @@ def _build_default_morning_chain_callable(
     chain-orchestrator's imports until the job is wired.
     """
 
+    from portfolio_outlook_api.earnings_calendar_leg import (
+        build_real_earnings_calendar_leg,
+    )
     from portfolio_outlook_api.morning_chain import (
         build_default_morning_chain_legs,
         build_scheduler_chain_callable,
     )
 
-    legs = build_default_morning_chain_legs(runtime_settings)
+    earnings_override = None
+    if getattr(runtime_settings, "earnings_calendar_sync_enabled", False):
+        earnings_override = build_real_earnings_calendar_leg(runtime_settings)
+
+    legs = build_default_morning_chain_legs(
+        runtime_settings,
+        earnings_calendar_leg_override=earnings_override,
+    )
     return build_scheduler_chain_callable(legs_factory=lambda: legs)
 
 

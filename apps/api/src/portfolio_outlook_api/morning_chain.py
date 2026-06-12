@@ -36,6 +36,7 @@ LEG_FORECAST_SYNC: Final = "forecast_sync"
 LEG_SUGGESTION_SYNC: Final = "suggestion_sync"
 LEG_DECISION_PACKAGE_SYNC: Final = "decision_package_sync"
 LEG_ACTION_DRAFT_SYNC: Final = "action_draft_sync"
+LEG_EARNINGS_CALENDAR_SYNC: Final = "earnings_calendar_sync"
 LEG_ORCHESTRATOR_SCORING: Final = "orchestrator_scoring"
 LEG_DAILY_BRIEFING_SYNC: Final = "daily_briefing_sync"
 
@@ -46,6 +47,10 @@ MORNING_CHAIN_LEG_NAMES: Final[tuple[str, ...]] = (
     LEG_SUGGESTION_SYNC,
     LEG_DECISION_PACKAGE_SYNC,
     LEG_ACTION_DRAFT_SYNC,
+    # V1.2 §AK — earnings refresh runs *before* the orchestrator
+    # scoring leg so the latter can read fresh ``next_earnings_*``
+    # dates from storage.
+    LEG_EARNINGS_CALENDAR_SYNC,
     LEG_ORCHESTRATOR_SCORING,
     LEG_DAILY_BRIEFING_SYNC,
 )
@@ -227,6 +232,7 @@ def build_default_morning_chain_legs(
     runtime_settings: object,
     *,
     orchestrator_scoring_leg_override: LegCallable | None = None,
+    earnings_calendar_leg_override: LegCallable | None = None,
 ) -> tuple[LegCallable, ...]:
     """Build the production morning-chain legs from runtime settings.
 
@@ -302,6 +308,32 @@ def build_default_morning_chain_legs(
             detail_nl="Action draft sync uitgevoerd binnen morning chain.",
         )
 
+    def _earnings_calendar_sync_leg() -> MorningChainLegOutcome:
+        """V1.2 §AK earnings-calendar refresh leg (stub).
+
+        Pulls upcoming earnings dates so the orchestrator scoring
+        leg (next) can populate ``next_earnings_by_symbol`` from
+        storage. Default-disabled via
+        ``earnings_calendar_sync_enabled``; the real EODHD-backed
+        implementation lives in ``earnings_calendar_leg.py`` and is
+        injected via ``earnings_calendar_leg_override``.
+        """
+
+        if not getattr(runtime_settings, "earnings_calendar_sync_enabled", False):
+            return _leg_disabled(
+                LEG_EARNINGS_CALENDAR_SYNC,
+                setting_name="earnings_calendar_sync_enabled",
+            )
+        return MorningChainLegOutcome(
+            leg_name=LEG_EARNINGS_CALENDAR_SYNC,
+            status=LEG_STATUS_SUCCEEDED,
+            failure_code=None,
+            detail_nl=(
+                "Earnings-calendar refresh ingeschakeld; real EODHD "
+                "writer wordt via override geleverd."
+            ),
+        )
+
     def _orchestrator_scoring_leg() -> MorningChainLegOutcome:
         """V1.2 §Y parallel-scoring leg.
 
@@ -355,12 +387,18 @@ def build_default_morning_chain_legs(
         if orchestrator_scoring_leg_override is not None
         else _orchestrator_scoring_leg
     )
+    earnings_leg: LegCallable = (
+        earnings_calendar_leg_override
+        if earnings_calendar_leg_override is not None
+        else _earnings_calendar_sync_leg
+    )
     return (
         _market_data_sync_leg,
         _forecast_sync_leg,
         _suggestion_sync_leg,
         _decision_package_sync_leg,
         _action_draft_sync_leg,
+        earnings_leg,
         orchestrator_leg,
         _daily_briefing_sync_leg,
     )
@@ -396,6 +434,7 @@ __all__ = [
     "CHAIN_STATUS_SUCCEEDED",
     "LEG_ACTION_DRAFT_SYNC",
     "LEG_DAILY_BRIEFING_SYNC",
+    "LEG_EARNINGS_CALENDAR_SYNC",
     "LEG_DECISION_PACKAGE_SYNC",
     "LEG_FORECAST_SYNC",
     "LEG_MARKET_DATA_SYNC",
