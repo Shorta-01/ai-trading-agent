@@ -226,6 +226,13 @@ from .daily_briefing import (
     BriefingSuggestionInput,
     compute_daily_briefing,
 )
+from .earnings_calendar_gate import (
+    BLOCKING_REASON_EARNINGS_WINDOW,
+    DEFAULT_EARNINGS_BLOCK_DAYS,
+    EarningsGateInputs,
+    EarningsGateResult,
+    evaluate_earnings_calendar_gate,
+)
 from .ensemble_combiner import (
     ENSEMBLE_MODEL_CODE,
     ENSEMBLE_MODEL_VERSION,
@@ -382,6 +389,7 @@ from .profit_harvest import (
 )
 from .profit_harvest_orchestrator import (
     DECISION_SKIP_CONFIDENCE,
+    DECISION_SKIP_EARNINGS,
     DECISION_SKIP_MACRO,
     DECISION_SKIP_PAIR_BUILD,
     DECISION_SKIP_RISK_UNIVERSE,
@@ -764,6 +772,7 @@ __all__ = [
     "conviction_weighted_position_size_eur",
     "gross_pct_for_net_target_pct",
     "DECISION_SKIP_CONFIDENCE",
+    "DECISION_SKIP_EARNINGS",
     "DECISION_SKIP_MACRO",
     "DECISION_SKIP_PAIR_BUILD",
     "DECISION_SKIP_RISK_UNIVERSE",
@@ -773,6 +782,11 @@ __all__ = [
     "OrchestratorInputs",
     "OrchestratorResult",
     "evaluate_profit_harvest_candidate",
+    "BLOCKING_REASON_EARNINGS_WINDOW",
+    "DEFAULT_EARNINGS_BLOCK_DAYS",
+    "EarningsGateInputs",
+    "EarningsGateResult",
+    "evaluate_earnings_calendar_gate",
     "BLOCKING_REASON_INVALID_NET_TARGET",
     "BLOCKING_REASON_INVALID_POSITION_EUR",
     "BLOCKING_REASON_INVALID_PRICE",

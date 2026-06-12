@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from portfolio_outlook_portfolio import (
     DECISION_SKIP_CONFIDENCE,
+    DECISION_SKIP_EARNINGS,
     DECISION_SKIP_MACRO,
     DECISION_SKIP_RISK_UNIVERSE,
     DECISION_SKIP_SECTOR,
@@ -76,6 +77,8 @@ def _make_inputs(
     min_market_cap_eur: Decimal = Decimal("5000000000"),
     max_annual_volatility_pct: Decimal = Decimal("30"),
     max_sector_pct: Decimal = Decimal("25"),
+    today: date = date(2025, 4, 15),
+    next_earnings_date: date | None = None,
 ) -> OrchestratorInputs:
     if candidate_bars is None:
         candidate_bars = _moderate_vol_bars(120)
@@ -96,6 +99,8 @@ def _make_inputs(
         vix_level=vix_level,
         index_bars=index_bars,
         existing_sector_allocations=existing_sector_allocations,
+        today=today,
+        next_earnings_date=next_earnings_date,
         target_net_pct=target_net_pct,
         confidence_threshold_pct=confidence_threshold_pct,
         min_position_eur=min_position_eur,
@@ -192,6 +197,37 @@ def test_small_cap_short_circuits_at_risk_universe() -> None:
 
 
 # ---- skip-at-confidence ---------------------------------------------
+
+
+def test_earnings_window_short_circuits_at_earnings() -> None:
+    # Earnings 3 days out → blocked at the earnings gate.
+    result = evaluate_profit_harvest_candidate(
+        _make_inputs(next_earnings_date=date(2025, 4, 18))
+    )
+    assert result.decision == DECISION_SKIP_EARNINGS
+    assert result.macro is not None
+    assert result.risk_universe is not None and result.risk_universe.allowed
+    assert result.earnings is not None and not result.earnings.allowed
+    assert result.earnings.days_to_earnings == 3
+    # Everything after earnings is None.
+    assert result.confidence is None
+    assert result.pair_build is None
+
+
+def test_earnings_safely_in_future_passes() -> None:
+    result = evaluate_profit_harvest_candidate(
+        _make_inputs(next_earnings_date=date(2025, 6, 1))
+    )
+    assert result.decision == DECISION_SUGGEST
+    assert result.earnings is not None and result.earnings.allowed
+
+
+def test_missing_earnings_date_passes() -> None:
+    # Missing earnings data is allowed (doctrine choice).
+    result = evaluate_profit_harvest_candidate(
+        _make_inputs(next_earnings_date=None)
+    )
+    assert result.decision == DECISION_SUGGEST
 
 
 def test_low_p_hit_short_circuits_at_confidence() -> None:

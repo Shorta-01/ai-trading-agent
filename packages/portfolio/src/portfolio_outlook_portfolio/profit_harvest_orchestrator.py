@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Final
 
@@ -44,6 +45,12 @@ from portfolio_outlook_portfolio.belgian_tax import TobSecurityClass
 from portfolio_outlook_portfolio.confidence_gate import (
     ConfidenceGateResult,
     evaluate_confidence_gate,
+)
+from portfolio_outlook_portfolio.earnings_calendar_gate import (
+    DEFAULT_EARNINGS_BLOCK_DAYS,
+    EarningsGateInputs,
+    EarningsGateResult,
+    evaluate_earnings_calendar_gate,
 )
 from portfolio_outlook_portfolio.macro_regime_gate import (
     MacroRegimeInputs,
@@ -78,6 +85,7 @@ DECISION_SKIP_CONFIDENCE: Final[str] = "skip_confidence_gate"
 DECISION_SKIP_SIZING: Final[str] = "skip_below_conviction_floor"
 DECISION_SKIP_SECTOR: Final[str] = "skip_sector_concentration"
 DECISION_SKIP_PAIR_BUILD: Final[str] = "skip_pair_build"
+DECISION_SKIP_EARNINGS: Final[str] = "skip_earnings_window"
 
 
 @dataclass(frozen=True)
@@ -111,6 +119,10 @@ class OrchestratorInputs:
     # ---- portfolio state --------------------------------------------
     existing_sector_allocations: Sequence[SectorAllocation]
 
+    # ---- earnings calendar (V1.2 §R) --------------------------------
+    today: date
+    next_earnings_date: date | None
+
     # ---- user settings ----------------------------------------------
     target_net_pct: Decimal
     confidence_threshold_pct: Decimal
@@ -122,6 +134,8 @@ class OrchestratorInputs:
     max_sector_pct: Decimal
     # V1.2 §Q fat-tail correction for the confidence gate.
     fat_tail_factor: Decimal = Decimal("1.15")
+    # V1.2 §R earnings pre-print exclusion window (calendar days).
+    earnings_block_days: int = DEFAULT_EARNINGS_BLOCK_DAYS
 
 
 @dataclass(frozen=True)
@@ -137,6 +151,7 @@ class OrchestratorResult:
     blocking_reason: str | None
     macro: MacroRegimeResult | None
     risk_universe: RiskUniverseGateResult | None
+    earnings: EarningsGateResult | None
     confidence: ConfidenceGateResult | None
     proposed_position_eur: Decimal | None
     sector_concentration: SectorConcentrationResult | None
@@ -167,6 +182,7 @@ def evaluate_profit_harvest_candidate(
             blocking_reason=macro.blocking_reason,
             macro=macro,
             risk_universe=None,
+            earnings=None,
             confidence=None,
             proposed_position_eur=None,
             sector_concentration=None,
@@ -190,13 +206,36 @@ def evaluate_profit_harvest_candidate(
             blocking_reason=risk.blocking_reason,
             macro=macro,
             risk_universe=risk,
+            earnings=None,
             confidence=None,
             proposed_position_eur=None,
             sector_concentration=None,
             pair_build=None,
         )
 
-    # 3. Confidence gate.
+    # 3. Earnings calendar — pure metadata check, cheap.
+    earnings = evaluate_earnings_calendar_gate(
+        EarningsGateInputs(
+            symbol=inputs.ticker,
+            today=inputs.today,
+            next_earnings_date=inputs.next_earnings_date,
+        ),
+        days_to_earnings_block=inputs.earnings_block_days,
+    )
+    if not earnings.allowed:
+        return OrchestratorResult(
+            decision=DECISION_SKIP_EARNINGS,
+            blocking_reason=earnings.blocking_reason,
+            macro=macro,
+            risk_universe=risk,
+            earnings=earnings,
+            confidence=None,
+            proposed_position_eur=None,
+            sector_concentration=None,
+            pair_build=None,
+        )
+
+    # 4. Confidence gate.
     confidence = evaluate_confidence_gate(
         current_price=inputs.current_price,
         median_forecast_price=inputs.median_forecast_price,
@@ -213,13 +252,14 @@ def evaluate_profit_harvest_candidate(
             blocking_reason=confidence.blocking_reason,
             macro=macro,
             risk_universe=risk,
+            earnings=earnings,
             confidence=confidence,
             proposed_position_eur=None,
             sector_concentration=None,
             pair_build=None,
         )
 
-    # 4. Conviction-weighted sizing.
+    # 5. Conviction-weighted sizing.
     proposed_size = conviction_weighted_position_size_eur(
         confidence_pct=inputs.confidence_pct,
         confidence_floor_pct=inputs.confidence_threshold_pct,
@@ -232,13 +272,14 @@ def evaluate_profit_harvest_candidate(
             blocking_reason="confidence_below_floor",
             macro=macro,
             risk_universe=risk,
+            earnings=earnings,
             confidence=confidence,
             proposed_position_eur=proposed_size,
             sector_concentration=None,
             pair_build=None,
         )
 
-    # 5. Sector concentration — uses the sized position so the
+    # 6. Sector concentration — uses the sized position so the
     # projected pct is accurate.
     sector = evaluate_sector_concentration(
         candidate_sector=inputs.sector,
@@ -253,13 +294,14 @@ def evaluate_profit_harvest_candidate(
             blocking_reason=sector.blocking_reason,
             macro=macro,
             risk_universe=risk,
+            earnings=earnings,
             confidence=confidence,
             proposed_position_eur=proposed_size,
             sector_concentration=sector,
             pair_build=None,
         )
 
-    # 6. Take-profit pair.
+    # 7. Take-profit pair.
     pair_build = build_take_profit_pair(
         ticker=inputs.ticker,
         entry_lmt_price=inputs.current_price,
@@ -273,6 +315,7 @@ def evaluate_profit_harvest_candidate(
             blocking_reason=pair_build.blocking_reason,
             macro=macro,
             risk_universe=risk,
+            earnings=earnings,
             confidence=confidence,
             proposed_position_eur=proposed_size,
             sector_concentration=sector,
@@ -284,6 +327,7 @@ def evaluate_profit_harvest_candidate(
         blocking_reason=None,
         macro=macro,
         risk_universe=risk,
+        earnings=earnings,
         confidence=confidence,
         proposed_position_eur=proposed_size,
         sector_concentration=sector,
@@ -293,6 +337,7 @@ def evaluate_profit_harvest_candidate(
 
 __all__ = [
     "DECISION_SKIP_CONFIDENCE",
+    "DECISION_SKIP_EARNINGS",
     "DECISION_SKIP_MACRO",
     "DECISION_SKIP_PAIR_BUILD",
     "DECISION_SKIP_RISK_UNIVERSE",

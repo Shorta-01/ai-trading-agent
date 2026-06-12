@@ -184,6 +184,11 @@ class UserStrategySettings(DomainBaseModel):
     # the lognormal predictor assumes; lowering to 1.0 reverts to the
     # pure-lognormal behavior.
     trading_fat_tail_factor: Decimal = Decimal("1.15")
+    # V1.2 §R earnings calendar gate — refuse new BUY suggestions
+    # inside the configured pre-earnings window (calendar days).
+    # Earnings releases are binary events; buying in the run-up to
+    # one is gambling on the print, not on the 3-6 month drift.
+    trading_earnings_block_days: int = 5
     explanation_nl: str = (
         "Dit is je voorkeurlaag voor ranking en fit, niet voor harde blokkeringen."
     )
@@ -238,6 +243,17 @@ class UserStrategySettings(DomainBaseModel):
     def validate_horizon_months(cls, value: int) -> int:
         if value < 1 or value > 24:
             raise ValueError("Horizon moet tussen 1 en 24 maanden liggen.")
+        return value
+
+    @field_validator("trading_earnings_block_days")
+    @classmethod
+    def validate_earnings_block_days(cls, value: int) -> int:
+        # Zero = disabled; anything above 30 makes no economic sense
+        # because at that point the user is just not buying anything.
+        if value < 0 or value > 30:
+            raise ValueError(
+                "trading_earnings_block_days moet tussen 0 en 30 liggen."
+            )
         return value
 
     @field_validator(
@@ -492,6 +508,17 @@ def get_user_strategy_help_texts() -> tuple[SettingHelpText, ...]:
                 "(empirisch passend voor aandelen). Hogere waardes maken het "
                 "systeem eerlijker over downside-risico maar verhogen ook de "
                 "kans op suggesties. Standaard 1.15."
+            ),
+        ),
+        SettingHelpText(
+            key="trading_earnings_block_days",
+            label_nl="Earnings-blokkering (dagen)",
+            help_nl=(
+                "Aantal kalenderdagen vóór een earnings-publicatie waarin het "
+                "systeem geen nieuwe BUY-suggesties doet. Earnings zijn "
+                "binaire events; een aandeel kan ±20 % springen op de publicatie. "
+                "Bestaande posities worden niet verkocht — die wachten op het "
+                "winstdoel of een hard nieuwsbericht. Standaard 5 dagen."
             ),
         ),
     )

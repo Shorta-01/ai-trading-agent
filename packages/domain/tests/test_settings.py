@@ -149,6 +149,17 @@ def test_user_strategy_settings_default_trading_cycle_parameters() -> None:
     # V1.2 §Q fat-tail factor default — empirically calibrated to
     # Student-t df ≈ 5 for daily equity returns.
     assert settings.trading_fat_tail_factor == Decimal("1.15")
+    # V1.2 §R earnings calendar pre-print exclusion window.
+    assert settings.trading_earnings_block_days == 5
+
+
+def test_user_strategy_settings_rejects_invalid_earnings_block_days() -> None:
+    from portfolio_outlook_domain.settings import UserStrategySettings
+
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_earnings_block_days=-1)
+    with pytest.raises(ValidationError):
+        UserStrategySettings(trading_earnings_block_days=31)
 
 
 def test_user_strategy_settings_rejects_invalid_fat_tail_factor() -> None:
@@ -245,6 +256,7 @@ def test_user_strategy_help_texts_cover_all_trading_fields() -> None:
         "trading_max_annual_volatility_pct",
         "trading_total_budget_eur",
         "trading_fat_tail_factor",
+        "trading_earnings_block_days",
     }
     assert expected.issubset(keys)
 
