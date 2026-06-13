@@ -160,6 +160,39 @@ function ActionDraftRow({
     onChange();
   }
 
+  async function handleSubmitToPaper() {
+    const expectedToken = "VERZEND";
+    const typed = window.prompt(
+      `Type VERZEND om de goedgekeurde order voor ${draft.quantity}× ${draft.symbol} @ €${fmtDecimal(
+        draft.limit_price_local,
+        4,
+      )} LMT naar IBKR paper te verzenden.`,
+    );
+    if (typed !== expectedToken) {
+      setError("Verzending geannuleerd. Type exact VERZEND om door te gaan.");
+      return;
+    }
+    setBusy("submitting");
+    setError(null);
+    const result = await apiClient.submitActionDraftToPaper(
+      draft.action_draft_id,
+    );
+    setBusy(null);
+    if (!result.ok) {
+      setError(result.message || "Verzending mislukt.");
+      return;
+    }
+    if (result.data.blocking_reason) {
+      setError(
+        `Verzending geblokkeerd: ${result.data.blocking_reason} — ${
+          result.data.help_nl || result.data.status_nl || ""
+        }`,
+      );
+      return;
+    }
+    onChange();
+  }
+
   async function handleDismiss() {
     const reason = window.prompt(
       "Optionele reden voor dismiss (mag leeg blijven):",
@@ -336,10 +369,35 @@ function ActionDraftRow({
             color: "#1e40af",
             borderRadius: 6,
             fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          Goedgekeurd. IBKR-verzending wordt in een toekomstige update
-          toegevoegd.
+          <span style={{ flex: 1 }}>
+            Goedgekeurd. Klaar om naar IBKR paper te verzenden.
+          </span>
+          <button
+            type="button"
+            data-testid={`action-draft-submit-to-paper-${draft.action_draft_id}`}
+            onClick={handleSubmitToPaper}
+            disabled={busy !== null}
+            style={{
+              background: busy === "submitting" ? "#9ca3af" : "#1d4ed8",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: busy !== null ? "not-allowed" : "pointer",
+            }}
+          >
+            {busy === "submitting"
+              ? "Verzenden…"
+              : "Verzend naar IBKR paper"}
+          </button>
         </div>
       ) : null}
 

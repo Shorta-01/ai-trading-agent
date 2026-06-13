@@ -57,6 +57,7 @@ vi.mock("@/lib/apiClient", async () => {
       dismissActionDraft: vi.fn(),
       deleteActionDraft: vi.fn(),
       patchActionDraft: vi.fn(),
+      submitActionDraftToPaper: vi.fn(),
     },
   };
 });
@@ -111,7 +112,12 @@ describe("ActionDraftGrid", () => {
       "action-draft-approved-banner-draft-1",
     );
     expect(banner).toBeTruthy();
-    expect(banner.textContent).toContain("IBKR-verzending wordt in een");
+    expect(banner.textContent).toContain("Klaar om naar IBKR paper");
+    // V1.2 §AN — the placeholder was replaced by a real submit
+    // button that triggers ``submitActionDraftToPaper``.
+    expect(
+      screen.getByTestId("action-draft-submit-to-paper-draft-1"),
+    ).toBeTruthy();
   });
 
   it("calls approveActionDraft when user types JA in prompt", async () => {
@@ -145,6 +151,124 @@ describe("ActionDraftGrid", () => {
       ).toContain("Type exact JA");
     });
     expect(apiClient.approveActionDraft).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
+  // V1.2 §AN — IBKR paper submission flow.
+
+  it("calls submitActionDraftToPaper when user types VERZEND", async () => {
+    const onChange = vi.fn();
+    const promptSpy = vi
+      .spyOn(window, "prompt")
+      .mockReturnValue("VERZEND");
+    (apiClient.submitActionDraftToPaper as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          status: "submitted",
+          status_nl: "Verzonden",
+          help_nl: "",
+          submission_id: "sub-1",
+          state: "submitted",
+          ibkr_order_id: 42,
+          ibkr_perm_id: null,
+          ibkr_status_text: null,
+          blocking_reason: null,
+          actions_allowed: false,
+          order_submission_allowed: false,
+          order_modification_allowed: false,
+          order_cancellation_allowed: false,
+          safe_for_submission: false,
+          safe_for_orders: false,
+          safe_for_broker_submission: false,
+          blocks_orders: true,
+        },
+      });
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, status: "user_approved" }]}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(
+      screen.getByTestId("action-draft-submit-to-paper-draft-1"),
+    );
+    await waitFor(() => {
+      expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledWith(
+        "draft-1",
+      );
+    });
+    expect(onChange).toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
+  it("does NOT submit when user types wrong token", async () => {
+    const onChange = vi.fn();
+    const promptSpy = vi
+      .spyOn(window, "prompt")
+      .mockReturnValue("ja");
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, status: "user_approved" }]}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(
+      screen.getByTestId("action-draft-submit-to-paper-draft-1"),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("action-draft-error-draft-1").textContent,
+      ).toContain("VERZEND");
+    });
+    expect(apiClient.submitActionDraftToPaper).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
+  it("surfaces blocking_reason from server response as inline error", async () => {
+    const onChange = vi.fn();
+    const promptSpy = vi
+      .spyOn(window, "prompt")
+      .mockReturnValue("VERZEND");
+    (apiClient.submitActionDraftToPaper as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          status: "blocked",
+          status_nl: "Geblokkeerd",
+          help_nl: "Approval verlopen.",
+          submission_id: null,
+          state: null,
+          ibkr_order_id: null,
+          ibkr_perm_id: null,
+          ibkr_status_text: null,
+          blocking_reason: "approval_expired",
+          actions_allowed: false,
+          order_submission_allowed: false,
+          order_modification_allowed: false,
+          order_cancellation_allowed: false,
+          safe_for_submission: false,
+          safe_for_orders: false,
+          safe_for_broker_submission: false,
+          blocks_orders: true,
+        },
+      });
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, status: "user_approved" }]}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(
+      screen.getByTestId("action-draft-submit-to-paper-draft-1"),
+    );
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("action-draft-error-draft-1").textContent,
+      ).toContain("approval_expired");
+    });
     expect(onChange).not.toHaveBeenCalled();
     promptSpy.mockRestore();
   });
