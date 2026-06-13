@@ -258,6 +258,16 @@ from .gbm_predictor import (
     GBM_MODEL_VERSION,
     GbmPredictor,
 )
+from .hold_position_review import (
+    DEFAULT_HORIZON_REVIEW_START_DAYS,
+    DEFAULT_LOSS_FLOOR_PCT,
+    DEFAULT_TARGET_NET_PCT,
+    HOLD_ACTION_HOLD,
+    HOLD_ACTION_SUGGEST_SELL,
+    HoldPositionReviewInputs,
+    HoldPositionReviewResult,
+    evaluate_hold_position_review,
+)
 from .kelly_sizing import (
     DEFAULT_KELLY_FRACTION,
     DEFAULT_PER_ASSET_CAP_PCT,
@@ -777,8 +787,16 @@ __all__ = [
     "tob_rate_info",
     "compute_tob",
     "compute_dividend_withholding",
+    "DEFAULT_HORIZON_REVIEW_START_DAYS",
+    "DEFAULT_LOSS_FLOOR_PCT",
+    "DEFAULT_TARGET_NET_PCT",
+    "HOLD_ACTION_HOLD",
+    "HOLD_ACTION_SUGGEST_SELL",
+    "HoldPositionReviewInputs",
+    "HoldPositionReviewResult",
     "compute_take_profit_sell_price",
     "conviction_weighted_position_size_eur",
+    "evaluate_hold_position_review",
     "gross_pct_for_net_target_pct",
     "DECISION_SKIP_CONFIDENCE",
     "DECISION_SKIP_EARNINGS",
