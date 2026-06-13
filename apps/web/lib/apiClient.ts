@@ -537,6 +537,68 @@ export type SectorSpreadResponse = {
   has_unclassified: boolean;
 };
 
+// V1.2 §AW — belastingjaaroverzicht.
+
+export type TaxRealisedTrade = {
+  symbol: string;
+  account_id: string;
+  currency_local: string;
+  quantity: string;
+  buy_date: string;
+  buy_price_local: string;
+  buy_exec_id: string;
+  sell_date: string;
+  sell_price_local: string;
+  sell_exec_id: string;
+  gross_local: string;
+  tob_buy_local: string;
+  tob_sell_local: string;
+  net_local: string;
+  hold_days: number;
+  net_pct_on_cost: string;
+  buy_action_draft_id: string | null;
+  sell_action_draft_id: string | null;
+};
+
+export type TaxYearTotals = {
+  trade_count: number;
+  gross_local_by_currency: Record<string, string>;
+  tob_local_by_currency: Record<string, string>;
+  net_local_by_currency: Record<string, string>;
+  average_hold_days: number;
+  hit_rate_pct: number;
+  earliest_close: string | null;
+  latest_close: string | null;
+};
+
+export type TaxMonthlyPoint = {
+  month: string;
+  net_local_by_currency: Record<string, string>;
+  cumulative_net_local_by_currency: Record<string, string>;
+};
+
+export type TaxGoodHouseholder = {
+  trades_per_year: number;
+  average_hold_days: number;
+  trading_capital_share_pct: number | null;
+  uses_leverage: boolean;
+  uses_shorts: boolean;
+  summary_nl: string;
+};
+
+export type TaxYearReportResponse = {
+  title_nl: string;
+  help_nl: string;
+  year: number;
+  realised_trades: TaxRealisedTrade[];
+  year_totals: TaxYearTotals;
+  monthly_points: TaxMonthlyPoint[];
+  good_householder: TaxGoodHouseholder;
+  dividends: unknown[];
+  fx_conversion_available: boolean;
+  notes_nl: string[];
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2492,6 +2554,16 @@ export const apiClient = {
     getJson<MacroSnapshotResponse>("/markets/macro-snapshot"),
   getSectorSpread: () =>
     getJson<SectorSpreadResponse>("/portfolio/sector-spread"),
+  getTaxYearReport: (params?: { year?: number }) =>
+    getJson<TaxYearReportResponse>(
+      `/belasting/jaaroverzicht${
+        params?.year ? `?year=${params.year}` : ""
+      }`,
+    ),
+  taxYearReportCsvUrl: (params?: { year?: number }) =>
+    `${API_BASE_URL}/belasting/jaaroverzicht.csv${
+      params?.year ? `?year=${params.year}` : ""
+    }`,
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,
