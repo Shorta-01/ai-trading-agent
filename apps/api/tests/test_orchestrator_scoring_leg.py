@@ -152,6 +152,76 @@ def test_leg_detail_reports_counts(tmp_path) -> None:  # type: ignore[no-untyped
     assert "overgeslagen" in outcome.detail_nl
 
 
+def _seed_fundamentals_snapshot(
+    db_url: str,
+    *,
+    eodhd_symbol: str,
+    symbol: str,
+    sector: str,
+    market_cap_eur: str,
+) -> None:
+    engine = create_engine(db_url, future=True)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO asset_fundamentals_snapshots ("
+                "snapshot_id, ibkr_conid, eodhd_symbol, symbol, sector, "
+                "currency, market_cap, pe_ratio, pb_ratio, ev_ebitda, "
+                "roic_pct, gross_margin_pct, dividend_yield_pct, "
+                "return_6m_pct, return_12m_pct, raw_payload_hash, "
+                "provider_code, fetched_at, stored_at, safe_for_orders, "
+                "safe_for_action_drafts) VALUES ("
+                ":sid, '1', :esym, :sym, :sec, 'USD', :mcap, NULL, NULL, "
+                "NULL, NULL, NULL, NULL, NULL, NULL, 'h', 'eodhd', "
+                "'2026-06-12 06:00:00+00', '2026-06-12 06:00:00+00', 0, 0)"
+            ),
+            {
+                "sid": f"snap-{symbol}",
+                "esym": eodhd_symbol,
+                "sym": symbol,
+                "sec": sector,
+                "mcap": market_cap_eur,
+            },
+        )
+    engine.dispose()
+
+
+def test_leg_uses_real_fundamentals_when_storage_has_them(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """V1.2 §AM — when ``asset_fundamentals_snapshots`` has a row
+    for the forecast symbol the orchestrator candidate provider
+    uses the real sector + market-cap instead of the synthetic
+    fallback. We can prove that indirectly: an extreme sector
+    label flows into the verdict's ``details_json`` because the
+    sector-concentration gate echoes it."""
+
+    db_path = str(tmp_path / "db.sqlite")
+    db_url = _seed_db(db_path)
+    _seed_forecast(db_url, symbol="AAPL", conid="265598")
+    _seed_fundamentals_snapshot(
+        db_url,
+        eodhd_symbol="AAPL.US",
+        symbol="AAPL",
+        sector="healthcare",
+        market_cap_eur="50000000000",
+    )
+    leg = build_real_orchestrator_scoring_leg(_settings(db_url=db_url))
+    outcome = leg()
+    assert outcome.status == LEG_STATUS_SUCCEEDED
+    engine = create_engine(db_url, future=True)
+    with engine.connect() as conn:
+        rows = conn.execute(select(orchestrator_scoring_verdicts)).mappings().all()
+    engine.dispose()
+    assert len(rows) == 1
+    details = rows[0]["details_json"]
+    # ``details_json`` is JSON-stringified on SQLite.
+    import json as _json
+
+    parsed = _json.loads(details) if isinstance(details, str) else details
+    # The sector + market-cap appear in the diagnostics payload.
+    blob = _json.dumps(parsed).lower()
+    assert "healthcare" in blob or "50000000000" in blob
+
+
 # ---- failure path ----------------------------------------------------
 
 
