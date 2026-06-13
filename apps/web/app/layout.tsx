@@ -25,6 +25,7 @@ const navItems = [
   ["/onderzoek", "Onderzoek"],
   ["/historiek", "Historiek"],
   ["/audit", "Audit"],
+  ["/belasting", "Belasting"],
   ["/instellingen", "Instellingen"],
 ] as const;
 
