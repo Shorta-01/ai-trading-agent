@@ -128,24 +128,54 @@ def conviction_weighted_position_size_eur(
     min_position_eur: Decimal,
     max_position_eur: Decimal,
 ) -> Decimal:
-    """Map a confidence reading to an EUR position size.
+    """V1.2 §AO — stepped confidence-tier position sizing.
 
-    The mapping is linear between ``confidence_floor_pct`` (returns
-    ``min_position_eur``) and 100% (returns ``max_position_eur``).
-    Confidence below the floor returns ``Decimal("0")`` — the caller
-    should not propose the trade at all.
+    Maps a confidence reading to an EUR position size using the
+    operator-doctrine tiers locked in `CLAUDE.md §3`:
+
+    * ≥90% confidence (zeer zeker) → ``max_position_eur`` (100% of
+      cap, typically 50% of trading portfolio = €25k on €50k)
+    * 80-90% (zeker) → 60% of cap (typically 30% of portfolio = €15k
+      on €50k)
+    * 70-80% (redelijk) → 30% of cap (typically 15% of portfolio =
+      €7.5k on €50k)
+    * <``confidence_floor_pct`` → ``Decimal("0")`` (skip, do not
+      propose the trade at all)
+
+    The tiers are RELATIVE to ``max_position_eur`` so the caller can
+    set a portfolio-size-aware cap (typically ``portfolio_eur ×
+    0.50``) without the function needing to know the portfolio size
+    directly.
+
+    The result is floored at ``min_position_eur`` for non-zero
+    tiers: TOB (0.70% round-trip) makes positions below ~€5k
+    inefficient. If the computed tier-size falls below the floor,
+    the floor is returned — unless the floor itself exceeds
+    ``max_position_eur``, in which case the trade is skipped to
+    prevent breaching the cap.
+
+    The doctrine intentionally moved from a linear ramp to discrete
+    tiers so the operator sees clearly "this is a 30% portfolio
+    position because the model is in the 80-90% confidence band"
+    rather than a continuous slider. This makes confidence-cohorts
+    easier to compare across trades.
 
     Args:
         confidence_pct: Model's P(target hit within horizon), as a
             percentage (0–100).
         confidence_floor_pct: Minimum confidence to propose the trade
             (also a percentage, 0–100). Comes from user settings.
-        min_position_eur: EUR floor for an accepted trade.
-        max_position_eur: EUR ceiling at 100% confidence.
+            Doctrine default: 70.
+        min_position_eur: EUR floor for an accepted trade. Doctrine
+            default: 5000.
+        max_position_eur: EUR ceiling at the highest tier. Caller
+            sets this to ``portfolio_eur × max_position_pct``
+            (doctrine: 50%).
 
     Returns:
         Recommended position size in whole EUR (rounded HALF_UP).
-        Zero if ``confidence_pct < confidence_floor_pct``.
+        Zero if ``confidence_pct < confidence_floor_pct`` or if the
+        minimum exceeds the maximum (a misconfigured cap).
     """
 
     for name, value in (
@@ -167,15 +197,28 @@ def conviction_weighted_position_size_eur(
 
     if confidence_pct < confidence_floor_pct:
         return Decimal("0")
-    # Linear ramp from (floor, min_eur) → (100, max_eur).
-    span_pct = Decimal("100") - confidence_floor_pct
-    if span_pct == 0:
-        # Degenerate case: floor at 100. Above the floor means exactly
-        # 100, so award the ceiling size.
-        size = max_position_eur
+
+    # Stepped tiers — RELATIVE to max_position_eur so the function
+    # is portfolio-size agnostic. The multipliers (1.0 / 0.6 / 0.3)
+    # map to 50% / 30% / 15% of trading-portfolio when the caller
+    # passes max = portfolio × 0.50.
+    if confidence_pct >= Decimal("90"):
+        tier_multiplier = Decimal("1.0")
+    elif confidence_pct >= Decimal("80"):
+        tier_multiplier = Decimal("0.6")
     else:
-        progress = (confidence_pct - confidence_floor_pct) / span_pct
-        size = min_position_eur + progress * (max_position_eur - min_position_eur)
+        # 70-80% band (or whatever the operator's floor is, down to
+        # 70% — the doctrine floor).
+        tier_multiplier = Decimal("0.3")
+
+    size = max_position_eur * tier_multiplier
+    # TOB-efficiency floor: never propose a position below the
+    # minimum unless the minimum itself exceeds the cap (which
+    # means the caller's cap is too tight — skip rather than
+    # violate the cap).
+    if size < min_position_eur:
+        size = min_position_eur
+
     return size.quantize(_EUR_QUANT, rounding=ROUND_HALF_UP)
 
 

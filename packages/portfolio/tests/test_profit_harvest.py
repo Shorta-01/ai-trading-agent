@@ -132,90 +132,135 @@ def test_float_entry_rejected() -> None:
 # ---- conviction_weighted_position_size_eur ----------------------------
 
 
-def test_at_floor_confidence_returns_minimum_position() -> None:
-    size = conviction_weighted_position_size_eur(
-        confidence_pct=Decimal("70"),
-        confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
-    )
-    assert size == Decimal("25000")
+# V1.2 §AO — stepped confidence-tier sizing.
+# Tiers are RELATIVE to ``max_position_eur``:
+#   ≥90% → 100% of max
+#   80-90% → 60% of max
+#   70-80% → 30% of max
+# Caller is expected to pass max = portfolio × 0.50 so the
+# operator-doctrine percentages (50/30/15 of portfolio) land
+# correctly.
 
 
-def test_at_full_confidence_returns_maximum_position() -> None:
-    size = conviction_weighted_position_size_eur(
-        confidence_pct=Decimal("100"),
-        confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
-    )
-    assert size == Decimal("100000")
+def test_confidence_90_or_above_returns_max_position() -> None:
+    # ≥90% tier → 100% of cap (50% of €50k portfolio).
+    for conf in (Decimal("90"), Decimal("95"), Decimal("100")):
+        size = conviction_weighted_position_size_eur(
+            confidence_pct=conf,
+            confidence_floor_pct=Decimal("70"),
+            min_position_eur=Decimal("5000"),
+            max_position_eur=Decimal("25000"),
+        )
+        assert size == Decimal("25000"), f"failed at conf={conf}"
+
+
+def test_confidence_80_to_90_returns_60pct_of_max() -> None:
+    # 80-90% tier → 60% of cap. 60% × €25k = €15k (= 30% of €50k portfolio).
+    for conf in (Decimal("80"), Decimal("85"), Decimal("89.99")):
+        size = conviction_weighted_position_size_eur(
+            confidence_pct=conf,
+            confidence_floor_pct=Decimal("70"),
+            min_position_eur=Decimal("5000"),
+            max_position_eur=Decimal("25000"),
+        )
+        assert size == Decimal("15000"), f"failed at conf={conf}"
+
+
+def test_confidence_70_to_80_returns_30pct_of_max() -> None:
+    # 70-80% tier → 30% of cap. 30% × €25k = €7.5k (= 15% of €50k portfolio).
+    for conf in (Decimal("70"), Decimal("75"), Decimal("79.99")):
+        size = conviction_weighted_position_size_eur(
+            confidence_pct=conf,
+            confidence_floor_pct=Decimal("70"),
+            min_position_eur=Decimal("5000"),
+            max_position_eur=Decimal("25000"),
+        )
+        assert size == Decimal("7500"), f"failed at conf={conf}"
 
 
 def test_below_floor_returns_zero() -> None:
     size = conviction_weighted_position_size_eur(
         confidence_pct=Decimal("65"),
         confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
+        min_position_eur=Decimal("5000"),
+        max_position_eur=Decimal("25000"),
     )
     assert size == Decimal("0")
 
 
-def test_midpoint_confidence_is_linear() -> None:
-    # 85% is exactly halfway between 70 (floor) and 100; expect midpoint
-    # between min and max = €62 500.
+def test_tier_size_is_floored_at_min_position() -> None:
+    # 70-80% tier at €5k cap → 30% × €5k = €1500 → floored at min_position
+    # of €5000. The doctrine treats €5k as the TOB-efficiency floor.
     size = conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("75"),
+        confidence_floor_pct=Decimal("70"),
+        min_position_eur=Decimal("5000"),
+        max_position_eur=Decimal("5000"),
+    )
+    assert size == Decimal("5000")
+
+
+def test_tier_boundaries_are_inclusive_at_lower_bound() -> None:
+    # Exactly 90.00% → top tier.
+    size_at_90 = conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("90"),
+        confidence_floor_pct=Decimal("70"),
+        min_position_eur=Decimal("5000"),
+        max_position_eur=Decimal("25000"),
+    )
+    # Just below 90 → middle tier (60% × €25k = €15k).
+    size_at_89_99 = conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("89.99"),
+        confidence_floor_pct=Decimal("70"),
+        min_position_eur=Decimal("5000"),
+        max_position_eur=Decimal("25000"),
+    )
+    assert size_at_90 == Decimal("25000")
+    assert size_at_89_99 == Decimal("15000")
+    # Same boundary check at 80.
+    size_at_80 = conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("80"),
+        confidence_floor_pct=Decimal("70"),
+        min_position_eur=Decimal("5000"),
+        max_position_eur=Decimal("25000"),
+    )
+    size_at_79_99 = conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("79.99"),
+        confidence_floor_pct=Decimal("70"),
+        min_position_eur=Decimal("5000"),
+        max_position_eur=Decimal("25000"),
+    )
+    assert size_at_80 == Decimal("15000")
+    assert size_at_79_99 == Decimal("7500")
+
+
+def test_operator_doctrine_at_50k_portfolio() -> None:
+    """CLAUDE.md §3 doctrine: on €50k trading-portfolio with
+    max_position_pct=50%, expect the locked tier sizes."""
+
+    portfolio_eur = Decimal("50000")
+    max_position_eur = portfolio_eur * Decimal("0.50")  # €25k cap
+    floor = Decimal("70")
+    min_eur = Decimal("5000")
+
+    assert conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("92"),
+        confidence_floor_pct=floor,
+        min_position_eur=min_eur,
+        max_position_eur=max_position_eur,
+    ) == Decimal("25000")  # 50% of portfolio
+    assert conviction_weighted_position_size_eur(
         confidence_pct=Decimal("85"),
-        confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
-    )
-    assert size == Decimal("62500")
-
-
-def test_quarter_progress_is_linear() -> None:
-    # 77.5 = floor + 25% of span; expect min + 25% of (max - min).
-    # 25000 + 0.25 * 75000 = 43750.
-    size = conviction_weighted_position_size_eur(
-        confidence_pct=Decimal("77.5"),
-        confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
-    )
-    assert size == Decimal("43750")
-
-
-def test_floor_at_100_degenerate_case() -> None:
-    # Floor at 100% means the only acceptable level is exactly 100;
-    # we treat that as 'max position' for an accepted trade.
-    size = conviction_weighted_position_size_eur(
-        confidence_pct=Decimal("100"),
-        confidence_floor_pct=Decimal("100"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
-    )
-    assert size == Decimal("100000")
-
-
-def test_rounded_to_whole_eur() -> None:
-    size = conviction_weighted_position_size_eur(
-        confidence_pct=Decimal("73"),
-        confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25000"),
-        max_position_eur=Decimal("100000"),
-    )
-    # 25000 + (3/30) * 75000 = 32500 — already whole.
-    assert size == Decimal("32500")
-    # Awkward bounds: pick numbers that produce a non-whole euro.
-    size = conviction_weighted_position_size_eur(
-        confidence_pct=Decimal("71"),
-        confidence_floor_pct=Decimal("70"),
-        min_position_eur=Decimal("25001"),
-        max_position_eur=Decimal("100000"),
-    )
-    # 25001 + (1/30) * 74999 = 25001 + 2499.966... = 27500.966... → 27501.
-    assert size == Decimal("27501")
+        confidence_floor_pct=floor,
+        min_position_eur=min_eur,
+        max_position_eur=max_position_eur,
+    ) == Decimal("15000")  # 30% of portfolio
+    assert conviction_weighted_position_size_eur(
+        confidence_pct=Decimal("75"),
+        confidence_floor_pct=floor,
+        min_position_eur=min_eur,
+        max_position_eur=max_position_eur,
+    ) == Decimal("7500")  # 15% of portfolio
 
 
 def test_invalid_bounds_rejected() -> None:
