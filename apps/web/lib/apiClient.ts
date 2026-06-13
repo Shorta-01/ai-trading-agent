@@ -1467,6 +1467,26 @@ export type ActionDraftStatus =
   | "pending_cancellation"
   | "awaiting_reply_timeout";
 
+export type ActionDraftPaperSubmissionResponse = {
+  status: string;
+  status_nl: string;
+  help_nl: string;
+  submission_id: string | null;
+  state: string | null;
+  ibkr_order_id: number | null;
+  ibkr_perm_id: number | null;
+  ibkr_status_text: string | null;
+  blocking_reason: string | null;
+  actions_allowed: boolean;
+  order_submission_allowed: boolean;
+  order_modification_allowed: boolean;
+  order_cancellation_allowed: boolean;
+  safe_for_submission: boolean;
+  safe_for_orders: boolean;
+  safe_for_broker_submission: boolean;
+  blocks_orders: boolean;
+};
+
 export type ActionDraftResponse = {
   action_draft_id: string;
   decision_package_id: string | null;
@@ -2145,6 +2165,11 @@ export const apiClient = {
   approveActionDraft: (id: string) =>
     requestJson<ActionDraftResponse>(
       `/action-draft/${encodeURIComponent(id)}/approve`,
+      "POST",
+    ),
+  submitActionDraftToPaper: (id: string) =>
+    requestJson<ActionDraftPaperSubmissionResponse>(
+      `/action-drafts/${encodeURIComponent(id)}/submit-to-ibkr-paper`,
       "POST",
     ),
   dismissActionDraft: (id: string, reason?: string) =>
