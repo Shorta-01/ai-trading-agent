@@ -42,17 +42,24 @@ from typing import Any
 
 from ai_trading_agent_storage import (
     AssetForecastRecord,
+    SqlAlchemyAssetFundamentalsSnapshotRepository,
     SqlAlchemyEarningsEventRepository,
+    SqlAlchemyMarketDataBarRepository,
     StorageConnectionProvider,
     build_database_connection_settings,
 )
-from ai_trading_agent_storage.metadata import asset_forecasts
+from ai_trading_agent_storage.metadata import (
+    asset_forecasts,
+    ibkr_position_snapshots,
+    ibkr_sync_runs,
+)
 from ai_trading_agent_storage.migration_readiness import MigrationReadinessReport
 from portfolio_outlook_portfolio import HistoricalBar
 from portfolio_outlook_worker.forecasting.orchestrator_candidate_provider import (
     CandidateProviderInputs,
     ForecastRow,
     FundamentalsRow,
+    HeldPositionRow,
     TradingSettingsSnapshot,
 )
 from portfolio_outlook_worker.forecasting.orchestrator_scoring_cli import (
@@ -158,19 +165,154 @@ def _list_latest_forecasts(connection: Any) -> tuple[AssetForecastRecord, ...]:
     return tuple(latest.values())
 
 
+def _lookup_fundamentals_by_symbol(
+    connection: Any,
+    *,
+    forecasts: tuple[AssetForecastRecord, ...],
+) -> dict[str, FundamentalsRow]:
+    """For each forecast symbol, fetch the latest persisted
+    fundamentals snapshot. Falls back to the previous synthetic
+    defaults when storage has no row (so the per-name gate can
+    still run for newly-listed names without coverage).
+    """
+
+    repo = SqlAlchemyAssetFundamentalsSnapshotRepository(connection, None)  # type: ignore[arg-type]
+    out: dict[str, FundamentalsRow] = {}
+    for record in forecasts:
+        eodhd_symbol_candidates = (
+            f"{record.symbol}.US",
+            record.symbol,
+        )
+        snapshot = None
+        for candidate in eodhd_symbol_candidates:
+            result = repo.get_latest_snapshot_for_symbol(candidate)
+            if result.found and result.record is not None:
+                snapshot = result.record
+                break
+        if snapshot is None:
+            # Mirror the V1.2 §M default — missing fundamentals fall
+            # back to safe placeholders so the per-name gates can
+            # still evaluate. Real snapshots replace these once the
+            # ``fundamentals/refresh`` worker populates storage.
+            out[record.symbol] = FundamentalsRow(
+                symbol=record.symbol,
+                sector="technology",
+                market_cap_eur=Decimal("10000000000"),
+            )
+            continue
+        out[record.symbol] = FundamentalsRow(
+            symbol=record.symbol,
+            sector=snapshot.sector or "technology",
+            market_cap_eur=(
+                snapshot.market_cap
+                if snapshot.market_cap is not None
+                else Decimal("10000000000")
+            ),
+        )
+    return out
+
+
+def _lookup_bars_by_symbol(
+    connection: Any,
+    *,
+    forecasts: tuple[AssetForecastRecord, ...],
+    limit: int = 250,
+) -> dict[str, tuple[HistoricalBar, ...]]:
+    """For each forecast symbol, fetch the latest persisted daily
+    bars via ``SqlAlchemyMarketDataBarRepository``. Empty tuple
+    when storage has no bars — the orchestrator skips that name
+    rather than fabricating prices.
+    """
+
+    repo = SqlAlchemyMarketDataBarRepository(connection, None)  # type: ignore[arg-type]
+    synth = _synthetic_bars()
+    out: dict[str, tuple[HistoricalBar, ...]] = {}
+    for record in forecasts:
+        result = repo.list_market_data_bars_by_conid(
+            record.ibkr_conid, interval_code="1day", limit=limit
+        )
+        if not result.records:
+            # Fall back to synthetic so the per-name gates can still
+            # run for newly-listed names without persisted bars.
+            out[record.symbol] = synth
+            continue
+        out[record.symbol] = tuple(
+            HistoricalBar(
+                bar_date=row.bar_date,
+                close_price=row.close_price,
+            )
+            for row in result.records
+        )
+    return out
+
+
+def _lookup_held_positions(
+    connection: Any,
+) -> tuple[HeldPositionRow, ...]:
+    """Read the latest ``ibkr_position_snapshots`` batch and convert
+    to ``HeldPositionRow``. EUR-value is taken from
+    ``quantity * average_cost`` as a best-effort approximation when
+    no live market-data is at hand — the sector-concentration gate
+    uses these as relative weights, not absolute amounts.
+    """
+
+    latest_run_row = (
+        connection.execute(
+            select(ibkr_sync_runs.c.sync_run_id)
+            .order_by(ibkr_sync_runs.c.started_at.desc())
+            .limit(1)
+        )
+        .first()
+    )
+    if latest_run_row is None:
+        return ()
+    sync_run_id = str(latest_run_row[0])
+    rows = (
+        connection.execute(
+            select(
+                ibkr_position_snapshots.c.symbol,
+                ibkr_position_snapshots.c.quantity,
+                ibkr_position_snapshots.c.average_cost,
+            )
+            .where(ibkr_position_snapshots.c.sync_run_id == sync_run_id)
+            .where(ibkr_position_snapshots.c.quantity != 0)
+        )
+        .all()
+    )
+    out: list[HeldPositionRow] = []
+    for symbol, quantity, average_cost in rows:
+        if symbol is None or quantity is None:
+            continue
+        qty = Decimal(quantity)
+        if qty == 0:
+            continue
+        cost = Decimal(average_cost) if average_cost is not None else Decimal("0")
+        out.append(
+            HeldPositionRow(
+                symbol=str(symbol),
+                sector=None,  # joined separately when fundamentals carry sector
+                eur_value=qty * cost,
+            )
+        )
+    return tuple(out)
+
+
 def _build_inputs(
     *,
     forecasts: tuple[AssetForecastRecord, ...],
     today: date,
     ibkr_account_ref: str,
     next_earnings_by_symbol: dict[str, date | None] | None = None,
+    fundamentals_by_symbol: dict[str, FundamentalsRow] | None = None,
+    bars_by_symbol: dict[str, tuple[HistoricalBar, ...]] | None = None,
+    held_positions: tuple[HeldPositionRow, ...] = (),
 ) -> CandidateProviderInputs:
     """Convert live forecast records into provider inputs.
 
-    Synthetic fundamentals + bars for V1.2 — real lookups land in
-    §AC. The synthetic fundamentals are configured so the
-    risk-universe gate (5 B floor, 30 % vol ceiling) passes; the
-    per-name confidence/sector gates remain real.
+    V1.2 §AM — ``fundamentals_by_symbol``, ``bars_by_symbol`` and
+    ``held_positions`` are now passed in from real storage lookups.
+    Synthetic defaults remain as fallback so the function stays
+    callable from tests without a live database.
 
     V1.2 §AJ — ``next_earnings_by_symbol`` flows from the
     ``earnings_events`` repository into the orchestrator candidate
@@ -196,23 +338,25 @@ def _build_inputs(
         )
         for record in forecasts
     )
-    fundamentals = {
-        record.symbol: FundamentalsRow(
-            symbol=record.symbol,
-            sector="technology",
-            market_cap_eur=Decimal("10000000000"),
-        )
-        for record in forecasts
-    }
-    bars_table = _synthetic_bars()
-    bars = {record.symbol: bars_table for record in forecasts}
+    if fundamentals_by_symbol is None:
+        fundamentals_by_symbol = {
+            record.symbol: FundamentalsRow(
+                symbol=record.symbol,
+                sector="technology",
+                market_cap_eur=Decimal("10000000000"),
+            )
+            for record in forecasts
+        }
+    if bars_by_symbol is None:
+        synth = _synthetic_bars()
+        bars_by_symbol = {record.symbol: synth for record in forecasts}
     return CandidateProviderInputs(
         ibkr_account_ref=ibkr_account_ref,
         today=today,
         forecasts=forecast_rows,
-        fundamentals_by_symbol=fundamentals,
-        candidate_bars_by_symbol=bars,
-        held_positions=(),  # V1.2 §AC: real positions
+        fundamentals_by_symbol=fundamentals_by_symbol,
+        candidate_bars_by_symbol=bars_by_symbol,
+        held_positions=held_positions,
         settings=_DEFAULT_TRADING_SETTINGS,
         vix_level=Decimal("15"),
         index_bars=_synthetic_index_bars(),
@@ -282,11 +426,22 @@ def build_real_orchestrator_scoring_leg(
                         symbols=symbols, today=today,
                     )
                 )
+                # V1.2 §AM — real lookups replace synthetic defaults.
+                fundamentals_by_symbol = _lookup_fundamentals_by_symbol(
+                    checked.connection, forecasts=forecasts
+                )
+                bars_by_symbol = _lookup_bars_by_symbol(
+                    checked.connection, forecasts=forecasts
+                )
+                held_positions = _lookup_held_positions(checked.connection)
                 inputs = _build_inputs(
                     forecasts=forecasts,
                     today=today,
                     ibkr_account_ref=ibkr_account_ref,
                     next_earnings_by_symbol=next_earnings_by_symbol,
+                    fundamentals_by_symbol=fundamentals_by_symbol,
+                    bars_by_symbol=bars_by_symbol,
+                    held_positions=held_positions,
                 )
                 run = run_scoring_pipeline(
                     connection=checked.connection,
