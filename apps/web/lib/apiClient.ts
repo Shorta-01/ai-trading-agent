@@ -599,6 +599,60 @@ export type TaxYearReportResponse = {
   notes_nl: string[];
 };
 
+// V1.2 §AX — maandrapport.
+
+export type MonthlyReportRealisedTrade = {
+  symbol: string;
+  currency_local: string;
+  quantity: string;
+  buy_date: string;
+  sell_date: string;
+  gross_local: string;
+  net_local: string;
+  hold_days: number;
+  net_pct_on_cost: string;
+};
+
+export type MonthlyReportResponse = {
+  title_nl: string;
+  help_nl: string;
+  year: number;
+  month: number;
+  executive_summary: {
+    headline_nl: string;
+    net_local_by_currency: Record<string, string>;
+    vs_baseline_eur: string | null;
+    trade_count: number;
+    hit_rate_pct: number;
+  };
+  open_positions_count: number;
+  action_draft_activity: {
+    proposed: number;
+    user_approved: number;
+    submitted: number;
+    filled: number;
+    dismissed: number;
+  };
+  verdict_activity: {
+    total: number;
+    by_decision: Record<string, number>;
+  };
+  income: {
+    capital_gains_local_by_currency: Record<string, string>;
+    tob_local_by_currency: Record<string, string>;
+    net_local_by_currency: Record<string, string>;
+    ytd_net_local_by_currency: Record<string, string>;
+  };
+  software_performance: {
+    hit_rate_pct: number;
+    average_hold_days: number;
+    confidence_distribution_pct: Record<string, number>;
+    proposals_vs_approved: number[];
+  };
+  realised_trades: MonthlyReportRealisedTrade[];
+  notes_nl: string[];
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2564,6 +2618,13 @@ export const apiClient = {
     `${API_BASE_URL}/belasting/jaaroverzicht.csv${
       params?.year ? `?year=${params.year}` : ""
     }`,
+  getMonthlyReport: (params?: { year?: number; month?: number }) => {
+    const qs: string[] = [];
+    if (params?.year) qs.push(`year=${params.year}`);
+    if (params?.month) qs.push(`month=${params.month}`);
+    const suffix = qs.length > 0 ? `?${qs.join("&")}` : "";
+    return getJson<MonthlyReportResponse>(`/rapporten/maand${suffix}`);
+  },
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,

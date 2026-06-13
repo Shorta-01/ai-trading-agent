@@ -73,6 +73,9 @@ from portfolio_outlook_api.portfolio_nav_history_routes import (
 from portfolio_outlook_api.predictor_performance_routes import (
     router as predictor_performance_router,
 )
+from portfolio_outlook_api.rapporten_routes import (
+    router as rapporten_router,
+)
 from portfolio_outlook_api.reconciliation import (
     router as reconciliation_router,
 )
@@ -229,6 +232,7 @@ app.include_router(orchestrator_verdicts_router)
 app.include_router(notification_router)
 app.include_router(explanation_batch_router)
 app.include_router(predictor_performance_router)
+app.include_router(rapporten_router)
 app.include_router(tob_router)
 app.include_router(earnings_router)
 app.include_router(watchlist_preferences_router)
