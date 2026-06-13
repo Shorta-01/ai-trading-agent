@@ -31,7 +31,7 @@ def connection():  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0072_earnings_events')"
+                "('0073_watchlist_preferences')"
             )
         )
     conn = engine.connect()
@@ -50,8 +50,8 @@ def _readiness() -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0072_earnings_events",
-        database_revision_id="0072_earnings_events",
+        latest_expected_revision_id="0073_watchlist_preferences",
+        database_revision_id="0073_watchlist_preferences",
         persistence_allowed=True,
         blocks_runtime_writes=False,
         explanation_nl="ok",

@@ -908,6 +908,23 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "(eps-estimate, eps-actual, revenue-estimate)."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0073_watchlist_preferences",
+        previous_revision_id="0072_earnings_events",
+        filename="0073_watchlist_preferences.py",
+        label_nl="Favorieten en uitsluitingen",
+        description_nl=(
+            "Voegt de ``watchlist_preferences`` tabel toe voor de "
+            "hybride watchlist (CLAUDE.md §5 / V1.2 §AU). De "
+            "operator markeert symbolen als ``favorite`` — die "
+            "krijgen een dashboard-blok met live confidence ook al "
+            "passeren ze niet alle gates — of als ``excluded`` — "
+            "die mag de orchestrator nooit voorstellen. Aparte tabel "
+            "naast ``watchlist_items`` omdat die laatste de cold-"
+            "start onboarding flow bedient. UNIQUE per ``(account, "
+            "symbol, kind)`` maakt toggle-acties idempotent."
+        ),
+    ),
 )
 
 

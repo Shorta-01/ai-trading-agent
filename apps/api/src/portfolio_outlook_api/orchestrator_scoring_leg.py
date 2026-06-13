@@ -45,6 +45,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyAssetFundamentalsSnapshotRepository,
     SqlAlchemyEarningsEventRepository,
     SqlAlchemyMarketDataBarRepository,
+    SqlAlchemyWatchlistPreferenceRepository,
     StorageConnectionProvider,
     build_database_connection_settings,
 )
@@ -306,6 +307,7 @@ def _build_inputs(
     fundamentals_by_symbol: dict[str, FundamentalsRow] | None = None,
     bars_by_symbol: dict[str, tuple[HistoricalBar, ...]] | None = None,
     held_positions: tuple[HeldPositionRow, ...] = (),
+    excluded_symbols: frozenset[str] = frozenset(),
 ) -> CandidateProviderInputs:
     """Convert live forecast records into provider inputs.
 
@@ -361,6 +363,7 @@ def _build_inputs(
         vix_level=Decimal("15"),
         index_bars=_synthetic_index_bars(),
         next_earnings_by_symbol=next_earnings_by_symbol or {},
+        excluded_symbols=excluded_symbols,
     )
 
 
@@ -434,6 +437,16 @@ def build_real_orchestrator_scoring_leg(
                     checked.connection, forecasts=forecasts
                 )
                 held_positions = _lookup_held_positions(checked.connection)
+                # V1.2 §AU — operator exclusions short-circuit before
+                # the gates fire. Empty set when no exclusions are
+                # configured.
+                prefs_repo = SqlAlchemyWatchlistPreferenceRepository(
+                    checked.connection,
+                    _readiness_from(checked.readiness),
+                )
+                excluded_symbols = prefs_repo.list_excluded_symbols(
+                    ibkr_account_ref=ibkr_account_ref
+                )
                 inputs = _build_inputs(
                     forecasts=forecasts,
                     today=today,
@@ -442,6 +455,7 @@ def build_real_orchestrator_scoring_leg(
                     fundamentals_by_symbol=fundamentals_by_symbol,
                     bars_by_symbol=bars_by_symbol,
                     held_positions=held_positions,
+                    excluded_symbols=excluded_symbols,
                 )
                 run = run_scoring_pipeline(
                     connection=checked.connection,

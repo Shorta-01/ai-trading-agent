@@ -74,6 +74,7 @@ from ai_trading_agent_storage.metadata import (
     market_data_bars,
     market_data_snapshots,
     earnings_events,
+    watchlist_preferences,
     prediction_diary_entries,
     market_data_latest_snapshots,
     orchestrator_scoring_verdicts,
@@ -129,6 +130,8 @@ from ai_trading_agent_storage.repository_contracts import (
     OrchestratorScoringVerdictRecord,
     SaveEarningsEventRequest,
     SaveOrchestratorScoringVerdictRequest,
+    SaveWatchlistPreferenceRequest,
+    WatchlistPreferenceRecord,
     DecisionPackageExplanationRecord,
     ExplanationEvidenceLedgerRecord,
     ActionDraftOrderConditionRecord,
@@ -3302,6 +3305,130 @@ class SqlAlchemyEarningsEventRepository(_Base):
             if next_for.get(symbol) is None:
                 next_for[symbol] = event_date
         return next_for
+
+
+class SqlAlchemyWatchlistPreferenceRepository(_Base):
+    """Operator favorites + exclusions (V1.2 §AU, CLAUDE.md §5).
+
+    Two clients:
+
+    * Dashboard favorites widget reads via :meth:`list_for_account`
+      filtered on ``kind='favorite'``, then joins each row to the
+      latest orchestrator-scoring verdict for live confidence.
+    * Orchestrator candidate provider reads via
+      :meth:`list_excluded_symbols` to filter the universe-scan
+      output before the gates fire.
+
+    UNIQUE per ``(account, symbol, kind)`` means upserts are
+    delete-then-insert (mirrors the EarningsEvent + DailyDigest
+    patterns); the operator never wants two favorite rows for the
+    same symbol.
+    """
+
+    def upsert_preference(
+        self, request: SaveWatchlistPreferenceRequest
+    ) -> StorageWriteResult:
+        self._connection.execute(
+            watchlist_preferences.delete().where(
+                (
+                    watchlist_preferences.c.ibkr_account_ref
+                    == request.ibkr_account_ref
+                )
+                & (watchlist_preferences.c.symbol == request.symbol)
+                & (watchlist_preferences.c.kind == request.kind)
+            )
+        )
+        self._insert(watchlist_preferences, asdict(request))
+        return StorageWriteResult(
+            True,
+            request.watchlist_preference_id,
+            watchlist_preferences.name,
+            True,
+            "Watchlist-voorkeur opgeslagen.",
+        )
+
+    def delete_preference(
+        self,
+        *,
+        ibkr_account_ref: str,
+        symbol: str,
+        kind: str,
+    ) -> StorageWriteResult:
+        """Delete a single preference row. Idempotent: deleting a
+        non-existent row returns ``accepted=True`` because the desired
+        state (gone) holds. We still call ``ensure_persistence_allowed``
+        via the readiness check below so a paused-storage system does
+        not silently drop the request.
+        """
+
+        ensure_persistence_allowed(self._readiness_report)
+        self._connection.execute(
+            watchlist_preferences.delete().where(
+                (watchlist_preferences.c.ibkr_account_ref == ibkr_account_ref)
+                & (watchlist_preferences.c.symbol == symbol)
+                & (watchlist_preferences.c.kind == kind)
+            )
+        )
+        return StorageWriteResult(
+            True,
+            None,
+            watchlist_preferences.name,
+            True,
+            "Watchlist-voorkeur verwijderd.",
+        )
+
+    def list_for_account(
+        self,
+        *,
+        ibkr_account_ref: str,
+        kind: str | None = None,
+    ) -> StorageListResult[WatchlistPreferenceRecord]:
+        """List preferences for one account, optionally filtered on
+        ``kind`` (``favorite`` / ``excluded``). Ordered by symbol so
+        the dashboard table is stable across reloads.
+        """
+
+        statement = select(watchlist_preferences).where(
+            watchlist_preferences.c.ibkr_account_ref == ibkr_account_ref
+        )
+        if kind is not None:
+            statement = statement.where(watchlist_preferences.c.kind == kind)
+        rows = (
+            self._connection.execute(
+                statement.order_by(watchlist_preferences.c.symbol)
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            WatchlistPreferenceRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            watchlist_preferences.name,
+            f"{len(records)} watchlist-voorkeuren opgehaald.",
+        )
+
+    def list_excluded_symbols(self, *, ibkr_account_ref: str) -> frozenset[str]:
+        """Tight helper for the orchestrator candidate provider — the
+        gate-filtering step doesn't need the full record, just the set
+        of symbols to skip. Returns a ``frozenset`` so callers can do
+        cheap ``symbol in excluded`` membership checks.
+        """
+
+        rows = (
+            self._connection.execute(
+                select(watchlist_preferences.c.symbol).where(
+                    (
+                        watchlist_preferences.c.ibkr_account_ref
+                        == ibkr_account_ref
+                    )
+                    & (watchlist_preferences.c.kind == "excluded")
+                )
+            )
+            .all()
+        )
+        return frozenset(symbol for (symbol,) in rows)
 
 
 class SqlAlchemySchedulerRunRepository(_Base):

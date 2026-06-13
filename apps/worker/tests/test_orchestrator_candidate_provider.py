@@ -102,6 +102,7 @@ def _inputs(
     held_positions: tuple[HeldPositionRow, ...] = (),
     vix_level: Decimal | None = Decimal("15"),
     next_earnings_by_symbol: dict[str, date | None] | None = None,
+    excluded_symbols: frozenset[str] = frozenset(),
 ) -> CandidateProviderInputs:
     return CandidateProviderInputs(
         ibkr_account_ref="DU1234567",
@@ -114,6 +115,7 @@ def _inputs(
         vix_level=vix_level,
         index_bars=_trending_up_bars(),
         next_earnings_by_symbol=next_earnings_by_symbol or {},
+        excluded_symbols=excluded_symbols,
     )
 
 
@@ -350,3 +352,59 @@ def test_next_earnings_by_symbol_defaults_to_empty_dict() -> None:
         )
     )
     assert result.candidates[0].orchestrator_inputs.next_earnings_date is None
+
+
+# ---- V1.2 §AU exclusions --------------------------------------------
+
+
+def test_excluded_symbol_is_skipped_before_any_lookups() -> None:
+    """Operator exclusion takes precedence over even fundamentals or
+    bars — the forecast never reaches the gates."""
+
+    result = build_candidates(
+        _inputs(
+            forecasts=(_forecast(symbol="TSLA"),),
+            fundamentals={"TSLA": _fundamentals(symbol="TSLA")},
+            bars={"TSLA": _bars()},
+            excluded_symbols=frozenset({"TSLA"}),
+        )
+    )
+    assert result.candidates == ()
+    assert result.skipped_count == 1
+    assert any("excluded_by_operator" in r for r in result.skip_reasons)
+
+
+def test_exclusion_skips_only_listed_symbol() -> None:
+    """Other forecasts proceed normally — exclusion is per-symbol."""
+
+    result = build_candidates(
+        _inputs(
+            forecasts=(
+                _forecast(forecast_id="fc-1", symbol="AAPL"),
+                _forecast(forecast_id="fc-2", symbol="TSLA"),
+            ),
+            fundamentals={
+                "AAPL": _fundamentals(symbol="AAPL"),
+                "TSLA": _fundamentals(symbol="TSLA"),
+            },
+            bars={"AAPL": _bars(), "TSLA": _bars()},
+            excluded_symbols=frozenset({"TSLA"}),
+        )
+    )
+    assert {c.orchestrator_inputs.ticker for c in result.candidates} == {"AAPL"}
+    assert result.skipped_count == 1
+
+
+def test_empty_exclusion_set_does_not_affect_candidates() -> None:
+    """Backwards-compat: the default ``frozenset()`` matches today's
+    behaviour exactly."""
+
+    result = build_candidates(
+        _inputs(
+            forecasts=(_forecast(),),
+            fundamentals={"AAPL": _fundamentals()},
+            bars={"AAPL": _bars()},
+        )
+    )
+    assert len(result.candidates) == 1
+    assert result.skipped_count == 0

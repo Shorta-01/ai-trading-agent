@@ -1916,6 +1916,35 @@ Index(
 )
 
 
+watchlist_preferences = Table(
+    "watchlist_preferences",
+    metadata,
+    Column("watchlist_preference_id", Text, primary_key=True),
+    Column("ibkr_account_ref", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("kind", Text, nullable=False),
+    Column("note", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "kind IN ('favorite', 'excluded')",
+        name="ck_watchlist_preferences_kind",
+    ),
+    CheckConstraint(
+        "symbol <> ''",
+        name="ck_watchlist_preferences_symbol_not_empty",
+    ),
+    UniqueConstraint(
+        "ibkr_account_ref", "symbol", "kind",
+        name="uq_watchlist_preferences_account_symbol_kind",
+    ),
+)
+Index(
+    "ix_watchlist_preferences_account_kind",
+    watchlist_preferences.c.ibkr_account_ref,
+    watchlist_preferences.c.kind,
+)
+
+
 daily_briefings = Table(
     "daily_briefings",
     metadata,

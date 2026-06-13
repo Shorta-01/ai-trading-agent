@@ -99,6 +99,9 @@ from portfolio_outlook_api.watchlist import router as watchlist_router
 from portfolio_outlook_api.watchlist_confirmation_routes import (
     router as watchlist_confirmation_router,
 )
+from portfolio_outlook_api.watchlist_preferences_routes import (
+    router as watchlist_preferences_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +222,7 @@ app.include_router(explanation_batch_router)
 app.include_router(predictor_performance_router)
 app.include_router(tob_router)
 app.include_router(earnings_router)
+app.include_router(watchlist_preferences_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)
