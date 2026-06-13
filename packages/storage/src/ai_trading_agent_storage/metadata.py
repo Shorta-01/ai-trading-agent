@@ -1431,6 +1431,14 @@ runtime_config = Table(
     ),
     Column("ai_email_summary_enabled", Boolean, nullable=True),
     Column("research_ai_extraction_enabled", Boolean, nullable=True),
+    # V1.2 §AY — pauze-modus. ``software_paused`` is de huidige
+    # toestand (default False). ``software_paused_at`` houdt het
+    # moment van de pauze bij; bij ``hervat`` flipt de bool naar
+    # False en wordt het timestamp terug ``NULL``.
+    Column(
+        "software_paused", Boolean, nullable=False, server_default=sa_false()
+    ),
+    Column("software_paused_at", DateTime(timezone=True), nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown

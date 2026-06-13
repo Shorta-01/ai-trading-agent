@@ -33,7 +33,7 @@ def _seed_db(path: str) -> str:
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0073_watchlist_preferences')"
+                "('0074_runtime_config_software_pause')"
             )
         )
     engine.dispose()

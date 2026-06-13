@@ -140,7 +140,7 @@ describe("PendingApprovalsPanel", () => {
     getLatestActionDrafts.mockResolvedValue(ok({ ...SAMPLE, items: [] }));
     render(<PendingApprovalsPanel />);
     expect(
-      await screen.findByText("Geen acties te keuren"),
+      await screen.findByText("Geen kandidaten vandaag"),
     ).toBeInTheDocument();
   });
 });

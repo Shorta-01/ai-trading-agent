@@ -29,7 +29,7 @@ def connection():  # type: ignore[no-untyped-def]
         )
         conn.execute(
             text(
-                "INSERT INTO alembic_version (version_num) VALUES ('0073_watchlist_preferences')"
+                "INSERT INTO alembic_version (version_num) VALUES ('0074_runtime_config_software_pause')"
             )
         )
     conn = engine.connect()
@@ -48,8 +48,8 @@ def _readiness(persistence_allowed: bool = True) -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0073_watchlist_preferences",
-        database_revision_id="0073_watchlist_preferences",
+        latest_expected_revision_id="0074_runtime_config_software_pause",
+        database_revision_id="0074_runtime_config_software_pause",
         persistence_allowed=persistence_allowed,
         blocks_runtime_writes=False,
         explanation_nl="Test readiness — migration up-to-date.",

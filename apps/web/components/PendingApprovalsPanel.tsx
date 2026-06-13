@@ -144,8 +144,8 @@ export function PendingApprovalsPanel() {
       </div>
       {items.length === 0 ? (
         <EmptyState
-          title="Geen acties te keuren"
-          message="Wanneer de morning chain een draft schrijft die geslaagd is voor dry-run, verschijnt die hier."
+          title="Geen kandidaten vandaag"
+          message="Software wacht op betere setups — geduldig blijven hoort bij de doctrine. CLAUDE.md §7.1 verbiedt drempel-verlaging om iets te tonen."
         />
       ) : (
         <ul
