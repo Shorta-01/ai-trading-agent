@@ -19,10 +19,10 @@ from portfolio_outlook_api.action_draft import (
     router as action_draft_router,
 )
 from portfolio_outlook_api.asset_listings import router as asset_listings_router
+from portfolio_outlook_api.asset_master import router as asset_master_router
 from portfolio_outlook_api.belasting_routes import (
     router as belasting_router,
 )
-from portfolio_outlook_api.asset_master import router as asset_master_router
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.decision_package_routes import (
     router as decision_package_routes_router,
