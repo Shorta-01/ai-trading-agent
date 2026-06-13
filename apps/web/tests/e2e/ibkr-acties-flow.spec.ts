@@ -134,6 +134,11 @@ test.describe("Task 133 — IBKR Acties Te keuren flow", () => {
     ).toHaveText("Goedgekeurd");
     await expect(
       page.getByTestId("action-draft-approved-banner-draft-e2e-1"),
-    ).toContainText("IBKR-verzending wordt in een toekomstige update");
+    ).toContainText("Klaar om naar IBKR paper");
+    // V1.2 §AN — placeholder banner replaced by a real submit
+    // button that triggers POST /action-drafts/{id}/submit-to-ibkr-paper.
+    await expect(
+      page.getByTestId("action-draft-submit-to-paper-draft-e2e-1"),
+    ).toBeVisible();
   });
 });
