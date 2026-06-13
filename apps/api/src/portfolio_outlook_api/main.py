@@ -49,6 +49,9 @@ from portfolio_outlook_api.ibkr_connection_routes import (
 from portfolio_outlook_api.ibkr_submission import (
     router as ibkr_submission_router,
 )
+from portfolio_outlook_api.macro_snapshot_routes import (
+    router as macro_snapshot_router,
+)
 from portfolio_outlook_api.market_data_runtime_routes import (
     router as market_data_runtime_router,
 )
@@ -87,6 +90,9 @@ from portfolio_outlook_api.runtime_config_routes import (
 from portfolio_outlook_api.scheduler import build_scheduler, install_default_jobs
 from portfolio_outlook_api.scheduler_routes import (
     router as scheduler_v127_router,
+)
+from portfolio_outlook_api.sector_spread_routes import (
+    router as sector_spread_router,
 )
 from portfolio_outlook_api.status_routes import router as status_router
 from portfolio_outlook_api.suggestions_grid_routes import (
@@ -223,6 +229,8 @@ app.include_router(predictor_performance_router)
 app.include_router(tob_router)
 app.include_router(earnings_router)
 app.include_router(watchlist_preferences_router)
+app.include_router(macro_snapshot_router)
+app.include_router(sector_spread_router)
 
 # Auto-capture: record any unhandled exception in the central error log.
 app.add_exception_handler(Exception, unhandled_exception_handler)

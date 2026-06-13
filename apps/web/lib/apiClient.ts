@@ -507,6 +507,36 @@ export type WatchlistPreferenceMutationResponse = {
   explanation_nl: string;
 };
 
+// V1.2 §AV — macro info-strip + sector spread.
+
+export type MacroSnapshotResponse = {
+  title_nl: string;
+  help_nl: string;
+  state: "rustig" | "verhoogd" | "stress" | "onbekend";
+  severity: "info" | "warning" | "critical";
+  headline_nl: string;
+  vix_level: number | null;
+  ma_short_day: number | null;
+  ma_long_day: number | null;
+  last_evaluated_at: string | null;
+  sample_size: number;
+};
+
+export type SectorRow = {
+  sector: string;
+  weight_pct: number;
+  notional_local_approx: string;
+  position_count: number;
+};
+
+export type SectorSpreadResponse = {
+  title_nl: string;
+  help_nl: string;
+  items: SectorRow[];
+  total_positions: number;
+  has_unclassified: boolean;
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2458,6 +2488,10 @@ export const apiClient = {
       }`,
       "DELETE",
     ),
+  getMacroSnapshot: () =>
+    getJson<MacroSnapshotResponse>("/markets/macro-snapshot"),
+  getSectorSpread: () =>
+    getJson<SectorSpreadResponse>("/portfolio/sector-spread"),
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,

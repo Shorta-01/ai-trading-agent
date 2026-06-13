@@ -366,4 +366,71 @@ describe("ActionDraftGrid", () => {
         .value,
     ).toBe("6");
   });
+
+  // V1.2 §AV / CLAUDE.md §6.1 — EUR-equivalent transparency block.
+
+  it("shows EUR-equivalent block on a BUY with notional_eur", () => {
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, notional_eur: "15000" }]}
+        onChange={() => {}}
+      />,
+    );
+    const block = screen.getByTestId("action-draft-eur-equivalent-draft-1");
+    expect(block.textContent).toContain("+4");
+    expect(block.textContent).toContain("TOB");
+    // +4% on €15.000 = €600 gross, €495 net after 0,70% TOB.
+    expect(
+      screen.getByTestId("action-draft-eur-equivalent-net-draft-1").textContent,
+    ).toMatch(/Netto €\s*495,00/);
+  });
+
+  it("hides the FX sensitivity block when currency_local is EUR", () => {
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, notional_eur: "15000" }]}
+        onChange={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByTestId("action-draft-fx-sensitivity-draft-1"),
+    ).toBeNull();
+  });
+
+  it("shows three FX sensitivity rows for a non-EUR position", () => {
+    render(
+      <ActionDraftGrid
+        drafts={[
+          {
+            ...HAPPY,
+            currency_local: "USD",
+            fx_rate_at_creation: "0.92",
+            notional_eur: "10000",
+          },
+        ]}
+        onChange={() => {}}
+      />,
+    );
+    expect(
+      screen.getByTestId("action-draft-fx-sensitivity-draft-1"),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("action-draft-fx-row-draft-1-0").textContent,
+    ).toContain("Huidige koers");
+    expect(
+      screen.getByTestId("action-draft-fx-row-draft-1-2").textContent,
+    ).toContain("zwakkere EUR");
+  });
+
+  it("does not render the EUR-equivalent block on SELL drafts", () => {
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, side: "SELL" }]}
+        onChange={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByTestId("action-draft-eur-equivalent-draft-1"),
+    ).toBeNull();
+  });
 });
