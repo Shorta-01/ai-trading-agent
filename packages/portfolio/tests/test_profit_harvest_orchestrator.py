@@ -9,9 +9,7 @@ from decimal import Decimal
 from portfolio_outlook_portfolio import (
     DECISION_SKIP_CONFIDENCE,
     DECISION_SKIP_EARNINGS,
-    DECISION_SKIP_MACRO,
     DECISION_SKIP_RISK_UNIVERSE,
-    DECISION_SKIP_SECTOR,
     DECISION_SKIP_SIZING,
     DECISION_SUGGEST,
     HistoricalBar,
@@ -152,21 +150,29 @@ def test_suggest_carries_intended_position_through_to_pair() -> None:
 # ---- skip-at-macro --------------------------------------------------
 
 
-def test_high_vix_short_circuits_at_macro() -> None:
+def test_high_vix_does_not_block_suggestion() -> None:
+    """V1.2 §AP doctrine: macro gate is info-only, never blocks.
+
+    CLAUDE.md §7.2: high VIX shows as an info-strip on the dashboard
+    but per-name suggestions still surface — crashes are often the
+    best BUY moments and the operator decides whether to act.
+    """
+
     result = evaluate_profit_harvest_candidate(
         _make_inputs(vix_level=Decimal("40"))
     )
-    assert result.decision == DECISION_SKIP_MACRO
-    assert result.blocking_reason == "macro_vix_too_high"
-    # Everything after macro must be None.
-    assert result.risk_universe is None
-    assert result.confidence is None
-    assert result.proposed_position_eur is None
-    assert result.sector_concentration is None
-    assert result.pair_build is None
+    # Suggestion still produced — macro is now info-only.
+    assert result.decision == DECISION_SUGGEST
+    # Macro result IS populated so the dashboard can render the
+    # info-strip with the unfavorable reading.
+    assert result.macro is not None
+    assert not result.macro.favorable
+    assert result.macro.blocking_reason == "macro_vix_too_high"
 
 
-def test_bear_market_short_circuits_at_macro() -> None:
+def test_bear_market_does_not_block_suggestion() -> None:
+    """V1.2 §AP doctrine: bear-market regime is info-only too."""
+
     bear_bars = tuple(
         HistoricalBar(
             bar_date=date(2025, 1, 1) + timedelta(days=i),
@@ -175,7 +181,9 @@ def test_bear_market_short_circuits_at_macro() -> None:
         for i in range(250)
     )
     result = evaluate_profit_harvest_candidate(_make_inputs(index_bars=bear_bars))
-    assert result.decision == DECISION_SKIP_MACRO
+    assert result.decision == DECISION_SUGGEST
+    assert result.macro is not None
+    assert not result.macro.favorable
 
 
 # ---- skip-at-risk-universe ------------------------------------------
@@ -326,21 +334,31 @@ def test_confidence_below_floor_short_circuits_at_sizing() -> None:
 # ---- skip-at-sector -------------------------------------------------
 
 
-def test_sector_at_cap_short_circuits() -> None:
-    # Tech already at 23 %; €25 000 minimum position would push to
-    # 23 % + 2.5 % = 25.5 % > 25 % cap.
+def test_sector_at_cap_does_not_block() -> None:
+    """V1.2 §AP doctrine: sector concentration is info-only, never
+    blocks.
+
+    CLAUDE.md §7.3: confidence is the primary ranking signal; the
+    sector reading is surfaced to the dashboard for transparency
+    but never disqualifies a candidate. The operator decides
+    whether to concentrate.
+    """
+
     result = evaluate_profit_harvest_candidate(
         _make_inputs(
             existing_sector_allocations=(
                 SectorAllocation(sector="technology", current_eur=Decimal("230000")),
             ),
-            confidence_pct=Decimal("70"),  # min position size
+            confidence_pct=Decimal("70"),
         )
     )
-    assert result.decision == DECISION_SKIP_SECTOR
+    assert result.decision == DECISION_SUGGEST
+    # Sector result IS populated so the dashboard can show the
+    # over-cap reading as transparency info.
     assert result.sector_concentration is not None
     assert not result.sector_concentration.allowed
-    assert result.pair_build is None
+    # Pair-build still runs.
+    assert result.pair_build is not None
 
 
 def test_different_sector_does_not_block() -> None:
@@ -360,8 +378,11 @@ def test_different_sector_does_not_block() -> None:
 
 
 def test_macro_runs_before_risk_universe() -> None:
-    # Both fail (high VIX + leveraged ticker) — macro wins because
-    # it runs first.
+    """V1.2 §AP doctrine: macro is info-only now, so a TQQQ candidate
+    with high VIX flows to the risk-universe gate (which DOES block,
+    leveraged ETFs aren't part of the universe). The macro reading
+    is still populated for the dashboard info-strip."""
+
     result = evaluate_profit_harvest_candidate(
         _make_inputs(
             vix_level=Decimal("40"),
@@ -369,7 +390,13 @@ def test_macro_runs_before_risk_universe() -> None:
             instrument_name="ProShares UltraPro QQQ",
         )
     )
-    assert result.decision == DECISION_SKIP_MACRO
+    assert result.decision == DECISION_SKIP_RISK_UNIVERSE
+    # Macro is populated (info-only), risk-universe is the actual
+    # blocker.
+    assert result.macro is not None
+    assert not result.macro.favorable
+    assert result.risk_universe is not None
+    assert not result.risk_universe.allowed
 
 
 def test_risk_universe_runs_before_confidence() -> None:
@@ -384,13 +411,13 @@ def test_risk_universe_runs_before_confidence() -> None:
     assert result.decision == DECISION_SKIP_RISK_UNIVERSE
 
 
-def test_sector_runs_after_sizing() -> None:
-    # Sector check must see the actual sized position, not the user's
-    # cap. With 70 % confidence size = €25 000; with 100 % conf size =
-    # €100 000. Same existing 22 % tech allocation: at min size the
-    # 22 % + 2.5 % = 24.5 % is under cap; at max size 22 % + 10 % =
-    # 32 % > cap. Demonstrates sizing happens before sector check.
-    accept = evaluate_profit_harvest_candidate(
+def test_sector_evaluation_sees_sized_position() -> None:
+    """V1.2 §AP doctrine: sector concentration is info-only — both
+    candidates suggest. The diagnostic still captures the sized
+    position so the dashboard can render accurate "if you take
+    this you'll be X% in tech" info."""
+
+    small = evaluate_profit_harvest_candidate(
         _make_inputs(
             existing_sector_allocations=(
                 SectorAllocation(sector="technology", current_eur=Decimal("220000")),
@@ -398,7 +425,7 @@ def test_sector_runs_after_sizing() -> None:
             confidence_pct=Decimal("70"),
         )
     )
-    block = evaluate_profit_harvest_candidate(
+    big = evaluate_profit_harvest_candidate(
         _make_inputs(
             existing_sector_allocations=(
                 SectorAllocation(sector="technology", current_eur=Decimal("220000")),
@@ -406,8 +433,15 @@ def test_sector_runs_after_sizing() -> None:
             confidence_pct=Decimal("100"),
         )
     )
-    assert accept.decision == DECISION_SUGGEST
-    assert block.decision == DECISION_SKIP_SECTOR
+    # Both suggestions go through — sector is info-only.
+    assert small.decision == DECISION_SUGGEST
+    assert big.decision == DECISION_SUGGEST
+    # Both have sector diagnostics populated; small fits within
+    # cap, big breaches it (still info-only).
+    assert small.sector_concentration is not None
+    assert big.sector_concentration is not None
+    assert small.sector_concentration.allowed
+    assert not big.sector_concentration.allowed
 
 
 # ---- diagnostics preserved on partial pipeline ----------------------

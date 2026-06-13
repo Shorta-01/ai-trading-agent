@@ -183,27 +183,18 @@ def evaluate_profit_harvest_candidate(
     after the failing gate is ``None``.
     """
 
-    # 1. Macro regime.
+    # 1. Macro regime — V1.2 §AP DOCTRINE: info-only, never blocks.
+    # CLAUDE.md §7.2: macro-stress (high VIX, falling index) shows
+    # as an info-strip on the dashboard but the orchestrator still
+    # surfaces per-name suggestions because crashes are often the
+    # best BUY moments. The operator decides whether to act in this
+    # environment.
     macro = evaluate_macro_regime(
         MacroRegimeInputs(
             vix_level=inputs.vix_level,
             index_bars=inputs.index_bars,
         )
     )
-    if not macro.favorable:
-        return OrchestratorResult(
-            decision=DECISION_SKIP_MACRO,
-            blocking_reason=macro.blocking_reason,
-            macro=macro,
-            risk_universe=None,
-            earnings=None,
-            confidence=None,
-            news_sentiment=None,
-            boosted_confidence_pct=None,
-            proposed_position_eur=None,
-            sector_concentration=None,
-            pair_build=None,
-        )
 
     # 2. Risk universe.
     risk = evaluate_risk_universe_gate(
@@ -317,8 +308,13 @@ def evaluate_profit_harvest_candidate(
             pair_build=None,
         )
 
-    # 6. Sector concentration — uses the sized position so the
-    # projected pct is accurate.
+    # 6. Sector concentration — V1.2 §AP DOCTRINE: info-only, never
+    # blocks. CLAUDE.md §7.3: confidence is the primary ranking
+    # signal; sector spread is shown as transparency on the
+    # dashboard (per-suggestion "if you take this + MSFT you'll be
+    # 80% in tech" plus a portfolio-level pie chart) but does not
+    # disqualify candidates. The operator decides whether to
+    # concentrate or diversify.
     sector = evaluate_sector_concentration(
         candidate_sector=inputs.sector,
         candidate_intended_eur=proposed_size,
@@ -326,20 +322,6 @@ def evaluate_profit_harvest_candidate(
         total_budget_eur=inputs.total_budget_eur,
         max_sector_pct=inputs.max_sector_pct,
     )
-    if not sector.allowed:
-        return OrchestratorResult(
-            decision=DECISION_SKIP_SECTOR,
-            blocking_reason=sector.blocking_reason,
-            macro=macro,
-            risk_universe=risk,
-            earnings=earnings,
-            confidence=confidence,
-            news_sentiment=news_sentiment,
-            boosted_confidence_pct=boosted_confidence_pct,
-            proposed_position_eur=proposed_size,
-            sector_concentration=sector,
-            pair_build=None,
-        )
 
     # 7. Take-profit pair.
     pair_build = build_take_profit_pair(

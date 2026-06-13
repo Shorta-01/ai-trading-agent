@@ -125,16 +125,26 @@ def test_suggest_detail_with_news_includes_news_line() -> None:
 # ---- skip lines ------------------------------------------------------
 
 
-def test_macro_skip_line_mentions_vix() -> None:
+def test_macro_unfavorable_no_longer_skips() -> None:
+    """V1.2 §AP doctrine: macro is info-only — the orchestrator
+    surfaces the suggestion anyway and the dashboard's macro info-
+    strip renders the unfavorable reading separately. The explain-
+    line is therefore the standard suggest line, not a Marktklimaat
+    skip-line."""
+
     result = evaluate_profit_harvest_candidate(
         _base_inputs(vix_level=Decimal("40"))
     )
     line = explain_decision(result)
-    assert "Marktklimaat" in line
-    assert "VIX" in line
+    # No skip-line for macro.
+    assert "Marktklimaat" not in line
+    # Standard suggest-line is produced.
+    assert "Koop" in line and "AAPL" in line
 
 
-def test_macro_bear_trend_skip_line() -> None:
+def test_bear_trend_no_longer_skips_either() -> None:
+    """Same doctrine — bear trend is info-only now."""
+
     bear_bars = tuple(
         HistoricalBar(
             bar_date=date(2025, 1, 1) + timedelta(days=i),
@@ -146,7 +156,8 @@ def test_macro_bear_trend_skip_line() -> None:
         _base_inputs(index_bars=bear_bars)
     )
     line = explain_decision(result)
-    assert "bear-trend" in line
+    assert "bear-trend" not in line
+    assert "Koop" in line
 
 
 def test_risk_universe_skip_line_mentions_filter() -> None:
@@ -198,7 +209,11 @@ def test_sizing_skip_line() -> None:
     assert "drempel" in line
 
 
-def test_sector_skip_line() -> None:
+def test_sector_concentration_no_longer_skips() -> None:
+    """V1.2 §AP doctrine: sector concentration is info-only — the
+    orchestrator surfaces the suggestion and the dashboard renders
+    the sector-share info separately. No "Sector" skip-line."""
+
     result = evaluate_profit_harvest_candidate(
         _base_inputs(
             existing_sector_allocations=(
@@ -208,7 +223,10 @@ def test_sector_skip_line() -> None:
         )
     )
     line = explain_decision(result)
-    assert "Sector" in line
+    # The skip-line for sector is no longer triggered — it's a
+    # standard suggest line now.
+    assert "Sector-cap" not in line
+    assert "Koop" in line
 
 
 # ---- formatting ------------------------------------------------------
