@@ -16,6 +16,7 @@ import { EarningsRefreshButton } from "@/components/EarningsRefreshButton";
 import { EarningsThisWeekStrip } from "@/components/EarningsThisWeekStrip";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { LastVisitDiffStrip } from "@/components/LastVisitDiffStrip";
+import { MacroRegimeStrip } from "@/components/MacroRegimeStrip";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { MorningStatusStrip } from "@/components/MorningStatusStrip";
 import { NavSparkline } from "@/components/NavSparkline";
@@ -26,6 +27,7 @@ import { PortfolioKpiTiles } from "@/components/PortfolioKpiTiles";
 import { PredictorPerformanceWidget } from "@/components/PredictorPerformanceWidget";
 import { FavorietenWidget } from "@/components/FavorietenWidget";
 import { ProfitHarvestCycleWidget } from "@/components/ProfitHarvestCycleWidget";
+import { SectorSpreadWidget } from "@/components/SectorSpreadWidget";
 import { RecentActivityPanel } from "@/components/RecentActivityPanel";
 import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
@@ -38,6 +40,7 @@ import { WatchlistSnapshot } from "@/components/WatchlistSnapshot";
 export default function HomePage() {
   return (
     <main className="page-wrap">
+      <MacroRegimeStrip />
       <MorningStatusStrip />
       <LastVisitDiffStrip />
       <EarningsThisWeekStrip />
@@ -76,7 +79,18 @@ export default function HomePage() {
         <WatchlistSnapshot />
       </div>
 
-      <FavorietenWidget />
+      <div
+        data-testid="morning-grid-watchlist-sector"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <FavorietenWidget />
+        <SectorSpreadWidget />
+      </div>
 
       <OrchestratorVerdictsSummary />
 

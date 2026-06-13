@@ -22,6 +22,13 @@
 import { useState } from "react";
 
 import { apiClient, type ActionDraftResponse } from "@/lib/apiClient";
+import {
+  computeEurEquivalent,
+  computeFxSensitivity,
+  formatEurDetail,
+  TARGET_GROSS_PCT,
+  TOB_ROUND_TRIP_PCT,
+} from "@/lib/eurEquivalent";
 
 import { ActionDraftEditForm } from "./ActionDraftEditForm";
 import { ConfirmModal } from "./ConfirmModal";
@@ -65,6 +72,73 @@ const SIDE_COLOR: Record<ActionDraftResponse["side"], { bg: string; fg: string }
   BUY: { bg: "#dcfce7", fg: "#166534" },
   SELL: { bg: "#fee2e2", fg: "#7f1d1d" },
 };
+
+// ---------------------------------------------------------------------------
+// EUR-equivalent transparency (V1.2 §AV / CLAUDE.md §6.1).
+// ---------------------------------------------------------------------------
+
+function EurEquivalentBlock({ draft }: { draft: ActionDraftResponse }) {
+  // The doctrine only sizes BUYs; SELLs already realise the +4% target
+  // so the transparency block doesn't add anything there.
+  if (draft.side !== "BUY") return null;
+  const eq = computeEurEquivalent(draft.notional_eur);
+  if (eq.gross_eur <= 0) return null;
+  const fxRows = computeFxSensitivity(
+    draft.notional_eur,
+    draft.fx_rate_at_creation,
+    draft.currency_local,
+  );
+  return (
+    <div
+      data-testid={`action-draft-eur-equivalent-${draft.action_draft_id}`}
+      style={{
+        marginTop: 12,
+        padding: 10,
+        background: "#f0fdf4",
+        border: "1px solid #bbf7d0",
+        borderRadius: 6,
+        fontSize: 12,
+      }}
+    >
+      <div style={{ fontWeight: 600, color: "#166534", marginBottom: 4 }}>
+        EUR-equivalent op +{TARGET_GROSS_PCT}% (na TOB {TOB_ROUND_TRIP_PCT}%
+        round-trip)
+      </div>
+      <div
+        data-testid={`action-draft-eur-equivalent-net-${draft.action_draft_id}`}
+        style={{ color: "#14532d" }}
+      >
+        Bruto {formatEurDetail(eq.gross_eur)} · TOB
+        {" −"}
+        {formatEurDetail(eq.tob_eur)} · <strong>Netto {formatEurDetail(eq.net_eur)}</strong>
+      </div>
+      {fxRows.length > 0 ? (
+        <ul
+          data-testid={`action-draft-fx-sensitivity-${draft.action_draft_id}`}
+          style={{
+            margin: "6px 0 0",
+            padding: 0,
+            listStyle: "none",
+            color: "#374151",
+          }}
+        >
+          {fxRows.map((row, idx) => (
+            <li
+              key={`fx-${idx}`}
+              data-testid={`action-draft-fx-row-${draft.action_draft_id}-${idx}`}
+              style={{ display: "flex", justifyContent: "space-between" }}
+            >
+              <span>{row.scenario_nl}</span>
+              <span style={{ fontWeight: 600 }}>
+                {formatEurDetail(row.net_eur)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Per-draft row.
@@ -286,6 +360,8 @@ function ActionDraftRow({
           ) : null}
         </dl>
       )}
+
+      {editing ? null : <EurEquivalentBlock draft={draft} />}
 
       {error ? (
         <div
