@@ -426,6 +426,15 @@ def submit_action_draft_to_paper(
             blocking_reason="invalid_state_transition",
         )
 
+    # V1.2 §AR doctrine (CLAUDE.md §2 + §6.3): de software stuurt
+    # NOOIT een automatische take-profit-LMT of stop-loss-LMT mee
+    # naar IBKR. Alleen de entry-LMT wordt verzonden; de exit
+    # gebeurt na manuele bevestiging van een SELL-suggestie
+    # kaartje op het dashboard (gegenereerd door de pure-Python
+    # ``take_profit_signal_monitor.evaluate_take_profit_signal``).
+    # De bracket-velden blijven op de draft-rij voor audit-doeleinden
+    # maar worden hier expliciet op ``None`` gezet voor de submission
+    # zodat IBKR geen passieve exit-LMT plaatst.
     inputs = OrderSubmissionInputs(
         symbol=draft.symbol,
         primary_exchange=draft.primary_exchange or "NASDAQ",
@@ -438,8 +447,8 @@ def submit_action_draft_to_paper(
         stop_price=draft.stop_price,
         trail_amount=draft.trail_amount,
         trail_percent=draft.trail_percent,
-        bracket_take_profit_limit_price=draft.bracket_take_profit_limit_price,
-        bracket_stop_loss_price=draft.bracket_stop_loss_price,
+        bracket_take_profit_limit_price=None,
+        bracket_stop_loss_price=None,
     )
 
     try:

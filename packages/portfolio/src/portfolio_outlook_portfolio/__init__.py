@@ -529,6 +529,15 @@ from .take_profit_pair import (
     TakeProfitOrderPair,
     build_take_profit_pair,
 )
+from .take_profit_signal_monitor import (
+    DEFAULT_TAKE_PROFIT_NET_PCT,
+    SIGNAL_HOLD,
+    SIGNAL_SUGGEST_SELL,
+    TakeProfitForecastContext,
+    TakeProfitSignalInputs,
+    TakeProfitSignalResult,
+    evaluate_take_profit_signal,
+)
 from .term_deposits import (
     build_term_deposit_projection,
     calculate_days_until_maturity,
@@ -794,7 +803,14 @@ __all__ = [
     "HOLD_ACTION_SUGGEST_SELL",
     "HoldPositionReviewInputs",
     "HoldPositionReviewResult",
+    "DEFAULT_TAKE_PROFIT_NET_PCT",
+    "SIGNAL_HOLD",
+    "SIGNAL_SUGGEST_SELL",
+    "TakeProfitForecastContext",
+    "TakeProfitSignalInputs",
+    "TakeProfitSignalResult",
     "compute_take_profit_sell_price",
+    "evaluate_take_profit_signal",
     "conviction_weighted_position_size_eur",
     "evaluate_hold_position_review",
     "gross_pct_for_net_target_pct",
