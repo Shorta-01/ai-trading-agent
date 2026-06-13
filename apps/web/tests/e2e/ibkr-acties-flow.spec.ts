@@ -66,7 +66,7 @@ const DRAFT_APPROVED = {
 };
 
 test.describe("Task 133 — IBKR Acties Te keuren flow", () => {
-  test.beforeEach(async ({ context, page }) => {
+  test.beforeEach(async ({ context }) => {
     let approveCalled = false;
     await context.route("**/*", async (route) => {
       const url = route.request().url();
@@ -96,10 +96,8 @@ test.describe("Task 133 — IBKR Acties Te keuren flow", () => {
       },
     );
 
-    // Confirm JA on the approve prompt automatically.
-    page.on("dialog", async (dialog) => {
-      await dialog.accept("JA");
-    });
+    // V1.2 §AT — approval is now button + modal, no window.prompt.
+    // No dialog handler needed.
   });
 
   test("renders three tabs", async ({ page }) => {
@@ -122,21 +120,24 @@ test.describe("Task 133 — IBKR Acties Te keuren flow", () => {
     ).toHaveText("Voorgesteld");
   });
 
-  test("approving via JA prompt flips status and shows the Dutch info banner", async ({
+  test("approving via knop + modal flips status and shows the submit button", async ({
     page,
   }) => {
     await page.goto("/ibkr-acties");
+    // V1.2 §AT — Goedkeuren opens a modal; confirm with the Ja-button.
+    await page.getByTestId("action-draft-approve-draft-e2e-1").click();
+    await expect(
+      page.getByTestId("action-draft-approve-modal-draft-e2e-1"),
+    ).toBeVisible();
     await page
-      .getByTestId("action-draft-approve-draft-e2e-1")
+      .getByTestId("action-draft-approve-modal-draft-e2e-1-confirm")
       .click();
     await expect(
       page.getByTestId("action-draft-status-draft-e2e-1"),
     ).toHaveText("Goedgekeurd");
     await expect(
       page.getByTestId("action-draft-approved-banner-draft-e2e-1"),
-    ).toContainText("Klaar om naar IBKR paper");
-    // V1.2 §AN — placeholder banner replaced by a real submit
-    // button that triggers POST /action-drafts/{id}/submit-to-ibkr-paper.
+    ).toContainText("klaar om te verzenden");
     await expect(
       page.getByTestId("action-draft-submit-to-paper-draft-e2e-1"),
     ).toBeVisible();

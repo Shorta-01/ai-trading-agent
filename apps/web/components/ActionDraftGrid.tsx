@@ -1,19 +1,22 @@
 "use client";
 
 /**
- * Task 133: Action Draft grid (Te keuren tab).
+ * V1.2 §AT — 3-stage action-draft workflow.
  *
- * Renders the list of action drafts in proposed / edited / user_approved
- * status for the configured account. Per-row actions: Goedkeuren,
- * Bewerken (inline edit), Dismiss, Verwijder. Approval requires the
- * user to type ``JA`` in a confirmation prompt (mode-neutral wording
- * per the Stage 3 lock — no "paper-order" vs "ECHTE order"
- * differentiation).
+ * Restructures the action-draft surface into the doctrine's three
+ * stages (CLAUDE.md §8):
  *
- * After approval the row gets a green "Goedgekeurd" badge and the
- * locked Dutch info banner *"Goedgekeurd. IBKR-verzending wordt in
- * een toekomstige update toegevoegd."* — Task 134 will wire the real
- * submit; this task ends at user_approved.
+ *   1. "Voorstellen vandaag" (proposed / edited) — per voorstel:
+ *      Goedkeuren / Aanpassen (aantal + limietprijs) / Afwijzen.
+ *   2. "Te verzenden naar IBKR" (user_approved) — nog bewerkbaar;
+ *      per regel "Verwijder uit lijst" + één grote knop bovenaan
+ *      "Verzend alle X orders naar IBKR paper".
+ *   3. Verzonden orders leven in de Actief/Historiek tabs.
+ *
+ * Approval en verzending gebeuren via knop + bevestigingsmodal
+ * (Ja/Nee) — geen JA/VERZEND typen meer. De edit-velden voor aantal
+ * + limietprijs zijn beschikbaar in beide stages via de "Aanpassen"
+ * knop die de inline ``ActionDraftEditForm`` opent.
  */
 
 import { useState } from "react";
@@ -21,6 +24,7 @@ import { useState } from "react";
 import { apiClient, type ActionDraftResponse } from "@/lib/apiClient";
 
 import { ActionDraftEditForm } from "./ActionDraftEditForm";
+import { ConfirmModal } from "./ConfirmModal";
 
 function fmtTs(value: string | null): string {
   if (value === null) return "—";
@@ -40,85 +44,31 @@ const STATUS_COLOR: Record<
   ActionDraftResponse["status"],
   { bg: string; fg: string; label_nl: string }
 > = {
-  // Task 133 user-facing statuses (the only ones this grid renders;
-  // the lifecycle statuses live in the Actief bij IBKR + Historiek
-  // tabs via IbkrSubmissionGrids, but the record needs all 15 entries
-  // to satisfy TypeScript's exhaustive Record check).
   proposed: { bg: "#dbeafe", fg: "#1e40af", label_nl: "Voorgesteld" },
   edited: { bg: "#fef3c7", fg: "#854d0e", label_nl: "Bewerkt" },
   user_approved: { bg: "#dcfce7", fg: "#166534", label_nl: "Goedgekeurd" },
   dismissed: { bg: "#fee2e2", fg: "#7f1d1d", label_nl: "Genegeerd" },
-  deleted: { bg: "#e5e7eb", fg: "#374151", label_nl: "Verwijderd" },
-  superseded: { bg: "#fde68a", fg: "#92400e", label_nl: "Verouderd" },
-  // Task 134 lifecycle statuses — present for the typecheck even
-  // though Te keuren never lists drafts in these states.
-  submitted: { bg: "#dbeafe", fg: "#1e3a8a", label_nl: "Verstuurd" },
-  accepted: { bg: "#bfdbfe", fg: "#1e40af", label_nl: "Geaccepteerd" },
-  working: { bg: "#bae6fd", fg: "#075985", label_nl: "Actief" },
-  partially_filled: {
-    bg: "#fde68a",
-    fg: "#92400e",
-    label_nl: "Gedeeltelijk uitgevoerd",
-  },
-  filled: { bg: "#dcfce7", fg: "#166534", label_nl: "Uitgevoerd" },
-  cancelled: { bg: "#e5e7eb", fg: "#374151", label_nl: "Geannuleerd" },
-  rejected: { bg: "#fecaca", fg: "#7f1d1d", label_nl: "Geweigerd" },
-  pending_cancellation: {
-    bg: "#fef3c7",
-    fg: "#854d0e",
-    label_nl: "Annulering aangevraagd",
-  },
-  awaiting_reply_timeout: {
-    bg: "#fde68a",
-    fg: "#92400e",
-    label_nl: "Wacht op IBKR-bevestiging",
-  },
+  deleted: { bg: "#f3f4f6", fg: "#6b7280", label_nl: "Verwijderd" },
+  superseded: { bg: "#fde68a", fg: "#92400e", label_nl: "Vervangen" },
+  submitted: { bg: "#e0e7ff", fg: "#3730a3", label_nl: "Verzonden" },
+  accepted: { bg: "#e0e7ff", fg: "#3730a3", label_nl: "Geaccepteerd" },
+  working: { bg: "#e0e7ff", fg: "#3730a3", label_nl: "Actief" },
+  partially_filled: { bg: "#e0e7ff", fg: "#3730a3", label_nl: "Deels gevuld" },
+  filled: { bg: "#dcfce7", fg: "#166534", label_nl: "Gevuld" },
+  cancelled: { bg: "#fee2e2", fg: "#7f1d1d", label_nl: "Geannuleerd" },
+  rejected: { bg: "#fee2e2", fg: "#7f1d1d", label_nl: "Afgewezen" },
+  pending_cancellation: { bg: "#fef3c7", fg: "#854d0e", label_nl: "Annulering bezig" },
+  awaiting_reply_timeout: { bg: "#fee2e2", fg: "#7f1d1d", label_nl: "Timeout" },
 };
 
-const SIDE_COLOR: Record<
-  ActionDraftResponse["side"],
-  { bg: string; fg: string }
-> = {
+const SIDE_COLOR: Record<ActionDraftResponse["side"], { bg: string; fg: string }> = {
   BUY: { bg: "#dcfce7", fg: "#166534" },
-  SELL: { bg: "#fecaca", fg: "#7f1d1d" },
+  SELL: { bg: "#fee2e2", fg: "#7f1d1d" },
 };
 
-export function ActionDraftGrid({
-  drafts,
-  onChange,
-}: {
-  drafts: ActionDraftResponse[];
-  onChange: () => void;
-}) {
-  if (drafts.length === 0) {
-    return (
-      <div
-        data-testid="action-draft-grid-empty"
-        style={{
-          padding: 24,
-          textAlign: "center",
-          color: "#6b7280",
-          border: "1px dashed #d1d5db",
-          borderRadius: 8,
-        }}
-      >
-        Geen actiedrafts om te keuren.
-      </div>
-    );
-  }
-
-  return (
-    <div data-testid="action-draft-grid" style={{ display: "grid", gap: 12 }}>
-      {drafts.map((draft) => (
-        <ActionDraftRow
-          key={draft.action_draft_id}
-          draft={draft}
-          onChange={onChange}
-        />
-      ))}
-    </div>
-  );
-}
+// ---------------------------------------------------------------------------
+// Per-draft row.
+// ---------------------------------------------------------------------------
 
 function ActionDraftRow({
   draft,
@@ -130,6 +80,8 @@ function ActionDraftRow({
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [approveModal, setApproveModal] = useState(false);
+  const [submitModal, setSubmitModal] = useState(false);
 
   const statusStyle = STATUS_COLOR[draft.status];
   const sideStyle = SIDE_COLOR[draft.side];
@@ -137,22 +89,12 @@ function ActionDraftRow({
   const isApproved = draft.status === "user_approved";
   const isSuperseded = draft.superseded_by_decision_package_id !== null;
 
-  async function handleApprove() {
-    const expectedToken = "JA";
-    const typed = window.prompt(
-      `Type JA om order voor ${draft.quantity}× ${draft.symbol} @ €${fmtDecimal(
-        draft.limit_price_local,
-        4,
-      )} LMT (totaal €${fmtDecimal(draft.notional_eur)}) goed te keuren.`,
-    );
-    if (typed !== expectedToken) {
-      setError("Goedkeuring geannuleerd. Type exact JA om door te gaan.");
-      return;
-    }
+  async function confirmApprove() {
     setBusy("approving");
     setError(null);
     const result = await apiClient.approveActionDraft(draft.action_draft_id);
     setBusy(null);
+    setApproveModal(false);
     if (!result.ok) {
       setError(result.message || "Goedkeuren mislukt.");
       return;
@@ -160,24 +102,14 @@ function ActionDraftRow({
     onChange();
   }
 
-  async function handleSubmitToPaper() {
-    const expectedToken = "VERZEND";
-    const typed = window.prompt(
-      `Type VERZEND om de goedgekeurde order voor ${draft.quantity}× ${draft.symbol} @ €${fmtDecimal(
-        draft.limit_price_local,
-        4,
-      )} LMT naar IBKR paper te verzenden.`,
-    );
-    if (typed !== expectedToken) {
-      setError("Verzending geannuleerd. Type exact VERZEND om door te gaan.");
-      return;
-    }
+  async function confirmSubmit() {
     setBusy("submitting");
     setError(null);
     const result = await apiClient.submitActionDraftToPaper(
       draft.action_draft_id,
     );
     setBusy(null);
+    setSubmitModal(false);
     if (!result.ok) {
       setError(result.message || "Verzending mislukt.");
       return;
@@ -195,7 +127,7 @@ function ActionDraftRow({
 
   async function handleDismiss() {
     const reason = window.prompt(
-      "Optionele reden voor dismiss (mag leeg blijven):",
+      "Optionele reden voor afwijzen (mag leeg blijven):",
     );
     setBusy("dismissing");
     setError(null);
@@ -205,17 +137,13 @@ function ActionDraftRow({
     );
     setBusy(null);
     if (!result.ok) {
-      setError(result.message || "Dismiss mislukt.");
+      setError(result.message || "Afwijzen mislukt.");
       return;
     }
     onChange();
   }
 
   async function handleDelete() {
-    const ok = window.confirm(
-      "Weet je zeker dat je deze draft wil verwijderen?",
-    );
-    if (!ok) return;
     setBusy("deleting");
     setError(null);
     const result = await apiClient.deleteActionDraft(draft.action_draft_id);
@@ -313,7 +241,7 @@ function ActionDraftRow({
         </div>
       </header>
 
-      {editing && isPending ? (
+      {editing ? (
         <ActionDraftEditForm
           draft={draft}
           onCancel={() => setEditing(false)}
@@ -359,48 +287,6 @@ function ActionDraftRow({
         </dl>
       )}
 
-      {isApproved ? (
-        <div
-          data-testid={`action-draft-approved-banner-${draft.action_draft_id}`}
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#dbeafe",
-            color: "#1e40af",
-            borderRadius: 6,
-            fontSize: 13,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <span style={{ flex: 1 }}>
-            Goedgekeurd. Klaar om naar IBKR paper te verzenden.
-          </span>
-          <button
-            type="button"
-            data-testid={`action-draft-submit-to-paper-${draft.action_draft_id}`}
-            onClick={handleSubmitToPaper}
-            disabled={busy !== null}
-            style={{
-              background: busy === "submitting" ? "#9ca3af" : "#1d4ed8",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 6,
-              padding: "6px 14px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: busy !== null ? "not-allowed" : "pointer",
-            }}
-          >
-            {busy === "submitting"
-              ? "Verzenden…"
-              : "Verzend naar IBKR paper"}
-          </button>
-        </div>
-      ) : null}
-
       {error ? (
         <div
           data-testid={`action-draft-error-${draft.action_draft_id}`}
@@ -417,6 +303,7 @@ function ActionDraftRow({
         </div>
       ) : null}
 
+      {/* Stage 1 — Voorstellen: Goedkeuren / Aanpassen / Afwijzen. */}
       {isPending && !editing ? (
         <div
           style={{
@@ -429,7 +316,7 @@ function ActionDraftRow({
           <button
             type="button"
             data-testid={`action-draft-approve-${draft.action_draft_id}`}
-            onClick={handleApprove}
+            onClick={() => setApproveModal(true)}
             disabled={busy !== null}
             style={{
               padding: "8px 16px",
@@ -457,7 +344,7 @@ function ActionDraftRow({
               cursor: busy ? "wait" : "pointer",
             }}
           >
-            Bewerken
+            Aanpassen
           </button>
           <button
             type="button"
@@ -473,11 +360,62 @@ function ActionDraftRow({
               cursor: busy ? "wait" : "pointer",
             }}
           >
-            Dismiss
+            Afwijzen
+          </button>
+        </div>
+      ) : null}
+
+      {/* Stage 2 — Te verzenden: nog bewerkbaar + verwijder uit lijst. */}
+      {isApproved && !editing ? (
+        <div
+          data-testid={`action-draft-approved-banner-${draft.action_draft_id}`}
+          style={{
+            marginTop: 12,
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#166534", flex: 1 }}>
+            Goedgekeurd — klaar om te verzenden. Nog bewerkbaar.
+          </span>
+          <button
+            type="button"
+            data-testid={`action-draft-edit-${draft.action_draft_id}`}
+            onClick={() => setEditing(true)}
+            disabled={busy !== null}
+            style={{
+              padding: "8px 16px",
+              background: "#1d4ed8",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 6,
+              cursor: busy ? "wait" : "pointer",
+            }}
+          >
+            Aanpassen
           </button>
           <button
             type="button"
-            data-testid={`action-draft-delete-${draft.action_draft_id}`}
+            data-testid={`action-draft-submit-to-paper-${draft.action_draft_id}`}
+            onClick={() => setSubmitModal(true)}
+            disabled={busy !== null}
+            style={{
+              background: "#1d4ed8",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 6,
+              padding: "8px 16px",
+              fontWeight: 600,
+              cursor: busy !== null ? "not-allowed" : "pointer",
+            }}
+          >
+            Verzend naar IBKR paper
+          </button>
+          <button
+            type="button"
+            data-testid={`action-draft-remove-from-list-${draft.action_draft_id}`}
             onClick={handleDelete}
             disabled={busy !== null}
             style={{
@@ -489,10 +427,313 @@ function ActionDraftRow({
               cursor: busy ? "wait" : "pointer",
             }}
           >
-            Verwijder
+            Verwijder uit lijst
           </button>
         </div>
       ) : null}
+
+      <ConfirmModal
+        open={approveModal}
+        testId={`action-draft-approve-modal-${draft.action_draft_id}`}
+        title="Order goedkeuren?"
+        body={
+          <>
+            Keur je de order voor{" "}
+            <strong>
+              {fmtDecimal(draft.quantity, 0)}× {draft.symbol}
+            </strong>{" "}
+            @ €{fmtDecimal(draft.limit_price_local, 4)} LMT (totaal €
+            {fmtDecimal(draft.notional_eur)}) goed? De order gaat hierna naar
+            je &quot;Te verzenden&quot;-lijst — nog niet naar IBKR.
+          </>
+        }
+        confirmLabel="Ja, goedkeuren"
+        busy={busy === "approving"}
+        onConfirm={confirmApprove}
+        onCancel={() => setApproveModal(false)}
+      />
+
+      <ConfirmModal
+        open={submitModal}
+        testId={`action-draft-submit-modal-${draft.action_draft_id}`}
+        title="Verzenden naar IBKR paper?"
+        body={
+          <>
+            Verzend de goedgekeurde order voor{" "}
+            <strong>
+              {fmtDecimal(draft.quantity, 0)}× {draft.symbol}
+            </strong>{" "}
+            @ €{fmtDecimal(draft.limit_price_local, 4)} LMT naar IBKR paper?
+            Dit plaatst het order bij de broker.
+          </>
+        }
+        confirmLabel="Ja, verzend"
+        busy={busy === "submitting"}
+        onConfirm={confirmSubmit}
+        onCancel={() => setSubmitModal(false)}
+      />
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bulk-submit header for the "Te verzenden" stage.
+// ---------------------------------------------------------------------------
+
+function BulkSubmitBar({
+  approvedDrafts,
+  onChange,
+}: {
+  approvedDrafts: ActionDraftResponse[];
+  onChange: () => void;
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+
+  const totalEur = approvedDrafts.reduce(
+    (sum, d) => sum + Number(d.notional_eur || 0),
+    0,
+  );
+
+  async function confirmBulkSubmit() {
+    setBusy(true);
+    setError(null);
+    let ok = 0;
+    let blocked = 0;
+    const failures: string[] = [];
+    for (const draft of approvedDrafts) {
+      const result = await apiClient.submitActionDraftToPaper(
+        draft.action_draft_id,
+      );
+      if (!result.ok) {
+        failures.push(`${draft.symbol}: ${result.message ?? "request_failed"}`);
+        continue;
+      }
+      if (result.data.blocking_reason) {
+        blocked += 1;
+        failures.push(`${draft.symbol}: ${result.data.blocking_reason}`);
+        continue;
+      }
+      ok += 1;
+    }
+    setBusy(false);
+    setModalOpen(false);
+    const pieces = [`${ok} verzonden`];
+    if (blocked > 0) pieces.push(`${blocked} geblokkeerd`);
+    if (failures.length > 0) {
+      setError(`Niet alles gelukt: ${failures.join("; ")}`);
+    }
+    setSummary(pieces.join(", "));
+    onChange();
+  }
+
+  if (approvedDrafts.length === 0) return null;
+
+  return (
+    <div
+      data-testid="action-draft-bulk-submit-bar"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        background: "#ecfdf5",
+        border: "1px solid #6ee7b7",
+        borderRadius: 8,
+        padding: "10px 14px",
+        flexWrap: "wrap",
+      }}
+    >
+      <span style={{ fontWeight: 600, color: "#065f46", flex: 1 }}>
+        {approvedDrafts.length} order
+        {approvedDrafts.length === 1 ? "" : "s"} klaar om te verzenden — totaal €
+        {totalEur.toLocaleString("nl-BE", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </span>
+      {summary ? (
+        <span
+          data-testid="action-draft-bulk-submit-summary"
+          style={{ fontSize: 13, color: "#065f46" }}
+        >
+          {summary}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        data-testid="action-draft-bulk-submit-button"
+        onClick={() => setModalOpen(true)}
+        disabled={busy}
+        style={{
+          background: busy ? "#9ca3af" : "#15803d",
+          color: "#ffffff",
+          border: "none",
+          borderRadius: 6,
+          padding: "10px 18px",
+          fontWeight: 700,
+          fontSize: 14,
+          cursor: busy ? "not-allowed" : "pointer",
+        }}
+      >
+        Verzend alle {approvedDrafts.length} orders naar IBKR paper
+      </button>
+      {error ? (
+        <div
+          data-testid="action-draft-bulk-submit-error"
+          style={{
+            width: "100%",
+            color: "#7f1d1d",
+            background: "#fee2e2",
+            padding: 8,
+            borderRadius: 4,
+            fontSize: 13,
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
+
+      <ConfirmModal
+        open={modalOpen}
+        testId="action-draft-bulk-submit-modal"
+        title="Alle orders verzenden naar IBKR paper?"
+        body={
+          <>
+            <p style={{ margin: "0 0 10px" }}>
+              Je staat op het punt{" "}
+              <strong>{approvedDrafts.length} orders</strong> te verzenden naar
+              IBKR paper, totaal{" "}
+              <strong>
+                €
+                {totalEur.toLocaleString("nl-BE", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </strong>
+              .
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+              {approvedDrafts.map((d) => (
+                <li key={d.action_draft_id}>
+                  {d.side} {fmtDecimal(d.quantity, 0)}× {d.symbol} @ €
+                  {fmtDecimal(d.limit_price_local, 4)} (€
+                  {fmtDecimal(d.notional_eur)})
+                </li>
+              ))}
+            </ul>
+          </>
+        }
+        confirmLabel={`Ja, verzend ${approvedDrafts.length} orders`}
+        busy={busy}
+        onConfirm={confirmBulkSubmit}
+        onCancel={() => setModalOpen(false)}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Top-level grid: splits into the two operator-facing stages.
+// ---------------------------------------------------------------------------
+
+export function ActionDraftGrid({
+  drafts,
+  onChange,
+}: {
+  drafts: ActionDraftResponse[];
+  onChange: () => void;
+}) {
+  const proposed = drafts.filter(
+    (d) => d.status === "proposed" || d.status === "edited",
+  );
+  const approved = drafts.filter((d) => d.status === "user_approved");
+  const other = drafts.filter(
+    (d) =>
+      d.status !== "proposed" &&
+      d.status !== "edited" &&
+      d.status !== "user_approved",
+  );
+
+  if (drafts.length === 0) {
+    return (
+      <div
+        data-testid="action-draft-grid-empty"
+        style={{
+          padding: 24,
+          textAlign: "center",
+          color: "#6b7280",
+          border: "1px dashed #d1d5db",
+          borderRadius: 8,
+        }}
+      >
+        Geen actiedrafts om te keuren.
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid="action-draft-grid" style={{ display: "grid", gap: 20 }}>
+      <section data-testid="action-draft-stage-voorstellen">
+        <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>
+          Voorstellen vandaag ({proposed.length})
+        </h2>
+        {proposed.length === 0 ? (
+          <p style={{ color: "#6b7280", fontSize: 13, margin: 0 }}>
+            Geen nieuwe voorstellen.
+          </p>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {proposed.map((draft) => (
+              <ActionDraftRow
+                key={draft.action_draft_id}
+                draft={draft}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section data-testid="action-draft-stage-te-verzenden">
+        <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>
+          Te verzenden naar IBKR ({approved.length})
+        </h2>
+        {approved.length === 0 ? (
+          <p style={{ color: "#6b7280", fontSize: 13, margin: 0 }}>
+            Nog niets goedgekeurd om te verzenden.
+          </p>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            <BulkSubmitBar approvedDrafts={approved} onChange={onChange} />
+            {approved.map((draft) => (
+              <ActionDraftRow
+                key={draft.action_draft_id}
+                draft={draft}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {other.length > 0 ? (
+        <section data-testid="action-draft-stage-overig">
+          <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>
+            Overige ({other.length})
+          </h2>
+          <div style={{ display: "grid", gap: 12 }}>
+            {other.map((draft) => (
+              <ActionDraftRow
+                key={draft.action_draft_id}
+                draft={draft}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
   );
 }

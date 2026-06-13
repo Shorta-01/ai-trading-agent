@@ -101,7 +101,27 @@ describe("ActionDraftGrid", () => {
     ).toContain("Advies gewijzigd");
   });
 
-  it("renders Goedgekeurd banner when status is user_approved", () => {
+  // V1.2 §AT — drafts are grouped into the two operator stages.
+
+  it("groups proposed drafts under Voorstellen and approved under Te verzenden", () => {
+    render(
+      <ActionDraftGrid
+        drafts={[
+          HAPPY,
+          { ...HAPPY, action_draft_id: "draft-2", status: "user_approved" },
+        ]}
+        onChange={() => {}}
+      />,
+    );
+    expect(
+      screen.getByTestId("action-draft-stage-voorstellen"),
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("action-draft-stage-te-verzenden"),
+    ).toBeTruthy();
+  });
+
+  it("renders the approved-stage submit button when status is user_approved", () => {
     render(
       <ActionDraftGrid
         drafts={[{ ...HAPPY, status: "user_approved" }]}
@@ -111,57 +131,52 @@ describe("ActionDraftGrid", () => {
     const banner = screen.getByTestId(
       "action-draft-approved-banner-draft-1",
     );
-    expect(banner).toBeTruthy();
-    expect(banner.textContent).toContain("Klaar om naar IBKR paper");
-    // V1.2 §AN — the placeholder was replaced by a real submit
-    // button that triggers ``submitActionDraftToPaper``.
+    expect(banner.textContent).toContain("klaar om te verzenden");
     expect(
       screen.getByTestId("action-draft-submit-to-paper-draft-1"),
     ).toBeTruthy();
   });
 
-  it("calls approveActionDraft when user types JA in prompt", async () => {
+  // V1.2 §AT — approval via knop + modal (geen typen).
+
+  it("approves via confirm modal Ja-button (no typing)", async () => {
     const onChange = vi.fn();
-    const promptSpy = vi
-      .spyOn(window, "prompt")
-      .mockReturnValue("JA");
     (apiClient.approveActionDraft as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       data: { ...HAPPY, status: "user_approved" },
     });
     render(<ActionDraftGrid drafts={[HAPPY]} onChange={onChange} />);
+    // Clicking Goedkeuren opens the modal — does NOT call the API yet.
     fireEvent.click(screen.getByTestId("action-draft-approve-draft-1"));
+    expect(apiClient.approveActionDraft).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId("action-draft-approve-modal-draft-1"),
+    ).toBeTruthy();
+    // Confirm in the modal.
+    fireEvent.click(
+      screen.getByTestId("action-draft-approve-modal-draft-1-confirm"),
+    );
     await waitFor(() => {
       expect(apiClient.approveActionDraft).toHaveBeenCalledWith("draft-1");
     });
     expect(onChange).toHaveBeenCalled();
-    promptSpy.mockRestore();
   });
 
-  it("does NOT call approveActionDraft when user types wrong token", async () => {
+  it("does NOT approve when the modal is cancelled", async () => {
     const onChange = vi.fn();
-    const promptSpy = vi
-      .spyOn(window, "prompt")
-      .mockReturnValue("nope");
     render(<ActionDraftGrid drafts={[HAPPY]} onChange={onChange} />);
     fireEvent.click(screen.getByTestId("action-draft-approve-draft-1"));
-    await waitFor(() => {
-      expect(
-        screen.getByTestId("action-draft-error-draft-1").textContent,
-      ).toContain("Type exact JA");
-    });
+    fireEvent.click(
+      screen.getByTestId("action-draft-approve-modal-draft-1-cancel"),
+    );
     expect(apiClient.approveActionDraft).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
-    promptSpy.mockRestore();
   });
 
-  // V1.2 §AN — IBKR paper submission flow.
+  // V1.2 §AT — submit via knop + modal (geen typen).
 
-  it("calls submitActionDraftToPaper when user types VERZEND", async () => {
+  it("submits via confirm modal Ja-button (no typing)", async () => {
     const onChange = vi.fn();
-    const promptSpy = vi
-      .spyOn(window, "prompt")
-      .mockReturnValue("VERZEND");
     (apiClient.submitActionDraftToPaper as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -194,44 +209,20 @@ describe("ActionDraftGrid", () => {
     fireEvent.click(
       screen.getByTestId("action-draft-submit-to-paper-draft-1"),
     );
+    expect(apiClient.submitActionDraftToPaper).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByTestId("action-draft-submit-modal-draft-1-confirm"),
+    );
     await waitFor(() => {
       expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledWith(
         "draft-1",
       );
     });
     expect(onChange).toHaveBeenCalled();
-    promptSpy.mockRestore();
-  });
-
-  it("does NOT submit when user types wrong token", async () => {
-    const onChange = vi.fn();
-    const promptSpy = vi
-      .spyOn(window, "prompt")
-      .mockReturnValue("ja");
-    render(
-      <ActionDraftGrid
-        drafts={[{ ...HAPPY, status: "user_approved" }]}
-        onChange={onChange}
-      />,
-    );
-    fireEvent.click(
-      screen.getByTestId("action-draft-submit-to-paper-draft-1"),
-    );
-    await waitFor(() => {
-      expect(
-        screen.getByTestId("action-draft-error-draft-1").textContent,
-      ).toContain("VERZEND");
-    });
-    expect(apiClient.submitActionDraftToPaper).not.toHaveBeenCalled();
-    expect(onChange).not.toHaveBeenCalled();
-    promptSpy.mockRestore();
   });
 
   it("surfaces blocking_reason from server response as inline error", async () => {
     const onChange = vi.fn();
-    const promptSpy = vi
-      .spyOn(window, "prompt")
-      .mockReturnValue("VERZEND");
     (apiClient.submitActionDraftToPaper as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
@@ -264,13 +255,66 @@ describe("ActionDraftGrid", () => {
     fireEvent.click(
       screen.getByTestId("action-draft-submit-to-paper-draft-1"),
     );
+    fireEvent.click(
+      screen.getByTestId("action-draft-submit-modal-draft-1-confirm"),
+    );
     await waitFor(() => {
       expect(
         screen.getByTestId("action-draft-error-draft-1").textContent,
       ).toContain("approval_expired");
     });
     expect(onChange).not.toHaveBeenCalled();
-    promptSpy.mockRestore();
+  });
+
+  // V1.2 §AT — bulk submit.
+
+  it("bulk-submits all approved drafts via modal", async () => {
+    const onChange = vi.fn();
+    (apiClient.submitActionDraftToPaper as ReturnType<typeof vi.fn>)
+      .mockResolvedValue({
+        ok: true,
+        data: {
+          status: "submitted",
+          status_nl: "Verzonden",
+          help_nl: "",
+          submission_id: "sub",
+          state: "submitted",
+          ibkr_order_id: 1,
+          ibkr_perm_id: null,
+          ibkr_status_text: null,
+          blocking_reason: null,
+          actions_allowed: false,
+          order_submission_allowed: false,
+          order_modification_allowed: false,
+          order_cancellation_allowed: false,
+          safe_for_submission: false,
+          safe_for_orders: false,
+          safe_for_broker_submission: false,
+          blocks_orders: true,
+        },
+      });
+    render(
+      <ActionDraftGrid
+        drafts={[
+          { ...HAPPY, action_draft_id: "draft-1", status: "user_approved" },
+          { ...HAPPY, action_draft_id: "draft-2", status: "user_approved" },
+        ]}
+        onChange={onChange}
+      />,
+    );
+    expect(
+      screen.getByTestId("action-draft-bulk-submit-bar"),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByTestId("action-draft-bulk-submit-button"));
+    fireEvent.click(
+      screen.getByTestId("action-draft-bulk-submit-modal-confirm"),
+    );
+    await waitFor(() => {
+      expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledTimes(2);
+    });
+    expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledWith("draft-1");
+    expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledWith("draft-2");
+    expect(onChange).toHaveBeenCalled();
   });
 
   it("calls dismissActionDraft with reason when user enters one", async () => {
@@ -293,24 +337,27 @@ describe("ActionDraftGrid", () => {
     promptSpy.mockRestore();
   });
 
-  it("calls deleteActionDraft after confirmation", async () => {
+  it("removes an approved draft from the list via Verwijder uit lijst", async () => {
     const onChange = vi.fn();
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
     (apiClient.deleteActionDraft as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       data: { ...HAPPY, status: "deleted" },
     });
-    render(<ActionDraftGrid drafts={[HAPPY]} onChange={onChange} />);
-    fireEvent.click(screen.getByTestId("action-draft-delete-draft-1"));
+    render(
+      <ActionDraftGrid
+        drafts={[{ ...HAPPY, status: "user_approved" }]}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(
+      screen.getByTestId("action-draft-remove-from-list-draft-1"),
+    );
     await waitFor(() => {
       expect(apiClient.deleteActionDraft).toHaveBeenCalledWith("draft-1");
     });
-    confirmSpy.mockRestore();
   });
 
-  it("opens edit form when Bewerken is clicked", () => {
+  it("opens edit form when Aanpassen is clicked", () => {
     render(<ActionDraftGrid drafts={[HAPPY]} onChange={() => {}} />);
     fireEvent.click(screen.getByTestId("action-draft-edit-draft-1"));
     expect(screen.getByTestId("action-draft-edit-form-draft-1")).toBeTruthy();
