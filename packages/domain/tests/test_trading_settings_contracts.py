@@ -15,8 +15,18 @@ from portfolio_outlook_domain import (
 )
 
 
-def test_default_allowed_universe_allows_etfs() -> None:
+def test_default_allowed_universe_blocks_etfs_per_doctrine() -> None:
+    """V1.2 §AS doctrine (CLAUDE.md §4): default-universum heeft ETFs
+    UIT. Reden: accumulating-ETFs hebben Belgische TOB van 1,32% per
+    kant — duur. De operator moet expliciet opt-in."""
+
     permission = evaluate_asset_permission(AllowedAssetType.ETF, AllowedUniverseSettings())
+    assert permission.allowed is False
+
+
+def test_default_allowed_universe_allows_etfs_when_explicitly_enabled() -> None:
+    settings = AllowedUniverseSettings(allow_etfs=True)
+    permission = evaluate_asset_permission(AllowedAssetType.ETF, settings)
     assert permission.allowed is True
     assert permission.status is AssetPermissionStatus.ALLOWED
 
@@ -24,6 +34,18 @@ def test_default_allowed_universe_allows_etfs() -> None:
 def test_default_allowed_universe_allows_stocks() -> None:
     permission = evaluate_asset_permission(AllowedAssetType.STOCK, AllowedUniverseSettings())
     assert permission.allowed is True
+
+
+def test_default_allowed_universe_enables_us_and_euronext_exchanges() -> None:
+    """V1.2 §AS doctrine: default vinkjes NASDAQ + NYSE + Euronext
+    (Brussel, Parijs, Amsterdam)."""
+
+    settings = AllowedUniverseSettings()
+    assert settings.nasdaq_enabled is True
+    assert settings.nyse_enabled is True
+    assert settings.euronext_brussels_enabled is True
+    assert settings.euronext_paris_enabled is True
+    assert settings.euronext_amsterdam_enabled is True
 
 
 def test_version1_blocked_asset_types_always_blocked() -> None:

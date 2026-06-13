@@ -128,11 +128,23 @@ class SettingHelpText(DomainBaseModel):
 
 
 class AllowedUniverseSettings(DomainBaseModel):
-    allow_etfs: bool = True
+    # V1.2 §AS doctrine (CLAUDE.md §4): default-universum is US +
+    # Euronext. ETFs en obligaties default uit; operator opt-in.
+    allow_etfs: bool = False
     allow_stocks: bool = True
     allow_currencies_watch_only: bool = False
     allow_bond_etfs: bool = False
     allow_commodity_etfs: bool = False
+    # V1.2 §AS — per-beurs vinkjes. Default vinkt de volledige
+    # doctrine-set aan: NASDAQ + NYSE + Euronext Brussel + Parijs +
+    # Amsterdam. De per-beurs gating wordt door de universum-scan
+    # gerespecteerd; uitschakelen filtert de bijbehorende EODHD-
+    # suffix uit het kandidaat-universum.
+    nasdaq_enabled: bool = True
+    nyse_enabled: bool = True
+    euronext_brussels_enabled: bool = True
+    euronext_paris_enabled: bool = True
+    euronext_amsterdam_enabled: bool = True
     blocked_asset_types: tuple[BlockedAssetType, ...] = tuple(
         BlockedAssetType(value) for value in _VERSION_1_BLOCKED_ASSET_TYPES
     )
@@ -387,7 +399,12 @@ def get_allowed_universe_help_texts() -> tuple[SettingHelpText, ...]:
         SettingHelpText(
             key="allow_etfs",
             label_nl="ETF’s toestaan",
-            help_nl="Het systeem mag ETF’s onderzoeken en gebruiken voor IBKR paper-acties.",
+            help_nl=(
+                "Het systeem mag ETF’s onderzoeken en gebruiken voor IBKR "
+                "paper-acties. Default uit (V1.2 doctrine §AS): "
+                "accumulating-ETFs hebben Belgische TOB van 1,32% per kant — "
+                "duur. Schakel alleen aan als je expliciet ETFs wil."
+            ),
         ),
         SettingHelpText(
             key="allow_stocks",
@@ -398,6 +415,46 @@ def get_allowed_universe_help_texts() -> tuple[SettingHelpText, ...]:
             key="allow_currencies_watch_only",
             label_nl="Valuta alleen volgen",
             help_nl="Valuta mogen gevolgd worden, maar niet gekocht of verkocht.",
+        ),
+        SettingHelpText(
+            key="nasdaq_enabled",
+            label_nl="NASDAQ toelaten",
+            help_nl=(
+                "Wanneer aan vinkt de universum-scan NASDAQ-genoteerde "
+                "aandelen mee. Default aan voor het V1.2 §AS-universum."
+            ),
+        ),
+        SettingHelpText(
+            key="nyse_enabled",
+            label_nl="NYSE toelaten",
+            help_nl=(
+                "Wanneer aan vinkt de universum-scan NYSE-genoteerde "
+                "aandelen mee. Default aan voor het V1.2 §AS-universum."
+            ),
+        ),
+        SettingHelpText(
+            key="euronext_brussels_enabled",
+            label_nl="Euronext Brussel toelaten",
+            help_nl=(
+                "Belgische beurs (Suffix .BR). Default aan zodat namen "
+                "zoals KBC, AB InBev, Solvay mee kunnen worden bekeken."
+            ),
+        ),
+        SettingHelpText(
+            key="euronext_paris_enabled",
+            label_nl="Euronext Parijs toelaten",
+            help_nl=(
+                "Franse beurs (Suffix .PA). Default aan voor TotalEnergies, "
+                "LVMH, Sanofi, etc."
+            ),
+        ),
+        SettingHelpText(
+            key="euronext_amsterdam_enabled",
+            label_nl="Euronext Amsterdam toelaten",
+            help_nl=(
+                "Nederlandse beurs (Suffix .AS). Default aan voor ASML, "
+                "Heineken, Philips, etc."
+            ),
         ),
     )
 
