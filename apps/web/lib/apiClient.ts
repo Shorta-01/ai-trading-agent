@@ -459,6 +459,54 @@ export type OrchestratorVerdictsListResponse = {
   items: OrchestratorVerdictRow[];
 };
 
+// V1.2 §AU / CLAUDE.md §5 — operator favorites + exclusions.
+
+export type WatchlistFavoriteRow = {
+  watchlist_preference_id: string;
+  symbol: string;
+  note: string | null;
+  created_at: string;
+  latest_decision: string | null;
+  latest_blocking_reason: string | null;
+  latest_summary_nl: string | null;
+  latest_generated_at: string | null;
+  latest_confidence: number | null;
+};
+
+export type WatchlistFavoritesResponse = {
+  title_nl: string;
+  help_nl: string;
+  account_id: string;
+  items: WatchlistFavoriteRow[];
+};
+
+export type WatchlistExclusionRow = {
+  watchlist_preference_id: string;
+  symbol: string;
+  note: string | null;
+  created_at: string;
+};
+
+export type WatchlistExclusionsResponse = {
+  title_nl: string;
+  help_nl: string;
+  account_id: string;
+  items: WatchlistExclusionRow[];
+};
+
+export type SaveWatchlistPreferenceInput = {
+  account_id?: string;
+  symbol: string;
+  kind: "favorite" | "excluded";
+  note?: string | null;
+};
+
+export type WatchlistPreferenceMutationResponse = {
+  accepted: boolean;
+  record_id: string | null;
+  explanation_nl: string;
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2375,6 +2423,40 @@ export const apiClient = {
       `/orchestrator-verdicts${
         params?.limit ? `?limit=${params.limit}` : ""
       }`,
+    ),
+  listFavorieten: (params?: { account_id?: string }) =>
+    getJson<WatchlistFavoritesResponse>(
+      `/watchlist-preferences/favorieten${
+        params?.account_id
+          ? `?account_id=${encodeURIComponent(params.account_id)}`
+          : ""
+      }`,
+    ),
+  listUitsluitingen: (params?: { account_id?: string }) =>
+    getJson<WatchlistExclusionsResponse>(
+      `/watchlist-preferences/uitsluitingen${
+        params?.account_id
+          ? `?account_id=${encodeURIComponent(params.account_id)}`
+          : ""
+      }`,
+    ),
+  saveWatchlistPreference: (payload: SaveWatchlistPreferenceInput) =>
+    postJson<WatchlistPreferenceMutationResponse>(
+      "/watchlist-preferences",
+      payload,
+    ),
+  deleteWatchlistPreference: (params: {
+    account_id?: string;
+    symbol: string;
+    kind: "favorite" | "excluded";
+  }) =>
+    requestJson<WatchlistPreferenceMutationResponse>(
+      `/watchlist-preferences?account_id=${encodeURIComponent(
+        params.account_id ?? "default",
+      )}&symbol=${encodeURIComponent(params.symbol)}&kind=${
+        params.kind
+      }`,
+      "DELETE",
     ),
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(

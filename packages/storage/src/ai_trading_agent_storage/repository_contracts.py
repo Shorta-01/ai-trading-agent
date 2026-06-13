@@ -3104,6 +3104,74 @@ class SaveEarningsEventRequest:
     raw_json: dict[str, object] | None
 
 
+WATCHLIST_PREFERENCE_KIND_FAVORITE = "favorite"
+WATCHLIST_PREFERENCE_KIND_EXCLUDED = "excluded"
+_WATCHLIST_PREFERENCE_KINDS = frozenset(
+    {WATCHLIST_PREFERENCE_KIND_FAVORITE, WATCHLIST_PREFERENCE_KIND_EXCLUDED}
+)
+
+
+@dataclass(frozen=True)
+class WatchlistPreferenceRecord:
+    """One operator-maintained favorite or exclusion (V1.2 §AU).
+
+    Feeds CLAUDE.md §5: the dashboard surfaces favorites with their
+    latest orchestrator confidence even when they don't pass the
+    gates; exclusions are a hard veto applied before scoring. Stored
+    in a dedicated ``watchlist_preferences`` table so the cold-start
+    seed pipeline (``watchlist_items``) is unaffected.
+
+    ``kind`` is locked to ``favorite`` / ``excluded``. UNIQUE per
+    ``(ibkr_account_ref, symbol, kind)`` is enforced at the DB level
+    so toggling a favorite twice is idempotent.
+    """
+
+    watchlist_preference_id: str
+    ibkr_account_ref: str
+    symbol: str
+    kind: str
+    note: str | None
+    created_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "watchlist_preference_id",
+            "ibkr_account_ref",
+            "symbol",
+            "kind",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.kind not in _WATCHLIST_PREFERENCE_KINDS:
+            raise ValueError(
+                f"kind must be favorite/excluded, got {self.kind!r}"
+            )
+
+
+@dataclass(frozen=True)
+class SaveWatchlistPreferenceRequest:
+    """Create-or-replace request for one favorite/exclusion row."""
+
+    watchlist_preference_id: str
+    ibkr_account_ref: str
+    symbol: str
+    kind: str
+    note: str | None
+    created_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "watchlist_preference_id",
+            "ibkr_account_ref",
+            "symbol",
+            "kind",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.kind not in _WATCHLIST_PREFERENCE_KINDS:
+            raise ValueError(
+                f"kind must be favorite/excluded, got {self.kind!r}"
+            )
+
+
 @dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.

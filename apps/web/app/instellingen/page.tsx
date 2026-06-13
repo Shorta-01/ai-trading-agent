@@ -28,6 +28,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { WatchlistPreferencesSettings } from "@/components/WatchlistPreferencesSettings";
 import {
   apiClient,
   type ConnectionSettingsResponse,
@@ -2010,6 +2011,14 @@ export default function Page() {
               error={universeError}
               onSave={() => void handleSaveUniverse()}
             />
+          </section>
+
+          {/* Section 4a-bis — Watchlist favorites + exclusions (V1.2 §AU). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-watchlist-preferences-section"
+          >
+            <WatchlistPreferencesSettings />
           </section>
 
           {/* Section 4b — Scan markets (multi-select). */}

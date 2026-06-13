@@ -98,6 +98,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "reconciliation_run_audit",
         "orchestrator_scoring_verdicts",
         "earnings_events",
+        "watchlist_preferences",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

@@ -108,6 +108,7 @@ def test_exactly_seventy_revision_files_exist_with_expected_names() -> None:
         "0070_runtime_config_ai_features.py",
         "0071_orchestrator_scoring_verdicts.py",
         "0072_earnings_events.py",
+        "0073_watchlist_preferences.py",
     ]
 
 

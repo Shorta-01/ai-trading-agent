@@ -114,6 +114,11 @@ class CandidateProviderInputs:
     # gate semantics: missing data does not block; see
     # earnings_calendar_gate doctrine).
     next_earnings_by_symbol: dict[str, date | None] = field(default_factory=dict)
+    # V1.2 §AU / CLAUDE.md §5 — operator-maintained exclusions. Any
+    # symbol in this set is dropped before the gates fire so the
+    # orchestrator never even spends a forecast on a name the
+    # operator has vetoed. The veto is hard: there is no override.
+    excluded_symbols: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
@@ -181,6 +186,14 @@ def build_candidates(
 
     for forecast in inputs.forecasts:
         symbol = forecast.symbol
+        if symbol in inputs.excluded_symbols:
+            # Operator-veto wins before any provider work. We log the
+            # skip so the morning-chain detail-string surfaces "N
+            # candidates door uitsluitingen geblokkeerd" — useful
+            # transparency on a dashboard otherwise filled only with
+            # gate-level skips.
+            skip_reasons.append(f"{symbol}: excluded_by_operator")
+            continue
         fundamentals = inputs.fundamentals_by_symbol.get(symbol)
         bars = inputs.candidate_bars_by_symbol.get(symbol)
         if fundamentals is None:

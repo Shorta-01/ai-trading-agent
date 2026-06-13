@@ -24,6 +24,7 @@ import { OrchestratorVerdictsSummary } from "@/components/OrchestratorVerdictsSu
 import { PendingApprovalsPanel } from "@/components/PendingApprovalsPanel";
 import { PortfolioKpiTiles } from "@/components/PortfolioKpiTiles";
 import { PredictorPerformanceWidget } from "@/components/PredictorPerformanceWidget";
+import { FavorietenWidget } from "@/components/FavorietenWidget";
 import { ProfitHarvestCycleWidget } from "@/components/ProfitHarvestCycleWidget";
 import { RecentActivityPanel } from "@/components/RecentActivityPanel";
 import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
@@ -74,6 +75,8 @@ export default function HomePage() {
         <ProfitHarvestCycleWidget />
         <WatchlistSnapshot />
       </div>
+
+      <FavorietenWidget />
 
       <OrchestratorVerdictsSummary />
 
