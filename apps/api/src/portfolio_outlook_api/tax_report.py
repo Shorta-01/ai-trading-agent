@@ -417,7 +417,6 @@ def _convert_trade_to_eur(
     convert = getattr(fx_converter, "to_eur", None)
     if convert is None:
         return trade
-    buy_amount = trade.gross_local + trade.tob_buy_local + trade.tob_sell_local
     # We berekenen de FX-koers op buy_date voor cost-side legs, sell_date
     # voor sell-side. Net = sell-side EUR - buy-side EUR.
     cost_eur, buy_lookup = convert(
