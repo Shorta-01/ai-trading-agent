@@ -37,9 +37,7 @@ from pydantic import BaseModel
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.sell_signal_sweep import (
-    DEFAULT_HORIZON_REVIEW_START_DAYS,
     DEFAULT_IBKR_ACCOUNT_REF,
-    DEFAULT_LOSS_FLOOR_PCT,
     DEFAULT_TARGET_NET_PCT,
     SellSignalSweepResult,
     run_sell_signal_sweep,
@@ -253,11 +251,14 @@ def trigger_sell_signal_sweep() -> SellSignalSweepResponse:
         )
 
     target_net_pct = _read_profit_target_pct() or DEFAULT_TARGET_NET_PCT
+    # GAPS.md P1-9 / V1.2 §BU — operator-configureerbare hold-window
+    # + loss-floor via env-var fallback. Default-waarden komen overeen
+    # met CLAUDE.md §6.2 zodat bestaande deploys ongewijzigd blijven.
     result: SellSignalSweepResult = run_sell_signal_sweep(
         database_url=storage.database_url,
         target_net_pct=target_net_pct,
-        loss_floor_pct=DEFAULT_LOSS_FLOOR_PCT,
-        horizon_review_start_days=DEFAULT_HORIZON_REVIEW_START_DAYS,
+        loss_floor_pct=settings.sell_signal_loss_floor_pct,
+        horizon_review_start_days=settings.sell_signal_horizon_review_start_days,
         ibkr_account_ref=DEFAULT_IBKR_ACCOUNT_REF,
     )
     return SellSignalSweepResponse(

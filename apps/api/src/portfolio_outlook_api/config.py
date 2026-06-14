@@ -266,6 +266,19 @@ class Settings(BaseSettings):
     # instellingen" accordion.
     sharpe_strong_threshold: float = 1.0
     sharpe_slight_threshold: float = 0.3
+    # GAPS.md P1-9 / V1.2 §BU — V1.2 §AQ profit-harvest doctrine zit
+    # de hold-window default op 180 dagen en de combo-trigger
+    # loss-floor op -5 %. Beide zaten hardcoded in
+    # ``sell_signal_sweep.DEFAULT_*`` zodat een operator die de
+    # doctrine wilde verstrengen of versoepelen geen knop had.
+    # Default-waarden komen overeen met CLAUDE.md §6.2 zodat
+    # bestaande deploys ongewijzigd blijven; env-vars
+    # ``API_SELL_SIGNAL_LOSS_FLOOR_PCT`` /
+    # ``API_SELL_SIGNAL_HORIZON_REVIEW_START_DAYS`` geven de hook
+    # voor operator-tuning zonder code-wijziging. UI + runtime_config
+    # wiring is een follow-up PR.
+    sell_signal_loss_floor_pct: Decimal = Decimal("-5")
+    sell_signal_horizon_review_start_days: int = 180
     # Market-aware scheduler toggles (PR J). API-side mirrors of the
     # worker's runtime_config overlay — the worker reads its own copy
     # at startup and registers per-market cron jobs accordingly.
