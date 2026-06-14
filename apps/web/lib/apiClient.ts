@@ -1772,6 +1772,18 @@ export type DecisionPackageResponse = {
   deterministic_dutch_explanation: string;
   audit_trail_hash: string;
   previous_package_hash: string | null;
+  // V1.2 §BK / §BL — CLAUDE.md §9 enrichment velden. Allemaal nullable
+  // (null wanneer storage geen rij heeft).
+  sector: string | null;
+  market_cap_eur: string | null;
+  pe_ratio: string | null;
+  momentum_6m_pct: string | null;
+  momentum_12m_pct: string | null;
+  dividend_yield_pct: string | null;
+  next_earnings_date: string | null;
+  next_earnings_status: string | null;
+  expected_dividend_gross_local: string | null;
+  expected_dividend_currency: string | null;
   safe_for_action_drafts: false;
   safe_for_orders: false;
 };
