@@ -76,6 +76,9 @@ from portfolio_outlook_api.morning_chain import (
     LEG_STATUS_SUCCEEDED,
     MorningChainLegOutcome,
 )
+from portfolio_outlook_api.operator_settings import (
+    load_operator_trading_settings,
+)
 
 # Locked V1.2 doctrinal defaults — match
 # domain/settings.py::UserStrategySettings. The "read from
@@ -308,6 +311,7 @@ def _build_inputs(
     bars_by_symbol: dict[str, tuple[HistoricalBar, ...]] | None = None,
     held_positions: tuple[HeldPositionRow, ...] = (),
     excluded_symbols: frozenset[str] = frozenset(),
+    trading_settings: TradingSettingsSnapshot | None = None,
 ) -> CandidateProviderInputs:
     """Convert live forecast records into provider inputs.
 
@@ -359,7 +363,7 @@ def _build_inputs(
         fundamentals_by_symbol=fundamentals_by_symbol,
         candidate_bars_by_symbol=bars_by_symbol,
         held_positions=held_positions,
-        settings=_DEFAULT_TRADING_SETTINGS,
+        settings=trading_settings or _DEFAULT_TRADING_SETTINGS,
         vix_level=Decimal("15"),
         index_bars=_synthetic_index_bars(),
         next_earnings_by_symbol=next_earnings_by_symbol or {},
@@ -461,6 +465,10 @@ def build_real_orchestrator_scoring_leg(
                 excluded_symbols = prefs_repo.list_excluded_symbols(
                     ibkr_account_ref=ibkr_account_ref
                 )
+                # V1.2 §BD — operator-keuzes uit /instellingen voeden
+                # nu de live scoring. Bij een verse install valt dit
+                # netjes terug op de doctrine-defaults.
+                operator_resolution = load_operator_trading_settings()
                 inputs = _build_inputs(
                     forecasts=forecasts,
                     today=today,
@@ -470,6 +478,7 @@ def build_real_orchestrator_scoring_leg(
                     bars_by_symbol=bars_by_symbol,
                     held_positions=held_positions,
                     excluded_symbols=excluded_symbols,
+                    trading_settings=operator_resolution.snapshot,
                 )
                 run = run_scoring_pipeline(
                     connection=checked.connection,
@@ -492,7 +501,14 @@ def build_real_orchestrator_scoring_leg(
                     f"geschreven, "
                     f"{run.scoring.failed_count} mislukt, "
                     f"{run.skipped_provider_count} forecasts "
-                    f"overgeslagen door de provider."
+                    f"overgeslagen door de provider. "
+                    f"Instellingen-bron: {operator_resolution.source}"
+                    + (
+                        " (winstdoel overschreven)"
+                        if operator_resolution.profit_target_overridden
+                        else ""
+                    )
+                    + "."
                 ),
             )
         except Exception as exc:  # noqa: BLE001 — boundary catch
