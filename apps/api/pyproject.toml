@@ -26,6 +26,10 @@ dependencies = [
   # Task 126: Postgres driver for production runtime (`DATABASE_URL=
   # postgresql://...`). SQLite-based tests remain unaffected.
   "psycopg[binary]>=3.2",
+  # V1.2 §BC — PDF-export voor /belasting + /rapporten en auto-PDF
+  # maandarchief. ``reportlab`` is pure-Python met geen system-deps,
+  # past goed in een lightweight Docker image.
+  "reportlab>=4.0.0",
 ]
 
 [project.optional-dependencies]

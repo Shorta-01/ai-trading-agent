@@ -16,6 +16,7 @@ import type {
 
 const getTaxYearReport = vi.fn();
 const taxYearReportCsvUrl = vi.fn();
+const taxYearReportPdfUrl = vi.fn().mockReturnValue("/belasting.pdf");
 const listDividenden = vi.fn();
 const createDividend = vi.fn();
 const deleteDividend = vi.fn();
@@ -24,6 +25,7 @@ vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     getTaxYearReport: (...a: unknown[]) => getTaxYearReport(...a),
     taxYearReportCsvUrl: (...a: unknown[]) => taxYearReportCsvUrl(...a),
+    taxYearReportPdfUrl: (...a: unknown[]) => taxYearReportPdfUrl(...a),
     listDividenden: (...a: unknown[]) => listDividenden(...a),
     createDividend: (...a: unknown[]) => createDividend(...a),
     deleteDividend: (...a: unknown[]) => deleteDividend(...a),

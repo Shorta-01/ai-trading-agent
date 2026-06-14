@@ -969,6 +969,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "netto. /belasting en /rapporten lezen deze rijen."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0077_monthly_report_archive",
+        previous_revision_id="0076_dividend_events",
+        filename="0077_monthly_report_archive.py",
+        label_nl="Maandrapport PDF-archief",
+        description_nl=(
+            "Voegt de ``monthly_report_archive`` tabel toe voor de "
+            "auto-PDF van elke maandrapport (V1.2 §BC / CLAUDE.md "
+            "§13 follow-up). PDF wordt als ``LargeBinary`` "
+            "opgeslagen — typisch 50-200 KB per maand zodat geen "
+            "filesystem-mount nodig is. UNIQUE per ``(account, "
+            "year, month)`` zodat re-genereren upsert."
+        ),
+    ),
 )
 
 

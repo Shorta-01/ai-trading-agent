@@ -37,6 +37,7 @@ from sqlalchemy import select
 
 from portfolio_outlook_api.config import settings
 from portfolio_outlook_api.fx_conversion import FxConverter
+from portfolio_outlook_api.pdf_export import render_tax_year_report_pdf
 from portfolio_outlook_api.profit_target import get_profit_target_pct
 from portfolio_outlook_api.tax_report import (
     ExecutionRow,
@@ -264,7 +265,7 @@ def _fetch_dividends(year: int) -> list[dict[str, object]]:
     ]
 
 
-def _open_fx_converter() -> tuple[FxConverter | None, "Callable[[], None]"]:
+def _open_fx_converter() -> tuple[FxConverter | None, Callable[[], None]]:
     """Return a (converter, close_callback) tuple, or (None, noop).
 
     De caller moet de close-callback aanroepen na het rapport-build
@@ -466,6 +467,44 @@ def get_jaaroverzicht_csv(year: int | None = None) -> Response:
     return Response(
         content=body,
         media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.get("/belasting/jaaroverzicht.pdf")
+def get_jaaroverzicht_pdf(year: int | None = None) -> Response:
+    """Render een PDF-versie van het jaaroverzicht voor de accountant
+    (V1.2 §BC). Gebruikt reportlab — alle data komt uit dezelfde
+    engine als JSON + CSV."""
+
+    resolved_year = _resolve_year(year)
+    if resolved_year < 2000 or resolved_year > 2100:
+        raise HTTPException(
+            status_code=400, detail="year moet tussen 2000 en 2100 liggen"
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        report = _empty_report(resolved_year)
+    else:
+        executions = _fetch_executions(resolved_year)
+        converter, close_converter = _open_fx_converter()
+        try:
+            report = build_tax_year_report(
+                year=resolved_year,
+                executions=executions,
+                profit_target_pct=get_profit_target_pct(),
+                dividends=_fetch_dividends(resolved_year),
+                fx_converter=converter,
+            )
+        finally:
+            close_converter()
+    pdf_bytes = render_tax_year_report_pdf(report)
+    filename = f"belasting-{resolved_year}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
         },

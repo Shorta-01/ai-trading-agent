@@ -100,6 +100,7 @@ def test_metadata_imports_and_expected_tables_only() -> None:
         "earnings_events",
         "watchlist_preferences",
         "dividend_events",
+        "monthly_report_archive",
     }
     assert metadata is not None
     assert set(metadata.tables) == expected

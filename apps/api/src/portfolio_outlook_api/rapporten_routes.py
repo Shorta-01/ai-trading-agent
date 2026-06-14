@@ -16,10 +16,14 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from ai_trading_agent_storage import (
+    SaveMonthlyReportArchiveRequest,
+    SqlAlchemyMonthlyReportArchiveRepository,
     StorageConnectionError,
     StorageConnectionProvider,
+    StoragePersistenceBlockedError,
     build_database_connection_settings,
 )
 from ai_trading_agent_storage.metadata import (
@@ -29,7 +33,7 @@ from ai_trading_agent_storage.metadata import (
     ibkr_sync_runs,
     orchestrator_scoring_verdicts,
 )
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.engine import Connection
@@ -41,6 +45,7 @@ from portfolio_outlook_api.monthly_report import (
     VerdictSnapshot,
     build_monthly_report,
 )
+from portfolio_outlook_api.pdf_export import render_monthly_report_pdf
 from portfolio_outlook_api.profit_target import get_profit_target_pct
 from portfolio_outlook_api.tax_report import ExecutionRow
 
@@ -361,6 +366,37 @@ def _empty_response(year: int, month: int) -> MonthlyReportResponse:
     )
 
 
+def _build_report(year: int, month: int) -> MonthlyReport:
+    """Common build path used by JSON + PDF endpoints."""
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return build_monthly_report(
+            year=year, month=month, executions=(),
+            action_drafts=(), verdicts=(), open_positions_count=0,
+        )
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            executions = _fetch_executions(checked.connection, year, month)
+            drafts = _fetch_action_drafts(checked.connection)
+            verdicts = _fetch_verdicts(checked.connection)
+            open_count = _count_open_positions(checked.connection)
+    except StorageConnectionError as exc:
+        logger.warning("rapporten build storage error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return build_monthly_report(
+        year=year, month=month, executions=executions,
+        action_drafts=drafts, verdicts=verdicts,
+        open_positions_count=open_count,
+        profit_target_pct=get_profit_target_pct(),
+    )
+
+
 @router.get("/rapporten/maand", response_model=MonthlyReportResponse)
 def get_maandrapport(
     year: int | None = None, month: int | None = None
@@ -406,6 +442,215 @@ def get_maandrapport(
         profit_target_pct=get_profit_target_pct(),
     )
     return _to_response(report)
+
+
+@router.get("/rapporten/maand.pdf")
+def get_maandrapport_pdf(
+    year: int | None = None, month: int | None = None
+) -> Response:
+    """Render één maandrapport naar PDF (V1.2 §BC)."""
+
+    resolved_year, resolved_month = _resolve(year, month)
+    if resolved_year < 2000 or resolved_year > 2100:
+        raise HTTPException(
+            status_code=400, detail="year moet tussen 2000 en 2100 liggen"
+        )
+    if resolved_month < 1 or resolved_month > 12:
+        raise HTTPException(
+            status_code=400, detail="month moet tussen 1 en 12 liggen"
+        )
+    report = _build_report(resolved_year, resolved_month)
+    pdf_bytes = render_monthly_report_pdf(report)
+    filename = f"maandrapport-{resolved_year:04d}-{resolved_month:02d}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+# ---- Archief --------------------------------------------------------
+
+
+class ArchiveEntryOut(BaseModel):
+    archive_id: str
+    year: int
+    month: int
+    pdf_size_bytes: int
+    generated_at: str
+    source: str
+
+
+class ArchiveListResponse(BaseModel):
+    title_nl: str
+    help_nl: str
+    items: list[ArchiveEntryOut]
+
+
+_ARCHIVE_HELP_NL = (
+    "Maandrapport-PDF-archief. Bouwt elke 1e van de maand automatisch "
+    "een PDF voor de vorige maand en bewaart die hier. Operator kan "
+    "ook handmatig regenereren via POST /rapporten/archief/generate."
+)
+
+
+def _account_ref() -> str:
+    return "default"
+
+
+@router.get("/rapporten/archief", response_model=ArchiveListResponse)
+def list_archive() -> ArchiveListResponse:
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return ArchiveListResponse(
+            title_nl="Maandrapport-archief",
+            help_nl=_ARCHIVE_HELP_NL,
+            items=[],
+        )
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyMonthlyReportArchiveRepository(
+                checked.connection, checked.readiness
+            )
+            listed = repo.list_for_account(ibkr_account_ref=_account_ref())
+    except StorageConnectionError as exc:
+        logger.warning("archief list storage error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    items = [
+        ArchiveEntryOut(
+            archive_id=r.archive_id,
+            year=r.year,
+            month=r.month,
+            pdf_size_bytes=r.pdf_size_bytes,
+            generated_at=r.generated_at.isoformat(),
+            source=r.source,
+        )
+        for r in listed.records
+    ]
+    return ArchiveListResponse(
+        title_nl="Maandrapport-archief",
+        help_nl=_ARCHIVE_HELP_NL,
+        items=items,
+    )
+
+
+@router.get("/rapporten/archief/{year}/{month}")
+def get_archive_pdf(year: int, month: int) -> Response:
+    if not (1 <= month <= 12):
+        raise HTTPException(
+            status_code=400, detail="month moet tussen 1 en 12 liggen"
+        )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        raise HTTPException(status_code=404, detail="Geen archief beschikbaar.")
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyMonthlyReportArchiveRepository(
+                checked.connection, checked.readiness
+            )
+            record = repo.get(
+                ibkr_account_ref=_account_ref(),
+                year=year,
+                month=month,
+            )
+    except StorageConnectionError as exc:
+        logger.warning("archief get storage error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Geen archief voor deze maand. Roep "
+            "POST /rapporten/archief/generate aan.",
+        )
+    filename = f"maandrapport-{year:04d}-{month:02d}.pdf"
+    return Response(
+        content=record.pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+class GenerateArchiveRequest(BaseModel):
+    year: int
+    month: int
+
+
+class GenerateArchiveResponse(BaseModel):
+    accepted: bool
+    archive_id: str
+    pdf_size_bytes: int
+
+
+@router.post(
+    "/rapporten/archief/generate",
+    response_model=GenerateArchiveResponse,
+    status_code=201,
+)
+def generate_archive(payload: GenerateArchiveRequest) -> GenerateArchiveResponse:
+    """Genereer (of regenereer) een PDF-archief voor één (year, month)."""
+
+    if not (2000 <= payload.year <= 2100):
+        raise HTTPException(
+            status_code=400, detail="year moet tussen 2000 en 2100 liggen"
+        )
+    if not (1 <= payload.month <= 12):
+        raise HTTPException(
+            status_code=400, detail="month moet tussen 1 en 12 liggen"
+        )
+    report = _build_report(payload.year, payload.month)
+    pdf_bytes = render_monthly_report_pdf(report)
+    archive_id = str(uuid4())
+    request = SaveMonthlyReportArchiveRequest(
+        archive_id=archive_id,
+        ibkr_account_ref=_account_ref(),
+        year=payload.year,
+        month=payload.month,
+        pdf_bytes=pdf_bytes,
+        pdf_size_bytes=len(pdf_bytes),
+        generated_at=datetime.now(UTC),
+        source="operator-manual",
+    )
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        )
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyMonthlyReportArchiveRepository(
+                checked.connection, checked.readiness
+            )
+            repo.upsert(request)
+            checked.connection.commit()
+    except StoragePersistenceBlockedError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except StorageConnectionError as exc:
+        logger.warning("archive generate storage error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return GenerateArchiveResponse(
+        accepted=True,
+        archive_id=archive_id,
+        pdf_size_bytes=len(pdf_bytes),
+    )
 
 
 __all__ = ["router"]

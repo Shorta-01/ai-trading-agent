@@ -24,6 +24,7 @@ import {
   type MonthlyReportRealisedTrade,
   type MonthlyReportResponse,
 } from "@/lib/apiClient";
+import { ArchivePanel } from "@/components/ArchivePanel";
 
 const NOW = new Date();
 const CURRENT_YEAR = NOW.getUTCFullYear();
@@ -208,6 +209,23 @@ export default function RapportenPage() {
             ))}
           </select>
         </label>
+        <a
+          data-testid="rapport-pdf-download"
+          href={apiClient.monthlyReportPdfUrl({ year, month })}
+          download
+          style={{
+            marginLeft: "auto",
+            padding: "6px 12px",
+            background: "#7c2d12",
+            color: "#ffffff",
+            borderRadius: 6,
+            textDecoration: "none",
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          Download PDF
+        </a>
       </header>
 
       <section
@@ -557,6 +575,8 @@ export default function RapportenPage() {
           </ul>
         </div>
       ) : null}
+
+      <ArchivePanel defaultYear={year} defaultMonth={month} />
     </main>
   );
 }
