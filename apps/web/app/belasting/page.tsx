@@ -337,6 +337,37 @@ export default function BelastingPage() {
               "0,0"}{" "}
             %
           </dd>
+          {report?.year_totals.net_eur_total ? (
+            <>
+              <dt
+                style={{
+                  fontWeight: 600,
+                  marginTop: 8,
+                  paddingTop: 8,
+                  borderTop: "1px solid #e5e7eb",
+                }}
+              >
+                Netto EUR (FX-conversie)
+              </dt>
+              <dd
+                data-testid="tax-year-totals-net-eur"
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  color: "#166534",
+                  marginTop: 8,
+                  paddingTop: 8,
+                  borderTop: "1px solid #e5e7eb",
+                }}
+              >
+                {fmtMoney(report.year_totals.net_eur_total)} EUR{" "}
+                <span style={{ fontSize: 11, color: "#6b7280" }}>
+                  ({report.year_totals.eur_conversion_coverage_pct ?? 0} %
+                  conversie-dekking)
+                </span>
+              </dd>
+            </>
+          ) : null}
         </dl>
       </section>
 

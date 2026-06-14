@@ -558,6 +558,13 @@ export type TaxRealisedTrade = {
   net_pct_on_cost: string;
   buy_action_draft_id: string | null;
   sell_action_draft_id: string | null;
+  // V1.2 §BB — EUR fields, optional.
+  buy_fx_rate_eur?: string | null;
+  sell_fx_rate_eur?: string | null;
+  gross_eur?: string | null;
+  tob_buy_eur?: string | null;
+  tob_sell_eur?: string | null;
+  net_eur?: string | null;
 };
 
 export type TaxYearTotals = {
@@ -569,6 +576,11 @@ export type TaxYearTotals = {
   hit_rate_pct: number;
   earliest_close: string | null;
   latest_close: string | null;
+  // V1.2 §BB — EUR-totalen.
+  gross_eur_total?: string | null;
+  tob_eur_total?: string | null;
+  net_eur_total?: string | null;
+  eur_conversion_coverage_pct?: number;
 };
 
 export type TaxMonthlyPoint = {
