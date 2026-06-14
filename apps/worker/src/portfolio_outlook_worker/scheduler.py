@@ -1046,6 +1046,73 @@ class PortfolioScheduler:
                 )
         except StorageConnectionError as exc:
             logger.warning("Heartbeat skipped: storage niet bereikbaar (%s)", exc)
+        # GAPS.md P2-1 / V1.2 §BY — TWS reset's elke nacht (~23:45),
+        # netwerk-hick-ups droppen de sessie. Tot deze hook bleef de
+        # gateway gewoon ``is_connected()=False`` voor altijd; nu
+        # probeert de heartbeat te reconnecten zodat de in-process
+        # reconciliation tick + andere consumers de volgende cyclus
+        # weer een echte client zien. Default-off zodat bestaande
+        # deploys onveranderd blijven; opt-in via ``ibkr_auto_reconnect_enabled``.
+        self._maybe_reconnect_ibkr_gateway()
+
+    def _maybe_reconnect_ibkr_gateway(self) -> None:
+        """Re-open de TWS-sessie wanneer de heartbeat detecteert dat
+        de dedicated reconciler-gateway niet meer verbonden is.
+
+        Na V1.2 §BM-2 is de hoofdgateway (``self._gateway``) een
+        disconnected boot-stub; alleen ``self._reconciler_gateway``
+        houdt een long-lived TWS-sessie. De heartbeat target't die
+        sessie en gebruikt ``reconciler_session_client_id`` voor de
+        reconnect.
+
+        Doctrine-locks:
+        * Default ``ibkr_auto_reconnect_enabled=False`` zodat enkel
+          operators die de persistent-session expliciet gebruiken
+          (b.v. reconciliation cron) hiervoor opt-in.
+        * Geen reconnect zonder configured account_id of zonder
+          ``ibkr.enabled``.
+        * Reconnect-fout wordt gelogd maar gooit niet — een gevallen
+          heartbeat mag nooit de scheduler-loop crashen.
+        """
+
+        if not self._ibkr_settings.ibkr_auto_reconnect_enabled:
+            return
+        if not self._ibkr_settings.enabled:
+            return
+        if self._ibkr_settings.account_id is None:
+            return
+        gateway = self._reconciler_gateway
+        if gateway is None:
+            return
+        # The scheduler's gateway is typed ``Any`` (a test stub may not
+        # implement ``connect``); duck-type the check so the heartbeat
+        # never raises.
+        try:
+            if gateway.is_connected():
+                return
+        except Exception:  # noqa: BLE001 — boundary
+            logger.exception("IBKR is_connected check raised; skip reconnect.")
+            return
+        connect = getattr(gateway, "connect", None)
+        if connect is None:
+            return
+        try:
+            result = connect(
+                host=self._ibkr_settings.host,
+                port=self._ibkr_settings.port,
+                client_id=self._ibkr_settings.reconciler_session_client_id,
+                account_id=self._ibkr_settings.account_id,
+            )
+        except Exception:  # noqa: BLE001 — boundary
+            logger.exception("IBKR auto-reconnect attempt raised.")
+            return
+        if getattr(result, "connected", False):
+            logger.info("IBKR auto-reconnect: opnieuw verbonden.")
+        else:
+            logger.warning(
+                "IBKR auto-reconnect: connect geweigerd (%s).",
+                getattr(result, "error_nl", "onbekende reden"),
+            )
 
     def _brussels_hour_now(self) -> int:
         try:

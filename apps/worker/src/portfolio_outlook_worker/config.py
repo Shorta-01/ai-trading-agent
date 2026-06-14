@@ -77,6 +77,15 @@ class IbkrSettings(BaseModel):
     # zodat de drie worker-side TWS-sessies (boot-test → 1, order →
     # 2, reconciler → 3) elkaar niet in de weg zitten. Default 3.
     reconciler_session_client_id: int = 3
+    # GAPS.md P2-1 / V1.2 §BY — TWS reset's elke nacht (~23:45) en
+    # netwerk-hick-ups droppen de read-only sessie. De scheduler-
+    # heartbeat checkt periodiek ``gateway.is_connected()`` en doet
+    # een ``connect()`` retry wanneer die False is. Default-off
+    # zodat bestaande deploys onveranderd blijven; alleen wanneer
+    # de operator de in-process reconciliation cron of een andere
+    # langlevende read-consumer aan heeft staan, levert auto-reconnect
+    # waarde op.
+    ibkr_auto_reconnect_enabled: bool = False
 
 
 class EodhdSettings(BaseModel):
