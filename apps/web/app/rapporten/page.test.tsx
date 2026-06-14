@@ -12,10 +12,18 @@ import type { ReactElement } from "react";
 import type { MonthlyReportResponse } from "@/lib/apiClient";
 
 const getMonthlyReport = vi.fn();
+const listArchive = vi.fn();
+const generateArchive = vi.fn();
+const monthlyReportPdfUrl = vi.fn().mockReturnValue("/rapport.pdf");
+const archivePdfUrl = vi.fn().mockReturnValue("/archief.pdf");
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     getMonthlyReport: (...a: unknown[]) => getMonthlyReport(...a),
+    listArchive: (...a: unknown[]) => listArchive(...a),
+    generateArchive: (...a: unknown[]) => generateArchive(...a),
+    monthlyReportPdfUrl: (...a: unknown[]) => monthlyReportPdfUrl(...a),
+    archivePdfUrl: (...a: unknown[]) => archivePdfUrl(...a),
   },
 }));
 
@@ -77,6 +85,12 @@ function makeReport(
 
 beforeEach(() => {
   getMonthlyReport.mockReset();
+  listArchive.mockReset();
+  listArchive.mockResolvedValue({
+    ok: true as const,
+    data: { title_nl: "", help_nl: "", items: [] },
+  });
+  generateArchive.mockReset();
 });
 
 afterEach(() => cleanup());

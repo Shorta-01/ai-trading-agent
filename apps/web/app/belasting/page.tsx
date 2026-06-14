@@ -220,23 +220,40 @@ export default function BelastingPage() {
             ))}
           </select>
         </label>
-        <a
-          data-testid="tax-csv-download"
-          href={apiClient.taxYearReportCsvUrl({ year })}
-          download
-          style={{
-            marginLeft: "auto",
-            padding: "6px 12px",
-            background: "#0f172a",
-            color: "#ffffff",
-            borderRadius: 6,
-            textDecoration: "none",
-            fontWeight: 600,
-            fontSize: 13,
-          }}
-        >
-          Download CSV
-        </a>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <a
+            data-testid="tax-csv-download"
+            href={apiClient.taxYearReportCsvUrl({ year })}
+            download
+            style={{
+              padding: "6px 12px",
+              background: "#0f172a",
+              color: "#ffffff",
+              borderRadius: 6,
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Download CSV
+          </a>
+          <a
+            data-testid="tax-pdf-download"
+            href={apiClient.taxYearReportPdfUrl({ year })}
+            download
+            style={{
+              padding: "6px 12px",
+              background: "#7c2d12",
+              color: "#ffffff",
+              borderRadius: 6,
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Download PDF
+          </a>
+        </div>
       </header>
 
       <p

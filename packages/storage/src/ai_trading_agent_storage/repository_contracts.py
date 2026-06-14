@@ -3258,6 +3258,48 @@ class SaveDividendEventRequest:
 
 
 @dataclass(frozen=True)
+class MonthlyReportArchiveRecord:
+    """Eén PDF maandrapport-archief row (V1.2 §BC)."""
+
+    archive_id: str
+    ibkr_account_ref: str
+    year: int
+    month: int
+    pdf_bytes: bytes
+    pdf_size_bytes: int
+    generated_at: datetime
+    source: str
+
+    def __post_init__(self) -> None:
+        for field_name in ("archive_id", "ibkr_account_ref", "source"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if not (1 <= self.month <= 12):
+            raise ValueError("month must be between 1 and 12")
+        if not (2000 <= self.year <= 2100):
+            raise ValueError("year must be between 2000 and 2100")
+
+
+@dataclass(frozen=True)
+class SaveMonthlyReportArchiveRequest:
+    archive_id: str
+    ibkr_account_ref: str
+    year: int
+    month: int
+    pdf_bytes: bytes
+    pdf_size_bytes: int
+    generated_at: datetime
+    source: str
+
+    def __post_init__(self) -> None:
+        for field_name in ("archive_id", "ibkr_account_ref", "source"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if not (1 <= self.month <= 12):
+            raise ValueError("month must be between 1 and 12")
+        if not (2000 <= self.year <= 2100):
+            raise ValueError("year must be between 2000 and 2100")
+
+
+@dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.
 

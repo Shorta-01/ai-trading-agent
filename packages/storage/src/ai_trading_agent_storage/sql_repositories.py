@@ -75,6 +75,7 @@ from ai_trading_agent_storage.metadata import (
     market_data_snapshots,
     dividend_events,
     earnings_events,
+    monthly_report_archive,
     watchlist_preferences,
     prediction_diary_entries,
     market_data_latest_snapshots,
@@ -130,7 +131,9 @@ from ai_trading_agent_storage.repository_contracts import (
     EarningsEventRecord,
     OrchestratorScoringVerdictRecord,
     DividendEventRecord,
+    MonthlyReportArchiveRecord,
     SaveDividendEventRequest,
+    SaveMonthlyReportArchiveRequest,
     SaveEarningsEventRequest,
     SaveOrchestratorScoringVerdictRequest,
     SaveWatchlistPreferenceRequest,
@@ -3493,6 +3496,101 @@ class SqlAlchemyDividendEventRepository(_Base):
             records,
             dividend_events.name,
             f"{len(records)} dividend-events opgehaald.",
+        )
+
+
+class SqlAlchemyMonthlyReportArchiveRepository(_Base):
+    """Auto-PDF maandrapport-archief (V1.2 §BC)."""
+
+    def upsert(
+        self, request: SaveMonthlyReportArchiveRequest
+    ) -> StorageWriteResult:
+        # Delete-then-insert mirrors the DailyDigest pattern.
+        self._connection.execute(
+            monthly_report_archive.delete().where(
+                (
+                    monthly_report_archive.c.ibkr_account_ref
+                    == request.ibkr_account_ref
+                )
+                & (monthly_report_archive.c.year == request.year)
+                & (monthly_report_archive.c.month == request.month)
+            )
+        )
+        self._insert(monthly_report_archive, asdict(request))
+        return StorageWriteResult(
+            True,
+            request.archive_id,
+            monthly_report_archive.name,
+            True,
+            "Maandrapport-PDF opgeslagen.",
+        )
+
+    def get(
+        self, *, ibkr_account_ref: str, year: int, month: int
+    ) -> MonthlyReportArchiveRecord | None:
+        row = (
+            self._connection.execute(
+                select(monthly_report_archive)
+                .where(
+                    monthly_report_archive.c.ibkr_account_ref
+                    == ibkr_account_ref
+                )
+                .where(monthly_report_archive.c.year == year)
+                .where(monthly_report_archive.c.month == month)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return MonthlyReportArchiveRecord(**dict(row))
+
+    def list_for_account(
+        self, *, ibkr_account_ref: str
+    ) -> StorageListResult[MonthlyReportArchiveRecord]:
+        rows = (
+            self._connection.execute(
+                select(
+                    monthly_report_archive.c.archive_id,
+                    monthly_report_archive.c.ibkr_account_ref,
+                    monthly_report_archive.c.year,
+                    monthly_report_archive.c.month,
+                    monthly_report_archive.c.pdf_size_bytes,
+                    monthly_report_archive.c.generated_at,
+                    monthly_report_archive.c.source,
+                )
+                .where(
+                    monthly_report_archive.c.ibkr_account_ref
+                    == ibkr_account_ref
+                )
+                .order_by(
+                    monthly_report_archive.c.year.desc(),
+                    monthly_report_archive.c.month.desc(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(
+            MonthlyReportArchiveRecord(
+                archive_id=str(row["archive_id"]),
+                ibkr_account_ref=str(row["ibkr_account_ref"]),
+                year=int(row["year"]),
+                month=int(row["month"]),
+                # Bytes weggelaten in list-mode om bandwidth te
+                # besparen; caller die de PDF nodig heeft roept
+                # ``get`` aan.
+                pdf_bytes=b"",
+                pdf_size_bytes=int(row["pdf_size_bytes"]),
+                generated_at=row["generated_at"],
+                source=str(row["source"]),
+            )
+            for row in rows
+        )
+        return StorageListResult(
+            records,
+            monthly_report_archive.name,
+            f"{len(records)} maandrapport-archive entries opgehaald.",
         )
 
 

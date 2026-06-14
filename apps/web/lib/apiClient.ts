@@ -2724,6 +2724,33 @@ export const apiClient = {
       `/dividenden/${encodeURIComponent(dividendEventId)}`,
       "DELETE",
     ),
+  taxYearReportPdfUrl: (params?: { year?: number }) =>
+    `${API_BASE_URL}/belasting/jaaroverzicht.pdf${
+      params?.year ? `?year=${params.year}` : ""
+    }`,
+  monthlyReportPdfUrl: (params: { year: number; month: number }) =>
+    `${API_BASE_URL}/rapporten/maand.pdf?year=${params.year}&month=${params.month}`,
+  listArchive: () =>
+    getJson<{
+      title_nl: string;
+      help_nl: string;
+      items: {
+        archive_id: string;
+        year: number;
+        month: number;
+        pdf_size_bytes: number;
+        generated_at: string;
+        source: string;
+      }[];
+    }>("/rapporten/archief"),
+  generateArchive: (payload: { year: number; month: number }) =>
+    postJson<{
+      accepted: boolean;
+      archive_id: string;
+      pdf_size_bytes: number;
+    }>("/rapporten/archief/generate", payload),
+  archivePdfUrl: (params: { year: number; month: number }) =>
+    `${API_BASE_URL}/rapporten/archief/${params.year}/${params.month}`,
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,

@@ -15,6 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     MetaData,
     Numeric,
     Table,
@@ -1986,6 +1987,38 @@ Index(
     "ix_dividend_events_account_date",
     dividend_events.c.ibkr_account_ref,
     dividend_events.c.pay_date,
+)
+
+
+monthly_report_archive = Table(
+    "monthly_report_archive",
+    metadata,
+    Column("archive_id", Text, primary_key=True),
+    Column("ibkr_account_ref", Text, nullable=False),
+    Column("year", Integer, nullable=False),
+    Column("month", Integer, nullable=False),
+    Column("pdf_bytes", LargeBinary, nullable=False),
+    Column("pdf_size_bytes", Integer, nullable=False),
+    Column("generated_at", DateTime(timezone=True), nullable=False),
+    Column("source", Text, nullable=False),
+    CheckConstraint(
+        "month >= 1 AND month <= 12",
+        name="ck_monthly_report_archive_month_range",
+    ),
+    CheckConstraint(
+        "year >= 2000 AND year <= 2100",
+        name="ck_monthly_report_archive_year_range",
+    ),
+    UniqueConstraint(
+        "ibkr_account_ref", "year", "month",
+        name="uq_monthly_report_archive_account_year_month",
+    ),
+)
+Index(
+    "ix_monthly_report_archive_account_date",
+    monthly_report_archive.c.ibkr_account_ref,
+    monthly_report_archive.c.year,
+    monthly_report_archive.c.month,
 )
 
 
