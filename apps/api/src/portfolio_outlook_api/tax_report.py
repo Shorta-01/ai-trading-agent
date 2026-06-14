@@ -253,6 +253,8 @@ def _match_trades(
 
 def _aggregate_year(
     trades: Sequence[RealisedTradeRow],
+    *,
+    hit_target_pct: Decimal = HIT_RATE_TARGET_PCT,
 ) -> YearTotals:
     by_currency: dict[str, dict[str, Decimal]] = defaultdict(
         lambda: {"gross": Decimal(0), "tob": Decimal(0), "net": Decimal(0)}
@@ -266,7 +268,7 @@ def _aggregate_year(
         bucket["gross"] += trade.gross_local
         bucket["tob"] += trade.tob_buy_local + trade.tob_sell_local
         bucket["net"] += trade.net_local
-        if trade.net_pct_on_cost >= HIT_RATE_TARGET_PCT:
+        if trade.net_pct_on_cost >= hit_target_pct:
             hit += 1
         total_hold += trade.hold_days
         if earliest is None or trade.sell_date < earliest:
@@ -387,6 +389,7 @@ def build_tax_year_report(
     trading_capital_eur: Decimal | None = None,
     total_wealth_eur: Decimal | None = None,
     fx_conversion_available: bool = False,
+    profit_target_pct: Decimal = HIT_RATE_TARGET_PCT,
 ) -> TaxYearReport:
     """End-to-end report builder. Pure function — call from the API
     layer after fetching rows."""
@@ -396,7 +399,7 @@ def build_tax_year_report(
     # ``year`` post-match.
     matched = _match_trades(executions)
     in_year = tuple(t for t in matched if t.sell_date.year == year)
-    totals = _aggregate_year(in_year)
+    totals = _aggregate_year(in_year, hit_target_pct=profit_target_pct)
     monthly = _monthly_breakdown(year, in_year)
     householder = _good_householder_metrics(
         in_year,

@@ -6664,6 +6664,7 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             ),
             "software_paused": record.software_paused,
             "software_paused_at": record.software_paused_at,
+            "profit_target_net_pct": record.profit_target_net_pct,
         }
         existing = (
             self._connection.execute(
@@ -6916,6 +6917,7 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
         ),
         software_paused=bool(row.get("software_paused") or False),
         software_paused_at=row.get("software_paused_at"),
+        profit_target_net_pct=_to_decimal(row.get("profit_target_net_pct")),
     )
 
 

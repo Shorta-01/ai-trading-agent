@@ -33,6 +33,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.profit_target import get_profit_target_pct
 from portfolio_outlook_api.tax_report import (
     ExecutionRow,
     TaxYearReport,
@@ -280,7 +281,11 @@ def get_jaaroverzicht(year: int | None = None) -> TaxYearReportResponse:
         return _to_response(_empty_report(resolved_year))
 
     executions = _fetch_executions(resolved_year)
-    report = build_tax_year_report(year=resolved_year, executions=executions)
+    report = build_tax_year_report(
+        year=resolved_year,
+        executions=executions,
+        profit_target_pct=get_profit_target_pct(),
+    )
     return _to_response(report)
 
 
@@ -296,7 +301,11 @@ def get_jaaroverzicht_csv(year: int | None = None) -> Response:
         report = _empty_report(resolved_year)
     else:
         executions = _fetch_executions(resolved_year)
-        report = build_tax_year_report(year=resolved_year, executions=executions)
+        report = build_tax_year_report(
+            year=resolved_year,
+            executions=executions,
+            profit_target_pct=get_profit_target_pct(),
+        )
 
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";")

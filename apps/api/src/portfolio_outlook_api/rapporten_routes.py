@@ -41,6 +41,7 @@ from portfolio_outlook_api.monthly_report import (
     VerdictSnapshot,
     build_monthly_report,
 )
+from portfolio_outlook_api.profit_target import get_profit_target_pct
 from portfolio_outlook_api.tax_report import ExecutionRow
 
 logger = logging.getLogger(__name__)
@@ -402,6 +403,7 @@ def get_maandrapport(
         action_drafts=drafts,
         verdicts=verdicts,
         open_positions_count=open_count,
+        profit_target_pct=get_profit_target_pct(),
     )
     return _to_response(report)
 

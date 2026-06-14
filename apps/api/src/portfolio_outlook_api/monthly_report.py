@@ -175,6 +175,7 @@ def build_monthly_report(
     verdicts: Sequence[VerdictSnapshot],
     open_positions_count: int,
     baseline_monthly_eur: Decimal = DEFAULT_BASELINE_MONTHLY_EUR,
+    profit_target_pct: Decimal = Decimal("4"),
 ) -> MonthlyReport:
     if month < 1 or month > 12:
         raise ValueError("month must be between 1 and 12")
@@ -211,9 +212,8 @@ def build_monthly_report(
         if trade_count
         else 0
     )
-    hit_target = Decimal("4")
     hit_count = sum(
-        1 for t in in_month if t.net_pct_on_cost >= hit_target
+        1 for t in in_month if t.net_pct_on_cost >= profit_target_pct
     )
     hit_rate = (
         round(hit_count / trade_count * 100, 1) if trade_count else 0.0
