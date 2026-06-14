@@ -9,10 +9,10 @@ import pytest
 from sqlalchemy import create_engine, text
 
 from ai_trading_agent_storage import (
+    WITHHOLDING_DEFAULTS_BY_COUNTRY,
     DividendEventRecord,
     SaveDividendEventRequest,
     SqlAlchemyDividendEventRepository,
-    WITHHOLDING_DEFAULTS_BY_COUNTRY,
 )
 from ai_trading_agent_storage.metadata import metadata
 from ai_trading_agent_storage.migration_readiness import (
