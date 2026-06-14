@@ -10896,6 +10896,80 @@
         "title": "RiskLimitsResponse",
         "type": "object"
       },
+      "RunbookItemResponse": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "label_nl": {
+            "title": "Label Nl",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "value_nl": {
+            "title": "Value Nl",
+            "type": "string"
+          },
+          "what_it_means_nl": {
+            "title": "What It Means Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "group",
+          "label_nl",
+          "status",
+          "value_nl",
+          "what_it_means_nl"
+        ],
+        "title": "RunbookItemResponse",
+        "type": "object"
+      },
+      "RunbookResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunbookItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "ready_for_paper_go_live": {
+            "title": "Ready For Paper Go Live",
+            "type": "boolean"
+          },
+          "summary_nl": {
+            "title": "Summary Nl",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "ready_for_paper_go_live",
+          "summary_nl",
+          "items"
+        ],
+        "title": "RunbookResponse",
+        "type": "object"
+      },
       "SavePreferenceRequest": {
         "properties": {
           "account_id": {
@@ -21141,6 +21215,25 @@
           }
         },
         "summary": "Create User Note"
+      }
+    },
+    "/runbook": {
+      "get": {
+        "description": "Read-only operator-checklist voor go-live readiness.\n\nDe endpoint zelf wijzigt niets \u2014 pure introspectie op\n``settings``. Veilig om vaak te lezen (geen DB roundtrip per\nitem).",
+        "operationId": "get_runbook_runbook_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunbookResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Runbook"
       }
     },
     "/scheduler/jobs": {

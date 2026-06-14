@@ -3185,6 +3185,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Runbook
+         * @description Read-only operator-checklist voor go-live readiness.
+         *
+         *     De endpoint zelf wijzigt niets — pure introspectie op
+         *     ``settings``. Veilig om vaak te lezen (geen DB roundtrip per
+         *     item).
+         */
+        get: operations["get_runbook_runbook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduler/jobs": {
         parameters: {
             query?: never;
@@ -8155,6 +8179,34 @@ export interface components {
             soft_drawdown_pct: string;
             /** Soft Drawdown Window Days */
             soft_drawdown_window_days: number;
+        };
+        /** RunbookItemResponse */
+        RunbookItemResponse: {
+            /** Code */
+            code: string;
+            /** Group */
+            group: string;
+            /** Label Nl */
+            label_nl: string;
+            /** Status */
+            status: string;
+            /** Value Nl */
+            value_nl: string;
+            /** What It Means Nl */
+            what_it_means_nl: string;
+        };
+        /** RunbookResponse */
+        RunbookResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["RunbookItemResponse"][];
+            /** Ready For Paper Go Live */
+            ready_for_paper_go_live: boolean;
+            /** Summary Nl */
+            summary_nl: string;
+            /** Title Nl */
+            title_nl: string;
         };
         /** SavePreferenceRequest */
         SavePreferenceRequest: {
@@ -14717,6 +14769,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_runbook_runbook_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunbookResponse"];
                 };
             };
         };
