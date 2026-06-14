@@ -36,7 +36,6 @@ from portfolio_outlook_worker.api_trigger import (
     trigger_monthly_archive_auto_generate,
     trigger_morning_chain,
     trigger_morning_explanation_batch,
-    trigger_reconciliation_sweep,
     trigger_sell_signal_sweep,
 )
 from portfolio_outlook_worker.config import (
@@ -727,9 +726,89 @@ class PortfolioScheduler:
         )
 
     def _on_reconciliation_sweep_trigger(self) -> None:
-        trigger_reconciliation_sweep(
-            base_url=self._scheduler_settings.api_base_url,
-            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        """V1.2 §BM / GAPS.md P0-3 — in-process call to
+        ``IbkrReconciler.tick()``.
+
+        Earlier iterations of this PR called the legacy
+        ``POST /action-drafts/reconcile`` endpoint, which only does
+        snapshot-based action_draft.status transitions and never writes
+        the audit queues the ``/admin/reconciliation`` dashboard reads.
+        The in-process runner builds the full 3-pass reconciler from
+        the worker's read-only TWS session, so Pass A / Pass B / Pass C
+        rows now appear in ``reconciliation_run_audit``,
+        ``unmatched_execution_audit`` and ``manual_review_queue``.
+        """
+
+        if (
+            not self._storage_settings.enabled
+            or not self._storage_settings.database_url
+        ):
+            return
+        ibkr_account_id = self._ibkr_settings.account_id
+        if ibkr_account_id is None:
+            logger.info(
+                "reconciler tick skipped: geen IBKR account_id geconfigureerd"
+            )
+            return
+        ib_client = self._gateway.get_read_ib_client()
+        if ib_client is None:
+            logger.info(
+                "reconciler tick skipped: IBKR gateway niet verbonden"
+            )
+            return
+
+        from datetime import timedelta as _timedelta
+
+        from portfolio_outlook_worker.ibkr_reconciliation.reconciler_runner import (
+            build_storage_provider,
+            run_reconciler_tick,
+        )
+
+        storage_provider = build_storage_provider(
+            self._storage_settings.database_url
+        )
+        pass_c_timeout_cutoff = _timedelta(
+            hours=max(
+                1, self._ibkr_settings.reconciler_pass_c_timeout_hours
+            )
+        )
+        # Cast keeps mypy honest about the gateway → ReadCapable bridge:
+        # the SDK's IB and the worker test fakes structurally satisfy
+        # ReadCapableIbClientProtocol (reqExecutions + trades), but the
+        # IbClientProtocol the gateway exposes is a permissive subset.
+        from typing import cast as _cast
+
+        from portfolio_outlook_worker.ibkr_reconciliation.ibkr_reconciliation_adapter import (
+            ReadCapableIbClientProtocol as _ReadCapable,
+        )
+
+        result = run_reconciler_tick(
+            storage_provider=storage_provider,
+            ib_client=_cast(_ReadCapable, ib_client),
+            gateway=self._gateway,
+            lock_factory=_build_lock,
+            ibkr_account_id=ibkr_account_id,
+            pass_c_timeout_cutoff=pass_c_timeout_cutoff,
+        )
+        if result is None:
+            return
+        logger.info(
+            "reconciler tick: mode=%s pass_a=%d pass_b=%d pass_c=%d",
+            result.mode_detected,
+            result.pass_a_orphaned_count,
+            result.pass_b_stale_count,
+            result.pass_c_timeout_count,
+        )
+        self._track_sweep_outcome(
+            kind="reconciliation",
+            mode=(
+                "error" if result.mode_detected == "error" else "ok"
+            ),
+            error_message=(
+                str(result.error_details_json)
+                if result.error_details_json
+                else None
+            ),
         )
 
     # ---- order sweeps (T-045 §1-3, gated + default-off) -----------

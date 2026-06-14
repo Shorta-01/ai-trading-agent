@@ -108,26 +108,6 @@ def trigger_monthly_archive_auto_generate(
     )
 
 
-def trigger_reconciliation_sweep(
-    *, base_url: str | None, timeout_seconds: float
-) -> dict[str, Any] | None:
-    """POST ``/action-drafts/reconcile`` on the API (V1.2 §BM / GAPS.md P0-3).
-
-    CLAUDE.md §2 audit-trail-doctrine — filled orders moeten
-    automatisch hun ``action_draft.status`` van ``submitted`` naar
-    ``filled`` / ``cancelled`` / ``rejected`` zien overgaan op basis
-    van de laatste IBKR-sync. Tot deze cron werd de reconciliatie
-    alleen handmatig getriggerd via dashboard. Audit-trail bleef
-    achter en de operator zag stale "submitted" badges.
-
-    De endpoint is idempotent: een tick zonder nieuwe IBKR-sync of
-    zonder veranderde submissions retourneert ``submissions_unchanged
-    == submissions_total`` zonder fout. Veilig om frequent te firen.
-    """
-
-    return _post(base_url, "/action-drafts/reconcile", timeout_seconds)
-
-
 def compose_alert_summary(
     *,
     base_url: str | None,
@@ -200,6 +180,5 @@ __all__ = [
     "trigger_monthly_archive_auto_generate",
     "trigger_morning_chain",
     "trigger_morning_explanation_batch",
-    "trigger_reconciliation_sweep",
     "trigger_sell_signal_sweep",
 ]
