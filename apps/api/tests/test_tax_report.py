@@ -45,7 +45,7 @@ def test_returns_empty_report_when_no_executions() -> None:
     assert report.year_totals.trade_count == 0
     assert len(report.monthly_points) == 12
     assert report.good_householder.trades_per_year == 0
-    assert any("Dividenden" in note for note in report.notes_nl)
+    assert any("dividenden" in note.lower() for note in report.notes_nl)
 
 
 def test_matches_one_buy_to_one_sell_with_correct_tob() -> None:

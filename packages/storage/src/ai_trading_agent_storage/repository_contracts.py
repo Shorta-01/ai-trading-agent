@@ -3180,6 +3180,83 @@ class SaveWatchlistPreferenceRequest:
             )
 
 
+# Verdrag-tarieven voor bronbelasting (V1.2 §BA / CLAUDE.md §12).
+WITHHOLDING_DEFAULTS_BY_COUNTRY: dict[str, Decimal] = {
+    "US": Decimal("15"),
+    "NL": Decimal("15"),
+    "FR": Decimal("12.8"),
+    "BE": Decimal("0"),
+}
+
+
+@dataclass(frozen=True)
+class DividendEventRecord:
+    """One operator-getrackt dividend (V1.2 §BA).
+
+    V1 heeft geen broker-dividend-feed; operator vult dit zelf in.
+    De Belgische 30 % roerende voorheffing-regularisatie wordt op
+    rapport-niveau berekend, dus we slaan alleen op wat de operator
+    binnenkreeg.
+    """
+
+    dividend_event_id: str
+    ibkr_account_ref: str
+    symbol: str
+    isin: str | None
+    pay_date: date
+    currency_local: str
+    gross_local: Decimal
+    withholding_pct: Decimal
+    withholding_local: Decimal
+    net_local: Decimal
+    country_code: str | None
+    note: str | None
+    created_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "dividend_event_id",
+            "ibkr_account_ref",
+            "symbol",
+            "currency_local",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.gross_local < 0:
+            raise ValueError("gross_local must be >= 0")
+        if not (Decimal(0) <= self.withholding_pct <= Decimal(100)):
+            raise ValueError("withholding_pct must be between 0 and 100")
+
+
+@dataclass(frozen=True)
+class SaveDividendEventRequest:
+    dividend_event_id: str
+    ibkr_account_ref: str
+    symbol: str
+    isin: str | None
+    pay_date: date
+    currency_local: str
+    gross_local: Decimal
+    withholding_pct: Decimal
+    withholding_local: Decimal
+    net_local: Decimal
+    country_code: str | None
+    note: str | None
+    created_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "dividend_event_id",
+            "ibkr_account_ref",
+            "symbol",
+            "currency_local",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.gross_local < 0:
+            raise ValueError("gross_local must be >= 0")
+        if not (Decimal(0) <= self.withholding_pct <= Decimal(100)):
+            raise ValueError("withholding_pct must be between 0 and 100")
+
+
 @dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.

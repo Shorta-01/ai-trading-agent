@@ -30,6 +30,9 @@ from portfolio_outlook_api.decision_package_routes import (
 from portfolio_outlook_api.digest_routes import (
     router as digest_router,
 )
+from portfolio_outlook_api.dividenden_routes import (
+    router as dividenden_router,
+)
 from portfolio_outlook_api.earnings_routes import (
     router as earnings_router,
 )
@@ -234,6 +237,7 @@ app.include_router(runtime_config_router)
 app.include_router(suggestions_grid_router)
 app.include_router(market_events_router)
 app.include_router(digest_router)
+app.include_router(dividenden_router)
 app.include_router(orchestrator_verdicts_router)
 app.include_router(pauze_router)
 app.include_router(notification_router)

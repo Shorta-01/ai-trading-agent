@@ -954,6 +954,21 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "EUR-equivalent helpers lezen deze waarde."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0076_dividend_events",
+        previous_revision_id="0075_runtime_config_profit_target",
+        filename="0076_dividend_events.py",
+        label_nl="Manueel dividenden-register",
+        description_nl=(
+            "Voegt de ``dividend_events`` tabel toe voor "
+            "operator-getrackte dividenden (V1.2 §BA / CLAUDE.md "
+            "§12 follow-up). V1 heeft geen dividend-feed; tot die "
+            "er is logt de operator dividenden zelf. Per dividend: "
+            "symbol/ISIN, pay-date, bruto, bronbelasting-tarief "
+            "(verdrag-defaults US 15 %, NL 15 %, FR 12,8 %, BE 0 %), "
+            "netto. /belasting en /rapporten lezen deze rijen."
+        ),
+    ),
 )
 
 

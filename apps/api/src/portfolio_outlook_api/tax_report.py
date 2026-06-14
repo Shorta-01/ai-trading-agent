@@ -390,6 +390,7 @@ def build_tax_year_report(
     total_wealth_eur: Decimal | None = None,
     fx_conversion_available: bool = False,
     profit_target_pct: Decimal = HIT_RATE_TARGET_PCT,
+    dividends: Sequence[dict[str, object]] | None = None,
 ) -> TaxYearReport:
     """End-to-end report builder. Pure function — call from the API
     layer after fetching rows."""
@@ -413,17 +414,20 @@ def build_tax_year_report(
             "lokale munt. De accountant past zelf de FX-koers van de "
             "transactiedag toe."
         )
-    notes.append(
-        "Dividenden zijn nog niet opgenomen — V1 heeft geen "
-        "dividend-feed; opvolgsessie voegt dit toe."
-    )
+    dividend_tuple = tuple(dividends or ())
+    if not dividend_tuple:
+        notes.append(
+            "Geen dividenden geregistreerd voor dit jaar — voeg ze "
+            "manueel toe via /dividenden zodat de Belgische 30 % "
+            "roerende voorheffing-regularisatie kloppend is."
+        )
     return TaxYearReport(
         year=year,
         realised_trades=in_year,
         year_totals=totals,
         monthly_points=tuple(monthly),
         good_householder=householder,
-        dividends=(),
+        dividends=dividend_tuple,
         fx_conversion_available=fx_conversion_available,
         notes_nl=tuple(notes),
     )

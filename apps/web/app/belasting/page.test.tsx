@@ -16,11 +16,17 @@ import type {
 
 const getTaxYearReport = vi.fn();
 const taxYearReportCsvUrl = vi.fn();
+const listDividenden = vi.fn();
+const createDividend = vi.fn();
+const deleteDividend = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     getTaxYearReport: (...a: unknown[]) => getTaxYearReport(...a),
     taxYearReportCsvUrl: (...a: unknown[]) => taxYearReportCsvUrl(...a),
+    listDividenden: (...a: unknown[]) => listDividenden(...a),
+    createDividend: (...a: unknown[]) => createDividend(...a),
+    deleteDividend: (...a: unknown[]) => deleteDividend(...a),
   },
 }));
 
@@ -102,8 +108,26 @@ function makeReport(
 
 beforeEach(() => {
   getTaxYearReport.mockReset();
-  taxYearReportCsvUrl.mockReset();
   taxYearReportCsvUrl.mockReturnValue("/belasting/jaaroverzicht.csv");
+  listDividenden.mockReset();
+  listDividenden.mockResolvedValue({
+    ok: true as const,
+    data: {
+      title_nl: "Dividenden 2026",
+      help_nl: "help",
+      year: 2026,
+      items: [],
+      totals: {
+        gross_by_currency: {},
+        withholding_by_currency: {},
+        net_by_currency: {},
+        count: 0,
+      },
+      treaty_defaults_pct_by_country: { US: "15" },
+    },
+  });
+  createDividend.mockReset();
+  deleteDividend.mockReset();
 });
 
 afterEach(() => cleanup());
@@ -268,7 +292,7 @@ describe("BelastingPage", () => {
     });
     render(<BelastingPage />);
     expect(
-      await screen.findByTestId("tax-dividends-empty"),
+      await screen.findByTestId("tax-dividends-info"),
     ).toBeInTheDocument();
   });
 });

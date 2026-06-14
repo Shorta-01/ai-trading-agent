@@ -16,6 +16,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
+import { DividendenManager } from "@/components/DividendenManager";
 import {
   apiClient,
   type TaxRealisedTrade,
@@ -441,13 +442,18 @@ export default function BelastingPage() {
       >
         <h2 style={{ marginTop: 0 }}>Ontvangen dividenden</h2>
         <p
-          data-testid="tax-dividends-empty"
+          data-testid="tax-dividends-info"
           style={{ fontStyle: "italic", color: "#6b7280", fontSize: 13 }}
         >
-          Dividenden-feed is in V1 nog niet beschikbaar. Volgende slice
-          voegt bronbelasting-tracking toe (US 15 % / NL 15 % / FR 12,8 %)
-          met een Belgische 30 % roerende voorheffing-regularisatie.
+          V1 heeft geen broker-dividend-feed; je registreert dividenden
+          handmatig hieronder. De bronbelasting wordt automatisch
+          ingevuld volgens verdrag-tarieven (US 15 %, NL 15 %, FR 12,8 %,
+          BE 0 %). Belgische 30 % roerende voorheffing-regularisatie
+          komt op rapportniveau van je accountant.
         </p>
+        <div style={{ marginTop: 12 }}>
+          <DividendenManager year={year} />
+        </div>
       </section>
     </main>
   );

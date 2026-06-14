@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from ai_trading_agent_storage import (
+    SqlAlchemyDividendEventRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -193,6 +194,45 @@ def _to_response(report: TaxYearReport) -> TaxYearReportResponse:
     )
 
 
+def _fetch_dividends(year: int) -> list[dict[str, object]]:
+    """Return manually-tracked dividenden voor dit jaar als plain
+    dicts zodat de tax_report engine puur op data werkt."""
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return []
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemyDividendEventRepository(
+                checked.connection, checked.readiness
+            )
+            listed = repo.list_for_account(
+                ibkr_account_ref="default", year=year
+            )
+    except StorageConnectionError as exc:
+        logger.warning("belasting dividend lookup error: %s", exc)
+        return []
+    return [
+        {
+            "dividend_event_id": r.dividend_event_id,
+            "symbol": r.symbol,
+            "isin": r.isin,
+            "pay_date": r.pay_date.isoformat(),
+            "currency_local": r.currency_local,
+            "gross_local": str(r.gross_local),
+            "withholding_pct": str(r.withholding_pct),
+            "withholding_local": str(r.withholding_local),
+            "net_local": str(r.net_local),
+            "country_code": r.country_code,
+            "note": r.note,
+        }
+        for r in listed.records
+    ]
+
+
 def _fetch_executions(year: int) -> list[ExecutionRow]:
     """Read every execution from storage. We fetch the full table
     (not just the year) so FIFO matching works for sells that close
@@ -285,6 +325,7 @@ def get_jaaroverzicht(year: int | None = None) -> TaxYearReportResponse:
         year=resolved_year,
         executions=executions,
         profit_target_pct=get_profit_target_pct(),
+        dividends=_fetch_dividends(resolved_year),
     )
     return _to_response(report)
 
@@ -305,6 +346,7 @@ def get_jaaroverzicht_csv(year: int | None = None) -> Response:
             year=resolved_year,
             executions=executions,
             profit_target_pct=get_profit_target_pct(),
+            dividends=_fetch_dividends(resolved_year),
         )
 
     buffer = io.StringIO()

@@ -34,7 +34,7 @@ def _seed_db(tmp_path) -> str:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0075_runtime_config_profit_target')"
+                "('0076_dividend_events')"
             )
         )
     engine.dispose()
@@ -218,7 +218,7 @@ def test_response_includes_notes_about_fx_and_dividends(tmp_path) -> None:  # ty
     body = _client(db).get("/belasting/jaaroverzicht?year=2026").json()
     notes = body["notes_nl"]
     assert any("EUR" in note for note in notes)
-    assert any("Dividenden" in note for note in notes)
+    assert any("dividenden" in note.lower() for note in notes)
 
 
 def test_only_sells_in_requested_year_are_returned(tmp_path) -> None:  # type: ignore[no-untyped-def]

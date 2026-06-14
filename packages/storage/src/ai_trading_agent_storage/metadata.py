@@ -1956,6 +1956,39 @@ Index(
 )
 
 
+dividend_events = Table(
+    "dividend_events",
+    metadata,
+    Column("dividend_event_id", Text, primary_key=True),
+    Column("ibkr_account_ref", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("isin", Text, nullable=True),
+    Column("pay_date", Date, nullable=False),
+    Column("currency_local", Text, nullable=False),
+    Column("gross_local", MONEY_NUMERIC, nullable=False),
+    Column("withholding_pct", MONEY_NUMERIC, nullable=False),
+    Column("withholding_local", MONEY_NUMERIC, nullable=False),
+    Column("net_local", MONEY_NUMERIC, nullable=False),
+    Column("country_code", Text, nullable=True),
+    Column("note", Text, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "gross_local >= 0",
+        name="ck_dividend_events_gross_non_negative",
+    ),
+    CheckConstraint(
+        "withholding_pct >= 0 AND withholding_pct <= 100",
+        name="ck_dividend_events_withholding_pct_range",
+    ),
+    CheckConstraint("symbol <> ''", name="ck_dividend_events_symbol_not_empty"),
+)
+Index(
+    "ix_dividend_events_account_date",
+    dividend_events.c.ibkr_account_ref,
+    dividend_events.c.pay_date,
+)
+
+
 daily_briefings = Table(
     "daily_briefings",
     metadata,

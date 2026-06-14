@@ -212,7 +212,7 @@ def _seed_db(tmp_path, *, with_position: bool = False) -> str:  # type: ignore[n
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0075_runtime_config_profit_target')"
+                "('0076_dividend_events')"
             )
         )
         dp_repo = SqlAlchemyDecisionPackageRepository(conn, _report(True))
@@ -276,7 +276,7 @@ def test_post_blocks_when_no_cash_snapshot(tmp_path) -> None:  # type: ignore[no
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0075_runtime_config_profit_target')"
+                "('0076_dividend_events')"
             )
         )
         dp_repo = SqlAlchemyDecisionPackageRepository(conn, _report(True))
@@ -529,7 +529,7 @@ def test_post_blocks_houden_package(tmp_path) -> None:  # type: ignore[no-untype
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0075_runtime_config_profit_target')"
+                "('0076_dividend_events')"
             )
         )
         dp_repo = SqlAlchemyDecisionPackageRepository(conn, _report(True))
@@ -563,7 +563,7 @@ def test_sell_verkopen_uses_held_quantity(tmp_path) -> None:  # type: ignore[no-
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0075_runtime_config_profit_target')"
+                "('0076_dividend_events')"
             )
         )
         dp_repo = SqlAlchemyDecisionPackageRepository(conn, _report(True))
