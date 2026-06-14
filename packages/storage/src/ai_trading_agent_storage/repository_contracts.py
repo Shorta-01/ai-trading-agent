@@ -1837,6 +1837,9 @@ class MarketDataSnapshotRepository(Protocol):
     def list_latest_market_data_snapshots_by_conids(
         self, conids: tuple[str, ...]
     ) -> StorageListResult[MarketDataLatestSnapshotRecord]: ...
+    def list_latest_market_data_snapshots_by_symbols(
+        self, symbols: tuple[str, ...]
+    ) -> StorageListResult[MarketDataLatestSnapshotRecord]: ...
     def get_latest_by_ibkr_conid(
         self,
         ibkr_conid: str,

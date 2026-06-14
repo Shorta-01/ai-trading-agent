@@ -9,6 +9,7 @@ from uuid import uuid4
 from ai_trading_agent_storage import (
     AssetActionDraftEventRecord,
     AssetActionDraftSubmissionRecord,
+    IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
     MarketDataBarRecord,
     PredictorBacktestRunRecord,
@@ -32,6 +33,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyResearchSourceArchiveRepository,
     SqlAlchemySchedulerRunRepository,
     SqlAlchemyUniverseScanRunRepository,
+    SqlAlchemyWatchlistPreferenceRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -966,6 +968,114 @@ def run_market_data_sync() -> dict[str, object]:
     }
 
 
+_FORECAST_FAVORITE_ACCOUNT_REF = "default"
+
+
+def _strip_exchange_suffix(symbol: str) -> str:
+    """Strip an EODHD-style exchange suffix from a favorite symbol.
+
+    The settings UI placeholder explicitly invites operators to type
+    ``ASML.AS`` (intent §AU / CLAUDE.md §5), but IBKR — and therefore
+    ``market_data_latest_snapshots.symbol`` — stores the bare ticker
+    (``ASML``) with the exchange on a separate column. Without
+    normalisation here the by-symbol lookup misses every suffixed
+    favorite and the forecast is silently skipped.
+
+    Only the last ``.suffix`` is dropped (EODHD convention puts the
+    exchange last). Symbols without a dot are returned unchanged.
+    """
+
+    stripped = symbol.strip()
+    head, sep, _tail = stripped.rpartition(".")
+    return head if sep else stripped
+
+
+def _build_favorite_positions(
+    *,
+    pref_repo: SqlAlchemyWatchlistPreferenceRepository,
+    market_repo: SqlAlchemyMarketDataSnapshotRepository,
+    held_positions: list[IbkrPositionSnapshotRecord],
+    sync_run_id: str,
+) -> list[IbkrPositionSnapshotRecord]:
+    """V1.2 §BR / CLAUDE.md §5: synthesise read-only position records
+    for operator favorites that aren't currently held.
+
+    Favorites are stored by symbol only, so we recover the conid /
+    currency / exchange from the most recent market_data_latest_snapshot
+    for each symbol. Favorites without any prior market_data row are
+    skipped silently — the forecast cycle can't route them through
+    EODHD without an exchange suffix, and the dashboard widget will
+    surface that gap separately.
+
+    Favorites carrying an EODHD-style exchange suffix (``ASML.AS``)
+    are normalised to the bare ticker before lookup so they match the
+    IBKR-formatted ``symbol`` column.
+
+    ``quantity`` is set to ``Decimal(0)`` so downstream consumers
+    (e.g. ``user_holds_position`` in the decision package) treat the
+    row as "watched, not held".
+    """
+
+    held_symbols = {
+        (pos.symbol or "").strip().upper()
+        for pos in held_positions
+        if pos.symbol
+    }
+    favorites_result = pref_repo.list_for_account(
+        ibkr_account_ref=_FORECAST_FAVORITE_ACCOUNT_REF, kind="favorite"
+    )
+    # Dedup on the suffix-stripped form so ``ASML`` and ``ASML.AS``
+    # collapse onto one lookup, and so a favorite that matches a
+    # held position (regardless of how it was typed) is filtered out.
+    lookup_symbols: list[str] = []
+    seen_bare: set[str] = set()
+    for pref in favorites_result.records:
+        if not pref.symbol:
+            continue
+        bare = _strip_exchange_suffix(pref.symbol).upper()
+        if not bare or bare in held_symbols or bare in seen_bare:
+            continue
+        seen_bare.add(bare)
+        lookup_symbols.append(bare)
+    if not lookup_symbols:
+        return []
+
+    snapshots_result = market_repo.list_latest_market_data_snapshots_by_symbols(
+        tuple(lookup_symbols)
+    )
+    snapshots_by_symbol = {
+        snap.symbol: snap
+        for snap in snapshots_result.records
+        if snap.symbol is not None
+    }
+
+    now = datetime.now(UTC)
+    synthetic: list[IbkrPositionSnapshotRecord] = []
+    for bare_symbol in lookup_symbols:
+        snap = snapshots_by_symbol.get(bare_symbol)
+        if snap is None or not snap.ibkr_conid:
+            continue
+        synthetic.append(
+            IbkrPositionSnapshotRecord(
+                snapshot_id=f"favorite_{snap.ibkr_conid}",
+                sync_run_id=sync_run_id,
+                account_ref=_FORECAST_FAVORITE_ACCOUNT_REF,
+                conid=snap.ibkr_conid,
+                symbol=bare_symbol,
+                security_type=snap.asset_class or "STK",
+                currency=snap.currency or "USD",
+                exchange=snap.exchange,
+                primary_exchange=snap.primary_exchange,
+                quantity=Decimal(0),
+                average_cost=None,
+                received_at=now,
+                stored_at=now,
+                ibkr_account_id=None,
+            )
+        )
+    return synthetic
+
+
 def _build_blocked_forecast_response(
     *, reason: str, status_nl: str, help_nl: str
 ) -> dict[str, object]:
@@ -1059,13 +1169,33 @@ def run_forecast_sync() -> dict[str, object]:
                     ),
                 )
             positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            # V1.2 §BR / CLAUDE.md §5: extend the forecast universe with
+            # operator favorites so the dashboard widget can show live
+            # confidence even when the symbol is not (yet) held. We do
+            # this by appending synthetic IBKR position rows reconstructed
+            # from the latest market_data_snapshot per favorite symbol
+            # (quantity=0, average_cost=None). Held positions take
+            # precedence — duplicates on conid are dropped downstream by
+            # ``_unique_positions``.
+            pref_repo = SqlAlchemyWatchlistPreferenceRepository(
+                checked.connection, checked.readiness
+            )
+            favorite_positions = _build_favorite_positions(
+                pref_repo=pref_repo,
+                market_repo=market_repo,
+                held_positions=positions,
+                sync_run_id=latest_run.sync_run_id,
+            )
+            positions.extend(favorite_positions)
             if not positions:
                 return _build_blocked_forecast_response(
                     reason="no_positions",
-                    status_nl="Geen posities in laatste IBKR-sync",
+                    status_nl="Geen posities of favorieten beschikbaar",
                     help_nl=(
-                        "De laatste IBKR-sync bevat geen posities; voer een "
-                        "nieuwe sync uit zodra je posities aanhoudt."
+                        "De laatste IBKR-sync bevat geen posities en er "
+                        "zijn geen favorieten geconfigureerd; voer een "
+                        "nieuwe sync uit of voeg favorieten toe via "
+                        "Instellingen → Watchlist."
                     ),
                 )
             conids = tuple(p.conid for p in positions if p.conid)
