@@ -23,7 +23,7 @@ services:
       context: ../..
       dockerfile: apps/api/Dockerfile
     env_file:
-      - .env.example
+      - .env
     environment:
       API_ENVIRONMENT: ${ENVIRONMENT:-development}
       API_PAPER_ONLY_MODE: ${PAPER_ONLY_MODE:-true}
@@ -53,7 +53,7 @@ services:
       context: ../..
       dockerfile: apps/worker/Dockerfile
     env_file:
-      - .env.example
+      - .env
     environment:
       WORKER_ENVIRONMENT: ${ENVIRONMENT:-development}
       WORKER_PAPER_ONLY_MODE: ${PAPER_ONLY_MODE:-true}
@@ -84,7 +84,7 @@ services:
       context: ../..
       dockerfile: apps/web/Dockerfile
     env_file:
-      - .env.example
+      - .env
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
@@ -106,7 +106,7 @@ services:
   postgres:
     image: postgres:16.4
     env_file:
-      - .env.example
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ai_trading_agent}
       POSTGRES_USER: ${POSTGRES_USER:-ai_trading_agent}
