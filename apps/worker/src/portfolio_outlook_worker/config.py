@@ -148,6 +148,15 @@ class SchedulerSettings(BaseModel):
     monthly_archive_auto_generate_enabled: bool = False
     monthly_archive_auto_generate_cron: str = "15 0 1 * *"
 
+    # Macro feed refresh trigger — V1.2 §BT / GAPS.md P1-10.
+    # CLAUDE.md §7.2 macro-regime gate vereist verse VIX + S&P 500
+    # bars. Tot deze cron werd ``sync_macro_feed`` alleen handmatig
+    # aangeroepen. Default cron: dagelijks 17:30 Europe/Brussels —
+    # net na Euronext close, vóór 18:00 EU/US-overlap waar VIX nog
+    # actief beweegt. Werkdag-only.
+    macro_feed_refresh_enabled: bool = False
+    macro_feed_refresh_cron: str = "30 17 * * mon-fri"
+
     # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
     # cadence). When ``per_market_close_digest_enabled`` is True the
     # worker registers one cron fire per active market (see

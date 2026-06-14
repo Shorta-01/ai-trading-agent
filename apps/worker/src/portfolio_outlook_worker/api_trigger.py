@@ -77,6 +77,21 @@ def trigger_sell_signal_sweep(
     return _post(base_url, "/sell-signals/sweep", timeout_seconds)
 
 
+def trigger_macro_feed_refresh(
+    *, base_url: str | None, timeout_seconds: float
+) -> dict[str, Any] | None:
+    """POST ``/markets/macro-snapshot/refresh`` on the API (V1.2 §BT).
+
+    GAPS.md P1-10 — verse VIX + SPX bars zijn voorwaardelijk voor
+    een correcte macro-regime gate (CLAUDE.md §7.2). Tot deze cron
+    moest de operator manueel ``sync_macro_feed()`` aanroepen.
+    """
+
+    return _post(
+        base_url, "/markets/macro-snapshot/refresh", timeout_seconds
+    )
+
+
 def trigger_monthly_archive_auto_generate(
     *, base_url: str | None, timeout_seconds: float
 ) -> dict[str, Any] | None:
@@ -161,6 +176,7 @@ def _post(
 __all__ = [
     "compose_alert_summary",
     "trigger_ibkr_sync",
+    "trigger_macro_feed_refresh",
     "trigger_monthly_archive_auto_generate",
     "trigger_morning_chain",
     "trigger_morning_explanation_batch",
