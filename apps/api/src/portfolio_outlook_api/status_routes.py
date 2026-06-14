@@ -3300,9 +3300,11 @@ def run_morning_chain_manually() -> dict[str, object]:
 
     from portfolio_outlook_api.morning_chain import (
         MorningChainFailed,
-        build_default_morning_chain_legs,
         run_morning_chain,
         serialize_morning_chain_result,
+    )
+    from portfolio_outlook_api.morning_chain_legs_wiring import (
+        build_morning_chain_legs_with_real_overrides,
     )
     from portfolio_outlook_api.scheduler import (
         DAILY_BRIEFING_JOB_NAME,
@@ -3341,7 +3343,12 @@ def run_morning_chain_manually() -> dict[str, object]:
             "run_id": None,
         }
 
-    legs = build_default_morning_chain_legs(settings)
+    # V1.2 §BG — gebruik dezelfde wiring-helper als het legacy
+    # scheduler-pad zodat de earnings-calendar + orchestrator-scoring
+    # legs door de real EODHD-backed implementaties worden uitgevoerd
+    # (i.p.v. de no-op stubs) wanneer de operator de flags heeft
+    # ingeschakeld.
+    legs = build_morning_chain_legs_with_real_overrides(settings)
     storage_provider = StorageConnectionProvider(
         build_database_connection_settings(storage.database_url)
     )
