@@ -21,6 +21,7 @@ import { PauzeStrip } from "@/components/PauzeStrip";
 import { SellSignalCards } from "@/components/SellSignalCards";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { MorningStatusStrip } from "@/components/MorningStatusStrip";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { NavSparkline } from "@/components/NavSparkline";
 import { OpenOrdersPanel } from "@/components/OpenOrdersPanel";
 import { OrchestratorVerdictsSummary } from "@/components/OrchestratorVerdictsSummary";
@@ -47,6 +48,7 @@ export default function HomePage() {
   return (
     <main className="page-wrap">
       <PauzeStrip />
+      <OnboardingChecklist />
       <MacroRegimeStrip />
       <MorningStatusStrip />
       <LastVisitDiffStrip />
