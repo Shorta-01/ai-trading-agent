@@ -1014,6 +1014,19 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "``(series_code, bar_date)`` zodat refetch upsert."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0080_dashboard_query_indexes",
+        previous_revision_id="0079_macro_index_snapshots",
+        filename="0080_dashboard_query_indexes.py",
+        label_nl="Dashboard-query indexes",
+        description_nl=(
+            "Voegt 7 covering indexes toe op de meest gequerysde "
+            "kolommen (status + created_at + occurred_at + "
+            "generated_at + fetched_at) zodat dashboard-pagina's "
+            "ook bij groeiende data snel blijven. Geen schema-"
+            "wijziging. P2-6 / GAPS.md."
+        ),
+    ),
 )
 
 
