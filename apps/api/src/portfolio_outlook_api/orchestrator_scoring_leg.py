@@ -391,6 +391,20 @@ def build_real_orchestrator_scoring_leg(
                     "`orchestrator_scoring_enabled` staat uit."
                 ),
             )
+        # V1.2 §AY — software-pauze blokkeert de BUY-leg. SELL-
+        # monitoring zit niet in deze chain (eigen sweep), dus die
+        # blijft draaien zoals CLAUDE.md §11 vraagt.
+        from portfolio_outlook_api.pauze_routes import is_software_paused
+        if is_software_paused():
+            return MorningChainLegOutcome(
+                leg_name=LEG_ORCHESTRATOR_SCORING,
+                status=LEG_STATUS_SKIPPED,
+                failure_code=None,
+                detail_nl=(
+                    "Orchestrator scoring overgeslagen — software is "
+                    "gepauzeerd (CLAUDE.md §11)."
+                ),
+            )
         storage = api_settings.storage
         if not storage.enabled or not storage.database_url:
             return MorningChainLegOutcome(

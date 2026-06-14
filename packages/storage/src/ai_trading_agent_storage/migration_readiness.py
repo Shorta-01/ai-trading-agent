@@ -925,6 +925,21 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "symbol, kind)`` maakt toggle-acties idempotent."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0074_runtime_config_software_pause",
+        previous_revision_id="0073_watchlist_preferences",
+        filename="0074_runtime_config_software_pause.py",
+        label_nl="Pauze-modus toggle",
+        description_nl=(
+            "Voegt ``software_paused`` (bool) en "
+            "``software_paused_at`` (timestamp) toe aan "
+            "``runtime_config`` (CLAUDE.md §11 / V1.2 §AY). Bij "
+            "pauze stopt de morning-chain de BUY-leg maar SELL-"
+            "monitoring blijft draaien — operator wil geen +4 % "
+            "hit missen. Eén row, geen aparte audit-tabel: de "
+            "operator pauzeert niet vaak en geschiedenis is V2."
+        ),
+    ),
 )
 
 

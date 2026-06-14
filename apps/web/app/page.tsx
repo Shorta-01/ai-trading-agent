@@ -17,6 +17,7 @@ import { EarningsThisWeekStrip } from "@/components/EarningsThisWeekStrip";
 import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget";
 import { LastVisitDiffStrip } from "@/components/LastVisitDiffStrip";
 import { MacroRegimeStrip } from "@/components/MacroRegimeStrip";
+import { PauzeStrip } from "@/components/PauzeStrip";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { MorningStatusStrip } from "@/components/MorningStatusStrip";
 import { NavSparkline } from "@/components/NavSparkline";
@@ -40,6 +41,7 @@ import { WatchlistSnapshot } from "@/components/WatchlistSnapshot";
 export default function HomePage() {
   return (
     <main className="page-wrap">
+      <PauzeStrip />
       <MacroRegimeStrip />
       <MorningStatusStrip />
       <LastVisitDiffStrip />

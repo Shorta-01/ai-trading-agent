@@ -6662,6 +6662,8 @@ class SqlAlchemyRuntimeConfigRepository(_Base):
             "research_ai_extraction_enabled": (
                 record.research_ai_extraction_enabled
             ),
+            "software_paused": record.software_paused,
+            "software_paused_at": record.software_paused_at,
         }
         existing = (
             self._connection.execute(
@@ -6912,6 +6914,8 @@ def _runtime_config_from_row(row: Any) -> RuntimeConfigRecord:
             if row.get("research_ai_extraction_enabled") is not None
             else None
         ),
+        software_paused=bool(row.get("software_paused") or False),
+        software_paused_at=row.get("software_paused_at"),
     )
 
 

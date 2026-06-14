@@ -368,6 +368,11 @@ class RuntimeConfigRecord:
     ai_explanation_morning_batch_enabled: bool | None = None
     ai_email_summary_enabled: bool | None = None
     research_ai_extraction_enabled: bool | None = None
+    # V1.2 §AY — pauze-modus. Default False zodat een bestaande
+    # config-row die deze velden nog niet kent zonder migratie kan
+    # worden gelezen.
+    software_paused: bool = False
+    software_paused_at: datetime | None = None
 
 
 @dataclass(frozen=True)

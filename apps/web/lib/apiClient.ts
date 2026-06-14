@@ -653,6 +653,16 @@ export type MonthlyReportResponse = {
   notes_nl: string[];
 };
 
+// V1.2 §AY — pauze-modus.
+
+export type PauzeStatusResponse = {
+  title_nl: string;
+  help_nl: string;
+  paused: boolean;
+  paused_at: string | null;
+  summary_nl: string;
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2625,6 +2635,9 @@ export const apiClient = {
     const suffix = qs.length > 0 ? `?${qs.join("&")}` : "";
     return getJson<MonthlyReportResponse>(`/rapporten/maand${suffix}`);
   },
+  getPauzeStatus: () => getJson<PauzeStatusResponse>("/pauze"),
+  postPauze: () => postJson<PauzeStatusResponse>("/pauze"),
+  postHervat: () => postJson<PauzeStatusResponse>("/pauze/hervat"),
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,
