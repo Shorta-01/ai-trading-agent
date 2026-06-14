@@ -675,6 +675,53 @@ export type PauzeStatusResponse = {
   summary_nl: string;
 };
 
+// V1.2 §BF + §BJ — SELL-suggestie kaartjes voor het dashboard.
+export type SellSignalCardResponse = {
+  card_id: string;
+  ibkr_account_ref: string;
+  symbol: string;
+  currency: string;
+  signal_kind: string; // "take_profit" | "hold_review"
+  action: string; // "hold" | "suggest_sell"
+  entry_price: string;
+  current_price: string;
+  quantity: number;
+  current_pct_return: string;
+  target_pct: string | null;
+  target_reached: boolean | null;
+  days_held: number | null;
+  forecast_id: string | null;
+  forecaster_above_target: boolean | null;
+  position_in_loss: boolean | null;
+  short_term_p50: string | null;
+  short_term_horizon_days: number | null;
+  short_term_prob_above_pct: string | null;
+  expected_net_proceeds_eur: string | null;
+  headline_nl: string;
+  detail_nl: string;
+  first_generated_at: string;
+  last_evaluated_at: string;
+  dismissed_at: string | null;
+  dismissed_reason: string | null;
+};
+
+export type SellSignalListResponse = {
+  title_nl: string;
+  help_nl: string;
+  cards: SellSignalCardResponse[];
+};
+
+export type SellSignalSweepResponse = {
+  started_at: string;
+  completed_at: string;
+  positions_evaluated: number;
+  take_profit_cards_upserted: number;
+  hold_review_cards_upserted: number;
+  skipped_no_forecast: number;
+  skipped_no_position: number;
+  error_text: string | null;
+};
+
 // V1.2 §AZ — operator-aanpasbaar winstdoel.
 
 export type ProfitTargetResponse = {
@@ -2709,6 +2756,17 @@ export const apiClient = {
   getPauzeStatus: () => getJson<PauzeStatusResponse>("/pauze"),
   postPauze: () => postJson<PauzeStatusResponse>("/pauze"),
   postHervat: () => postJson<PauzeStatusResponse>("/pauze/hervat"),
+  // V1.2 §BJ — SELL-suggestie kaartjes voor dashboard.
+  getSellSignals: () =>
+    getJson<SellSignalListResponse>("/sell-signals"),
+  dismissSellSignal: (cardId: string, reason?: string) =>
+    requestJson<SellSignalCardResponse>(
+      `/sell-signals/${encodeURIComponent(cardId)}/dismiss`,
+      "POST",
+      { reason: reason ?? null },
+    ),
+  triggerSellSignalSweep: () =>
+    postJson<SellSignalSweepResponse>("/sell-signals/sweep"),
   getProfitTarget: () =>
     getJson<ProfitTargetResponse>("/settings/profit-target"),
   putProfitTarget: (payload: { profit_target_pct: string | null }) =>
