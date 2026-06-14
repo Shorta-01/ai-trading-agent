@@ -28,6 +28,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { ProfitTargetSetting } from "@/components/ProfitTargetSetting";
 import { WatchlistPreferencesSettings } from "@/components/WatchlistPreferencesSettings";
 import {
   apiClient,
@@ -2019,6 +2020,14 @@ export default function Page() {
             data-testid="instellingen-watchlist-preferences-section"
           >
             <WatchlistPreferencesSettings />
+          </section>
+
+          {/* Section 4a-ter — Operator-configureerbaar winstdoel (§AZ). */}
+          <section
+            style={SECTION_STYLE}
+            data-testid="instellingen-profit-target-section"
+          >
+            <ProfitTargetSetting />
           </section>
 
           {/* Section 4b — Scan markets (multi-select). */}

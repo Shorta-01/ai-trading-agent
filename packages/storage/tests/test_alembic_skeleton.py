@@ -110,6 +110,7 @@ def test_exactly_seventy_revision_files_exist_with_expected_names() -> None:
         "0072_earnings_events.py",
         "0073_watchlist_preferences.py",
         "0074_runtime_config_software_pause.py",
+        "0075_runtime_config_profit_target.py",
     ]
 
 

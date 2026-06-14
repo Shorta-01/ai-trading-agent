@@ -35,9 +35,9 @@ def _report(allowed: bool) -> MigrationReadinessReport:
         database_connected=allowed,
         migrations_checked_against_database=allowed,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0074_runtime_config_software_pause",
+        latest_expected_revision_id="0075_runtime_config_profit_target",
         database_revision_id=(
-            "0074_runtime_config_software_pause" if allowed else None
+            "0075_runtime_config_profit_target" if allowed else None
         ),
         persistence_allowed=allowed,
         blocks_runtime_writes=(not allowed),

@@ -663,6 +663,16 @@ export type PauzeStatusResponse = {
   summary_nl: string;
 };
 
+// V1.2 §AZ — operator-aanpasbaar winstdoel.
+
+export type ProfitTargetResponse = {
+  title_nl: string;
+  help_nl: string;
+  profit_target_pct: string;
+  is_doctrine_default: boolean;
+  summary_nl: string;
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2638,6 +2648,10 @@ export const apiClient = {
   getPauzeStatus: () => getJson<PauzeStatusResponse>("/pauze"),
   postPauze: () => postJson<PauzeStatusResponse>("/pauze"),
   postHervat: () => postJson<PauzeStatusResponse>("/pauze/hervat"),
+  getProfitTarget: () =>
+    getJson<ProfitTargetResponse>("/settings/profit-target"),
+  putProfitTarget: (payload: { profit_target_pct: string | null }) =>
+    putJson<ProfitTargetResponse>("/settings/profit-target", payload),
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,

@@ -373,6 +373,9 @@ class RuntimeConfigRecord:
     # worden gelezen.
     software_paused: bool = False
     software_paused_at: datetime | None = None
+    # V1.2 §AZ — operator-aanpasbaar winstdoel. ``None`` = doctrine-
+    # default 4 %.
+    profit_target_net_pct: Decimal | None = None
 
 
 @dataclass(frozen=True)

@@ -940,6 +940,20 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "operator pauzeert niet vaak en geschiedenis is V2."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0075_runtime_config_profit_target",
+        previous_revision_id="0074_runtime_config_software_pause",
+        filename="0075_runtime_config_profit_target.py",
+        label_nl="Operator-aanpasbaar winstdoel",
+        description_nl=(
+            "Voegt ``profit_target_net_pct`` (Decimal) toe aan "
+            "``runtime_config`` (V1.2 §AZ / CLAUDE.md §6.1 follow-"
+            "up). NULL = doctrine-default 4 %. Operator kan op "
+            "/instellingen een hogere of lagere drempel kiezen — de "
+            "tax engine, monthly report, sell-suggestie monitor en "
+            "EUR-equivalent helpers lezen deze waarde."
+        ),
+    ),
 )
 
 

@@ -1439,6 +1439,9 @@ runtime_config = Table(
         "software_paused", Boolean, nullable=False, server_default=sa_false()
     ),
     Column("software_paused_at", DateTime(timezone=True), nullable=True),
+    # V1.2 §AZ — operator-aanpasbaar winstdoel. Default NULL =
+    # CLAUDE.md §6.1 doctrine van 4 %.
+    Column("profit_target_net_pct", MONEY_NUMERIC, nullable=True),
 )
 
 # Portfolio net-liquidation (NAV) time series for the submission drawdown
