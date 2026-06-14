@@ -19,11 +19,14 @@ All routes:
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from ai_trading_agent_storage import (
     DecisionPackageEntry,
+    SqlAlchemyAssetFundamentalsSnapshotRepository,
     SqlAlchemyDecisionPackageRepository,
+    SqlAlchemyDividendEventRepository,
+    SqlAlchemyEarningsEventRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -95,6 +98,24 @@ class DecisionPackageResponse(BaseModel):
     deterministic_dutch_explanation: str
     audit_trail_hash: str
     previous_package_hash: str | None
+    # V1.2 §BK / GAPS.md P0-5 — Decision Package §9 compliance:
+    # de operator-doctrine vereist een volledig dossier. Onderstaande
+    # velden worden via aparte storage lookups gepopulateerd (sector +
+    # market_cap + P/E + momentum uit asset_fundamentals_snapshots;
+    # earnings-datum uit earnings_events; verwachte dividenden uit
+    # dividend_events). Wanneer een lookup geen rij geeft blijft het
+    # veld ``None`` zodat de UI een neutrale "—" kan tonen — geen
+    # verzonnen getallen (CLAUDE.md §15).
+    sector: str | None = None
+    market_cap_eur: str | None = None
+    pe_ratio: str | None = None
+    momentum_6m_pct: str | None = None
+    momentum_12m_pct: str | None = None
+    dividend_yield_pct: str | None = None
+    next_earnings_date: str | None = None
+    next_earnings_status: str | None = None
+    expected_dividend_gross_local: str | None = None
+    expected_dividend_currency: str | None = None
     safe_for_action_drafts: Literal[False] = False
     safe_for_orders: Literal[False] = False
 
@@ -111,6 +132,116 @@ class DecisionPackageChainResponse(BaseModel):
 
 def _raise_storage_unavailable() -> None:
     raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_DETAIL)
+
+
+def _enrich_with_fundamentals_earnings_dividends(
+    entry: DecisionPackageEntry,
+    connection: Any,
+    readiness: Any,
+) -> dict[str, object]:
+    """V1.2 §BK / GAPS.md P0-5 — extra doctrine-§9 velden.
+
+    Drie storage-lookups die de Decision Package response aanvullen
+    met sector + market_cap + P/E + momentum (asset_fundamentals_
+    snapshots), next_earnings_date (earnings_events), en verwachte
+    dividenden (dividend_events). Wanneer een lookup geen rij geeft
+    blijft het veld ``None`` zodat de UI een neutrale "—" toont —
+    CLAUDE.md §15 verbiedt verzonnen getallen.
+    """
+
+    enrichment: dict[str, object] = {
+        "sector": None,
+        "market_cap_eur": None,
+        "pe_ratio": None,
+        "momentum_6m_pct": None,
+        "momentum_12m_pct": None,
+        "dividend_yield_pct": None,
+        "next_earnings_date": None,
+        "next_earnings_status": None,
+        "expected_dividend_gross_local": None,
+        "expected_dividend_currency": None,
+    }
+
+    # Fundamentals — probeer een paar gangbare EODHD-symbol-varianten
+    # zodat we ook werken voor US (.US suffix) zonder dat de exchange
+    # column 100% gepopulateerd hoeft te zijn.
+    try:
+        fundamentals_repo = SqlAlchemyAssetFundamentalsSnapshotRepository(
+            connection, readiness
+        )
+        candidates = (
+            f"{entry.symbol}.{entry.exchange}" if entry.exchange else None,
+            f"{entry.symbol}.US",
+            entry.symbol,
+        )
+        snapshot = None
+        for candidate in candidates:
+            if candidate is None:
+                continue
+            result = fundamentals_repo.get_latest_snapshot_for_symbol(candidate)
+            if result.found and result.record is not None:
+                snapshot = result.record
+                break
+        if snapshot is not None:
+            enrichment["sector"] = snapshot.sector
+            enrichment["market_cap_eur"] = (
+                str(snapshot.market_cap) if snapshot.market_cap is not None else None
+            )
+            enrichment["pe_ratio"] = (
+                str(snapshot.pe_ratio) if snapshot.pe_ratio is not None else None
+            )
+            enrichment["momentum_6m_pct"] = (
+                str(snapshot.return_6m_pct)
+                if snapshot.return_6m_pct is not None
+                else None
+            )
+            enrichment["momentum_12m_pct"] = (
+                str(snapshot.return_12m_pct)
+                if snapshot.return_12m_pct is not None
+                else None
+            )
+            enrichment["dividend_yield_pct"] = (
+                str(snapshot.dividend_yield_pct)
+                if snapshot.dividend_yield_pct is not None
+                else None
+            )
+    except Exception:  # noqa: BLE001 — enrichment is best-effort
+        pass
+
+    # Earnings — volgende earnings-event voor dit symbool.
+    try:
+        from datetime import UTC, datetime
+
+        earnings_repo = SqlAlchemyEarningsEventRepository(connection, readiness)
+        next_earnings = earnings_repo.get_next_for_symbols(
+            symbols=(entry.symbol,), today=datetime.now(UTC).date()
+        )
+        event_date = next_earnings.get(entry.symbol)
+        if event_date is not None:
+            enrichment["next_earnings_date"] = event_date.isoformat()
+            # ``get_next_for_symbols`` filtert al op confirmed/estimated;
+            # de exacte status komt uit een aparte lookup als we ooit
+            # die uitsplitsen — voor §BK is "next" voldoende.
+            enrichment["next_earnings_status"] = "upcoming"
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Dividends — laatst bekende dividend per symbol als referentie
+    # voor "wat krijg je als je hold-periode een dividend bevat".
+    try:
+        dividend_repo = SqlAlchemyDividendEventRepository(connection, readiness)
+        dividends = dividend_repo.list_for_account(
+            ibkr_account_ref=entry.ibkr_account_id
+        )
+        for div in reversed(dividends.records):
+            if div.symbol == entry.symbol:
+                enrichment["expected_dividend_gross_local"] = str(div.gross_local)
+                enrichment["expected_dividend_currency"] = div.currency_local
+                break
+    except Exception:  # noqa: BLE001
+        pass
+
+    return enrichment
 
 
 def _serialize_package(entry: DecisionPackageEntry) -> dict[str, object]:
@@ -232,7 +363,11 @@ def read_latest_decision_package(
                         "Geen Decision Package voor deze rekening/asset."
                     ),
                 )
-            return _serialize_package(entry)
+            base = _serialize_package(entry)
+            enrichment = _enrich_with_fundamentals_earnings_dividends(
+                entry, checked.connection, checked.readiness
+            )
+            return {**base, **enrichment}
     except StorageConnectionError:
         _raise_storage_unavailable()
     raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_DETAIL)
@@ -295,7 +430,11 @@ def read_decision_package(decision_package_id: str) -> dict[str, object]:
                     status_code=404,
                     detail="Decision Package niet gevonden.",
                 )
-            return _serialize_package(entry)
+            base = _serialize_package(entry)
+            enrichment = _enrich_with_fundamentals_earnings_dividends(
+                entry, checked.connection, checked.readiness
+            )
+            return {**base, **enrichment}
     except StorageConnectionError:
         _raise_storage_unavailable()
     raise HTTPException(status_code=503, detail=STORAGE_UNAVAILABLE_DETAIL)

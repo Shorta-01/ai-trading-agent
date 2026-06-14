@@ -5021,10 +5021,16 @@ export interface components {
             decision_package_id: string;
             /** Deterministic Dutch Explanation */
             deterministic_dutch_explanation: string;
+            /** Dividend Yield Pct */
+            dividend_yield_pct?: string | null;
             /** Evidence References */
             evidence_references: components["schemas"]["EvidenceReferenceResponse"][];
             /** Exchange */
             exchange: string | null;
+            /** Expected Dividend Currency */
+            expected_dividend_currency?: string | null;
+            /** Expected Dividend Gross Local */
+            expected_dividend_gross_local?: string | null;
             /** Expected Volatility Annualized */
             expected_volatility_annualized: string;
             /**
@@ -5049,6 +5055,16 @@ export interface components {
             held_quantity: string | null;
             /** Ibkr Account Id */
             ibkr_account_id: string;
+            /** Market Cap Eur */
+            market_cap_eur?: string | null;
+            /** Momentum 12M Pct */
+            momentum_12m_pct?: string | null;
+            /** Momentum 6M Pct */
+            momentum_6m_pct?: string | null;
+            /** Next Earnings Date */
+            next_earnings_date?: string | null;
+            /** Next Earnings Status */
+            next_earnings_status?: string | null;
             /** P10 Log Return */
             p10_log_return: string;
             /** P10 Price Eur */
@@ -5061,6 +5077,8 @@ export interface components {
             p90_log_return: string;
             /** P90 Price Eur */
             p90_price_eur: string;
+            /** Pe Ratio */
+            pe_ratio?: string | null;
             /** Previous Package Hash */
             previous_package_hash: string | null;
             /** Prob Loss Gt 5Pct */
@@ -5079,6 +5097,8 @@ export interface components {
              * @constant
              */
             safe_for_orders: false;
+            /** Sector */
+            sector?: string | null;
             /**
              * Suggested Action Label
              * @enum {string}
