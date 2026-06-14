@@ -711,6 +711,24 @@ export type SellSignalListResponse = {
   cards: SellSignalCardResponse[];
 };
 
+// V1.2 §BH + §BV — Go-live runbook checklist.
+export type RunbookItemResponse = {
+  code: string;
+  group: string;
+  label_nl: string;
+  status: string; // "ok" | "info" | "warning" | "blocking"
+  value_nl: string;
+  what_it_means_nl: string;
+};
+
+export type RunbookResponse = {
+  title_nl: string;
+  help_nl: string;
+  ready_for_paper_go_live: boolean;
+  summary_nl: string;
+  items: RunbookItemResponse[];
+};
+
 export type SellSignalSweepResponse = {
   started_at: string;
   completed_at: string;
@@ -2767,6 +2785,8 @@ export const apiClient = {
     ),
   triggerSellSignalSweep: () =>
     postJson<SellSignalSweepResponse>("/sell-signals/sweep"),
+  // V1.2 §BV — Go-live runbook checklist.
+  getRunbook: () => getJson<RunbookResponse>("/runbook"),
   getProfitTarget: () =>
     getJson<ProfitTargetResponse>("/settings/profit-target"),
   putProfitTarget: (payload: { profit_target_pct: string | null }) =>
