@@ -126,6 +126,17 @@ class SchedulerSettings(BaseModel):
     morning_explanation_batch_trigger_enabled: bool = False
     morning_explanation_batch_cron: str = "45 6 * * *"
 
+    # SELL-signal sweep trigger (POST /sell-signals/sweep) — V1.2 §BI.
+    # CLAUDE.md §6.3 + §11 vraagt dat de SELL-monitoring blijft
+    # draaien, OOK tijdens software-pauze. De sweep zelf bypasst de
+    # pauze-flag bewust (`sell_signal_sweep.py:431`), maar tot deze
+    # cron werd de sweep helemaal nooit automatisch getriggerd.
+    # Default cron: elke 10 minuten tijdens kantoor-uren weekdagen
+    # — globaal venster dat US + Euronext market-hours dekt. Operator
+    # kan dit verfijnen via env-var of runtime-config.
+    sell_signal_sweep_trigger_enabled: bool = False
+    sell_signal_sweep_cron: str = "*/10 7-22 * * mon-fri"
+
     # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
     # cadence). When ``per_market_close_digest_enabled`` is True the
     # worker registers one cron fire per active market (see

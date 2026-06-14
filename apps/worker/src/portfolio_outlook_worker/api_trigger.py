@@ -57,6 +57,26 @@ def trigger_morning_explanation_batch(
     return _post(base_url, "/explanations/morning-batch", timeout_seconds)
 
 
+def trigger_sell_signal_sweep(
+    *, base_url: str | None, timeout_seconds: float
+) -> dict[str, Any] | None:
+    """POST ``/sell-signals/sweep`` on the API (V1.2 §BI).
+
+    CLAUDE.md §6.3 + §11 — de SELL-monitoring sweep moet
+    automatisch draaien zodat de operator zijn +4 % intraday hits
+    niet mist. De sweep zelf is bewust pauze-agnostisch (CLAUDE.md
+    §11), maar wordt nooit door het pre-briefing pad getriggerd —
+    deze trigger is dat ontbrekende stuk wireup.
+
+    Returns ``None`` op transport-fout of non-2xx; persistente
+    fouten landen in de API's ``scheduler_runs`` audit row én in
+    de standaard worker error-log via APScheduler's
+    ``EVENT_JOB_ERROR`` listener.
+    """
+
+    return _post(base_url, "/sell-signals/sweep", timeout_seconds)
+
+
 def compose_alert_summary(
     *,
     base_url: str | None,
@@ -127,4 +147,5 @@ __all__ = [
     "trigger_ibkr_sync",
     "trigger_morning_chain",
     "trigger_morning_explanation_batch",
+    "trigger_sell_signal_sweep",
 ]
