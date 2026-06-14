@@ -971,6 +971,25 @@ def run_market_data_sync() -> dict[str, object]:
 _FORECAST_FAVORITE_ACCOUNT_REF = "default"
 
 
+def _strip_exchange_suffix(symbol: str) -> str:
+    """Strip an EODHD-style exchange suffix from a favorite symbol.
+
+    The settings UI placeholder explicitly invites operators to type
+    ``ASML.AS`` (intent §AU / CLAUDE.md §5), but IBKR — and therefore
+    ``market_data_latest_snapshots.symbol`` — stores the bare ticker
+    (``ASML``) with the exchange on a separate column. Without
+    normalisation here the by-symbol lookup misses every suffixed
+    favorite and the forecast is silently skipped.
+
+    Only the last ``.suffix`` is dropped (EODHD convention puts the
+    exchange last). Symbols without a dot are returned unchanged.
+    """
+
+    stripped = symbol.strip()
+    head, sep, _tail = stripped.rpartition(".")
+    return head if sep else stripped
+
+
 def _build_favorite_positions(
     *,
     pref_repo: SqlAlchemyWatchlistPreferenceRepository,
@@ -988,6 +1007,10 @@ def _build_favorite_positions(
     EODHD without an exchange suffix, and the dashboard widget will
     surface that gap separately.
 
+    Favorites carrying an EODHD-style exchange suffix (``ASML.AS``)
+    are normalised to the bare ticker before lookup so they match the
+    IBKR-formatted ``symbol`` column.
+
     ``quantity`` is set to ``Decimal(0)`` so downstream consumers
     (e.g. ``user_holds_position`` in the decision package) treat the
     row as "watched, not held".
@@ -1001,16 +1024,24 @@ def _build_favorite_positions(
     favorites_result = pref_repo.list_for_account(
         ibkr_account_ref=_FORECAST_FAVORITE_ACCOUNT_REF, kind="favorite"
     )
-    favorite_symbols = tuple(
-        pref.symbol
-        for pref in favorites_result.records
-        if pref.symbol and pref.symbol.upper() not in held_symbols
-    )
-    if not favorite_symbols:
+    # Dedup on the suffix-stripped form so ``ASML`` and ``ASML.AS``
+    # collapse onto one lookup, and so a favorite that matches a
+    # held position (regardless of how it was typed) is filtered out.
+    lookup_symbols: list[str] = []
+    seen_bare: set[str] = set()
+    for pref in favorites_result.records:
+        if not pref.symbol:
+            continue
+        bare = _strip_exchange_suffix(pref.symbol).upper()
+        if not bare or bare in held_symbols or bare in seen_bare:
+            continue
+        seen_bare.add(bare)
+        lookup_symbols.append(bare)
+    if not lookup_symbols:
         return []
 
     snapshots_result = market_repo.list_latest_market_data_snapshots_by_symbols(
-        favorite_symbols
+        tuple(lookup_symbols)
     )
     snapshots_by_symbol = {
         snap.symbol: snap
@@ -1020,8 +1051,8 @@ def _build_favorite_positions(
 
     now = datetime.now(UTC)
     synthetic: list[IbkrPositionSnapshotRecord] = []
-    for symbol in favorite_symbols:
-        snap = snapshots_by_symbol.get(symbol)
+    for bare_symbol in lookup_symbols:
+        snap = snapshots_by_symbol.get(bare_symbol)
         if snap is None or not snap.ibkr_conid:
             continue
         synthetic.append(
@@ -1030,7 +1061,7 @@ def _build_favorite_positions(
                 sync_run_id=sync_run_id,
                 account_ref=_FORECAST_FAVORITE_ACCOUNT_REF,
                 conid=snap.ibkr_conid,
-                symbol=symbol,
+                symbol=bare_symbol,
                 security_type=snap.asset_class or "STK",
                 currency=snap.currency or "USD",
                 exchange=snap.exchange,

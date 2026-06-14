@@ -364,9 +364,18 @@ def test_compute_extends_universe_with_operator_favorites(monkeypatch) -> None:
         ):
             assert ibkr_account_ref == "default"
             assert kind == "favorite"
-            # ASML is a favorite, not held; AAPL is a favorite AND held —
-            # the duplicate must be dropped (_unique_positions handles it).
-            return _ListResult([_Pref("ASML"), _Pref("AAPL")])
+            # V1.2 §BR — Codex review #654:
+            # - ``ASML.AS`` is a suffixed favorite (the UI placeholder
+            #   tells operators they may type ``ASML.AS``). The
+            #   normaliser must strip ``.AS`` so the symbol lookup
+            #   matches the IBKR-formatted ``ASML`` row.
+            # - ``AAPL`` is both a favorite *and* a held position; the
+            #   held filter drops it before the lookup runs.
+            # - ``ASML`` (bare) would collide with the suffixed entry;
+            #   only one lookup must be issued.
+            return _ListResult(
+                [_Pref("ASML.AS"), _Pref("ASML"), _Pref("AAPL")]
+            )
 
     class _FakeBarRepo:
         def save_market_data_bars(self, records: list[object]) -> object:
