@@ -33,7 +33,7 @@ def connection():  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) "
-                "VALUES ('0079_macro_index_snapshots')"
+                "VALUES ('0080_dashboard_query_indexes')"
             )
         )
     conn = engine.connect()
@@ -52,8 +52,8 @@ def _readiness() -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0079_macro_index_snapshots",
-        database_revision_id="0079_macro_index_snapshots",
+        latest_expected_revision_id="0080_dashboard_query_indexes",
+        database_revision_id="0080_dashboard_query_indexes",
         persistence_allowed=True,
         blocks_runtime_writes=False,
         explanation_nl="ok",

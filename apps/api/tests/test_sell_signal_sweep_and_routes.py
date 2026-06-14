@@ -63,7 +63,7 @@ def _seed_db(tmp_path) -> str:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0079_macro_index_snapshots')"
+                "('0080_dashboard_query_indexes')"
             )
         )
         # Sweep + worker code call ``checked_connection(require_writable=

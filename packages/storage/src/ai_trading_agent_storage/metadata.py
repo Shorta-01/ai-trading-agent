@@ -3541,3 +3541,37 @@ Index(
     reconciliation_run_audit.c.account_id,
     reconciliation_run_audit.c.started_at,
 )
+
+
+# V1.2 §CG / GAPS.md P2-6 — covering indexes voor dashboard queries.
+# Bewust single-column of (account, kolom) composiet om writes niet
+# nodeloos te belasten. Zie 0080_dashboard_query_indexes.py voor de
+# migratie + rationale.
+Index(
+    "ix_asset_action_drafts_status",
+    asset_action_drafts.c.status,
+)
+Index(
+    "ix_asset_suggestions_status",
+    asset_suggestions.c.status,
+)
+Index(
+    "ix_orchestrator_scoring_verdicts_generated_at",
+    orchestrator_scoring_verdicts.c.generated_at,
+)
+Index(
+    "ix_system_events_created_at",
+    system_events.c.created_at,
+)
+Index(
+    "ix_audit_events_occurred_at",
+    audit_events.c.occurred_at,
+)
+Index(
+    "ix_dividend_events_created_at",
+    dividend_events.c.created_at,
+)
+Index(
+    "ix_earnings_events_fetched_at",
+    earnings_events.c.fetched_at,
+)

@@ -115,6 +115,7 @@ def test_exactly_seventy_revision_files_exist_with_expected_names() -> None:
         "0077_monthly_report_archive.py",
         "0078_sell_signal_cards.py",
         "0079_macro_index_snapshots.py",
+        "0080_dashboard_query_indexes.py",
     ]
 
 
