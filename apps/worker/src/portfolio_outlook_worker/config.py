@@ -65,6 +65,13 @@ class IbkrSettings(BaseModel):
     # ``sweep_interval_seconds`` for the next scheduled fire.
     sweep_retry_max_attempts: int = 3
     sweep_retry_backoff_seconds: float = 2.0
+    # GAPS.md P2-4 — Pass C ``awaiting_reply_timeout`` escalatie naar
+    # manual-review. De doctrine-lock op 24u (Task 135) is nu de
+    # default; operator kan dit verkorten (b.v. 4u) zodat stuck
+    # drafts niet 24u in limbo blijven voordat ze de manual-review
+    # queue raken. Range 1-72 uur; verder verandert het reconciler-
+    # gedrag niet.
+    reconciler_pass_c_timeout_hours: int = 24
 
 
 class EodhdSettings(BaseModel):

@@ -24,7 +24,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal, Protocol
 
 from ai_trading_agent_storage import (
@@ -162,6 +162,7 @@ class IbkrReconciler:
         run_audit_repo: SqlAlchemyReconciliationRunAuditRepository,
         now_provider: Callable[[], datetime],
         run_id_factory: Callable[[], str] | None = None,
+        pass_c_timeout_cutoff: timedelta | None = None,
     ) -> None:
         self._ibkr_account_id = ibkr_account_id
         self._lock = lock
@@ -177,6 +178,17 @@ class IbkrReconciler:
         self._run_audit_repo = run_audit_repo
         self._now_provider = now_provider
         self._run_id_factory = run_id_factory or _default_run_id_factory
+        # V1.2 §CC / GAPS.md P2-4 — Pass C cut-off configureerbaar.
+        # ``None`` valt terug op de doctrine-default (24u).
+        from portfolio_outlook_worker.ibkr_reconciliation.pass_c_timeout_recovery import (
+            DEFAULT_TIMEOUT_CUTOFF,
+        )
+
+        self._pass_c_timeout_cutoff = (
+            pass_c_timeout_cutoff
+            if pass_c_timeout_cutoff is not None
+            else DEFAULT_TIMEOUT_CUTOFF
+        )
 
     def tick(self) -> IbkrReconcilerResult:
         started = self._now_provider()
@@ -273,6 +285,7 @@ class IbkrReconciler:
                 manual_review_repo=self._manual_review_repo,
                 reconciliation_audit_repo=self._reconciliation_audit_repo,
                 now_provider=self._now_provider,
+                timeout_cutoff=self._pass_c_timeout_cutoff,
             )
         except Exception as exc:  # noqa: BLE001 — boundary
             logger.exception("reconciler tick raised through a pass")

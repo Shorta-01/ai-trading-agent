@@ -42,8 +42,14 @@ from ai_trading_agent_storage import (
 logger = logging.getLogger(__name__)
 
 
-# Task 135 product lock §4 — 24h cut-off, not configurable.
+# GAPS.md P2-4 — voorheen hard-vergrendeld op 24u (Task 135 lock §4).
+# Behoud die default zodat bestaand gedrag intact blijft, maar laat
+# de operator de cut-off overschrijven via ``run_pass_c_timeout_
+# recovery(... timeout_cutoff=...)``. Default kort genoeg dat
+# stale ``submitted/accepted`` drafts niet 24u in limbo blijven
+# voordat ze de operator-manual-review halen.
 TIMEOUT_CUTOFF = timedelta(hours=24)
+DEFAULT_TIMEOUT_CUTOFF = TIMEOUT_CUTOFF
 
 
 # ---------------------------------------------------------------------------
@@ -78,8 +84,16 @@ def run_pass_c_timeout_recovery(
     manual_review_repo: SqlAlchemyManualReviewQueueRepository,
     reconciliation_audit_repo: SqlAlchemyReconciliationAuditRepository,
     now_provider: Callable[[], datetime],
+    timeout_cutoff: timedelta = DEFAULT_TIMEOUT_CUTOFF,
 ) -> PassCTimeoutRecoveryResult:
-    """Run Pass C for one reconciler tick."""
+    """Run Pass C for one reconciler tick.
+
+    ``timeout_cutoff`` (V1.2 §CC / GAPS.md P2-4) bepaalt hoe lang
+    een ``submitted``/``accepted`` draft op een IBKR-reply mag
+    wachten voordat hij geëscaleerd wordt naar manual-review. Default
+    24u (de oude harde lock); operator kan ``IbkrSettings.reconciler_
+    timeout_hours`` instellen om korter te draaien (b.v. 4u).
+    """
 
     timeouts = action_draft_repo.list_by_status(
         account_id, "awaiting_reply_timeout"
@@ -105,7 +119,7 @@ def run_pass_c_timeout_recovery(
             else draft.terminal_state_at.replace(tzinfo=None)
         )
         age = left - right
-        if age < TIMEOUT_CUTOFF:
+        if age < timeout_cutoff:
             within_cutoff += 1
             continue
 
@@ -149,7 +163,7 @@ def run_pass_c_timeout_recovery(
                 ibkr_evidence_json={
                     "awaited_since": draft.terminal_state_at.isoformat(),
                     "elapsed_seconds": int(age.total_seconds()),
-                    "cutoff_seconds": int(TIMEOUT_CUTOFF.total_seconds()),
+                    "cutoff_seconds": int(timeout_cutoff.total_seconds()),
                 },
                 notes_dutch=(
                     "Timeout van 24 uur overschreden zonder IBKR-data; "
@@ -173,6 +187,7 @@ def run_pass_c_timeout_recovery(
 
 
 __all__ = [
+    "DEFAULT_TIMEOUT_CUTOFF",
     "PassCTimeoutRecoveryResult",
     "TIMEOUT_CUTOFF",
     "run_pass_c_timeout_recovery",
