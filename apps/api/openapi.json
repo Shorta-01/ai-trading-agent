@@ -6141,10 +6141,52 @@
         "title": "MarketHoursNowResponse",
         "type": "object"
       },
+      "MonthEventOut": {
+        "description": "One operational event during the report month \u2014 V1.2 \u00a7CD / P2-11.\n\nCLAUDE.md \u00a713 vraagt expliciet \"Pauze-momenten, macro alerts,\nvermeden earnings, settings wijzigingen\". Deze rij komt uit\n``system_events`` met severity \u2265 warning binnen het maand-venster\nzodat de operator een chronologisch overzicht heeft van wat de\nsoftware deze maand heeft gesignaleerd.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "event_at": {
+            "title": "Event At",
+            "type": "string"
+          },
+          "message_nl": {
+            "title": "Message Nl",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_at",
+          "severity",
+          "category",
+          "title_nl",
+          "message_nl"
+        ],
+        "title": "MonthEventOut",
+        "type": "object"
+      },
       "MonthlyReportResponse": {
         "properties": {
           "action_draft_activity": {
             "$ref": "#/components/schemas/ActionDraftActivityOut"
+          },
+          "events": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MonthEventOut"
+            },
+            "title": "Events",
+            "type": "array"
           },
           "executive_summary": {
             "$ref": "#/components/schemas/ExecutiveSummaryOut"

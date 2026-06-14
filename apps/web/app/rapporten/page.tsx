@@ -576,6 +576,71 @@ export default function RapportenPage() {
         </div>
       ) : null}
 
+      {/* V1.2 §CD / GAPS.md P2-11 — Events sectie (CLAUDE.md §13). */}
+      {(report?.events ?? []).length > 0 ? (
+        <section
+          data-testid="rapport-events"
+          style={{
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            padding: 12,
+            margin: "12px 0",
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 14, color: "#1f2937" }}>
+            Events deze maand
+          </h2>
+          <p
+            style={{
+              margin: "2px 0 8px 0",
+              fontSize: 11,
+              color: "#6b7280",
+            }}
+          >
+            Pauze-momenten, macro alerts, settings wijzigingen en andere
+            operationele meldingen (severity ≥ warning).
+          </p>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            {(report?.events ?? []).map((ev, idx) => (
+              <li
+                key={idx}
+                data-testid={`rapport-event-${idx}`}
+                data-severity={ev.severity}
+                style={{
+                  padding: "6px 10px",
+                  background:
+                    ev.severity === "critical"
+                      ? "#fee2e2"
+                      : ev.severity === "error"
+                        ? "#fee2e2"
+                        : "#fef3c7",
+                  borderRadius: 4,
+                  fontSize: 12,
+                  color: "#374151",
+                }}
+              >
+                <strong>{ev.title_nl}</strong>{" "}
+                <span style={{ color: "#6b7280", fontSize: 11 }}>
+                  ({ev.category} · {ev.severity}) ·{" "}
+                  {ev.event_at.replace("T", " ").slice(0, 16)}
+                </span>
+                <div style={{ marginTop: 2 }}>{ev.message_nl}</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <ArchivePanel defaultYear={year} defaultMonth={month} />
     </main>
   );
