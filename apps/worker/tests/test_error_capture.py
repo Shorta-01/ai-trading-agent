@@ -24,8 +24,8 @@ def _report() -> MigrationReadinessReport:
         database_connected=True,
         migrations_checked_against_database=True,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0077_monthly_report_archive",
-        database_revision_id="0077_monthly_report_archive",
+        latest_expected_revision_id="0078_sell_signal_cards",
+        database_revision_id="0078_sell_signal_cards",
         persistence_allowed=True,
         blocks_runtime_writes=False,
         explanation_nl="test",
@@ -43,7 +43,7 @@ def _seed(tmp_path) -> StorageSettings:  # type: ignore[no-untyped-def]
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0077_monthly_report_archive')"
+                "('0078_sell_signal_cards')"
             )
         )
     return StorageSettings(enabled=True, database_url=db_url, writes_enabled=True)

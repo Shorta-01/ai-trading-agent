@@ -76,6 +76,7 @@ from ai_trading_agent_storage.metadata import (
     dividend_events,
     earnings_events,
     monthly_report_archive,
+    sell_signal_cards,
     watchlist_preferences,
     prediction_diary_entries,
     market_data_latest_snapshots,
@@ -134,6 +135,9 @@ from ai_trading_agent_storage.repository_contracts import (
     MonthlyReportArchiveRecord,
     SaveDividendEventRequest,
     SaveMonthlyReportArchiveRequest,
+    SELL_SIGNAL_ACTION_SUGGEST_SELL,
+    SaveSellSignalCardRequest,
+    SellSignalCardRecord,
     SaveEarningsEventRequest,
     SaveOrchestratorScoringVerdictRequest,
     SaveWatchlistPreferenceRequest,
@@ -3592,6 +3596,299 @@ class SqlAlchemyMonthlyReportArchiveRepository(_Base):
             monthly_report_archive.name,
             f"{len(records)} maandrapport-archive entries opgehaald.",
         )
+
+
+class SqlAlchemySellSignalCardRepository(_Base):
+    """SELL-suggestie kaartjes voor de SELL-loop sweep (V1.2 §BF).
+
+    Eén ACTIVE rij per ``(ibkr_account_ref, symbol, signal_kind)``.
+    De sweep upsert via :meth:`upsert`; de operator dismisst via
+    :meth:`dismiss`. ``last_evaluated_at`` wordt bij elke upsert
+    bijgewerkt zodat het dashboard kan tonen wanneer het signaal
+    voor het laatst geëvalueerd is.
+    """
+
+    def upsert(self, request: SaveSellSignalCardRequest) -> StorageWriteResult:
+        ensure_persistence_allowed(self._readiness_report)
+        existing = (
+            self._connection.execute(
+                select(sell_signal_cards).where(
+                    (
+                        sell_signal_cards.c.ibkr_account_ref
+                        == request.ibkr_account_ref
+                    )
+                    & (sell_signal_cards.c.symbol == request.symbol)
+                    & (sell_signal_cards.c.signal_kind == request.signal_kind)
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if existing is None:
+            self._insert(
+                sell_signal_cards,
+                {
+                    "card_id": request.card_id,
+                    "ibkr_account_ref": request.ibkr_account_ref,
+                    "symbol": request.symbol,
+                    "currency": request.currency,
+                    "signal_kind": request.signal_kind,
+                    "action": request.action,
+                    "entry_price": request.entry_price,
+                    "current_price": request.current_price,
+                    "quantity": request.quantity,
+                    "current_pct_return": request.current_pct_return,
+                    "target_pct": request.target_pct,
+                    "target_reached": request.target_reached,
+                    "days_held": request.days_held,
+                    "forecast_id": request.forecast_id,
+                    "forecaster_above_target": request.forecaster_above_target,
+                    "position_in_loss": request.position_in_loss,
+                    "short_term_p50": request.short_term_p50,
+                    "short_term_horizon_days": request.short_term_horizon_days,
+                    "short_term_prob_above_pct": (
+                        request.short_term_prob_above_pct
+                    ),
+                    "expected_net_proceeds_eur": (
+                        request.expected_net_proceeds_eur
+                    ),
+                    "headline_nl": request.headline_nl,
+                    "detail_nl": request.detail_nl,
+                    "first_generated_at": request.evaluated_at,
+                    "last_evaluated_at": request.evaluated_at,
+                    "dismissed_at": None,
+                    "dismissed_reason": None,
+                    "safe_for_action_drafts": False,
+                },
+            )
+            return StorageWriteResult(
+                True,
+                request.card_id,
+                sell_signal_cards.name,
+                True,
+                "SELL-signal kaartje aangemaakt.",
+            )
+
+        # Sticky dismissal: de operator-dismissal blijft staan tenzij
+        # het signaal materieel verandert (b.v. action hold→suggest_sell
+        # of forecast-conditie omgeklapt). De sweep zet
+        # ``reset_dismissal=True`` in dat geval.
+        keep_dismissal = not request.reset_dismissal
+        new_dismissed_at = existing["dismissed_at"] if keep_dismissal else None
+        new_dismissed_reason = (
+            existing["dismissed_reason"] if keep_dismissal else None
+        )
+
+        self._connection.execute(
+            sell_signal_cards.update()
+            .where(sell_signal_cards.c.card_id == existing["card_id"])
+            .values(
+                action=request.action,
+                entry_price=request.entry_price,
+                current_price=request.current_price,
+                quantity=request.quantity,
+                current_pct_return=request.current_pct_return,
+                target_pct=request.target_pct,
+                target_reached=request.target_reached,
+                days_held=request.days_held,
+                forecast_id=request.forecast_id,
+                forecaster_above_target=request.forecaster_above_target,
+                position_in_loss=request.position_in_loss,
+                short_term_p50=request.short_term_p50,
+                short_term_horizon_days=request.short_term_horizon_days,
+                short_term_prob_above_pct=request.short_term_prob_above_pct,
+                expected_net_proceeds_eur=request.expected_net_proceeds_eur,
+                headline_nl=request.headline_nl,
+                detail_nl=request.detail_nl,
+                last_evaluated_at=request.evaluated_at,
+                dismissed_at=new_dismissed_at,
+                dismissed_reason=new_dismissed_reason,
+            )
+        )
+        return StorageWriteResult(
+            True,
+            str(existing["card_id"]),
+            sell_signal_cards.name,
+            True,
+            "SELL-signal kaartje bijgewerkt.",
+        )
+
+    def dismiss(
+        self,
+        *,
+        card_id: str,
+        dismissed_at: datetime,
+        reason: str | None = None,
+    ) -> StorageWriteResult:
+        ensure_persistence_allowed(self._readiness_report)
+        self._connection.execute(
+            sell_signal_cards.update()
+            .where(sell_signal_cards.c.card_id == card_id)
+            .values(dismissed_at=dismissed_at, dismissed_reason=reason)
+        )
+        return StorageWriteResult(
+            True,
+            card_id,
+            sell_signal_cards.name,
+            True,
+            "SELL-signal kaartje verwijderd uit lijst.",
+        )
+
+    def delete_for_position(
+        self,
+        *,
+        ibkr_account_ref: str,
+        symbol: str,
+        signal_kind: str | None = None,
+    ) -> StorageWriteResult:
+        """Verwijder kaartje(s) wanneer een positie sloot.
+
+        De sweep roept dit aan zodra een symbool niet meer in
+        ``ibkr_position_snapshots`` zit — geen positie, geen
+        SELL-suggestie meer.
+        """
+
+        ensure_persistence_allowed(self._readiness_report)
+        statement = sell_signal_cards.delete().where(
+            (sell_signal_cards.c.ibkr_account_ref == ibkr_account_ref)
+            & (sell_signal_cards.c.symbol == symbol)
+        )
+        if signal_kind is not None:
+            statement = statement.where(
+                sell_signal_cards.c.signal_kind == signal_kind
+            )
+        self._connection.execute(statement)
+        return StorageWriteResult(
+            True,
+            None,
+            sell_signal_cards.name,
+            True,
+            "SELL-signal kaartje verwijderd (positie gesloten).",
+        )
+
+    def get(self, *, card_id: str) -> SellSignalCardRecord | None:
+        row = (
+            self._connection.execute(
+                select(sell_signal_cards).where(
+                    sell_signal_cards.c.card_id == card_id
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return _row_to_sell_signal_card(row)
+
+    def list_active(
+        self,
+        *,
+        ibkr_account_ref: str | None = None,
+    ) -> StorageListResult[SellSignalCardRecord]:
+        """Active = action 'suggest_sell' AND dismissed_at IS NULL.
+
+        Dashboard endpoint: dit zijn de kaartjes die de operator nu
+        ziet. Het hold-state-rijtje (action='hold') wordt voor
+        diagnostiek bewaard maar niet aan de operator getoond.
+        """
+
+        statement = select(sell_signal_cards).where(
+            (sell_signal_cards.c.action == SELL_SIGNAL_ACTION_SUGGEST_SELL)
+            & (sell_signal_cards.c.dismissed_at.is_(None))
+        )
+        if ibkr_account_ref is not None:
+            statement = statement.where(
+                sell_signal_cards.c.ibkr_account_ref == ibkr_account_ref
+            )
+        statement = statement.order_by(
+            sell_signal_cards.c.last_evaluated_at.desc()
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(_row_to_sell_signal_card(row) for row in rows)
+        return StorageListResult(
+            records,
+            sell_signal_cards.name,
+            f"{len(records)} actieve SELL-kaartjes opgehaald.",
+        )
+
+    def list_all(
+        self,
+        *,
+        ibkr_account_ref: str | None = None,
+    ) -> StorageListResult[SellSignalCardRecord]:
+        """Alle kaartjes inclusief dismissed/hold — audit-view voor
+        operator/test fixtures.
+        """
+
+        statement = select(sell_signal_cards)
+        if ibkr_account_ref is not None:
+            statement = statement.where(
+                sell_signal_cards.c.ibkr_account_ref == ibkr_account_ref
+            )
+        statement = statement.order_by(
+            sell_signal_cards.c.last_evaluated_at.desc()
+        )
+        rows = self._connection.execute(statement).mappings().all()
+        records = tuple(_row_to_sell_signal_card(row) for row in rows)
+        return StorageListResult(
+            records,
+            sell_signal_cards.name,
+            f"{len(records)} SELL-kaartjes opgehaald.",
+        )
+
+
+def _row_to_sell_signal_card(row: RowMapping) -> SellSignalCardRecord:
+    return SellSignalCardRecord(
+        card_id=str(row["card_id"]),
+        ibkr_account_ref=str(row["ibkr_account_ref"]),
+        symbol=str(row["symbol"]),
+        currency=str(row["currency"]),
+        signal_kind=str(row["signal_kind"]),
+        action=str(row["action"]),
+        entry_price=Decimal(str(row["entry_price"])),
+        current_price=Decimal(str(row["current_price"])),
+        quantity=int(row["quantity"]),
+        current_pct_return=Decimal(str(row["current_pct_return"])),
+        target_pct=(
+            Decimal(str(row["target_pct"]))
+            if row["target_pct"] is not None
+            else None
+        ),
+        target_reached=row["target_reached"],
+        days_held=row["days_held"],
+        forecast_id=(
+            str(row["forecast_id"]) if row["forecast_id"] is not None else None
+        ),
+        forecaster_above_target=row["forecaster_above_target"],
+        position_in_loss=row["position_in_loss"],
+        short_term_p50=(
+            Decimal(str(row["short_term_p50"]))
+            if row["short_term_p50"] is not None
+            else None
+        ),
+        short_term_horizon_days=row["short_term_horizon_days"],
+        short_term_prob_above_pct=(
+            Decimal(str(row["short_term_prob_above_pct"]))
+            if row["short_term_prob_above_pct"] is not None
+            else None
+        ),
+        expected_net_proceeds_eur=(
+            Decimal(str(row["expected_net_proceeds_eur"]))
+            if row["expected_net_proceeds_eur"] is not None
+            else None
+        ),
+        headline_nl=str(row["headline_nl"]),
+        detail_nl=str(row["detail_nl"]),
+        first_generated_at=row["first_generated_at"],
+        last_evaluated_at=row["last_evaluated_at"],
+        dismissed_at=row["dismissed_at"],
+        dismissed_reason=(
+            str(row["dismissed_reason"])
+            if row["dismissed_reason"] is not None
+            else None
+        ),
+        safe_for_action_drafts=bool(row["safe_for_action_drafts"]),
+    )
 
 
 class SqlAlchemySchedulerRunRepository(_Base):

@@ -245,7 +245,7 @@ def test_record_event_persists_to_real_db(tmp_path) -> None:  # type: ignore[no-
         conn.execute(
             text(
                 "INSERT INTO alembic_version (version_num) VALUES "
-                "('0077_monthly_report_archive')"
+                "('0078_sell_signal_cards')"
             )
         )
 

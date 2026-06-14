@@ -583,6 +583,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/belasting/jaaroverzicht": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Jaaroverzicht */
+        get: operations["get_jaaroverzicht_belasting_jaaroverzicht_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/belasting/jaaroverzicht.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Jaaroverzicht Csv */
+        get: operations["get_jaaroverzicht_csv_belasting_jaaroverzicht_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/belasting/jaaroverzicht.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Jaaroverzicht Pdf
+         * @description Render een PDF-versie van het jaaroverzicht voor de accountant
+         *     (V1.2 §BC). Gebruikt reportlab — alle data komt uit dezelfde
+         *     engine als JSON + CSV.
+         */
+        get: operations["get_jaaroverzicht_pdf_belasting_jaaroverzicht_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/briefings/daily/compute": {
         parameters: {
             query?: never;
@@ -876,6 +932,194 @@ export interface paths {
         get: operations["read_latest_decision_package_for_conid_decision_packages__ibkr_conid__latest_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/digests/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Digest Today */
+        get: operations["get_digest_today_digests_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dividenden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Dividenden */
+        get: operations["list_dividenden_dividenden_get"];
+        put?: never;
+        /** Create Dividend */
+        post: operations["create_dividend_dividenden_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dividenden/{dividend_event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Dividend */
+        delete: operations["delete_dividend_dividenden__dividend_event_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/earnings/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refresh Earnings
+         * @description Trigger a synchronous earnings calendar refresh for the given
+         *     EODHD-shaped symbols (``AAPL.US``, ``ASML.AS``, …).
+         *
+         *     Short-circuits with ``skipped`` when:
+         *     * The operator's EODHD key is missing, or
+         *     * Storage is disabled.
+         *
+         *     Caps ``window_days`` at 90 so a bug in the caller doesn't burn
+         *     EODHD quota.
+         */
+        post: operations["post_refresh_earnings_earnings_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/earnings/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Upcoming Earnings
+         * @description Return upcoming earnings events within ``days`` of today.
+         *
+         *     Defaults to 14-day window. Hard cap at 60 days so a careless
+         *     ``?days=9999`` doesn't return three years of data.
+         */
+        get: operations["get_upcoming_earnings_earnings_upcoming_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Errors */
+        get: operations["list_errors_errors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/errors/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report Frontend Error */
+        post: operations["report_frontend_error_errors_report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/errors/{system_event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Error */
+        delete: operations["delete_error_errors__system_event_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/errors/{system_event_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve Error */
+        post: operations["resolve_error_errors__system_event_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/explanations/morning-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger Morning Explanation Batch */
+        post: operations["trigger_morning_explanation_batch_explanations_morning_batch_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1746,6 +1990,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/markets/hours-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Hours Now
+         * @description Live open/close + current state per followed market.
+         *
+         *     Polled by the dashboard's market-hours widget. Re-reads the
+         *     operator's universe-scan selection on every call so a fresh save
+         *     in /instellingen reflects without a worker restart. Never raises:
+         *     a storage hiccup falls back to the env-configured codes.
+         */
+        get: operations["get_market_hours_now_markets_hours_now_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/markets/macro-snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Macro Snapshot
+         * @description Return the most recent macro-regime snapshot.
+         *
+         *     Reads the latest batch of ``orchestrator_scoring_verdicts`` and
+         *     picks the macro diagnostics from any one row in it — every row
+         *     in a batch shares the same macro inputs, so the first verdict
+         *     in the burst is representative.
+         */
+        get: operations["get_macro_snapshot_markets_macro_snapshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/compose-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compose Alert Summary Endpoint
+         * @description Compose a Dutch summary header for the worker's alert emails.
+         *
+         *     Worker-only consumer. Fall-through-friendly: any failure path
+         *     returns ``summary_nl=None`` so the caller sends the template-only
+         *     email instead of crashing.
+         */
+        post: operations["compose_alert_summary_endpoint_notifications_compose_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orchestrator-verdicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orchestrator Verdicts
+         * @description Return the most-recent verdicts, newest first.
+         *
+         *     Default ``limit`` is 100; the repo caps at storage-level.
+         */
+        get: operations["list_orchestrator_verdicts_orchestrator_verdicts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orchestrator-verdicts/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Orchestrator Verdicts Summary
+         * @description Aggregate counts of the most recent verdicts per decision code.
+         *
+         *     "Most recent" = the verdicts written at the latest
+         *     ``generated_at`` timestamp. The morning-chain leg writes one
+         *     burst per fire, so this surfaces "what did today's run produce".
+         */
+        get: operations["get_orchestrator_verdicts_summary_orchestrator_verdicts_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pauze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pauze Status */
+        get: operations["get_pauze_status_pauze_get"];
+        put?: never;
+        /** Pauze */
+        post: operations["pauze_pauze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pauze/hervat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hervat */
+        post: operations["hervat_pauze_hervat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/nav/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Nav History */
+        get: operations["read_nav_history_portfolio_nav_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/sector-spread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sector Spread
+         * @description Return current portfolio breakdown by sector, sorted by weight.
+         */
+        get: operations["get_sector_spread_portfolio_sector_spread_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/setup/defaults": {
         parameters: {
             query?: never;
@@ -1972,6 +2408,114 @@ export interface paths {
          *     an order.
          */
         get: operations["read_predictor_leaderboard_predictor_leaderboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/predictors/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Predictor Performance */
+        get: operations["read_predictor_performance_predictors_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rapporten/archief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Archive */
+        get: operations["list_archive_rapporten_archief_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rapporten/archief/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Archive
+         * @description Genereer (of regenereer) een PDF-archief voor één (year, month).
+         */
+        post: operations["generate_archive_rapporten_archief_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rapporten/archief/{year}/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Archive Pdf */
+        get: operations["get_archive_pdf_rapporten_archief__year___month__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rapporten/maand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Maandrapport */
+        get: operations["get_maandrapport_rapporten_maand_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rapporten/maand.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Maandrapport Pdf
+         * @description Render één maandrapport naar PDF (V1.2 §BC).
+         */
+        get: operations["get_maandrapport_pdf_rapporten_maand_pdf_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2289,6 +2833,23 @@ export interface paths {
         get: operations["get_research_source_research_sources__library_source_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/sources/{library_source_id}/ai-extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Research Ai Extraction */
+        post: operations["run_research_ai_extraction_research_sources__library_source_id__ai_extract_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2647,6 +3208,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduler/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Recent Scheduler Runs
+         * @description Return the most recent ``daily_briefing`` scheduler runs (audit list).
+         *
+         *     Mirrors ``/scheduler/runs/latest`` but surfaces a window so the
+         *     portefeuille page can show whether recent morning-chain fires
+         *     succeeded — until now ``scheduler_runs`` was internal-only and a
+         *     failing daily briefing was invisible in the UI.
+         */
+        get: operations["read_recent_scheduler_runs_scheduler_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduler/runs/latest": {
         parameters: {
             query?: never;
@@ -2736,6 +3322,313 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sell-signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Active Sell Signals
+         * @description Lijst actieve SELL-suggestie kaartjes.
+         */
+        get: operations["list_active_sell_signals_sell_signals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sell-signals/sweep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Sell Signal Sweep
+         * @description Handmatige trigger voor de SELL-loop sweep.
+         *
+         *     De worker-scheduler roept dit elke 15 min aan tijdens
+         *     market-hours; de operator kan het via de UI handmatig
+         *     triggeren voor een verse evaluatie. De endpoint checkt
+         *     bewust GEEN pauze-flag — CLAUDE.md §11 vraagt dat de
+         *     SELL-monitor blijft draaien.
+         */
+        post: operations["trigger_sell_signal_sweep_sell_signals_sweep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sell-signals/{card_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Sell Signal
+         * @description Operator: verwijder een SELL-suggestie uit de lijst.
+         */
+        post: operations["dismiss_sell_signal_sell_signals__card_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/advanced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Advanced Settings */
+        get: operations["get_advanced_settings_settings_advanced_get"];
+        /** Update Advanced Settings */
+        put: operations["update_advanced_settings_settings_advanced_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Connection Settings */
+        get: operations["get_connection_settings_settings_connection_get"];
+        /** Update Connection Settings */
+        put: operations["update_connection_settings_settings_connection_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/data-windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Data Window Settings */
+        get: operations["get_data_window_settings_settings_data_windows_get"];
+        /** Update Data Window Settings */
+        put: operations["update_data_window_settings_settings_data_windows_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/execution-gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Execution Gate Settings */
+        get: operations["get_execution_gate_settings_settings_execution_gates_get"];
+        /** Update Execution Gate Settings */
+        put: operations["update_execution_gate_settings_settings_execution_gates_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/forecast-market": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Forecast Market Settings */
+        get: operations["get_forecast_market_settings_settings_forecast_market_get"];
+        /** Update Forecast Market Settings */
+        put: operations["update_forecast_market_settings_settings_forecast_market_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/market-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Market Events Settings */
+        get: operations["get_market_events_settings_settings_market_events_get"];
+        /** Update Market Events Settings */
+        put: operations["update_market_events_settings_settings_market_events_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notification Settings */
+        get: operations["get_notification_settings_settings_notifications_get"];
+        /** Update Notification Settings */
+        put: operations["update_notification_settings_settings_notifications_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/notifications/test-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Test Email
+         * @description Send one test email using the currently-saved SMTP settings.
+         *
+         *     Honours ``notifications_email_real_client_enabled`` — when False
+         *     this returns a ``stubbed`` result without opening an SMTP session.
+         *     That's the safe default: a fresh deploy with SMTP creds saved but
+         *     no operator opt-in can't accidentally email anyone.
+         */
+        post: operations["send_test_email_settings_notifications_test_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/order-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Order Policy Settings */
+        get: operations["get_order_policy_settings_settings_order_policy_get"];
+        /** Update Order Policy Settings */
+        put: operations["update_order_policy_settings_settings_order_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/predictor-tuning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Predictor Tuning Settings */
+        get: operations["get_predictor_tuning_settings_settings_predictor_tuning_get"];
+        /** Update Predictor Tuning Settings */
+        put: operations["update_predictor_tuning_settings_settings_predictor_tuning_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/profit-target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profit Target Setting */
+        get: operations["get_profit_target_setting_settings_profit_target_get"];
+        /** Update Profit Target Setting */
+        put: operations["update_profit_target_setting_settings_profit_target_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/risk-limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Risk Limits */
+        get: operations["get_risk_limits_settings_risk_limits_get"];
+        /** Update Risk Limits */
+        put: operations["update_risk_limits_settings_risk_limits_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/scheduler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Scheduler Settings */
+        get: operations["get_scheduler_settings_settings_scheduler_get"];
+        /** Update Scheduler Settings */
+        put: operations["update_scheduler_settings_settings_scheduler_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/settings/summary": {
         parameters: {
             query?: never;
@@ -2764,6 +3657,49 @@ export interface paths {
         get: operations["read_trading_settings_settings_trading_get"];
         /** Update Trading Settings */
         put: operations["update_trading_settings_settings_trading_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/universe-scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Universe Scan Settings
+         * @description Operator's selected scan markets + the full list to choose from.
+         */
+        get: operations["get_universe_scan_settings_settings_universe_scan_get"];
+        /**
+         * Update Universe Scan Settings
+         * @description Persist the operator's multi-select. Validates against
+         *     ``LOCKED_INDEX_CODES``; unknown codes raise HTTP 422.
+         */
+        put: operations["update_universe_scan_settings_settings_universe_scan_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/worker-sweeps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Worker Sweep Settings */
+        get: operations["get_worker_sweep_settings_settings_worker_sweeps_get"];
+        /** Update Worker Sweep Settings */
+        put: operations["update_worker_sweep_settings_settings_worker_sweeps_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2822,6 +3758,31 @@ export interface paths {
          *     evidence-gated inputs. Default-off. No action drafts or orders.
          */
         post: operations["run_suggestions_sync_suggestions_compute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/suggestions/grid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Suggestions Grid
+         * @description Return the daily TODO grid the operator opens at 7am.
+         *
+         *     Sections are returned in locked safety order: Verkopen first,
+         *     Geblokkeerd last. Each row carries a ``diff_status`` (nieuw /
+         *     gewijzigd / ongewijzigd) computed by comparing against the most
+         *     recent prior suggestion for the same asset.
+         */
+        get: operations["get_suggestions_grid_suggestions_grid_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2908,6 +3869,34 @@ export interface paths {
         };
         /** Read System Status */
         get: operations["read_system_status_system_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tob/year-to-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tob Year To Date
+         * @description Return realised TOB for the given (or current) calendar year.
+         *
+         *     Aggregates ``compute_tob(fill_price_local * fill_quantity,
+         *     standard_stock)`` over every fill whose ``fill_time`` falls inside
+         *     the calendar year. Both BUY and SELL count — TOB is owed on each
+         *     leg of a round-trip.
+         *
+         *     Per-currency totals are reported as decimal strings; the response
+         *     never collapses them into a single EUR figure.
+         */
+        get: operations["get_tob_year_to_date_tob_year_to_date_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3036,6 +4025,80 @@ export interface paths {
          *     V1+V1.1 checks instead of blanket-failing.
          */
         get: operations["read_v1_release_readiness_v1_release_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save Preference
+         * @description Add or replace one preference. Idempotent on ``(account,
+         *     symbol, kind)`` — re-posting the same triple updates the ``note``
+         *     and creation timestamp without raising.
+         */
+        post: operations["save_preference_watchlist_preferences_post"];
+        /**
+         * Delete Preference
+         * @description Remove one preference. Idempotent — deleting a non-existent
+         *     row returns success because the desired state (gone) holds.
+         */
+        delete: operations["delete_preference_watchlist_preferences_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist-preferences/favorieten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Favorieten
+         * @description Return all favorites for one account with the latest
+         *     orchestrator verdict per symbol.
+         *
+         *     The orchestrator writes one verdict per (account, symbol,
+         *     forecast_id) — we want the most recent per symbol so the UI
+         *     surfaces "what is the doctrine saying about my favorite right
+         *     now". We do that client-side by listing all verdicts for the
+         *     account (capped at 500) and picking the newest per symbol.
+         */
+        get: operations["list_favorieten_watchlist_preferences_favorieten_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist-preferences/uitsluitingen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Uitsluitingen
+         * @description Return all exclusions for one account.
+         */
+        get: operations["list_uitsluitingen_watchlist_preferences_uitsluitingen_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3177,6 +4240,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionDraftActivityOut */
+        ActionDraftActivityOut: {
+            /** Dismissed */
+            dismissed: number;
+            /** Filled */
+            filled: number;
+            /** Proposed */
+            proposed: number;
+            /** Submitted */
+            submitted: number;
+            /** User Approved */
+            user_approved: number;
+        };
         /** ActionDraftListResponse */
         ActionDraftListResponse: {
             /** Drafts */
@@ -3335,6 +4411,28 @@ export interface components {
             /** Storage Configured */
             storage_configured: boolean;
         };
+        /**
+         * AdvancedSettingsResponse
+         * @description Tier-2 power-user knobs surfaced behind the "Geavanceerde
+         *     instellingen" accordion. Each value falls back to the API
+         *     settings-singleton default (env-var) when no DB row has been saved.
+         */
+        AdvancedSettingsResponse: {
+            /** Action Draft Approval Valid Minutes */
+            action_draft_approval_valid_minutes: number;
+            /** Ai Explanation Provider Code */
+            ai_explanation_provider_code: string;
+            /** Ensemble Weight Strategy */
+            ensemble_weight_strategy: string;
+            /** Gbm Drift Window Days */
+            gbm_drift_window_days: number | null;
+            /** Help Nl */
+            help_nl: string;
+            /** Sharpe Slight Threshold */
+            sharpe_slight_threshold: string;
+            /** Sharpe Strong Threshold */
+            sharpe_strong_threshold: string;
+        };
         /** AiBudgetSection */
         AiBudgetSection: {
             /** Help Nl */
@@ -3343,6 +4441,13 @@ export interface components {
             label_nl: string;
             /** Status Nl */
             status_nl: string;
+        };
+        /** AiExtractedFact */
+        AiExtractedFact: {
+            /** Fact Text Nl */
+            fact_text_nl: string;
+            /** Is Grounded */
+            is_grounded: boolean;
         };
         /** AiUsageSummary */
         AiUsageSummary: {
@@ -3401,7 +4506,7 @@ export interface components {
             allow_currencies_watch_only: boolean;
             /**
              * Allow Etfs
-             * @default true
+             * @default false
              */
             allow_etfs: boolean;
             /**
@@ -3424,10 +4529,59 @@ export interface components {
              */
             blocked_asset_types: components["schemas"]["BlockedAssetType"][];
             /**
+             * Euronext Amsterdam Enabled
+             * @default true
+             */
+            euronext_amsterdam_enabled: boolean;
+            /**
+             * Euronext Brussels Enabled
+             * @default true
+             */
+            euronext_brussels_enabled: boolean;
+            /**
+             * Euronext Paris Enabled
+             * @default true
+             */
+            euronext_paris_enabled: boolean;
+            /**
              * Explanation Nl
              * @default Dit is de harde veiligheidsfilter voor toegestane beleggingen.
              */
             explanation_nl: string;
+            /**
+             * Nasdaq Enabled
+             * @default true
+             */
+            nasdaq_enabled: boolean;
+            /**
+             * Nyse Enabled
+             * @default true
+             */
+            nyse_enabled: boolean;
+        };
+        /** ArchiveEntryOut */
+        ArchiveEntryOut: {
+            /** Archive Id */
+            archive_id: string;
+            /** Generated At */
+            generated_at: string;
+            /** Month */
+            month: number;
+            /** Pdf Size Bytes */
+            pdf_size_bytes: number;
+            /** Source */
+            source: string;
+            /** Year */
+            year: number;
+        };
+        /** ArchiveListResponse */
+        ArchiveListResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["ArchiveEntryOut"][];
+            /** Title Nl */
+            title_nl: string;
         };
         /** AssetCreateRequest */
         AssetCreateRequest: {
@@ -3567,6 +4721,65 @@ export interface components {
             safe_for_orders: false;
         };
         /**
+         * ComposeAlertSummaryRequest
+         * @description Worker-side request shape for the compose-summary endpoint.
+         *
+         *     The worker has already rendered the deterministic alert lines and
+         *     a short context block (market code, date, NAV delta). Those strings
+         *     become the AI's input evidence; the validator's hallucination guard
+         *     will block any number that doesn't already appear in them.
+         */
+        ComposeAlertSummaryRequest: {
+            /** Alert Lines */
+            alert_lines: string[];
+            /** Context Text */
+            context_text: string;
+            /** Kind */
+            kind: string;
+        };
+        /** ComposeAlertSummaryResponse */
+        ComposeAlertSummaryResponse: {
+            /** Blocking Reason */
+            blocking_reason: string | null;
+            /** Hallucinated Numbers */
+            hallucinated_numbers: string[];
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
+            /** Summary Nl */
+            summary_nl: string | null;
+        };
+        /** ConnectionSettingsResponse */
+        ConnectionSettingsResponse: {
+            /** Ai Email Summary Enabled */
+            ai_email_summary_enabled: boolean;
+            /** Ai Explanation Enabled */
+            ai_explanation_enabled: boolean;
+            /** Ai Explanation Morning Batch Enabled */
+            ai_explanation_morning_batch_enabled: boolean;
+            /** Claude Ai Api Key Set */
+            claude_ai_api_key_set: boolean;
+            /** Claude Ai Budget Monthly Eur */
+            claude_ai_budget_monthly_eur: string | null;
+            /** Claude Ai Explanation Model */
+            claude_ai_explanation_model: string | null;
+            /** Ibkr Account Id */
+            ibkr_account_id: string | null;
+            /** Ibkr Client Id */
+            ibkr_client_id: number | null;
+            /** Ibkr Enabled */
+            ibkr_enabled: boolean;
+            /** Ibkr Host */
+            ibkr_host: string | null;
+            /** Ibkr Port */
+            ibkr_port: number | null;
+            /** Research Ai Extraction Enabled */
+            research_ai_extraction_enabled: boolean;
+        };
+        /**
          * CreateActionDraftRequest
          * @description Discriminated union: either ``decision_package_id`` or full fields.
          */
@@ -3591,6 +4804,25 @@ export interface components {
             symbol?: string | null;
             /** User Note */
             user_note?: string | null;
+        };
+        /** CreateDividendRequest */
+        CreateDividendRequest: {
+            /** Country Code */
+            country_code?: string | null;
+            /** Currency Local */
+            currency_local: string;
+            /** Gross Local */
+            gross_local: string;
+            /** Isin */
+            isin?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Pay Date */
+            pay_date: string;
+            /** Symbol */
+            symbol: string;
+            /** Withholding Pct */
+            withholding_pct?: string | null;
         };
         /** CreateWatchlistItemRequest */
         CreateWatchlistItemRequest: {
@@ -3624,6 +4856,23 @@ export interface components {
          * @enum {string}
          */
         CurrencyPreference: "eur_preferred_usd_allowed" | "eur_only" | "usd_only";
+        /**
+         * DataWindowSettingsResponse
+         * @description Operator-editable data-window knobs that govern how much history
+         *     the morning chain pulls + caches.
+         */
+        DataWindowSettingsResponse: {
+            /** Daily Briefing Lookback Hours */
+            daily_briefing_lookback_hours: number;
+            /** Forecast History Lookback Days */
+            forecast_history_lookback_days: number;
+            /** Forecast Minimum Bars Required */
+            forecast_minimum_bars_required: number;
+            /** Help Nl */
+            help_nl: string;
+            /** Universe Scan Cache Ttl Hours */
+            universe_scan_cache_ttl_hours: number;
+        };
         /** DecisionPackageChainResponse */
         DecisionPackageChainResponse: {
             /** Conid */
@@ -3741,10 +4990,132 @@ export interface components {
             /** Valid Until */
             valid_until: string;
         };
+        /** DigestAlert */
+        DigestAlert: {
+            /** Body Nl */
+            body_nl: string;
+            /** Kind */
+            kind: string;
+            /** Reference Id */
+            reference_id: string | null;
+            /** Reference Kind */
+            reference_kind: string | null;
+            /** Severity Nl */
+            severity_nl: string;
+            /** Title Nl */
+            title_nl: string;
+        };
+        /** DigestTodayResponse */
+        DigestTodayResponse: {
+            /** Action Drafts Summary */
+            action_drafts_summary: {
+                [key: string]: unknown;
+            };
+            /** Alerts */
+            alerts: components["schemas"]["DigestAlert"][];
+            /** Briefing Date */
+            briefing_date: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Help Nl */
+            help_nl: string;
+            /** Market Code */
+            market_code: string | null;
+            /** Nav Summary */
+            nav_summary: {
+                [key: string]: unknown;
+            };
+            /** Positions Summary */
+            positions_summary: {
+                [key: string]: unknown;
+            };
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
+            /** Suggestions Summary */
+            suggestions_summary: {
+                [key: string]: unknown;
+            };
+        };
         /** DismissActionDraftRequest */
         DismissActionDraftRequest: {
             /** Reason */
             reason?: string | null;
+        };
+        /** DismissRequest */
+        DismissRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** DividendKpisOut */
+        DividendKpisOut: {
+            /** Count */
+            count: number;
+            /** Gross By Currency */
+            gross_by_currency: {
+                [key: string]: string;
+            };
+            /** Net By Currency */
+            net_by_currency: {
+                [key: string]: string;
+            };
+            /** Withholding By Currency */
+            withholding_by_currency: {
+                [key: string]: string;
+            };
+        };
+        /** DividendListResponse */
+        DividendListResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["DividendOut"][];
+            /** Title Nl */
+            title_nl: string;
+            totals: components["schemas"]["DividendKpisOut"];
+            /** Treaty Defaults Pct By Country */
+            treaty_defaults_pct_by_country: {
+                [key: string]: string;
+            };
+            /** Year */
+            year: number;
+        };
+        /** DividendMutationResponse */
+        DividendMutationResponse: {
+            /** Accepted */
+            accepted: boolean;
+            /** Explanation Nl */
+            explanation_nl: string;
+            /** Record Id */
+            record_id: string | null;
+        };
+        /** DividendOut */
+        DividendOut: {
+            /** Country Code */
+            country_code: string | null;
+            /** Currency Local */
+            currency_local: string;
+            /** Dividend Event Id */
+            dividend_event_id: string;
+            /** Gross Local */
+            gross_local: string;
+            /** Isin */
+            isin: string | null;
+            /** Net Local */
+            net_local: string;
+            /** Note */
+            note: string | null;
+            /** Pay Date */
+            pay_date: string;
+            /** Symbol */
+            symbol: string;
+            /** Withholding Local */
+            withholding_local: string;
+            /** Withholding Pct */
+            withholding_pct: string;
         };
         /** DutchLabelsSummary */
         DutchLabelsSummary: {
@@ -3752,6 +5123,99 @@ export interface components {
             labels: {
                 [key: string]: string;
             };
+        };
+        /** EarningsEventRow */
+        EarningsEventRow: {
+            /** Earnings Event Id */
+            earnings_event_id: string;
+            /** Event Date */
+            event_date: string;
+            /** Fetched At */
+            fetched_at: string;
+            /** Ibkr Conid */
+            ibkr_conid: string | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Symbol */
+            symbol: string;
+        };
+        /** EarningsRefreshRequest */
+        EarningsRefreshRequest: {
+            /** Symbols */
+            symbols: string[];
+            /**
+             * Window Days
+             * @default 21
+             */
+            window_days: number;
+        };
+        /** EarningsRefreshResponse */
+        EarningsRefreshResponse: {
+            /** Error Text */
+            error_text: string | null;
+            /** Fetched Count */
+            fetched_count: number;
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Status */
+            status: string;
+            /** Symbols Requested */
+            symbols_requested: number;
+            /** Upserted Count */
+            upserted_count: number;
+            /** Window Days */
+            window_days: number;
+        };
+        /** EarningsUpcomingResponse */
+        EarningsUpcomingResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["EarningsEventRow"][];
+            /** Title Nl */
+            title_nl: string;
+            /** Window Days */
+            window_days: number;
+        };
+        /** ErrorLogItem */
+        ErrorLogItem: {
+            /** Category */
+            category: string;
+            /** Created At */
+            created_at: string;
+            /** Event Code */
+            event_code: string;
+            /** Message Nl */
+            message_nl: string;
+            /** Redacted Details Json */
+            redacted_details_json: {
+                [key: string]: string;
+            } | null;
+            /** Severity */
+            severity: string;
+            /** Source Component */
+            source_component: string;
+            /** Source Service */
+            source_service: string;
+            /** Stack Trace Redacted */
+            stack_trace_redacted: string | null;
+            /** Status */
+            status: string;
+            /** System Event Id */
+            system_event_id: string;
+            /** Technical Summary */
+            technical_summary: string | null;
+            /** Title Nl */
+            title_nl: string;
+        };
+        /** ErrorLogResponse */
+        ErrorLogResponse: {
+            /** Errors */
+            errors: components["schemas"]["ErrorLogItem"][];
+            /** Open Count */
+            open_count: number;
         };
         /** EvidenceReferenceResponse */
         EvidenceReferenceResponse: {
@@ -3761,6 +5225,93 @@ export interface components {
             source_id: string;
             /** Source Type */
             source_type: string;
+        };
+        /** ExclusionRow */
+        ExclusionRow: {
+            /** Created At */
+            created_at: string;
+            /** Note */
+            note: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Watchlist Preference Id */
+            watchlist_preference_id: string;
+        };
+        /** ExclusionsResponse */
+        ExclusionsResponse: {
+            /** Account Id */
+            account_id: string;
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["ExclusionRow"][];
+            /** Title Nl */
+            title_nl: string;
+        };
+        /**
+         * ExecutionGateSettingsResponse
+         * @description Safety-critical execution toggles. ``ibkr_paper_order_submission_enabled``
+         *     is the API-side master switch for IBKR order submission; the other three
+         *     are worker-side and take effect at the next worker restart.
+         */
+        ExecutionGateSettingsResponse: {
+            /** Cancel Sweep Enabled */
+            cancel_sweep_enabled: boolean;
+            /** Help Nl */
+            help_nl: string;
+            /** Ibkr Paper Order Submission Enabled */
+            ibkr_paper_order_submission_enabled: boolean;
+            /** Morning Chain After Pre Briefing */
+            morning_chain_after_pre_briefing: boolean;
+            /** Submission Sweep Enabled */
+            submission_sweep_enabled: boolean;
+        };
+        /** ExecutiveSummaryOut */
+        ExecutiveSummaryOut: {
+            /** Headline Nl */
+            headline_nl: string;
+            /** Hit Rate Pct */
+            hit_rate_pct: number;
+            /** Net Local By Currency */
+            net_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Trade Count */
+            trade_count: number;
+            /** Vs Baseline Eur */
+            vs_baseline_eur: string | null;
+        };
+        /** FavoriteRow */
+        FavoriteRow: {
+            /** Created At */
+            created_at: string;
+            /** Latest Blocking Reason */
+            latest_blocking_reason?: string | null;
+            /** Latest Confidence */
+            latest_confidence?: number | null;
+            /** Latest Decision */
+            latest_decision?: string | null;
+            /** Latest Generated At */
+            latest_generated_at?: string | null;
+            /** Latest Summary Nl */
+            latest_summary_nl?: string | null;
+            /** Note */
+            note: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Watchlist Preference Id */
+            watchlist_preference_id: string;
+        };
+        /** FavoritesResponse */
+        FavoritesResponse: {
+            /** Account Id */
+            account_id: string;
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["FavoriteRow"][];
+            /** Title Nl */
+            title_nl: string;
         };
         /** ForecastByAccountResponse */
         ForecastByAccountResponse: {
@@ -3792,13 +5343,19 @@ export interface components {
             conid: string;
             /** Generated At */
             generated_at: string;
+            /** Horizon Trading Days */
+            horizon_trading_days: number;
             /**
              * Label
              * @enum {string}
              */
             label: "Kopen" | "Verminderen" | "Verkopen" | "Houden" | "Bekijken" | "Geblokkeerd";
+            /** P10 Log Return */
+            p10_log_return: string;
             /** P50 Log Return */
             p50_log_return: string;
+            /** P90 Log Return */
+            p90_log_return: string;
             /** Prob Positive */
             prob_positive: string;
             /** User Holds Position */
@@ -3903,6 +5460,32 @@ export interface components {
              * @constant
              */
             safe_for_orders: false;
+        };
+        /**
+         * ForecastMarketSettingsResponse
+         * @description Operator-facing forecast horizon, ensemble toggle, risk profile,
+         *     locked-universe pick, and market-data feed toggles. Each value falls
+         *     back to the env-var default when no DB row has been saved.
+         */
+        ForecastMarketSettingsResponse: {
+            /** Forecast Ensemble Enabled */
+            forecast_ensemble_enabled: boolean;
+            /** Forecast Horizon Trading Days */
+            forecast_horizon_trading_days: number;
+            /** Help Nl */
+            help_nl: string;
+            /** Ibkr Market Data Enabled */
+            ibkr_market_data_enabled: boolean;
+            /** Ibkr Market Data Type */
+            ibkr_market_data_type: string;
+            /** Market Data Provider */
+            market_data_provider: string;
+            /** Market Data Sync Enabled */
+            market_data_sync_enabled: boolean;
+            /** Suggestions Risk Profile */
+            suggestions_risk_profile: string;
+            /** Universe Set */
+            universe_set: string;
         };
         /** FreshnessAuditListResponse */
         FreshnessAuditListResponse: {
@@ -4018,6 +5601,22 @@ export interface components {
             passed: boolean;
             /** Reason Nl */
             reason_nl: string;
+        };
+        /** GenerateArchiveRequest */
+        GenerateArchiveRequest: {
+            /** Month */
+            month: number;
+            /** Year */
+            year: number;
+        };
+        /** GenerateArchiveResponse */
+        GenerateArchiveResponse: {
+            /** Accepted */
+            accepted: boolean;
+            /** Archive Id */
+            archive_id: string;
+            /** Pdf Size Bytes */
+            pdf_size_bytes: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4351,6 +5950,25 @@ export interface components {
             /** To Status */
             to_status: string | null;
         };
+        /** IncomeBreakdownOut */
+        IncomeBreakdownOut: {
+            /** Capital Gains Local By Currency */
+            capital_gains_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Net Local By Currency */
+            net_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Tob Local By Currency */
+            tob_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Ytd Net Local By Currency */
+            ytd_net_local_by_currency: {
+                [key: string]: string;
+            };
+        };
         /** IntegrationCard */
         IntegrationCard: {
             /** Blocks Related Jobs */
@@ -4468,6 +6086,29 @@ export interface components {
          * @enum {string}
          */
         LatestSnapshotStatus: "not_configured" | "missing_snapshot" | "snapshot_available" | "storage_failure" | "stale_snapshot";
+        /** MacroSnapshotResponse */
+        MacroSnapshotResponse: {
+            /** Headline Nl */
+            headline_nl: string;
+            /** Help Nl */
+            help_nl: string;
+            /** Last Evaluated At */
+            last_evaluated_at: string | null;
+            /** Ma Long Day */
+            ma_long_day: number | null;
+            /** Ma Short Day */
+            ma_short_day: number | null;
+            /** Sample Size */
+            sample_size: number;
+            /** Severity */
+            severity: string;
+            /** State */
+            state: string;
+            /** Title Nl */
+            title_nl: string;
+            /** Vix Level */
+            vix_level: number | null;
+        };
         /** ManualReviewListResponse */
         ManualReviewListResponse: {
             /** Ibkr Account Id */
@@ -4585,6 +6226,188 @@ export interface components {
             /** Symbol */
             symbol: string;
         };
+        /**
+         * MarketEventFire
+         * @description One scheduled cron fire for the operator's followed universe.
+         */
+        MarketEventFire: {
+            /** Event Kind */
+            event_kind: string;
+            /** Fire Hour */
+            fire_hour: number;
+            /** Fire Minute */
+            fire_minute: number;
+            /** Market Code */
+            market_code: string;
+            /** Market Label Nl */
+            market_label_nl: string;
+            /** Timezone */
+            timezone: string;
+        };
+        /**
+         * MarketEventsSettingsResponse
+         * @description GET payload for the Markt-events settings section.
+         */
+        MarketEventsSettingsResponse: {
+            /** Active Sessions */
+            active_sessions: string[];
+            /** Fires */
+            fires: components["schemas"]["MarketEventFire"][];
+            /** Help Nl */
+            help_nl: string;
+            /** Per Market Close Digest Enabled */
+            per_market_close_digest_enabled: boolean;
+            /** Per Market Open Alerts Enabled */
+            per_market_open_alerts_enabled: boolean;
+            /** Universe Codes Selected */
+            universe_codes_selected: string[];
+        };
+        /**
+         * MarketHoursEntry
+         * @description One followed market's open/close + current state.
+         *
+         *     All times are exposed as UTC ISO so the client can render in the
+         *     operator's local timezone without server-side tz juggling. The
+         *     ``state`` enum is deterministic so the UI dot mapping never has
+         *     to parse Dutch text.
+         */
+        MarketHoursEntry: {
+            /** Close At Utc */
+            close_at_utc: string;
+            /** Close Local Hhmm */
+            close_local_hhmm: string;
+            /** Market Code */
+            market_code: string;
+            /** Market Label Nl */
+            market_label_nl: string;
+            /** Next Event At Utc */
+            next_event_at_utc: string | null;
+            /** Next Event Kind */
+            next_event_kind: string | null;
+            /** Open At Utc */
+            open_at_utc: string;
+            /** Open Local Hhmm */
+            open_local_hhmm: string;
+            /** State */
+            state: string;
+            /** State Nl */
+            state_nl: string;
+            /** Timezone */
+            timezone: string;
+        };
+        /**
+         * MarketHoursNowResponse
+         * @description Live snapshot of every followed market's hours.
+         */
+        MarketHoursNowResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Markets */
+            markets: components["schemas"]["MarketHoursEntry"][];
+            /** Now Utc */
+            now_utc: string;
+            /** Universe Codes Selected */
+            universe_codes_selected: string[];
+        };
+        /** MonthlyReportResponse */
+        MonthlyReportResponse: {
+            action_draft_activity: components["schemas"]["ActionDraftActivityOut"];
+            executive_summary: components["schemas"]["ExecutiveSummaryOut"];
+            /** Help Nl */
+            help_nl: string;
+            income: components["schemas"]["IncomeBreakdownOut"];
+            /** Month */
+            month: number;
+            /** Notes Nl */
+            notes_nl: string[];
+            /** Open Positions Count */
+            open_positions_count: number;
+            /** Realised Trades */
+            realised_trades: components["schemas"]["RealisedTradeOut"][];
+            software_performance: components["schemas"]["SoftwarePerformanceOut"];
+            /** Title Nl */
+            title_nl: string;
+            verdict_activity: components["schemas"]["VerdictActivityOut"];
+            /** Year */
+            year: number;
+        };
+        /** MorningExplanationBatchResponse */
+        MorningExplanationBatchResponse: {
+            /** Blocked Count */
+            blocked_count: number;
+            /** Blocking Reasons */
+            blocking_reasons: string[];
+            /** Generated Count */
+            generated_count: number;
+            /** Help Nl */
+            help_nl: string;
+            /** Package Count */
+            package_count: number;
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Skipped Count */
+            skipped_count: number;
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
+        };
+        /**
+         * NavHistoryPoint
+         * @description One NAV snapshot ready for the sparkline.
+         */
+        NavHistoryPoint: {
+            /** Nav Value */
+            nav_value: string;
+            /** Recorded At Utc */
+            recorded_at_utc: string;
+        };
+        /** NavHistoryResponse */
+        NavHistoryResponse: {
+            /** Base Currency */
+            base_currency: string | null;
+            /** Days Requested */
+            days_requested: number;
+            /** Help Nl */
+            help_nl: string;
+            /** Ibkr Account Id */
+            ibkr_account_id: string | null;
+            /** Points */
+            points: components["schemas"]["NavHistoryPoint"][];
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
+        };
+        /** NotificationSettingsResponse */
+        NotificationSettingsResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Notification Send On High Confidence Sell */
+            notification_send_on_high_confidence_sell: boolean;
+            /** Notification Send On Nav Drop */
+            notification_send_on_nav_drop: boolean;
+            /** Notification Send On Position Drop */
+            notification_send_on_position_drop: boolean;
+            /** Notifications Email Enabled */
+            notifications_email_enabled: boolean;
+            /** Notifications Email Real Client Enabled */
+            notifications_email_real_client_enabled: boolean;
+            /** Smtp From */
+            smtp_from: string | null;
+            /** Smtp Host */
+            smtp_host: string | null;
+            /** Smtp Password Set */
+            smtp_password_set: boolean;
+            /** Smtp Port */
+            smtp_port: number;
+            /** Smtp To */
+            smtp_to: string | null;
+            /** Smtp Use Tls */
+            smtp_use_tls: boolean;
+            /** Smtp Username */
+            smtp_username: string | null;
+        };
         /** OnlineStorageStatusResponse */
         OnlineStorageStatusResponse: {
             /** Configured */
@@ -4615,6 +6438,28 @@ export interface components {
             /** Status Nl */
             status_nl: string;
         };
+        /**
+         * OrderPolicySettingsResponse
+         * @description Operator-editable defaults for action-draft sizing + the suggestion
+         *     portfolio-context gate. Strings on the wire so Decimal precision
+         *     survives the round trip and the form stays parser-friendly.
+         */
+        OrderPolicySettingsResponse: {
+            /** Cost Dominates Ratio */
+            cost_dominates_ratio: string;
+            /** Default Buy Value Eur */
+            default_buy_value_eur: string;
+            /** Default Reduce Pct */
+            default_reduce_pct: string;
+            /** Default Top Up Pct */
+            default_top_up_pct: string;
+            /** Help Nl */
+            help_nl: string;
+            /** Max Sector Pct */
+            max_sector_pct: string;
+            /** Suggestion Valid Minutes */
+            suggestion_valid_minutes: number;
+        };
         /** PatchActionDraftRequest */
         PatchActionDraftRequest: {
             /** Limit Price Local */
@@ -4630,6 +6475,19 @@ export interface components {
             asset_id?: string | null;
             /** Note */
             note?: string | null;
+        };
+        /** PauzeStatusResponse */
+        PauzeStatusResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Paused */
+            paused: boolean;
+            /** Paused At */
+            paused_at: string | null;
+            /** Summary Nl */
+            summary_nl: string;
+            /** Title Nl */
+            title_nl: string;
         };
         /**
          * PerAssetCoverage
@@ -5137,6 +6995,94 @@ export interface components {
             /** Valuation Status */
             valuation_status: string;
         };
+        /**
+         * PredictorPerformanceEntry
+         * @description One predictor's aggregated performance over the window.
+         */
+        PredictorPerformanceEntry: {
+            /** Mean Brier Score */
+            mean_brier_score: string | null;
+            /** Mean Realised Return Pct */
+            mean_realised_return_pct: string | null;
+            /** Mean Return Spread Pct */
+            mean_return_spread_pct: string | null;
+            /** Model Code */
+            model_code: string;
+            /** Model Version */
+            model_version: string;
+            /** Realised Sample Count */
+            realised_sample_count: number;
+            /** Sample Count */
+            sample_count: number;
+        };
+        /** PredictorPerformanceResponse */
+        PredictorPerformanceResponse: {
+            /** Best Model Code */
+            best_model_code: string | null;
+            /** Help Nl */
+            help_nl: string;
+            /** Lookback Days */
+            lookback_days: number;
+            /** Predictors */
+            predictors: components["schemas"]["PredictorPerformanceEntry"][];
+            /** Safe For Action Drafts */
+            safe_for_action_drafts: boolean;
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
+            /** Total Contributions Considered */
+            total_contributions_considered: number;
+        };
+        /**
+         * PredictorTuningSettingsResponse
+         * @description Power-user predictor knobs surfaced behind the "Voorspeller-tuning"
+         *     accordion. Each value falls back to the env-default when no DB row
+         *     has been saved.
+         */
+        PredictorTuningSettingsResponse: {
+            /** Decision Packages Valid Minutes */
+            decision_packages_valid_minutes: number;
+            /** Forecast Valid Minutes */
+            forecast_valid_minutes: number;
+            /** Gbm Regime Shift Enabled */
+            gbm_regime_shift_enabled: boolean;
+            /** Gbm Regime Shift Threshold Pct */
+            gbm_regime_shift_threshold_pct: string;
+            /** Help Nl */
+            help_nl: string;
+            /** Prediction Diary Inconclusive Tolerance Pct */
+            prediction_diary_inconclusive_tolerance_pct: string;
+        };
+        /** PreferenceMutationResponse */
+        PreferenceMutationResponse: {
+            /** Accepted */
+            accepted: boolean;
+            /** Explanation Nl */
+            explanation_nl: string;
+            /** Record Id */
+            record_id: string | null;
+        };
+        /** ProfitTargetResponse */
+        ProfitTargetResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Is Doctrine Default */
+            is_doctrine_default: boolean;
+            /** Profit Target Pct */
+            profit_target_pct: string;
+            /** Summary Nl */
+            summary_nl: string;
+            /** Title Nl */
+            title_nl: string;
+        };
+        /** ProfitTargetUpdateRequest */
+        ProfitTargetUpdateRequest: {
+            /** Profit Target Pct */
+            profit_target_pct: string | null;
+        };
         /** ProviderCallRow */
         ProviderCallRow: {
             /** Account Id */
@@ -5459,6 +7405,27 @@ export interface components {
             /** Ibkr Contract Validated */
             ibkr_contract_validated: boolean;
         };
+        /** RealisedTradeOut */
+        RealisedTradeOut: {
+            /** Buy Date */
+            buy_date: string;
+            /** Currency Local */
+            currency_local: string;
+            /** Gross Local */
+            gross_local: string;
+            /** Hold Days */
+            hold_days: number;
+            /** Net Local */
+            net_local: string;
+            /** Net Pct On Cost */
+            net_pct_on_cost: string;
+            /** Quantity */
+            quantity: string;
+            /** Sell Date */
+            sell_date: string;
+            /** Symbol */
+            symbol: string;
+        };
         /** ReconciliationAuditListResponse */
         ReconciliationAuditListResponse: {
             /** Ibkr Account Id */
@@ -5548,6 +7515,19 @@ export interface components {
          * @enum {string}
          */
         RegionPreference: "global" | "europe" | "usa" | "emerging";
+        /** ReportFrontendErrorRequest */
+        ReportFrontendErrorRequest: {
+            /** Component */
+            component?: string | null;
+            /** Context */
+            context?: {
+                [key: string]: string;
+            } | null;
+            /** Message */
+            message: string;
+            /** Stack */
+            stack?: string | null;
+        };
         /** RequestLogListResponse */
         RequestLogListResponse: {
             /** Audit Help Nl */
@@ -5667,6 +7647,33 @@ export interface components {
             status_nl: string;
             /** Stored Record Count */
             stored_record_count: number | null;
+        };
+        /** ResearchAiExtractionResponse */
+        ResearchAiExtractionResponse: {
+            /** Blocking Reason */
+            blocking_reason: string | null;
+            /** Facts */
+            facts: components["schemas"]["AiExtractedFact"][];
+            /** Hallucinated Fact Indices */
+            hallucinated_fact_indices: number[];
+            /** Help Nl */
+            help_nl: string;
+            /** Library Source Id */
+            library_source_id: string;
+            /** Model Name */
+            model_name: string | null;
+            /** Model Provider Code */
+            model_provider_code: string | null;
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Safe For Suggestions */
+            safe_for_suggestions: boolean;
+            /** Source Text Hash */
+            source_text_hash: string | null;
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
         };
         /** ResearchDocumentClassificationInput */
         ResearchDocumentClassificationInput: {
@@ -6124,6 +8131,48 @@ export interface components {
             /** User Confidence Nl */
             user_confidence_nl?: string | null;
         };
+        /** RiskLimitsResponse */
+        RiskLimitsResponse: {
+            /** Anti Revenge Loss Threshold Pct */
+            anti_revenge_loss_threshold_pct: string;
+            /** Anti Revenge Window Hours */
+            anti_revenge_window_hours: number;
+            /** Cooldown Seconds */
+            cooldown_seconds: number;
+            /** Daily Max Approvals */
+            daily_max_approvals: number;
+            /** Fomo Drift Pct */
+            fomo_drift_pct: string;
+            /** Hard Drawdown Pct */
+            hard_drawdown_pct: string;
+            /** Hard Drawdown Window Days */
+            hard_drawdown_window_days: number;
+            /** Ibkr Account Id */
+            ibkr_account_id: string;
+            /** Last Updated At */
+            last_updated_at: string;
+            /** Soft Drawdown Pct */
+            soft_drawdown_pct: string;
+            /** Soft Drawdown Window Days */
+            soft_drawdown_window_days: number;
+        };
+        /** SavePreferenceRequest */
+        SavePreferenceRequest: {
+            /**
+             * Account Id
+             * @default default
+             */
+            account_id: string;
+            /**
+             * Kind
+             * @description favorite | excluded
+             */
+            kind: string;
+            /** Note */
+            note?: string | null;
+            /** Symbol */
+            symbol: string;
+        };
         /** ScheduledRunAuditRow */
         ScheduledRunAuditRow: {
             /** Duration Ms */
@@ -6144,6 +8193,20 @@ export interface components {
             run_id: string;
             /** Run Type */
             run_type: string;
+        };
+        /**
+         * SchedulerSettingsResponse
+         * @description Operator-editable scheduler cadence — currently the API-side cron
+         *     + the IBKR read-only sync interval. Worker-side sweep settings are
+         *     a separate overlay (the worker reads its own env vars at startup).
+         */
+        SchedulerSettingsResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Ibkr Sync Interval Minutes */
+            ibkr_sync_interval_minutes: number;
+            /** Scheduler Daily Briefing Cron */
+            scheduler_daily_briefing_cron: string;
         };
         /** SchedulerV127RunsResponse */
         SchedulerV127RunsResponse: {
@@ -6205,6 +8268,113 @@ export interface components {
          * @enum {string}
          */
         SectorPreference: "technology" | "healthcare" | "industrials" | "financials" | "consumer" | "energy" | "utilities";
+        /** SectorRow */
+        SectorRow: {
+            /** Notional Local Approx */
+            notional_local_approx: string;
+            /** Position Count */
+            position_count: number;
+            /** Sector */
+            sector: string;
+            /** Weight Pct */
+            weight_pct: number;
+        };
+        /** SectorSpreadResponse */
+        SectorSpreadResponse: {
+            /** Has Unclassified */
+            has_unclassified: boolean;
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["SectorRow"][];
+            /** Title Nl */
+            title_nl: string;
+            /** Total Positions */
+            total_positions: number;
+        };
+        /** SellSignalCardResponse */
+        SellSignalCardResponse: {
+            /** Action */
+            action: string;
+            /** Card Id */
+            card_id: string;
+            /** Currency */
+            currency: string;
+            /** Current Pct Return */
+            current_pct_return: string;
+            /** Current Price */
+            current_price: string;
+            /** Days Held */
+            days_held: number | null;
+            /** Detail Nl */
+            detail_nl: string;
+            /** Dismissed At */
+            dismissed_at: string | null;
+            /** Dismissed Reason */
+            dismissed_reason: string | null;
+            /** Entry Price */
+            entry_price: string;
+            /** Expected Net Proceeds Eur */
+            expected_net_proceeds_eur: string | null;
+            /** First Generated At */
+            first_generated_at: string;
+            /** Forecast Id */
+            forecast_id: string | null;
+            /** Forecaster Above Target */
+            forecaster_above_target: boolean | null;
+            /** Headline Nl */
+            headline_nl: string;
+            /** Ibkr Account Ref */
+            ibkr_account_ref: string;
+            /** Last Evaluated At */
+            last_evaluated_at: string;
+            /** Position In Loss */
+            position_in_loss: boolean | null;
+            /** Quantity */
+            quantity: number;
+            /** Short Term Horizon Days */
+            short_term_horizon_days: number | null;
+            /** Short Term P50 */
+            short_term_p50: string | null;
+            /** Short Term Prob Above Pct */
+            short_term_prob_above_pct: string | null;
+            /** Signal Kind */
+            signal_kind: string;
+            /** Symbol */
+            symbol: string;
+            /** Target Pct */
+            target_pct: string | null;
+            /** Target Reached */
+            target_reached: boolean | null;
+        };
+        /** SellSignalListResponse */
+        SellSignalListResponse: {
+            /** Cards */
+            cards: components["schemas"]["SellSignalCardResponse"][];
+            /** Help Nl */
+            help_nl: string;
+            /** Title Nl */
+            title_nl: string;
+        };
+        /** SellSignalSweepResponse */
+        SellSignalSweepResponse: {
+            /** Completed At */
+            completed_at: string;
+            /** Error Text */
+            error_text: string | null;
+            /** Hold Review Cards Upserted */
+            hold_review_cards_upserted: number;
+            /** Positions Evaluated */
+            positions_evaluated: number;
+            /** Skipped No Forecast */
+            skipped_no_forecast: number;
+            /** Skipped No Position */
+            skipped_no_position: number;
+            /** Started At */
+            started_at: string;
+            /** Take Profit Cards Upserted */
+            take_profit_cards_upserted: number;
+        };
         /** ServiceStatusCard */
         ServiceStatusCard: {
             /** Action Nl */
@@ -6256,6 +8426,19 @@ export interface components {
             user_confirmed_no_real_money: boolean;
             /** User Confirmed Paper Only */
             user_confirmed_paper_only: boolean;
+        };
+        /** SoftwarePerformanceOut */
+        SoftwarePerformanceOut: {
+            /** Average Hold Days */
+            average_hold_days: number;
+            /** Confidence Distribution Pct */
+            confidence_distribution_pct: {
+                [key: string]: number;
+            };
+            /** Hit Rate Pct */
+            hit_rate_pct: number;
+            /** Proposals Vs Approved */
+            proposals_vs_approved: number[];
         };
         /** SourceToAssetLinkCreateRequest */
         SourceToAssetLinkCreateRequest: {
@@ -6365,6 +8548,110 @@ export interface components {
          * @enum {string}
          */
         StrategyRiskLevel: "low" | "medium" | "high";
+        /** SuggestionsGridResponse */
+        SuggestionsGridResponse: {
+            /** Actions Allowed */
+            actions_allowed: boolean;
+            /** Changed Count */
+            changed_count: number;
+            /** Generated At */
+            generated_at: string | null;
+            /** Help Nl */
+            help_nl: string;
+            /** New Count */
+            new_count: number;
+            /** Risk Profile */
+            risk_profile: string;
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Section Count */
+            section_count: number;
+            /** Sections */
+            sections: components["schemas"]["SuggestionsGridSection"][];
+            /** Status */
+            status: string;
+            /** Status Nl */
+            status_nl: string;
+            /** Total Item Count */
+            total_item_count: number;
+        };
+        /** SuggestionsGridSection */
+        SuggestionsGridSection: {
+            /** Action Label Nl */
+            action_label_nl: string;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["SuggestionsGridSectionItem"][];
+            /** Section Title Nl */
+            section_title_nl: string;
+        };
+        /**
+         * SuggestionsGridSectionItem
+         * @description One row in the grid. Mirrors the existing ``serialize_suggestion_for_response``
+         *     payload with three extra display fields: ``diff_status`` for the
+         *     NIEUW / Gewijzigd badge, ``previous_action_label_nl`` (the label the
+         *     asset had yesterday, if any), and ``valid_until_age_minutes`` so the
+         *     UI can show how stale the row is.
+         */
+        SuggestionsGridSectionItem: {
+            /** Action Label */
+            action_label: string;
+            /** Action Label Nl */
+            action_label_nl: string;
+            /** Blockers */
+            blockers: string[];
+            /** Blocking Reason */
+            blocking_reason: string | null;
+            /** Blocking Reason Nl */
+            blocking_reason_nl: string | null;
+            /** Branch Reason Nl */
+            branch_reason_nl: string | null;
+            /** Confidence Label */
+            confidence_label: string;
+            /** Confidence Label Nl */
+            confidence_label_nl: string;
+            /** Confidence Score */
+            confidence_score: string;
+            /** Currency */
+            currency: string;
+            /** Diff Status */
+            diff_status: string;
+            /** Downgrade Reason Nl */
+            downgrade_reason_nl: string | null;
+            /** Drivers */
+            drivers: string[];
+            /** Expected Return Pct */
+            expected_return_pct: string | null;
+            /** Forecast Id */
+            forecast_id: string | null;
+            /** Generated At */
+            generated_at: string;
+            /** Has Position */
+            has_position: boolean;
+            /** Ibkr Conid */
+            ibkr_conid: string;
+            /** Previous Action Label Nl */
+            previous_action_label_nl: string | null;
+            /** Prob Gain Pct */
+            prob_gain_pct: string | null;
+            /** Rationale Nl */
+            rationale_nl: string;
+            /** Risk Profile */
+            risk_profile: string;
+            /** Status */
+            status: string;
+            /** Suggestion Id */
+            suggestion_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Top Driver Nl */
+            top_driver_nl: string | null;
+            /** Valid Until */
+            valid_until: string;
+            /** Valid Until Age Minutes */
+            valid_until_age_minutes: number;
+        };
         /** SystemEventMutationInput */
         SystemEventMutationInput: {
             /** Reason Nl */
@@ -6393,12 +8680,202 @@ export interface components {
             /** Title Nl */
             title_nl: string;
         };
+        /** TaxGoodHouseholderOut */
+        TaxGoodHouseholderOut: {
+            /** Average Hold Days */
+            average_hold_days: number;
+            /** Summary Nl */
+            summary_nl: string;
+            /** Trades Per Year */
+            trades_per_year: number;
+            /** Trading Capital Share Pct */
+            trading_capital_share_pct: number | null;
+            /** Uses Leverage */
+            uses_leverage: boolean;
+            /** Uses Shorts */
+            uses_shorts: boolean;
+        };
+        /** TaxMonthlyPointOut */
+        TaxMonthlyPointOut: {
+            /** Cumulative Net Local By Currency */
+            cumulative_net_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Month */
+            month: string;
+            /** Net Local By Currency */
+            net_local_by_currency: {
+                [key: string]: string;
+            };
+        };
+        /** TaxRealisedTradeOut */
+        TaxRealisedTradeOut: {
+            /** Account Id */
+            account_id: string;
+            /** Buy Action Draft Id */
+            buy_action_draft_id: string | null;
+            /** Buy Date */
+            buy_date: string;
+            /** Buy Exec Id */
+            buy_exec_id: string;
+            /** Buy Fx Rate Eur */
+            buy_fx_rate_eur?: string | null;
+            /** Buy Price Local */
+            buy_price_local: string;
+            /** Currency Local */
+            currency_local: string;
+            /** Gross Eur */
+            gross_eur?: string | null;
+            /** Gross Local */
+            gross_local: string;
+            /** Hold Days */
+            hold_days: number;
+            /** Net Eur */
+            net_eur?: string | null;
+            /** Net Local */
+            net_local: string;
+            /** Net Pct On Cost */
+            net_pct_on_cost: string;
+            /** Quantity */
+            quantity: string;
+            /** Sell Action Draft Id */
+            sell_action_draft_id: string | null;
+            /** Sell Date */
+            sell_date: string;
+            /** Sell Exec Id */
+            sell_exec_id: string;
+            /** Sell Fx Rate Eur */
+            sell_fx_rate_eur?: string | null;
+            /** Sell Price Local */
+            sell_price_local: string;
+            /** Symbol */
+            symbol: string;
+            /** Tob Buy Eur */
+            tob_buy_eur?: string | null;
+            /** Tob Buy Local */
+            tob_buy_local: string;
+            /** Tob Sell Eur */
+            tob_sell_eur?: string | null;
+            /** Tob Sell Local */
+            tob_sell_local: string;
+        };
+        /** TaxYearReportResponse */
+        TaxYearReportResponse: {
+            /** Dividends */
+            dividends: {
+                [key: string]: unknown;
+            }[];
+            /** Fx Conversion Available */
+            fx_conversion_available: boolean;
+            good_householder: components["schemas"]["TaxGoodHouseholderOut"];
+            /** Help Nl */
+            help_nl: string;
+            /** Monthly Points */
+            monthly_points: components["schemas"]["TaxMonthlyPointOut"][];
+            /** Notes Nl */
+            notes_nl: string[];
+            /** Realised Trades */
+            realised_trades: components["schemas"]["TaxRealisedTradeOut"][];
+            /** Title Nl */
+            title_nl: string;
+            /** Year */
+            year: number;
+            year_totals: components["schemas"]["TaxYearTotalsOut"];
+        };
+        /** TaxYearTotalsOut */
+        TaxYearTotalsOut: {
+            /** Average Hold Days */
+            average_hold_days: number;
+            /** Earliest Close */
+            earliest_close: string | null;
+            /**
+             * Eur Conversion Coverage Pct
+             * @default 0
+             */
+            eur_conversion_coverage_pct: number;
+            /** Gross Eur Total */
+            gross_eur_total?: string | null;
+            /** Gross Local By Currency */
+            gross_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Hit Rate Pct */
+            hit_rate_pct: number;
+            /** Latest Close */
+            latest_close: string | null;
+            /** Net Eur Total */
+            net_eur_total?: string | null;
+            /** Net Local By Currency */
+            net_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Tob Eur Total */
+            tob_eur_total?: string | null;
+            /** Tob Local By Currency */
+            tob_local_by_currency: {
+                [key: string]: string;
+            };
+            /** Trade Count */
+            trade_count: number;
+        };
+        /** TestEmailResponse */
+        TestEmailResponse: {
+            /** Detail Nl */
+            detail_nl: string;
+            /** Sent */
+            sent: boolean;
+            /** Status */
+            status: string;
+            /** Used Host */
+            used_host: string | null;
+        };
+        /** TobYearToDateResponse */
+        TobYearToDateResponse: {
+            /** By Currency */
+            by_currency: {
+                [key: string]: string;
+            };
+            /** By Security Class */
+            by_security_class: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /** Executions Count */
+            executions_count: number;
+            /** Help Nl */
+            help_nl: string;
+            /** Note Nl */
+            note_nl: string;
+            /** Safe For Orders */
+            safe_for_orders: boolean;
+            /** Title Nl */
+            title_nl: string;
+            /** Year */
+            year: number;
+        };
         /** TradingSettingsUpdateInput */
         TradingSettingsUpdateInput: {
             allowed_universe: components["schemas"]["AllowedUniverseSettings"];
             /** Reason Nl */
             reason_nl?: string | null;
             user_strategy: components["schemas"]["UserStrategySettings"];
+        };
+        /** UniverseScanIndexOption */
+        UniverseScanIndexOption: {
+            /** Code */
+            code: string;
+            /** Label Nl */
+            label_nl: string;
+        };
+        /** UniverseScanSettingsResponse */
+        UniverseScanSettingsResponse: {
+            /** Available Codes */
+            available_codes: components["schemas"]["UniverseScanIndexOption"][];
+            /** Help Nl */
+            help_nl: string;
+            /** Selected Codes */
+            selected_codes: string[];
         };
         /** UnmatchedExecutionListResponse */
         UnmatchedExecutionListResponse: {
@@ -6441,6 +8918,222 @@ export interface components {
              * @enum {string}
              */
             side: "BUY" | "SELL";
+        };
+        /** UpdateAdvancedSettingsRequest */
+        UpdateAdvancedSettingsRequest: {
+            /** Action Draft Approval Valid Minutes */
+            action_draft_approval_valid_minutes: number;
+            /** Ai Explanation Provider Code */
+            ai_explanation_provider_code: string;
+            /** Ensemble Weight Strategy */
+            ensemble_weight_strategy: string;
+            /** Gbm Drift Window Days */
+            gbm_drift_window_days?: number | null;
+            /** Sharpe Slight Threshold */
+            sharpe_slight_threshold: number | string;
+            /** Sharpe Strong Threshold */
+            sharpe_strong_threshold: number | string;
+        };
+        /** UpdateConnectionSettingsRequest */
+        UpdateConnectionSettingsRequest: {
+            /**
+             * Ai Email Summary Enabled
+             * @default false
+             */
+            ai_email_summary_enabled: boolean;
+            /** Ai Explanation Enabled */
+            ai_explanation_enabled: boolean;
+            /**
+             * Ai Explanation Morning Batch Enabled
+             * @default false
+             */
+            ai_explanation_morning_batch_enabled: boolean;
+            /** Claude Ai Api Key */
+            claude_ai_api_key?: string | null;
+            /** Claude Ai Budget Monthly Eur */
+            claude_ai_budget_monthly_eur?: number | string | null;
+            /** Claude Ai Explanation Model */
+            claude_ai_explanation_model?: string | null;
+            /** Ibkr Account Id */
+            ibkr_account_id?: string | null;
+            /** Ibkr Client Id */
+            ibkr_client_id?: number | null;
+            /** Ibkr Enabled */
+            ibkr_enabled: boolean;
+            /** Ibkr Host */
+            ibkr_host?: string | null;
+            /** Ibkr Port */
+            ibkr_port?: number | null;
+            /**
+             * Research Ai Extraction Enabled
+             * @default false
+             */
+            research_ai_extraction_enabled: boolean;
+        };
+        /** UpdateDataWindowSettingsRequest */
+        UpdateDataWindowSettingsRequest: {
+            /** Daily Briefing Lookback Hours */
+            daily_briefing_lookback_hours: number;
+            /** Forecast History Lookback Days */
+            forecast_history_lookback_days: number;
+            /** Forecast Minimum Bars Required */
+            forecast_minimum_bars_required: number;
+            /** Universe Scan Cache Ttl Hours */
+            universe_scan_cache_ttl_hours: number;
+        };
+        /** UpdateExecutionGateSettingsRequest */
+        UpdateExecutionGateSettingsRequest: {
+            /** Cancel Sweep Enabled */
+            cancel_sweep_enabled: boolean;
+            /** Ibkr Paper Order Submission Enabled */
+            ibkr_paper_order_submission_enabled: boolean;
+            /** Morning Chain After Pre Briefing */
+            morning_chain_after_pre_briefing: boolean;
+            /** Submission Sweep Enabled */
+            submission_sweep_enabled: boolean;
+        };
+        /** UpdateForecastMarketSettingsRequest */
+        UpdateForecastMarketSettingsRequest: {
+            /** Forecast Ensemble Enabled */
+            forecast_ensemble_enabled: boolean;
+            /** Forecast Horizon Trading Days */
+            forecast_horizon_trading_days: number;
+            /** Ibkr Market Data Enabled */
+            ibkr_market_data_enabled: boolean;
+            /** Ibkr Market Data Type */
+            ibkr_market_data_type: string;
+            /** Market Data Provider */
+            market_data_provider: string;
+            /** Market Data Sync Enabled */
+            market_data_sync_enabled: boolean;
+            /** Suggestions Risk Profile */
+            suggestions_risk_profile: string;
+            /** Universe Set */
+            universe_set: string;
+        };
+        /** UpdateMarketEventsSettingsRequest */
+        UpdateMarketEventsSettingsRequest: {
+            /** Per Market Close Digest Enabled */
+            per_market_close_digest_enabled: boolean;
+            /** Per Market Open Alerts Enabled */
+            per_market_open_alerts_enabled: boolean;
+        };
+        /** UpdateNotificationSettingsRequest */
+        UpdateNotificationSettingsRequest: {
+            /**
+             * Notification Send On High Confidence Sell
+             * @default true
+             */
+            notification_send_on_high_confidence_sell: boolean;
+            /**
+             * Notification Send On Nav Drop
+             * @default true
+             */
+            notification_send_on_nav_drop: boolean;
+            /**
+             * Notification Send On Position Drop
+             * @default true
+             */
+            notification_send_on_position_drop: boolean;
+            /**
+             * Notifications Email Enabled
+             * @default false
+             */
+            notifications_email_enabled: boolean;
+            /** Smtp From */
+            smtp_from?: string | null;
+            /** Smtp Host */
+            smtp_host?: string | null;
+            /** Smtp Password */
+            smtp_password?: string | null;
+            /**
+             * Smtp Port
+             * @default 587
+             */
+            smtp_port: number;
+            /** Smtp To */
+            smtp_to?: string | null;
+            /**
+             * Smtp Use Tls
+             * @default true
+             */
+            smtp_use_tls: boolean;
+            /** Smtp Username */
+            smtp_username?: string | null;
+        };
+        /** UpdateOrderPolicySettingsRequest */
+        UpdateOrderPolicySettingsRequest: {
+            /** Cost Dominates Ratio */
+            cost_dominates_ratio: number | string;
+            /** Default Buy Value Eur */
+            default_buy_value_eur: number | string;
+            /** Default Reduce Pct */
+            default_reduce_pct: number | string;
+            /** Default Top Up Pct */
+            default_top_up_pct: number | string;
+            /** Max Sector Pct */
+            max_sector_pct: number | string;
+            /** Suggestion Valid Minutes */
+            suggestion_valid_minutes: number;
+        };
+        /** UpdatePredictorTuningSettingsRequest */
+        UpdatePredictorTuningSettingsRequest: {
+            /** Decision Packages Valid Minutes */
+            decision_packages_valid_minutes: number;
+            /** Forecast Valid Minutes */
+            forecast_valid_minutes: number;
+            /** Gbm Regime Shift Enabled */
+            gbm_regime_shift_enabled: boolean;
+            /** Gbm Regime Shift Threshold Pct */
+            gbm_regime_shift_threshold_pct: number | string;
+            /** Prediction Diary Inconclusive Tolerance Pct */
+            prediction_diary_inconclusive_tolerance_pct: number | string;
+        };
+        /** UpdateRiskLimitsRequest */
+        UpdateRiskLimitsRequest: {
+            /** Anti Revenge Loss Threshold Pct */
+            anti_revenge_loss_threshold_pct: number | string;
+            /** Anti Revenge Window Hours */
+            anti_revenge_window_hours: number;
+            /** Cooldown Seconds */
+            cooldown_seconds: number;
+            /** Daily Max Approvals */
+            daily_max_approvals: number;
+            /** Fomo Drift Pct */
+            fomo_drift_pct: number | string;
+            /** Hard Drawdown Pct */
+            hard_drawdown_pct: number | string;
+            /** Hard Drawdown Window Days */
+            hard_drawdown_window_days: number;
+            /** Soft Drawdown Pct */
+            soft_drawdown_pct: number | string;
+            /** Soft Drawdown Window Days */
+            soft_drawdown_window_days: number;
+        };
+        /** UpdateSchedulerSettingsRequest */
+        UpdateSchedulerSettingsRequest: {
+            /** Ibkr Sync Interval Minutes */
+            ibkr_sync_interval_minutes: number;
+            /** Scheduler Daily Briefing Cron */
+            scheduler_daily_briefing_cron: string;
+        };
+        /** UpdateUniverseScanSettingsRequest */
+        UpdateUniverseScanSettingsRequest: {
+            /** Selected Codes */
+            selected_codes: string[];
+        };
+        /** UpdateWorkerSweepSettingsRequest */
+        UpdateWorkerSweepSettingsRequest: {
+            /** Eodhd Rate Limit Per Second */
+            eodhd_rate_limit_per_second: number;
+            /** Sweep Alert After Consecutive Errors */
+            sweep_alert_after_consecutive_errors: number;
+            /** Sweep Interval Seconds */
+            sweep_interval_seconds: number;
+            /** Sweep Retry Backoff Seconds */
+            sweep_retry_backoff_seconds: number | string;
+            /** Sweep Retry Max Attempts */
+            sweep_retry_max_attempts: number;
         };
         /** UserStrategySettings */
         UserStrategySettings: {
@@ -6490,6 +9183,71 @@ export interface components {
             /** @default medium */
             risk_level: components["schemas"]["StrategyRiskLevel"];
             /**
+             * Trading Confidence Threshold Pct
+             * @default 70
+             */
+            trading_confidence_threshold_pct: number | string;
+            /**
+             * Trading Earnings Block Days
+             * @default 5
+             */
+            trading_earnings_block_days: number;
+            /**
+             * Trading Fat Tail Factor
+             * @default 1.15
+             */
+            trading_fat_tail_factor: number | string;
+            /**
+             * Trading Horizon Max Months
+             * @default 6
+             */
+            trading_horizon_max_months: number;
+            /**
+             * Trading Horizon Min Months
+             * @default 3
+             */
+            trading_horizon_min_months: number;
+            /**
+             * Trading Max Annual Volatility Pct
+             * @default 30
+             */
+            trading_max_annual_volatility_pct: number | string;
+            /**
+             * Trading Max Position Eur
+             * @default 100000
+             */
+            trading_max_position_eur: number | string;
+            /**
+             * Trading Max Sector Pct
+             * @default 25
+             */
+            trading_max_sector_pct: number | string;
+            /**
+             * Trading Min Market Cap Eur
+             * @default 5000000000
+             */
+            trading_min_market_cap_eur: number | string;
+            /**
+             * Trading Min Position Eur
+             * @default 25000
+             */
+            trading_min_position_eur: number | string;
+            /**
+             * Trading News Buy Bias Max Boost Pct
+             * @default 5
+             */
+            trading_news_buy_bias_max_boost_pct: number | string;
+            /**
+             * Trading Target Net Pct
+             * @default 4
+             */
+            trading_target_net_pct: number | string;
+            /**
+             * Trading Total Budget Eur
+             * @default 1000000
+             */
+            trading_total_budget_eur: number | string;
+            /**
              * User Buffer Eur
              * @default 0
              */
@@ -6507,6 +9265,62 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VerdictActivityOut */
+        VerdictActivityOut: {
+            /** By Decision */
+            by_decision: {
+                [key: string]: number;
+            };
+            /** Total */
+            total: number;
+        };
+        /** VerdictRow */
+        VerdictRow: {
+            /** Blocking Reason */
+            blocking_reason: string | null;
+            /** Decision */
+            decision: string;
+            /** Details Json */
+            details_json: {
+                [key: string]: unknown;
+            };
+            /** Forecast Id */
+            forecast_id: string | null;
+            /** Generated At */
+            generated_at: string;
+            /** Ibkr Conid */
+            ibkr_conid: number | null;
+            /** Summary Nl */
+            summary_nl: string;
+            /** Symbol */
+            symbol: string;
+            /** Verdict Id */
+            verdict_id: string;
+        };
+        /** VerdictsListResponse */
+        VerdictsListResponse: {
+            /** Help Nl */
+            help_nl: string;
+            /** Items */
+            items: components["schemas"]["VerdictRow"][];
+            /** Title Nl */
+            title_nl: string;
+        };
+        /** VerdictsSummaryResponse */
+        VerdictsSummaryResponse: {
+            /** By Decision */
+            by_decision: {
+                [key: string]: number;
+            };
+            /** Help Nl */
+            help_nl: string;
+            /** Latest Generated At */
+            latest_generated_at: string | null;
+            /** Title Nl */
+            title_nl: string;
+            /** Total */
+            total: number;
         };
         /** WatchlistConfirmRequest */
         WatchlistConfirmRequest: {
@@ -6560,6 +9374,29 @@ export interface components {
              * @enum {string}
              */
             state: "unconfirmed" | "confirmed" | "no_account_configured";
+        };
+        /**
+         * WorkerSweepSettingsResponse
+         * @description Operator-editable worker-side knobs. The values are persisted on
+         *     the same ``runtime_config`` row the API overlays at startup; the
+         *     worker reads the same row at its own startup so the operator
+         *     edits show up after the worker is restarted (interval-job
+         *     registration) and immediately for the per-tick reads (retry
+         *     attempts, alert threshold).
+         */
+        WorkerSweepSettingsResponse: {
+            /** Eodhd Rate Limit Per Second */
+            eodhd_rate_limit_per_second: number;
+            /** Help Nl */
+            help_nl: string;
+            /** Sweep Alert After Consecutive Errors */
+            sweep_alert_after_consecutive_errors: number;
+            /** Sweep Interval Seconds */
+            sweep_interval_seconds: number;
+            /** Sweep Retry Backoff Seconds */
+            sweep_retry_backoff_seconds: string;
+            /** Sweep Retry Max Attempts */
+            sweep_retry_max_attempts: number;
         };
     };
     responses: never;
@@ -7596,6 +10433,99 @@ export interface operations {
             };
         };
     };
+    get_jaaroverzicht_belasting_jaaroverzicht_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxYearReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_jaaroverzicht_csv_belasting_jaaroverzicht_csv_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_jaaroverzicht_pdf_belasting_jaaroverzicht_pdf_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     run_daily_briefing_briefings_daily_compute_post: {
         parameters: {
             query?: never;
@@ -8003,6 +10933,327 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_digest_today_digests_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestTodayResponse"];
+                };
+            };
+        };
+    };
+    list_dividenden_dividenden_get: {
+        parameters: {
+            query?: {
+                /** @description Default: huidige jaar. */
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DividendListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_dividend_dividenden_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDividendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DividendMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_dividend_dividenden__dividend_event_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dividend_event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DividendMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_refresh_earnings_earnings_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EarningsRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsRefreshResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_upcoming_earnings_earnings_upcoming_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningsUpcomingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_errors_errors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorLogResponse"];
+                };
+            };
+        };
+    };
+    report_frontend_error_errors_report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportFrontendErrorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_error_errors__system_event_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                system_event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_error_errors__system_event_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                system_event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_morning_explanation_batch_explanations_morning_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MorningExplanationBatchResponse"];
                 };
             };
         };
@@ -9230,6 +12481,241 @@ export interface operations {
             };
         };
     };
+    get_market_hours_now_markets_hours_now_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketHoursNowResponse"];
+                };
+            };
+        };
+    };
+    get_macro_snapshot_markets_macro_snapshot_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroSnapshotResponse"];
+                };
+            };
+        };
+    };
+    compose_alert_summary_endpoint_notifications_compose_summary_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComposeAlertSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComposeAlertSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_orchestrator_verdicts_orchestrator_verdicts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictsListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_orchestrator_verdicts_summary_orchestrator_verdicts_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictsSummaryResponse"];
+                };
+            };
+        };
+    };
+    get_pauze_status_pauze_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PauzeStatusResponse"];
+                };
+            };
+        };
+    };
+    pauze_pauze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PauzeStatusResponse"];
+                };
+            };
+        };
+    };
+    hervat_pauze_hervat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PauzeStatusResponse"];
+                };
+            };
+        };
+    };
+    read_nav_history_portfolio_nav_history_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NavHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sector_spread_portfolio_sector_spread_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorSpreadResponse"];
+                };
+            };
+        };
+    };
     read_portfolio_setup_defaults_portfolio_setup_defaults_get: {
         parameters: {
             query?: never;
@@ -9520,6 +13006,187 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_predictor_performance_predictors_performance_get: {
+        parameters: {
+            query?: {
+                lookback_days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictorPerformanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_archive_rapporten_archief_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveListResponse"];
+                };
+            };
+        };
+    };
+    generate_archive_rapporten_archief_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateArchiveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateArchiveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_archive_pdf_rapporten_archief__year___month__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: number;
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_maandrapport_rapporten_maand_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                month?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_maandrapport_pdf_rapporten_maand_pdf_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+                month?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -10141,6 +13808,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_research_ai_extraction_research_sources__library_source_id__ai_extract_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                library_source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchAiExtractionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11045,6 +14743,39 @@ export interface operations {
             };
         };
     };
+    read_recent_scheduler_runs_scheduler_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_latest_scheduler_run_scheduler_runs_latest_get: {
         parameters: {
             query?: {
@@ -11151,6 +14882,748 @@ export interface operations {
             };
         };
     };
+    list_active_sell_signals_sell_signals_get: {
+        parameters: {
+            query?: {
+                account_ref?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellSignalListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_sell_signal_sweep_sell_signals_sweep_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellSignalSweepResponse"];
+                };
+            };
+        };
+    };
+    dismiss_sell_signal_sell_signals__card_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellSignalCardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_advanced_settings_settings_advanced_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvancedSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_advanced_settings_settings_advanced_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdvancedSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvancedSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_connection_settings_settings_connection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_connection_settings_settings_connection_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConnectionSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_data_window_settings_settings_data_windows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataWindowSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_data_window_settings_settings_data_windows_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDataWindowSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataWindowSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_execution_gate_settings_settings_execution_gates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionGateSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_execution_gate_settings_settings_execution_gates_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExecutionGateSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionGateSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_forecast_market_settings_settings_forecast_market_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastMarketSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_forecast_market_settings_settings_forecast_market_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateForecastMarketSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastMarketSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_events_settings_settings_market_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketEventsSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_market_events_settings_settings_market_events_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMarketEventsSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketEventsSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notification_settings_settings_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_notification_settings_settings_notifications_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_test_email_settings_notifications_test_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestEmailResponse"];
+                };
+            };
+        };
+    };
+    get_order_policy_settings_settings_order_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPolicySettingsResponse"];
+                };
+            };
+        };
+    };
+    update_order_policy_settings_settings_order_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrderPolicySettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPolicySettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_predictor_tuning_settings_settings_predictor_tuning_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictorTuningSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_predictor_tuning_settings_settings_predictor_tuning_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePredictorTuningSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictorTuningSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profit_target_setting_settings_profit_target_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfitTargetResponse"];
+                };
+            };
+        };
+    };
+    update_profit_target_setting_settings_profit_target_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfitTargetUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfitTargetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_risk_limits_settings_risk_limits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskLimitsResponse"];
+                };
+            };
+        };
+    };
+    update_risk_limits_settings_risk_limits_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRiskLimitsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskLimitsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scheduler_settings_settings_scheduler_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulerSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_scheduler_settings_settings_scheduler_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSchedulerSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulerSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_settings_summary_settings_summary_get: {
         parameters: {
             query?: never;
@@ -11228,6 +15701,112 @@ export interface operations {
             };
         };
     };
+    get_universe_scan_settings_settings_universe_scan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UniverseScanSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_universe_scan_settings_settings_universe_scan_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUniverseScanSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UniverseScanSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_worker_sweep_settings_settings_worker_sweeps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerSweepSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_worker_sweep_settings_settings_worker_sweeps_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkerSweepSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerSweepSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_storage_status_storage_status_get: {
         parameters: {
             query?: never;
@@ -11286,6 +15865,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_suggestions_grid_suggestions_grid_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionsGridResponse"];
                 };
             };
         };
@@ -11426,6 +16025,37 @@ export interface operations {
             };
         };
     };
+    get_tob_year_to_date_tob_year_to_date_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TobYearToDateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_dutch_labels_ui_dutch_labels_get: {
         parameters: {
             query?: never;
@@ -11561,6 +16191,134 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    save_preference_watchlist_preferences_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavePreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferenceMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_preference_watchlist_preferences_delete: {
+        parameters: {
+            query: {
+                account_id?: string;
+                symbol: string;
+                kind: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferenceMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_favorieten_watchlist_preferences_favorieten_get: {
+        parameters: {
+            query?: {
+                account_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoritesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_uitsluitingen_watchlist_preferences_uitsluitingen_get: {
+        parameters: {
+            query?: {
+                account_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExclusionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

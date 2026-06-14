@@ -1990,6 +1990,88 @@ Index(
 )
 
 
+sell_signal_cards = Table(
+    "sell_signal_cards",
+    metadata,
+    Column("card_id", Text, primary_key=True),
+    Column("ibkr_account_ref", Text, nullable=False),
+    Column("symbol", Text, nullable=False),
+    Column("currency", Text, nullable=False),
+    Column("signal_kind", Text, nullable=False),
+    Column("action", Text, nullable=False),
+    Column("entry_price", MONEY_NUMERIC, nullable=False),
+    Column("current_price", MONEY_NUMERIC, nullable=False),
+    Column("quantity", Integer, nullable=False),
+    Column("current_pct_return", MONEY_NUMERIC, nullable=False),
+    Column("target_pct", MONEY_NUMERIC, nullable=True),
+    Column("target_reached", Boolean, nullable=True),
+    Column("days_held", Integer, nullable=True),
+    Column("forecast_id", Text, nullable=True),
+    Column("forecaster_above_target", Boolean, nullable=True),
+    Column("position_in_loss", Boolean, nullable=True),
+    Column("short_term_p50", MONEY_NUMERIC, nullable=True),
+    Column("short_term_horizon_days", Integer, nullable=True),
+    Column("short_term_prob_above_pct", MONEY_NUMERIC, nullable=True),
+    Column("expected_net_proceeds_eur", MONEY_NUMERIC, nullable=True),
+    Column("headline_nl", Text, nullable=False),
+    Column("detail_nl", Text, nullable=False),
+    Column("first_generated_at", DateTime(timezone=True), nullable=False),
+    Column("last_evaluated_at", DateTime(timezone=True), nullable=False),
+    Column("dismissed_at", DateTime(timezone=True), nullable=True),
+    Column("dismissed_reason", Text, nullable=True),
+    Column(
+        "safe_for_action_drafts",
+        Boolean,
+        nullable=False,
+        server_default=sa_false(),
+    ),
+    CheckConstraint(
+        "signal_kind IN ('take_profit', 'hold_review')",
+        name="ck_sell_signal_cards_signal_kind",
+    ),
+    CheckConstraint(
+        "action IN ('hold', 'suggest_sell')",
+        name="ck_sell_signal_cards_action",
+    ),
+    CheckConstraint(
+        "quantity > 0",
+        name="ck_sell_signal_cards_quantity_positive",
+    ),
+    CheckConstraint(
+        "entry_price > 0",
+        name="ck_sell_signal_cards_entry_price_positive",
+    ),
+    CheckConstraint(
+        "current_price > 0",
+        name="ck_sell_signal_cards_current_price_positive",
+    ),
+    CheckConstraint(
+        "symbol <> ''",
+        name="ck_sell_signal_cards_symbol_not_empty",
+    ),
+    CheckConstraint(
+        "headline_nl <> ''",
+        name="ck_sell_signal_cards_headline_not_empty",
+    ),
+    UniqueConstraint(
+        "ibkr_account_ref",
+        "symbol",
+        "signal_kind",
+        name="uq_sell_signal_cards_account_symbol_kind",
+    ),
+)
+Index(
+    "ix_sell_signal_cards_active",
+    sell_signal_cards.c.ibkr_account_ref,
+    sell_signal_cards.c.action,
+    sell_signal_cards.c.dismissed_at,
+)
+Index(
+    "ix_sell_signal_cards_last_evaluated_at",
+    sell_signal_cards.c.last_evaluated_at,
+)
+
+
 monthly_report_archive = Table(
     "monthly_report_archive",
     metadata,

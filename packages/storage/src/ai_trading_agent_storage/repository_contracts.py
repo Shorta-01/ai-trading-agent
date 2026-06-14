@@ -3299,6 +3299,161 @@ class SaveMonthlyReportArchiveRequest:
             raise ValueError("year must be between 2000 and 2100")
 
 
+# Locked vocabulary voor SELL-loop sweep (V1.2 §BF / CLAUDE.md §6).
+SELL_SIGNAL_KIND_TAKE_PROFIT: str = "take_profit"
+SELL_SIGNAL_KIND_HOLD_REVIEW: str = "hold_review"
+
+SELL_SIGNAL_ACTION_HOLD: str = "hold"
+SELL_SIGNAL_ACTION_SUGGEST_SELL: str = "suggest_sell"
+
+_SELL_SIGNAL_KINDS: frozenset[str] = frozenset(
+    {SELL_SIGNAL_KIND_TAKE_PROFIT, SELL_SIGNAL_KIND_HOLD_REVIEW}
+)
+_SELL_SIGNAL_ACTIONS: frozenset[str] = frozenset(
+    {SELL_SIGNAL_ACTION_HOLD, SELL_SIGNAL_ACTION_SUGGEST_SELL}
+)
+
+
+@dataclass(frozen=True)
+class SellSignalCardRecord:
+    """SELL-suggestie kaartje voor de operator (V1.2 §BF).
+
+    Twee signaal-soorten landen in dezelfde tabel:
+
+    * ``take_profit`` — CLAUDE.md §6.3 intraday +4% check
+    * ``hold_review`` — CLAUDE.md §6.2 6m+ combo-trigger
+
+    Eén ACTIVE rij per ``(ibkr_account_ref, symbol, signal_kind)`` —
+    de sweep upsert op die key. ``dismissed_at`` wordt door de
+    operator gezet via de UI.
+    """
+
+    card_id: str
+    ibkr_account_ref: str
+    symbol: str
+    currency: str
+    signal_kind: str
+    action: str
+    entry_price: Decimal
+    current_price: Decimal
+    quantity: int
+    current_pct_return: Decimal
+    target_pct: Decimal | None
+    target_reached: bool | None
+    days_held: int | None
+    forecast_id: str | None
+    forecaster_above_target: bool | None
+    position_in_loss: bool | None
+    short_term_p50: Decimal | None
+    short_term_horizon_days: int | None
+    short_term_prob_above_pct: Decimal | None
+    expected_net_proceeds_eur: Decimal | None
+    headline_nl: str
+    detail_nl: str
+    first_generated_at: datetime
+    last_evaluated_at: datetime
+    dismissed_at: datetime | None
+    dismissed_reason: str | None
+    safe_for_action_drafts: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "card_id",
+            "ibkr_account_ref",
+            "symbol",
+            "currency",
+            "headline_nl",
+            "detail_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.signal_kind not in _SELL_SIGNAL_KINDS:
+            raise ValueError(
+                f"signal_kind must be one of {sorted(_SELL_SIGNAL_KINDS)}, "
+                f"got {self.signal_kind!r}"
+            )
+        if self.action not in _SELL_SIGNAL_ACTIONS:
+            raise ValueError(
+                f"action must be one of {sorted(_SELL_SIGNAL_ACTIONS)}, "
+                f"got {self.action!r}"
+            )
+        if self.quantity <= 0:
+            raise ValueError("quantity must be > 0")
+        if self.entry_price <= 0:
+            raise ValueError("entry_price must be > 0")
+        if self.current_price <= 0:
+            raise ValueError("current_price must be > 0")
+        if self.safe_for_action_drafts:
+            raise ValueError(
+                "Sell signal card safe_for_action_drafts must remain false; "
+                "operator approval is required to draft a SELL action "
+                "(CLAUDE.md §2)."
+            )
+
+
+@dataclass(frozen=True)
+class SaveSellSignalCardRequest:
+    """Upsert request voor de SELL-loop sweep.
+
+    De sweep gebruikt deze om één ``(ibkr_account_ref, symbol,
+    signal_kind)`` rij te upserten op basis van de huidige evaluatie.
+    Bestaande ``dismissed_at`` blijft sticky in de repository tenzij
+    de sweep expliciet aangeeft dat het signaal materieel veranderd is
+    (zie ``reset_dismissal``).
+    """
+
+    card_id: str
+    ibkr_account_ref: str
+    symbol: str
+    currency: str
+    signal_kind: str
+    action: str
+    entry_price: Decimal
+    current_price: Decimal
+    quantity: int
+    current_pct_return: Decimal
+    target_pct: Decimal | None
+    target_reached: bool | None
+    days_held: int | None
+    forecast_id: str | None
+    forecaster_above_target: bool | None
+    position_in_loss: bool | None
+    short_term_p50: Decimal | None
+    short_term_horizon_days: int | None
+    short_term_prob_above_pct: Decimal | None
+    expected_net_proceeds_eur: Decimal | None
+    headline_nl: str
+    detail_nl: str
+    evaluated_at: datetime
+    reset_dismissal: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "card_id",
+            "ibkr_account_ref",
+            "symbol",
+            "currency",
+            "headline_nl",
+            "detail_nl",
+        ):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.signal_kind not in _SELL_SIGNAL_KINDS:
+            raise ValueError(
+                f"signal_kind must be one of {sorted(_SELL_SIGNAL_KINDS)}, "
+                f"got {self.signal_kind!r}"
+            )
+        if self.action not in _SELL_SIGNAL_ACTIONS:
+            raise ValueError(
+                f"action must be one of {sorted(_SELL_SIGNAL_ACTIONS)}, "
+                f"got {self.action!r}"
+            )
+        if self.quantity <= 0:
+            raise ValueError("quantity must be > 0")
+        if self.entry_price <= 0:
+            raise ValueError("entry_price must be > 0")
+        if self.current_price <= 0:
+            raise ValueError("current_price must be > 0")
+
+
 @dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.
