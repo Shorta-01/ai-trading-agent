@@ -29,17 +29,24 @@ def test_locked_universe_sets_are_immutable_frozenset() -> None:
     }
 
 
-def test_default_set_is_starter_50() -> None:
-    """STARTER_50 (Bel20 + AEX) is the new default — large/liquid Belgian
-    + Dutch names so the operator gets real ``Nieuwe kansen`` output
-    inside the EODHD quota before deciding to opt into the larger sets."""
+def test_default_set_is_sp500() -> None:
+    """V1.2 §BS / GAPS.md P1-4: SP500 is de default zodat de
+    orchestrator-scan op een breed US large-cap universum draait
+    (~325 namen) i.p.v. de eerdere STARTER_50 (45 namen alleen
+    Bel20+AEX). CLAUDE.md §5 vraagt namelijk ~3500 namen voor de
+    autonome scan; SP500 is een pragmatische tussenstop. Operator
+    kan handmatig STARTER_50 / EU600 / ALL_5K kiezen."""
 
-    assert DEFAULT_UNIVERSE_SET == UNIVERSE_SET_STARTER_50
+    from portfolio_outlook_api.universe_registry import UNIVERSE_SET_SP500
+
+    assert DEFAULT_UNIVERSE_SET == UNIVERSE_SET_SP500
 
 
-def test_locked_universe_default_returns_starter_50_set() -> None:
+def test_locked_universe_default_returns_sp500_set() -> None:
+    from portfolio_outlook_api.universe_registry import UNIVERSE_SET_SP500
+
     by_default = locked_universe()
-    by_explicit = locked_universe(UNIVERSE_SET_STARTER_50)
+    by_explicit = locked_universe(UNIVERSE_SET_SP500)
     assert by_default == by_explicit
 
 
