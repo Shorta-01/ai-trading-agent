@@ -185,6 +185,16 @@ jobs:
       - run: ruff check .
       - run: mypy src
       - run: pytest
+      # GAPS.md P2-8 contract drift detection: regenerate the OpenAPI
+      # snapshot and fail if it differs from what's committed. This
+      # catches route signature changes that ship without an
+      # ``apps/web/lib/api-types.ts`` regen.
+      - name: Verify openapi.json is up-to-date
+        run: |
+          python scripts/export_openapi.py
+          git diff --exit-code openapi.json || (
+            echo "openapi.json is stale. Run apps/api/scripts/export_openapi.py and commit." && exit 1
+          )
 
   worker:
     runs-on: ubuntu-latest
@@ -274,6 +284,16 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm test
+      # GAPS.md P2-8 contract drift detection: regenerate the TypeScript
+      # types and fail if they differ from what's committed. The api job
+      # already verified openapi.json is fresh; this catches the case
+      # where openapi.json was regen'd but api-types.ts wasn't.
+      - name: Verify api-types.ts is up-to-date
+        run: |
+          npm run gen:api-types
+          git diff --exit-code lib/api-types.ts || (
+            echo "lib/api-types.ts is stale. Run apps/web/npm run gen:api-types and commit." && exit 1
+          )
       # Task 126b: Playwright smoke. Install chromium only to keep CI fast.
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
