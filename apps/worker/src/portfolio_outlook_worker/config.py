@@ -137,6 +137,17 @@ class SchedulerSettings(BaseModel):
     sell_signal_sweep_trigger_enabled: bool = False
     sell_signal_sweep_cron: str = "*/10 7-22 * * mon-fri"
 
+    # Monthly report PDF auto-archive trigger — V1.2 §BN.
+    # CLAUDE.md §13: "elke 1e van de maand wordt een PDF
+    # gegenereerd en opgeslagen in /rapporten/archief". Tot deze cron
+    # bestond geen scheduler die dit deed; operator moest manueel
+    # ``POST /rapporten/archief/generate`` aanroepen voor elke
+    # maand. Default cron: 1e van elke maand 00:15 local time —
+    # vroeg genoeg dat de PDF beschikbaar is wanneer de operator 's
+    # ochtends het dashboard opent.
+    monthly_archive_auto_generate_enabled: bool = False
+    monthly_archive_auto_generate_cron: str = "15 0 1 * *"
+
     # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
     # cadence). When ``per_market_close_digest_enabled`` is True the
     # worker registers one cron fire per active market (see

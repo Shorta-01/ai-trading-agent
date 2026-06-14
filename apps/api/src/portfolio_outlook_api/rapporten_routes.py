@@ -14,7 +14,7 @@ Read-only; storage-failures → 503.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -650,6 +650,103 @@ def generate_archive(payload: GenerateArchiveRequest) -> GenerateArchiveResponse
         accepted=True,
         archive_id=archive_id,
         pdf_size_bytes=len(pdf_bytes),
+    )
+
+
+class AutoGenerateArchiveResponse(BaseModel):
+    """Antwoord op de auto-trigger — bedoeld voor de worker cron
+    (V1.2 §BN / CLAUDE.md §13)."""
+
+    accepted: bool
+    year: int
+    month: int
+    archive_id: str | None
+    pdf_size_bytes: int | None
+    status_nl: str
+
+
+def _previous_calendar_month(today: date) -> tuple[int, int]:
+    """Return (year, month) van de vorige kalendermaand.
+
+    Op de 1e van januari → (vorig jaar, 12). Anders → (zelfde jaar,
+    huidige maand - 1).
+    """
+
+    if today.month == 1:
+        return (today.year - 1, 12)
+    return (today.year, today.month - 1)
+
+
+@router.post(
+    "/rapporten/archief/auto-generate",
+    response_model=AutoGenerateArchiveResponse,
+)
+def auto_generate_archive() -> AutoGenerateArchiveResponse:
+    """V1.2 §BN — auto-trigger voor de maand-PDF.
+
+    CLAUDE.md §13: "elke 1e van de maand wordt een PDF gegenereerd
+    en opgeslagen in /rapporten/archief". Deze endpoint wordt
+    aangeroepen door de worker cron-job zonder year/month payload —
+    we berekenen zelf de vorige maand, zodat de cron generic blijft.
+
+    Idempotent: als de PDF voor (vorige maand) al bestaat wordt
+    hij overschreven (consistent met de operator-handmatige
+    generate_archive die ook upsert).
+    """
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return AutoGenerateArchiveResponse(
+            accepted=False,
+            year=0,
+            month=0,
+            archive_id=None,
+            pdf_size_bytes=None,
+            status_nl="Opslag uitgeschakeld; auto-archief overgeslagen.",
+        )
+
+    today = datetime.now(UTC).date()
+    target_year, target_month = _previous_calendar_month(today)
+    report = _build_report(target_year, target_month)
+    pdf_bytes = render_monthly_report_pdf(report)
+    archive_id = str(uuid4())
+    request = SaveMonthlyReportArchiveRequest(
+        archive_id=archive_id,
+        ibkr_account_ref=_account_ref(),
+        year=target_year,
+        month=target_month,
+        pdf_bytes=pdf_bytes,
+        pdf_size_bytes=len(pdf_bytes),
+        generated_at=datetime.now(UTC),
+        source="auto-cron",
+    )
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemyMonthlyReportArchiveRepository(
+                checked.connection, checked.readiness
+            )
+            repo.upsert(request)
+            checked.connection.commit()
+    except StoragePersistenceBlockedError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except StorageConnectionError as exc:
+        logger.warning("archive auto-generate storage error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Opslag is niet beschikbaar."
+        ) from exc
+    return AutoGenerateArchiveResponse(
+        accepted=True,
+        year=target_year,
+        month=target_month,
+        archive_id=archive_id,
+        pdf_size_bytes=len(pdf_bytes),
+        status_nl=(
+            f"PDF voor {target_month:02d}/{target_year} opgeslagen "
+            f"({len(pdf_bytes)} bytes)."
+        ),
     )
 
 

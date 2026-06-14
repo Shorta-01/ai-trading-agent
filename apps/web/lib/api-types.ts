@@ -2450,6 +2450,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rapporten/archief/auto-generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auto Generate Archive
+         * @description V1.2 §BN — auto-trigger voor de maand-PDF.
+         *
+         *     CLAUDE.md §13: "elke 1e van de maand wordt een PDF gegenereerd
+         *     en opgeslagen in /rapporten/archief". Deze endpoint wordt
+         *     aangeroepen door de worker cron-job zonder year/month payload —
+         *     we berekenen zelf de vorige maand, zodat de cron generic blijft.
+         *
+         *     Idempotent: als de PDF voor (vorige maand) al bestaat wordt
+         *     hij overschreven (consistent met de operator-handmatige
+         *     generate_archive die ook upsert).
+         */
+        post: operations["auto_generate_archive_rapporten_archief_auto_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rapporten/archief/generate": {
         parameters: {
             query?: never;
@@ -4638,6 +4667,25 @@ export interface components {
          * @enum {string}
          */
         AssetMixPreference: "etf_and_stock_mix" | "mostly_etfs" | "mostly_stocks";
+        /**
+         * AutoGenerateArchiveResponse
+         * @description Antwoord op de auto-trigger — bedoeld voor de worker cron
+         *     (V1.2 §BN / CLAUDE.md §13).
+         */
+        AutoGenerateArchiveResponse: {
+            /** Accepted */
+            accepted: boolean;
+            /** Archive Id */
+            archive_id: string | null;
+            /** Month */
+            month: number;
+            /** Pdf Size Bytes */
+            pdf_size_bytes: number | null;
+            /** Status Nl */
+            status_nl: string;
+            /** Year */
+            year: number;
+        };
         /**
          * BlockedAssetType
          * @enum {string}
@@ -13119,6 +13167,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArchiveListResponse"];
+                };
+            };
+        };
+    };
+    auto_generate_archive_rapporten_archief_auto_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoGenerateArchiveResponse"];
                 };
             };
         };

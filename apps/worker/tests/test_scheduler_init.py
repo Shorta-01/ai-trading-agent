@@ -832,3 +832,99 @@ def test_sell_signal_sweep_cron_rejects_bad_expression() -> None:
 
     with pytest.raises(ValueError, match="sell_signal_sweep_cron"):
         scheduler.start()
+
+
+# ---- Monthly archive auto-generate (V1.2 §BN) -----------------------
+
+
+def _build_with_monthly_archive_trigger(
+    *,
+    monthly_archive_auto_generate_enabled: bool = False,
+    monthly_archive_auto_generate_cron: str = "15 0 1 * *",
+    api_base_url: str | None = "http://api:8000",
+) -> PortfolioScheduler:
+    return PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            api_base_url=api_base_url,
+            monthly_archive_auto_generate_enabled=(
+                monthly_archive_auto_generate_enabled
+            ),
+            monthly_archive_auto_generate_cron=monthly_archive_auto_generate_cron,
+        ),
+        worker_id="worker-test-monthly-archive",
+        scheduler_factory=_scheduler_factory,
+    )
+
+
+def test_monthly_archive_job_not_registered_by_default() -> None:
+    scheduler = _build_with_monthly_archive_trigger()
+    try:
+        scheduler.start()
+        assert (
+            scheduler._scheduler.get_job("monthly_archive_auto_generate") is None
+        )
+    finally:
+        scheduler.stop()
+
+
+def test_monthly_archive_job_registered_when_enabled() -> None:
+    """V1.2 §BN — cron op 00:15 op de 1e van elke maand."""
+
+    scheduler = _build_with_monthly_archive_trigger(
+        monthly_archive_auto_generate_enabled=True,
+        monthly_archive_auto_generate_cron="15 0 1 * *",
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job("monthly_archive_auto_generate")
+        assert job is not None
+        cron_repr = repr(job.trigger)
+        assert "minute='15'" in cron_repr
+        assert "hour='0'" in cron_repr
+        assert "day='1'" in cron_repr
+        assert "Europe/Brussels" in cron_repr
+    finally:
+        scheduler.stop()
+
+
+def test_monthly_archive_handler_calls_trigger(monkeypatch) -> None:
+    captured: list[dict[str, object]] = []
+    from portfolio_outlook_worker import scheduler as sched_mod
+
+    def _stub_trigger(*, base_url, timeout_seconds):
+        captured.append({"base_url": base_url, "timeout": timeout_seconds})
+        return {"status": "ok"}
+
+    monkeypatch.setattr(
+        sched_mod, "trigger_monthly_archive_auto_generate", _stub_trigger
+    )
+    scheduler = _build_with_monthly_archive_trigger(
+        monthly_archive_auto_generate_enabled=True,
+        api_base_url="http://api.local",
+    )
+    try:
+        scheduler.start()
+        scheduler._on_monthly_archive_auto_generate_trigger()
+        assert len(captured) == 1
+        assert captured[0]["base_url"] == "http://api.local"
+    finally:
+        scheduler.stop()
+
+
+def test_monthly_archive_cron_rejects_bad_expression() -> None:
+    scheduler = _build_with_monthly_archive_trigger(
+        monthly_archive_auto_generate_enabled=True,
+        monthly_archive_auto_generate_cron="bad",
+    )
+    import pytest
+
+    with pytest.raises(ValueError, match="monthly_archive_auto_generate_cron"):
+        scheduler.start()

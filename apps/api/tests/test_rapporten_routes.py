@@ -350,3 +350,105 @@ def test_ytd_includes_earlier_months(tmp_path) -> None:  # type: ignore[no-untyp
     monthly = float(body["income"]["net_local_by_currency"]["USD"])
     ytd = float(body["income"]["ytd_net_local_by_currency"]["USD"])
     assert ytd > monthly
+
+
+# ----------------------------------------------------------------------
+# V1.2 §BN — auto-generate endpoint (worker cron)
+# ----------------------------------------------------------------------
+
+
+def test_auto_generate_returns_skipped_when_storage_disabled() -> None:
+    """V1.2 §BN — endpoint mag nooit 5xx geven; storage off → 200
+    met accepted=False zodat de worker cron de error niet log't."""
+
+    _disable_storage()
+    body = TestClient(app).post("/rapporten/archief/auto-generate").json()
+    assert body["accepted"] is False
+    assert body["year"] == 0
+    assert body["month"] == 0
+    assert "opslag uitgeschakeld" in body["status_nl"].lower()
+
+
+def test_auto_generate_picks_previous_calendar_month(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """De endpoint berekent zelf welke maand er gearchiveerd moet
+    worden — vorige kalendermaand."""
+
+    db = _seed_db(tmp_path)
+    client = _client(db)
+    # Fake "today" naar 2026-06-01 zodat we de mei-archief verwachten.
+    import datetime as _dt
+
+    from portfolio_outlook_api import rapporten_routes as routes
+
+    class _FixedDatetime:
+        @staticmethod
+        def now(tz=None):  # type: ignore[no-untyped-def]
+            return _dt.datetime(2026, 6, 1, 0, 15, tzinfo=tz or _dt.UTC)
+
+    monkeypatch.setattr(routes, "datetime", _FixedDatetime)
+    response = client.post("/rapporten/archief/auto-generate")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted"] is True
+    assert body["year"] == 2026
+    assert body["month"] == 5
+    assert body["archive_id"] is not None
+    assert body["pdf_size_bytes"] > 0
+
+
+def test_auto_generate_january_picks_december_previous_year(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Jaargrens: op 1 januari → vorig jaar december."""
+
+    db = _seed_db(tmp_path)
+    client = _client(db)
+    import datetime as _dt
+
+    from portfolio_outlook_api import rapporten_routes as routes
+
+    class _FixedDatetime:
+        @staticmethod
+        def now(tz=None):  # type: ignore[no-untyped-def]
+            return _dt.datetime(2027, 1, 1, 0, 15, tzinfo=tz or _dt.UTC)
+
+    monkeypatch.setattr(routes, "datetime", _FixedDatetime)
+    body = client.post("/rapporten/archief/auto-generate").json()
+    assert body["accepted"] is True
+    assert body["year"] == 2026
+    assert body["month"] == 12
+
+
+def test_auto_generate_is_idempotent(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Tweede call voor dezelfde maand moet de eerste overschrijven
+    (upsert), niet duplicaten maken. Repo gebruikt UNIQUE per (account,
+    year, month)."""
+
+    db = _seed_db(tmp_path)
+    client = _client(db)
+    import datetime as _dt
+
+    from portfolio_outlook_api import rapporten_routes as routes
+
+    class _FixedDatetime:
+        @staticmethod
+        def now(tz=None):  # type: ignore[no-untyped-def]
+            return _dt.datetime(2026, 6, 1, 0, 15, tzinfo=tz or _dt.UTC)
+
+    monkeypatch.setattr(routes, "datetime", _FixedDatetime)
+    first = client.post("/rapporten/archief/auto-generate").json()
+    second = client.post("/rapporten/archief/auto-generate").json()
+    assert first["accepted"] is True
+    assert second["accepted"] is True
+    # Beide geslaagd, archive_id verschilt (nieuw blob), maar het
+    # eindigt op één row in de tabel (UNIQUE constraint).
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(db, future=True)
+    with engine.begin() as conn:
+        count = conn.execute(
+            text(
+                "SELECT COUNT(*) FROM monthly_report_archive "
+                "WHERE year=2026 AND month=5"
+            )
+        ).scalar()
+    engine.dispose()
+    assert count == 1
