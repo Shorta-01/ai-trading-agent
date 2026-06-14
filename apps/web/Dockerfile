@@ -1,6 +1,9 @@
-# Task 126: build context is the monorepo root for parity with the
-# API + worker images. The web app builds a production-shaped bundle
-# and serves it with `next start`.
+# Task 126 + GAPS.md P4-7: build context is the monorepo root voor
+# pariteit met de API + worker images. ``next.config.ts`` zet
+# ``output: "standalone"`` zodat de builder een gesnoeide
+# server-bundle in ``.next/standalone`` legt. De runner kopieert
+# daaruit i.p.v. de volledige ``node_modules`` mee te slepen,
+# en verkleint het image met ~300 MB.
 
 FROM node:22-alpine AS deps
 WORKDIR /app
@@ -19,9 +22,14 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=builder /app/.next ./.next
+# Standalone bundle bevat zijn eigen gesnoeide ``node_modules`` +
+# ``server.js`` (entry point). ``.next/static`` en ``public`` moeten
+# apart worden gekopieerd omdat ``output: "standalone"`` die niet
+# in de standalone-tree zet (Next-conventie).
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
 EXPOSE 3000
-CMD ["npm", "start"]
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+CMD ["node", "server.js"]
