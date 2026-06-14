@@ -151,6 +151,7 @@ class PortfolioScheduler:
         worker_id: str | None = None,
         scheduler_factory: Callable[..., Any] | None = None,
         order_adapter: Any | None = None,
+        reconciler_gateway: Any | None = None,
         digest_runner: Any | None = None,
         morning_alerts_runner: Any | None = None,
     ) -> None:
@@ -164,6 +165,13 @@ class PortfolioScheduler:
         # paper). When None the order sweeps are never registered — the
         # default. This is the activation switch for T-045 §1-3.
         self._order_adapter = order_adapter
+        # V1.2 §BM-2 / GAPS.md P0-3 — dedicated read-only TWS session
+        # for the in-process reconciliation cron. Mirrors order_adapter:
+        # ``None`` (default) means the reconciler tick falls through to
+        # the disconnected stub gateway and skips with
+        # ``IBKR gateway niet verbonden``. ``main._maybe_open_reconciler_session``
+        # injects a live gateway when the reconciliation cron is on.
+        self._reconciler_gateway = reconciler_gateway
         # Concrete digest runner — fired on every ``market_close`` event.
         # Stays ``None`` until main() instantiates and injects one;
         # the orchestrator silently skips the digest step when ``None``.
@@ -750,7 +758,20 @@ class PortfolioScheduler:
                 "reconciler tick skipped: geen IBKR account_id geconfigureerd"
             )
             return
-        ib_client = self._gateway.get_read_ib_client()
+        # V1.2 §BM-2 / GAPS.md P0-3 — gebruik de dedicated reconciler
+        # gateway (eigen client_id, ge-opened door
+        # ``main._maybe_open_reconciler_session``). Backwards-compat:
+        # wanneer geen reconciler_gateway is geinjecteerd (legacy code-
+        # paths of tests die de gateway direct injecten) valt het terug
+        # op de hoofdgateway zodat de bestaande wiring blijft werken.
+        reconciler_gateway = self._reconciler_gateway or self._gateway
+        get_client = getattr(reconciler_gateway, "get_read_ib_client", None)
+        if get_client is None:
+            logger.info(
+                "reconciler tick skipped: gateway expose't geen ib_client"
+            )
+            return
+        ib_client = get_client()
         if ib_client is None:
             logger.info(
                 "reconciler tick skipped: IBKR gateway niet verbonden"
@@ -785,7 +806,7 @@ class PortfolioScheduler:
         result = run_reconciler_tick(
             storage_provider=storage_provider,
             ib_client=_cast(_ReadCapable, ib_client),
-            gateway=self._gateway,
+            gateway=reconciler_gateway,
             lock_factory=_build_lock,
             ibkr_account_id=ibkr_account_id,
             pass_c_timeout_cutoff=pass_c_timeout_cutoff,

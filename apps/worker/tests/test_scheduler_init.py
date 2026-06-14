@@ -1038,12 +1038,37 @@ def _build_with_reconciliation_sweep_trigger(
     storage_database_url: str | None = None,
     ibkr_account_id: str | None = None,
     gateway_connected: bool = True,
+    use_dedicated_reconciler_gateway: bool = False,
 ) -> PortfolioScheduler:
-    return PortfolioScheduler(
-        gateway=_ReconcilerStubGateway(
+    """Build a scheduler for reconciliation-sweep tests.
+
+    ``use_dedicated_reconciler_gateway=True`` mirrors production wiring
+    after V1.2 §BM-2 refactor: the main gateway is the disconnected
+    boot-stub, and the reconciliation cron uses a separate connected
+    ``reconciler_gateway``. Default ``False`` keeps the pre-refactor
+    behaviour where the main gateway carries the ib_client (the
+    backwards-compat path).
+    """
+
+    main_gateway = _ReconcilerStubGateway(
+        connected=gateway_connected and not use_dedicated_reconciler_gateway,
+        ib_client=(
+            object()
+            if gateway_connected and not use_dedicated_reconciler_gateway
+            else None
+        ),
+    )
+    reconciler_gateway = (
+        _ReconcilerStubGateway(
             connected=gateway_connected,
             ib_client=object() if gateway_connected else None,
-        ),
+        )
+        if use_dedicated_reconciler_gateway
+        else None
+    )
+    return PortfolioScheduler(
+        gateway=main_gateway,
+        reconciler_gateway=reconciler_gateway,
         storage_settings=StorageSettings(
             enabled=storage_enabled,
             database_url=storage_database_url,
@@ -1221,6 +1246,65 @@ def test_reconciliation_sweep_skipped_when_gateway_disconnected(
         )
         scheduler._on_reconciliation_sweep_trigger()
         assert called == []
+    finally:
+        scheduler.stop()
+
+
+def test_reconciliation_sweep_prefers_dedicated_reconciler_gateway(
+    monkeypatch,
+) -> None:
+    """V1.2 §BM-2 / GAPS.md P0-3 — wanneer een dedicated reconciler
+    gateway is geinjecteerd (productie-pad), gebruikt de cron die,
+    NIET de hoofdgateway (die in productie de disconnected boot-stub
+    is)."""
+
+    captured: list[dict[str, object]] = []
+    from portfolio_outlook_worker.ibkr_reconciliation import (
+        reconciler_runner as runner_mod,
+    )
+
+    class _Result:
+        mode_detected = "completed"
+        pass_a_orphaned_count = 0
+        pass_b_stale_count = 0
+        pass_c_timeout_count = 0
+        error_details_json = None
+
+    def _stub_tick(**kwargs):
+        captured.append(kwargs)
+        return _Result()
+
+    monkeypatch.setattr(runner_mod, "run_reconciler_tick", _stub_tick)
+    monkeypatch.setattr(
+        runner_mod, "build_storage_provider", lambda _url: object()
+    )
+
+    scheduler = _build_with_reconciliation_sweep_trigger(
+        reconciliation_sweep_trigger_enabled=True,
+        ibkr_account_id="DU12345",
+        storage_enabled=False,  # heartbeat off
+        use_dedicated_reconciler_gateway=True,
+    )
+    # Confirm the main gateway is disconnected (production matches this
+    # after the refactor — _try_connect_ibkr discards its session).
+    assert scheduler._gateway.is_connected() is False
+    # And the dedicated reconciler gateway IS connected.
+    assert scheduler._reconciler_gateway is not None
+    assert scheduler._reconciler_gateway.is_connected() is True
+
+    try:
+        scheduler.start()
+        scheduler._storage_settings = StorageSettings(
+            enabled=True,
+            database_url="postgresql://fake",
+            writes_enabled=True,
+        )
+        scheduler._on_reconciliation_sweep_trigger()
+        assert len(captured) == 1
+        # Critical: the gateway passed to run_reconciler_tick is the
+        # dedicated reconciler one, NOT the main gateway.
+        assert captured[0]["gateway"] is scheduler._reconciler_gateway
+        assert captured[0]["gateway"] is not scheduler._gateway
     finally:
         scheduler.stop()
 
