@@ -999,6 +999,21 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "automatische order (§2)."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0079_macro_index_snapshots",
+        previous_revision_id="0078_sell_signal_cards",
+        filename="0079_macro_index_snapshots.py",
+        label_nl="Macro index snapshots (VIX + SPX)",
+        description_nl=(
+            "Voegt de ``macro_index_snapshots`` tabel toe voor "
+            "historische VIX- en S&P-500-bars (V1.2 §BE). Tot deze "
+            "migratie las de orchestrator-scoring-leg een "
+            "hardgecodeerde VIX=15 en een synthetische uptrend, "
+            "waardoor de macro-gate elke marktdaling miste. Locked "
+            "vocabulary: ``series_code`` ∈ {vix, spx}. UNIQUE per "
+            "``(series_code, bar_date)`` zodat refetch upsert."
+        ),
+    ),
 )
 
 

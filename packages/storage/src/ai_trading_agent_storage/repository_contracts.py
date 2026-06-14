@@ -3454,6 +3454,50 @@ class SaveSellSignalCardRequest:
             raise ValueError("current_price must be > 0")
 
 
+# Locked vocabulary voor ``macro_index_snapshots.series_code``
+# (V1.2 §BE). Andere codes mogen — de tabel checkt geen enumerable —
+# maar de macro-resolver leest alleen deze twee. Toekomstige codes
+# kunnen toegevoegd worden zonder migratie.
+MACRO_SERIES_VIX = "vix"
+MACRO_SERIES_SPX = "spx"
+
+
+@dataclass(frozen=True)
+class MacroIndexSnapshotRecord:
+    """Eén historische bar van een macro-index (V1.2 §BE)."""
+
+    snapshot_id: str
+    series_code: str
+    bar_date: date
+    close_value: Decimal
+    raw_payload: dict[str, object] | None
+    provider: str
+    fetched_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in ("snapshot_id", "series_code", "provider"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.close_value <= 0:
+            raise ValueError("close_value must be > 0")
+
+
+@dataclass(frozen=True)
+class SaveMacroIndexSnapshotRequest:
+    snapshot_id: str
+    series_code: str
+    bar_date: date
+    close_value: Decimal
+    raw_payload: dict[str, object] | None
+    provider: str
+    fetched_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in ("snapshot_id", "series_code", "provider"):
+            _require_non_empty(getattr(self, field_name), field_name)
+        if self.close_value <= 0:
+            raise ValueError("close_value must be > 0")
+
+
 @dataclass(frozen=True)
 class BriefingAlertRecord:
     """Append-only alert row attached to one daily briefing.

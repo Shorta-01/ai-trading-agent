@@ -35,9 +35,9 @@ def _report(allowed: bool) -> MigrationReadinessReport:
         database_connected=allowed,
         migrations_checked_against_database=allowed,
         offline_inventory_valid=True,
-        latest_expected_revision_id="0078_sell_signal_cards",
+        latest_expected_revision_id="0079_macro_index_snapshots",
         database_revision_id=(
-            "0078_sell_signal_cards" if allowed else None
+            "0079_macro_index_snapshots" if allowed else None
         ),
         persistence_allowed=allowed,
         blocks_runtime_writes=(not allowed),
