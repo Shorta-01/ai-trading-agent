@@ -673,6 +673,55 @@ export type ProfitTargetResponse = {
   summary_nl: string;
 };
 
+// V1.2 §BA — operator-getrackt dividenden register.
+
+export type DividendRow = {
+  dividend_event_id: string;
+  symbol: string;
+  isin: string | null;
+  pay_date: string;
+  currency_local: string;
+  gross_local: string;
+  withholding_pct: string;
+  withholding_local: string;
+  net_local: string;
+  country_code: string | null;
+  note: string | null;
+};
+
+export type DividendKpis = {
+  gross_by_currency: Record<string, string>;
+  withholding_by_currency: Record<string, string>;
+  net_by_currency: Record<string, string>;
+  count: number;
+};
+
+export type DividendListResponse = {
+  title_nl: string;
+  help_nl: string;
+  year: number;
+  items: DividendRow[];
+  totals: DividendKpis;
+  treaty_defaults_pct_by_country: Record<string, string>;
+};
+
+export type CreateDividendInput = {
+  symbol: string;
+  pay_date: string;
+  currency_local: string;
+  gross_local: string;
+  withholding_pct?: string | null;
+  country_code?: string | null;
+  isin?: string | null;
+  note?: string | null;
+};
+
+export type DividendMutationResponse = {
+  accepted: boolean;
+  record_id: string | null;
+  explanation_nl: string;
+};
+
 export type TobYearToDateResponse = {
   title_nl: string;
   help_nl: string;
@@ -2652,6 +2701,17 @@ export const apiClient = {
     getJson<ProfitTargetResponse>("/settings/profit-target"),
   putProfitTarget: (payload: { profit_target_pct: string | null }) =>
     putJson<ProfitTargetResponse>("/settings/profit-target", payload),
+  listDividenden: (params?: { year?: number }) =>
+    getJson<DividendListResponse>(
+      `/dividenden${params?.year ? `?year=${params.year}` : ""}`,
+    ),
+  createDividend: (payload: CreateDividendInput) =>
+    postJson<DividendMutationResponse>("/dividenden", payload),
+  deleteDividend: (dividendEventId: string) =>
+    requestJson<DividendMutationResponse>(
+      `/dividenden/${encodeURIComponent(dividendEventId)}`,
+      "DELETE",
+    ),
   getTobYearToDate: (params?: { year?: number }) =>
     getJson<TobYearToDateResponse>(
       `/tob/year-to-date${params?.year ? `?year=${params.year}` : ""}`,

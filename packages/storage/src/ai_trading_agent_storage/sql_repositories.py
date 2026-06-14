@@ -73,6 +73,7 @@ from ai_trading_agent_storage.metadata import (
     universe_scan_runs,
     market_data_bars,
     market_data_snapshots,
+    dividend_events,
     earnings_events,
     watchlist_preferences,
     prediction_diary_entries,
@@ -128,6 +129,8 @@ from ai_trading_agent_storage.repository_contracts import (
     DailyDigestRecord,
     EarningsEventRecord,
     OrchestratorScoringVerdictRecord,
+    DividendEventRecord,
+    SaveDividendEventRequest,
     SaveEarningsEventRequest,
     SaveOrchestratorScoringVerdictRequest,
     SaveWatchlistPreferenceRequest,
@@ -3429,6 +3432,68 @@ class SqlAlchemyWatchlistPreferenceRepository(_Base):
             .all()
         )
         return frozenset(symbol for (symbol,) in rows)
+
+
+class SqlAlchemyDividendEventRepository(_Base):
+    """Operator-getrackt dividenden-register (V1.2 §BA)."""
+
+    def save_dividend(
+        self, request: SaveDividendEventRequest
+    ) -> StorageWriteResult:
+        self._insert(dividend_events, asdict(request))
+        return StorageWriteResult(
+            True,
+            request.dividend_event_id,
+            dividend_events.name,
+            True,
+            "Dividend opgeslagen.",
+        )
+
+    def delete_dividend(self, *, dividend_event_id: str) -> StorageWriteResult:
+        ensure_persistence_allowed(self._readiness_report)
+        self._connection.execute(
+            dividend_events.delete().where(
+                dividend_events.c.dividend_event_id == dividend_event_id
+            )
+        )
+        return StorageWriteResult(
+            True,
+            None,
+            dividend_events.name,
+            True,
+            "Dividend verwijderd.",
+        )
+
+    def list_for_account(
+        self,
+        *,
+        ibkr_account_ref: str,
+        year: int | None = None,
+    ) -> StorageListResult[DividendEventRecord]:
+        statement = select(dividend_events).where(
+            dividend_events.c.ibkr_account_ref == ibkr_account_ref
+        )
+        if year is not None:
+            from datetime import date as _date  # noqa: PLC0415
+
+            start = _date(year, 1, 1)
+            end = _date(year, 12, 31)
+            statement = statement.where(
+                dividend_events.c.pay_date >= start
+            ).where(dividend_events.c.pay_date <= end)
+        rows = (
+            self._connection.execute(
+                statement.order_by(dividend_events.c.pay_date)
+            )
+            .mappings()
+            .all()
+        )
+        records = tuple(DividendEventRecord(**dict(row)) for row in rows)
+        return StorageListResult(
+            records,
+            dividend_events.name,
+            f"{len(records)} dividend-events opgehaald.",
+        )
 
 
 class SqlAlchemySchedulerRunRepository(_Base):
