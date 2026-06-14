@@ -29,7 +29,8 @@ def connection():  # type: ignore[no-untyped-def]
         )
         conn.execute(
             text(
-                "INSERT INTO alembic_version (version_num) VALUES ('0074_runtime_config_software_pause')"
+                "INSERT INTO alembic_version (version_num) VALUES "
+                "('0074_runtime_config_software_pause')"
             )
         )
     conn = engine.connect()
