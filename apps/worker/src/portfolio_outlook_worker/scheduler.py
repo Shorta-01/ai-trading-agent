@@ -36,6 +36,7 @@ from portfolio_outlook_worker.api_trigger import (
     trigger_monthly_archive_auto_generate,
     trigger_morning_chain,
     trigger_morning_explanation_batch,
+    trigger_reconciliation_sweep,
     trigger_sell_signal_sweep,
 )
 from portfolio_outlook_worker.config import (
@@ -66,6 +67,7 @@ _IBKR_SYNC_JOB_ID = "ibkr_sync_trigger"
 _SELL_SIGNAL_SWEEP_JOB_ID = "sell_signal_sweep_trigger"
 _MONTHLY_ARCHIVE_JOB_ID = "monthly_archive_auto_generate"
 _MACRO_FEED_REFRESH_JOB_ID = "macro_feed_refresh"
+_RECONCILIATION_SWEEP_JOB_ID = "reconciliation_sweep_trigger"
 # Market-aware fires (one per active market session, see market_hours).
 # Job ids follow ``market_close_<EXCHANGE_CODE>`` so they're stable
 # across restarts and visible in /scheduler/runs for audit.
@@ -528,6 +530,24 @@ class PortfolioScheduler:
                 coalesce=True,
                 misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
             )
+        # Action-draft reconciliation sweep — V1.2 §BM / GAPS.md P0-3.
+        # CLAUDE.md §2 audit-trail-doctrine vraagt dat filled orders
+        # automatisch submitted → filled / cancelled / rejected zien
+        # transitioneren. Tot deze cron werd reconcile alleen
+        # handmatig getriggerd, en het dashboard toonde stale
+        # "submitted" badges. Default cron: elke 30 minuten op
+        # weekdagen (incl. off-hours zodat laat-afgevuurde executions
+        # snel binnenkomen).
+        if self._scheduler_settings.reconciliation_sweep_trigger_enabled:
+            self._scheduler.add_job(
+                self._on_reconciliation_sweep_trigger,
+                trigger=self._build_reconciliation_sweep_trigger(),
+                id=_RECONCILIATION_SWEEP_JOB_ID,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
+            )
 
     def _build_morning_chain_trigger(self) -> Any:
         """Parse the configured 5-field cron into a CronTrigger."""
@@ -678,6 +698,36 @@ class PortfolioScheduler:
 
     def _on_macro_feed_refresh_trigger(self) -> None:
         trigger_macro_feed_refresh(
+            base_url=self._scheduler_settings.api_base_url,
+            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        )
+
+    def _build_reconciliation_sweep_trigger(self) -> Any:
+        """Parse de geconfigureerde 5-field cron voor de reconciliation
+        sweep (V1.2 §BM / GAPS.md P0-3)."""
+
+        from apscheduler.triggers.cron import CronTrigger
+
+        parts = (
+            self._scheduler_settings.reconciliation_sweep_cron or ""
+        ).strip().split()
+        if len(parts) != 5:
+            raise ValueError(
+                "scheduler.reconciliation_sweep_cron must be a 5-field cron, "
+                f"got {self._scheduler_settings.reconciliation_sweep_cron!r}"
+            )
+        minute, hour, day, month, day_of_week = parts
+        return CronTrigger(
+            minute=minute,
+            hour=hour,
+            day=day,
+            month=month,
+            day_of_week=day_of_week,
+            timezone=self._scheduler_settings.timezone,
+        )
+
+    def _on_reconciliation_sweep_trigger(self) -> None:
+        trigger_reconciliation_sweep(
             base_url=self._scheduler_settings.api_base_url,
             timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
         )

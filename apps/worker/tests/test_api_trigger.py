@@ -181,6 +181,45 @@ def test_trigger_monthly_archive_auto_generate_noops_without_base_url() -> None:
     ) is None
 
 
+def test_trigger_reconciliation_sweep_targets_correct_path(monkeypatch) -> None:
+    """V1.2 §BM / GAPS.md P0-3 — worker cron POST't naar
+    /action-drafts/reconcile."""
+
+    captured: dict[str, str] = {}
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout: (captured.__setitem__("url", url) or _StubResponse()),
+    )
+    api_trigger.trigger_reconciliation_sweep(
+        base_url="http://api:8000", timeout_seconds=1.0
+    )
+    assert captured["url"] == "http://api:8000/action-drafts/reconcile"
+
+
+def test_trigger_reconciliation_sweep_noops_without_base_url() -> None:
+    assert api_trigger.trigger_reconciliation_sweep(
+        base_url=None, timeout_seconds=1.0
+    ) is None
+
+
+def test_trigger_reconciliation_sweep_returns_none_on_http_error(
+    monkeypatch,
+) -> None:
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout: _StubResponse(status_code=500),
+    )
+    assert api_trigger.trigger_reconciliation_sweep(
+        base_url="http://api:8000", timeout_seconds=1.0
+    ) is None
+
+
 def test_trigger_morning_explanation_batch_noops_without_base_url() -> None:
     assert api_trigger.trigger_morning_explanation_batch(
         base_url=None, timeout_seconds=1.0

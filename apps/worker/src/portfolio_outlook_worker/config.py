@@ -164,6 +164,18 @@ class SchedulerSettings(BaseModel):
     macro_feed_refresh_enabled: bool = False
     macro_feed_refresh_cron: str = "30 17 * * mon-fri"
 
+    # Action-draft reconciliation sweep — V1.2 §BM / GAPS.md P0-3.
+    # CLAUDE.md §2 audit-trail-doctrine vereist dat filled orders
+    # automatisch hun submitted → filled / cancelled / rejected
+    # transitie zien. Tot deze cron werd reconciliatie alleen
+    # handmatig getriggerd, waardoor het dashboard stale "submitted"
+    # badges toonde en de unmatched_executions audit-queue groeide.
+    # Default cron: elke 30 minuten op weekdagen (incl. off-hours
+    # om laat-afgevuurde executions snel op te pikken). De endpoint
+    # is idempotent en goedkoop dus 30-min cadence is veilig.
+    reconciliation_sweep_trigger_enabled: bool = False
+    reconciliation_sweep_cron: str = "*/30 * * * mon-fri"
+
     # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
     # cadence). When ``per_market_close_digest_enabled`` is True the
     # worker registers one cron fire per active market (see
