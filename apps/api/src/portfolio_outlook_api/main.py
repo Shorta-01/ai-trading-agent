@@ -96,6 +96,9 @@ from portfolio_outlook_api.research_sources import router as research_sources_ro
 from portfolio_outlook_api.risk_limits_routes import (
     router as risk_limits_router,
 )
+from portfolio_outlook_api.runbook_routes import (
+    router as runbook_router,
+)
 from portfolio_outlook_api.runtime_config_routes import (
     apply_runtime_config_overlay,
 )
@@ -248,6 +251,7 @@ app.include_router(explanation_batch_router)
 app.include_router(predictor_performance_router)
 app.include_router(profit_target_router)
 app.include_router(rapporten_router)
+app.include_router(runbook_router)
 app.include_router(sell_signal_router)
 app.include_router(tob_router)
 app.include_router(earnings_router)
