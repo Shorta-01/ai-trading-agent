@@ -39,18 +39,31 @@ logger = logging.getLogger(__name__)
 _active_scheduler: PortfolioScheduler | None = None
 
 
-def _try_connect_ibkr() -> None:
+def _try_connect_ibkr() -> IbkrGateway | None:
+    """Open the worker's read-only TWS session.
+
+    Returns the connected gateway so the scheduler can reuse it for
+    in-process consumers (V1.2 §BM-2 reconciliation cron). Returns
+    ``None`` when the connection wasn't attempted (IBKR disabled,
+    no account_id, storage unavailable) or failed.
+
+    NOTE: keeping the session alive (no auto-reconnect heartbeat) is
+    GAPS.md P2-1 §BY follow-up territory. Today a dropped session
+    surfaces via ``is_connected()=False`` in downstream consumers,
+    which then skip their tick gracefully.
+    """
+
     if not settings.ibkr.enabled:
         logger.info(
             "IBKR-verbinding overgeslagen (WORKER_IBKR__ENABLED=false)."
         )
-        return
+        return None
     if not settings.ibkr.account_id:
         logger.warning(
             "IBKR is ingeschakeld maar WORKER_IBKR__ACCOUNT_ID ontbreekt; "
             "verbinding wordt niet gestart."
         )
-        return
+        return None
     if (
         not settings.storage.enabled
         or not settings.storage.database_url
@@ -59,7 +72,7 @@ def _try_connect_ibkr() -> None:
             "Opslag is uitgeschakeld of zonder URL; IBKR connect-audit "
             "kan niet worden opgeslagen. Verbinding wordt niet gestart."
         )
-        return
+        return None
 
     connection_settings = build_database_connection_settings(
         settings.storage.database_url
@@ -84,21 +97,24 @@ def _try_connect_ibkr() -> None:
                     result.account_mode,
                     result.connection_id,
                 )
-            else:
-                logger.warning(
-                    "IBKR-verbinding geweigerd: %s", result.error_nl
-                )
-            # 126a: tear the session down at end-of-startup. 126b
-            # adds the durable worker-state row + sync loop that
-            # keeps the connection open.
+                # V1.2 §BM-2 / GAPS.md P0-3 — houd de sessie open zodat
+                # de in-process reconciliation tick een echte
+                # ``IbkrReconcilerGatewayProtocol`` heeft. De gateway
+                # wordt netjes afgesloten in de SIGTERM handler.
+                return gateway
+            logger.warning(
+                "IBKR-verbinding geweigerd: %s", result.error_nl
+            )
             with suppress(Exception):
                 gateway.disconnect()
+            return None
     except StorageConnectionError as exc:
         logger.warning(
             "Opslag niet bereikbaar tijdens IBKR-boot: %s; "
             "verbinding overgeslagen.",
             exc,
         )
+        return None
 
 
 def _maybe_open_order_adapter() -> Any | None:
@@ -139,13 +155,30 @@ def _maybe_open_order_adapter() -> Any | None:
     return adapter
 
 
-def _start_scheduler() -> None:
+def _start_scheduler(connected_gateway: IbkrGateway | None = None) -> None:
+    """Start the worker scheduler.
+
+    ``connected_gateway`` is the result of :func:`_try_connect_ibkr` —
+    when supplied the scheduler reuses that live read-only TWS session,
+    so the in-process reconciliation cron (V1.2 §BM-2) sees a real
+    ``ib_client`` instead of always skipping with
+    ``IBKR gateway niet verbonden``. When ``None`` (IBKR disabled, or
+    connect failed) the scheduler falls back to an unconnected stub
+    gateway — existing cron jobs (order sweeps, morning chain, …)
+    don't depend on the read session.
+    """
+
     global _active_scheduler
 
     if not settings.scheduler.enabled:
         logger.info("Scheduler is uitgeschakeld.")
+        # If we did open an IBKR session purely for the scheduler we
+        # never started, close it cleanly here.
+        if connected_gateway is not None:
+            with suppress(Exception):
+                connected_gateway.disconnect()
         return
-    gateway = IbkrGateway()
+    gateway = connected_gateway if connected_gateway is not None else IbkrGateway()
     order_adapter = _maybe_open_order_adapter()
     # End-of-day digest runner — fired by the orchestrator on every
     # market_close event. Reads positions/suggestions/drafts/NAV from
@@ -186,6 +219,9 @@ def _start_scheduler() -> None:
         scheduler.start()
     except Exception:  # noqa: BLE001 — boundary
         logger.exception("Scheduler kon niet starten.")
+        if connected_gateway is not None:
+            with suppress(Exception):
+                connected_gateway.disconnect()
         return
     _active_scheduler = scheduler
 
@@ -194,6 +230,11 @@ def _start_scheduler() -> None:
         if _active_scheduler is not None:
             with suppress(Exception):
                 _active_scheduler.stop()
+        # V1.2 §BM-2 — close the long-lived IBKR session opened by
+        # ``_try_connect_ibkr`` so the TWS client slot is released.
+        if connected_gateway is not None:
+            with suppress(Exception):
+                connected_gateway.disconnect()
 
     with suppress(ValueError):
         signal.signal(signal.SIGTERM, _shutdown)
@@ -215,8 +256,8 @@ def start_worker() -> None:
         settings.ibkr.enabled,
         settings.scheduler.enabled,
     )
-    _try_connect_ibkr()
-    _start_scheduler()
+    connected_gateway = _try_connect_ibkr()
+    _start_scheduler(connected_gateway=connected_gateway)
 
 
 # GAPS.md P4-3 — externe orchestrators (en de smoke-test prompt)

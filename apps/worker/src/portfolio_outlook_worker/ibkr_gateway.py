@@ -380,6 +380,20 @@ class IbkrGateway:
         except Exception:  # noqa: BLE001 — boundary
             return False
 
+    def get_read_ib_client(self) -> IbClientProtocol | None:
+        """V1.2 §BM / GAPS.md P0-3 — expose the underlying read-only
+        TWS client to the reconciliation fetchers.
+
+        The reconciler reads ``reqExecutions`` + ``trades()`` (defined
+        on the broader ``ReadCapableIbClientProtocol``); both are
+        structurally available on the SDK's ``IB`` instance and on the
+        worker's test fakes. Returns ``None`` when the gateway has no
+        live session — the caller (the in-process reconciler cron)
+        falls through to ``skipped_disconnected`` without raising.
+        """
+
+        return self._ib
+
     @property
     def account_id(self) -> str | None:
         """The account verified at connect time (``None`` until connected)."""

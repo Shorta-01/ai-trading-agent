@@ -1010,23 +1010,50 @@ def test_macro_feed_refresh_handler_calls_trigger(monkeypatch) -> None:
 # ---- Reconciliation sweep trigger (V1.2 §BM / GAPS.md P0-3) ---------
 
 
+class _ReconcilerStubGateway:
+    """V1.2 §BM — gateway double for the in-process reconciler tests.
+
+    Exposes both ``is_connected`` (used by IbkrReconcilerGatewayProtocol)
+    and ``get_read_ib_client`` (used by the scheduler to feed the
+    reconciler fetchers). The "ib_client" returned is a sentinel that
+    the test's ``run_reconciler_tick`` stub asserts against.
+    """
+
+    def __init__(self, *, connected: bool, ib_client: object | None) -> None:
+        self._connected = connected
+        self._ib_client = ib_client
+
+    def is_connected(self) -> bool:
+        return self._connected
+
+    def get_read_ib_client(self) -> object | None:
+        return self._ib_client if self._connected else None
+
+
 def _build_with_reconciliation_sweep_trigger(
     *,
     reconciliation_sweep_trigger_enabled: bool = False,
     reconciliation_sweep_cron: str = "*/30 * * * mon-fri",
-    api_base_url: str | None = "http://api:8000",
+    storage_enabled: bool = False,
+    storage_database_url: str | None = None,
+    ibkr_account_id: str | None = None,
+    gateway_connected: bool = True,
 ) -> PortfolioScheduler:
     return PortfolioScheduler(
-        gateway=_StubGateway(),
-        storage_settings=StorageSettings(
-            enabled=False, database_url=None, writes_enabled=False
+        gateway=_ReconcilerStubGateway(
+            connected=gateway_connected,
+            ib_client=object() if gateway_connected else None,
         ),
-        ibkr_settings=IbkrSettings(),
+        storage_settings=StorageSettings(
+            enabled=storage_enabled,
+            database_url=storage_database_url,
+            writes_enabled=storage_enabled,
+        ),
+        ibkr_settings=IbkrSettings(account_id=ibkr_account_id),
         scheduler_settings=SchedulerSettings(
             enabled=True,
             timezone="Europe/Brussels",
             heartbeat_interval_seconds=60,
-            api_base_url=api_base_url,
             reconciliation_sweep_trigger_enabled=(
                 reconciliation_sweep_trigger_enabled
             ),
@@ -1074,25 +1101,126 @@ def test_reconciliation_sweep_handler_calls_trigger(monkeypatch) -> None:
     met de geconfigureerde base_url + timeout."""
 
     captured: list[dict[str, object]] = []
-    from portfolio_outlook_worker import scheduler as sched_mod
+    from portfolio_outlook_worker.ibkr_reconciliation import (
+        reconciler_runner as runner_mod,
+    )
 
-    def _stub_trigger(*, base_url, timeout_seconds):
-        captured.append({"base_url": base_url, "timeout": timeout_seconds})
-        return {"status": "ok"}
+    class _Result:
+        mode_detected = "completed"
+        pass_a_orphaned_count = 0
+        pass_b_stale_count = 0
+        pass_c_timeout_count = 0
+        error_details_json = None
 
+    def _stub_tick(**kwargs):
+        captured.append(kwargs)
+        return _Result()
+
+    monkeypatch.setattr(runner_mod, "run_reconciler_tick", _stub_tick)
     monkeypatch.setattr(
-        sched_mod, "trigger_reconciliation_sweep", _stub_trigger
+        runner_mod, "build_storage_provider", lambda _url: object()
     )
 
     scheduler = _build_with_reconciliation_sweep_trigger(
         reconciliation_sweep_trigger_enabled=True,
-        api_base_url="http://api.local",
+        ibkr_account_id="DU12345",
+        storage_enabled=False,  # keep heartbeat off
     )
     try:
         scheduler.start()
+        # Override the storage_settings post-start so the reconciliation
+        # handler's storage-enabled guard passes — the heartbeat that
+        # ran during ``start()`` already skipped on the original False.
+        scheduler._storage_settings = StorageSettings(
+            enabled=True,
+            database_url="postgresql://fake",
+            writes_enabled=True,
+        )
         scheduler._on_reconciliation_sweep_trigger()
         assert len(captured) == 1
-        assert captured[0]["base_url"] == "http://api.local"
+        # The runner was called with the in-process gateway + the lock
+        # factory from the scheduler module, not a base_url.
+        assert captured[0]["ibkr_account_id"] == "DU12345"
+        assert "storage_provider" in captured[0]
+        assert "ib_client" in captured[0]
+        assert "lock_factory" in captured[0]
+        assert "pass_c_timeout_cutoff" in captured[0]
+    finally:
+        scheduler.stop()
+
+
+def test_reconciliation_sweep_skipped_without_account_id(monkeypatch) -> None:
+    """Geen ``account_id`` configured → cron skip't zonder runner-call,
+    geen warning of fout."""
+
+    from portfolio_outlook_worker.ibkr_reconciliation import (
+        reconciler_runner as runner_mod,
+    )
+
+    called: list[dict] = []
+
+    def _stub_tick(**kwargs):
+        called.append(kwargs)
+        return None
+
+    monkeypatch.setattr(runner_mod, "run_reconciler_tick", _stub_tick)
+    monkeypatch.setattr(
+        runner_mod, "build_storage_provider", lambda _url: object()
+    )
+
+    scheduler = _build_with_reconciliation_sweep_trigger(
+        reconciliation_sweep_trigger_enabled=True,
+        storage_enabled=False,
+        # account_id intentionally left None
+    )
+    try:
+        scheduler.start()
+        scheduler._storage_settings = StorageSettings(
+            enabled=True,
+            database_url="postgresql://fake",
+            writes_enabled=True,
+        )
+        scheduler._on_reconciliation_sweep_trigger()
+        assert called == []
+    finally:
+        scheduler.stop()
+
+
+def test_reconciliation_sweep_skipped_when_gateway_disconnected(
+    monkeypatch,
+) -> None:
+    """Gateway niet verbonden → cron skip't; geen IBKR-call gemaakt."""
+
+    from portfolio_outlook_worker.ibkr_reconciliation import (
+        reconciler_runner as runner_mod,
+    )
+
+    called: list[dict] = []
+
+    def _stub_tick(**kwargs):
+        called.append(kwargs)
+        return None
+
+    monkeypatch.setattr(runner_mod, "run_reconciler_tick", _stub_tick)
+    monkeypatch.setattr(
+        runner_mod, "build_storage_provider", lambda _url: object()
+    )
+
+    scheduler = _build_with_reconciliation_sweep_trigger(
+        reconciliation_sweep_trigger_enabled=True,
+        ibkr_account_id="DU12345",
+        storage_enabled=False,
+        gateway_connected=False,
+    )
+    try:
+        scheduler.start()
+        scheduler._storage_settings = StorageSettings(
+            enabled=True,
+            database_url="postgresql://fake",
+            writes_enabled=True,
+        )
+        scheduler._on_reconciliation_sweep_trigger()
+        assert called == []
     finally:
         scheduler.stop()
 
