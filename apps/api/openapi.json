@@ -1,6 +1,39 @@
 {
   "components": {
     "schemas": {
+      "ActionDraftActivityOut": {
+        "properties": {
+          "dismissed": {
+            "title": "Dismissed",
+            "type": "integer"
+          },
+          "filled": {
+            "title": "Filled",
+            "type": "integer"
+          },
+          "proposed": {
+            "title": "Proposed",
+            "type": "integer"
+          },
+          "submitted": {
+            "title": "Submitted",
+            "type": "integer"
+          },
+          "user_approved": {
+            "title": "User Approved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proposed",
+          "user_approved",
+          "submitted",
+          "filled",
+          "dismissed"
+        ],
+        "title": "ActionDraftActivityOut",
+        "type": "object"
+      },
       "ActionDraftListResponse": {
         "additionalProperties": false,
         "properties": {
@@ -477,6 +510,57 @@
         "title": "ActiveSystemEventsResponse",
         "type": "object"
       },
+      "AdvancedSettingsResponse": {
+        "description": "Tier-2 power-user knobs surfaced behind the \"Geavanceerde\ninstellingen\" accordion. Each value falls back to the API\nsettings-singleton default (env-var) when no DB row has been saved.",
+        "properties": {
+          "action_draft_approval_valid_minutes": {
+            "title": "Action Draft Approval Valid Minutes",
+            "type": "integer"
+          },
+          "ai_explanation_provider_code": {
+            "title": "Ai Explanation Provider Code",
+            "type": "string"
+          },
+          "ensemble_weight_strategy": {
+            "title": "Ensemble Weight Strategy",
+            "type": "string"
+          },
+          "gbm_drift_window_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gbm Drift Window Days"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "sharpe_slight_threshold": {
+            "title": "Sharpe Slight Threshold",
+            "type": "string"
+          },
+          "sharpe_strong_threshold": {
+            "title": "Sharpe Strong Threshold",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ensemble_weight_strategy",
+          "gbm_drift_window_days",
+          "action_draft_approval_valid_minutes",
+          "ai_explanation_provider_code",
+          "sharpe_strong_threshold",
+          "sharpe_slight_threshold",
+          "help_nl"
+        ],
+        "title": "AdvancedSettingsResponse",
+        "type": "object"
+      },
       "AiBudgetSection": {
         "properties": {
           "help_nl": {
@@ -498,6 +582,24 @@
           "help_nl"
         ],
         "title": "AiBudgetSection",
+        "type": "object"
+      },
+      "AiExtractedFact": {
+        "properties": {
+          "fact_text_nl": {
+            "title": "Fact Text Nl",
+            "type": "string"
+          },
+          "is_grounded": {
+            "title": "Is Grounded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fact_text_nl",
+          "is_grounded"
+        ],
+        "title": "AiExtractedFact",
         "type": "object"
       },
       "AiUsageSummary": {
@@ -652,7 +754,7 @@
             "type": "boolean"
           },
           "allow_etfs": {
-            "default": true,
+            "default": false,
             "title": "Allow Etfs",
             "type": "boolean"
           },
@@ -678,13 +780,102 @@
             "title": "Blocked Asset Types",
             "type": "array"
           },
+          "euronext_amsterdam_enabled": {
+            "default": true,
+            "title": "Euronext Amsterdam Enabled",
+            "type": "boolean"
+          },
+          "euronext_brussels_enabled": {
+            "default": true,
+            "title": "Euronext Brussels Enabled",
+            "type": "boolean"
+          },
+          "euronext_paris_enabled": {
+            "default": true,
+            "title": "Euronext Paris Enabled",
+            "type": "boolean"
+          },
           "explanation_nl": {
             "default": "Dit is de harde veiligheidsfilter voor toegestane beleggingen.",
             "title": "Explanation Nl",
             "type": "string"
+          },
+          "nasdaq_enabled": {
+            "default": true,
+            "title": "Nasdaq Enabled",
+            "type": "boolean"
+          },
+          "nyse_enabled": {
+            "default": true,
+            "title": "Nyse Enabled",
+            "type": "boolean"
           }
         },
         "title": "AllowedUniverseSettings",
+        "type": "object"
+      },
+      "ArchiveEntryOut": {
+        "properties": {
+          "archive_id": {
+            "title": "Archive Id",
+            "type": "string"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "pdf_size_bytes": {
+            "title": "Pdf Size Bytes",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "archive_id",
+          "year",
+          "month",
+          "pdf_size_bytes",
+          "generated_at",
+          "source"
+        ],
+        "title": "ArchiveEntryOut",
+        "type": "object"
+      },
+      "ArchiveListResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArchiveEntryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "items"
+        ],
+        "title": "ArchiveListResponse",
         "type": "object"
       },
       "AssetCreateRequest": {
@@ -1082,10 +1273,100 @@
         "title": "ColdStartWatchlistResponse",
         "type": "object"
       },
+      "ComposeAlertSummaryRequest": {
+        "description": "Worker-side request shape for the compose-summary endpoint.\n\nThe worker has already rendered the deterministic alert lines and\na short context block (market code, date, NAV delta). Those strings\nbecome the AI's input evidence; the validator's hallucination guard\nwill block any number that doesn't already appear in them.",
+        "properties": {
+          "alert_lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alert Lines",
+            "type": "array"
+          },
+          "context_text": {
+            "title": "Context Text",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "context_text",
+          "alert_lines"
+        ],
+        "title": "ComposeAlertSummaryRequest",
+        "type": "object"
+      },
+      "ComposeAlertSummaryResponse": {
+        "properties": {
+          "blocking_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Reason"
+          },
+          "hallucinated_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hallucinated Numbers",
+            "type": "array"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          },
+          "summary_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Nl"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "summary_nl",
+          "blocking_reason",
+          "hallucinated_numbers",
+          "safe_for_orders"
+        ],
+        "title": "ComposeAlertSummaryResponse",
+        "type": "object"
+      },
       "ConnectionSettingsResponse": {
         "properties": {
+          "ai_email_summary_enabled": {
+            "title": "Ai Email Summary Enabled",
+            "type": "boolean"
+          },
           "ai_explanation_enabled": {
             "title": "Ai Explanation Enabled",
+            "type": "boolean"
+          },
+          "ai_explanation_morning_batch_enabled": {
+            "title": "Ai Explanation Morning Batch Enabled",
             "type": "boolean"
           },
           "claude_ai_api_key_set": {
@@ -1161,6 +1442,10 @@
               }
             ],
             "title": "Ibkr Port"
+          },
+          "research_ai_extraction_enabled": {
+            "title": "Research Ai Extraction Enabled",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1172,7 +1457,10 @@
           "ai_explanation_enabled",
           "claude_ai_explanation_model",
           "claude_ai_budget_monthly_eur",
-          "claude_ai_api_key_set"
+          "claude_ai_api_key_set",
+          "ai_explanation_morning_batch_enabled",
+          "ai_email_summary_enabled",
+          "research_ai_extraction_enabled"
         ],
         "title": "ConnectionSettingsResponse",
         "type": "object"
@@ -1297,6 +1585,78 @@
           }
         },
         "title": "CreateActionDraftRequest",
+        "type": "object"
+      },
+      "CreateDividendRequest": {
+        "properties": {
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "currency_local": {
+            "title": "Currency Local",
+            "type": "string"
+          },
+          "gross_local": {
+            "title": "Gross Local",
+            "type": "string"
+          },
+          "isin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isin"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "pay_date": {
+            "title": "Pay Date",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "withholding_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withholding Pct"
+          }
+        },
+        "required": [
+          "symbol",
+          "pay_date",
+          "currency_local",
+          "gross_local"
+        ],
+        "title": "CreateDividendRequest",
         "type": "object"
       },
       "CreateWatchlistItemRequest": {
@@ -1429,6 +1789,40 @@
         ],
         "title": "CurrencyPreference",
         "type": "string"
+      },
+      "DataWindowSettingsResponse": {
+        "description": "Operator-editable data-window knobs that govern how much history\nthe morning chain pulls + caches.",
+        "properties": {
+          "daily_briefing_lookback_hours": {
+            "title": "Daily Briefing Lookback Hours",
+            "type": "integer"
+          },
+          "forecast_history_lookback_days": {
+            "title": "Forecast History Lookback Days",
+            "type": "integer"
+          },
+          "forecast_minimum_bars_required": {
+            "title": "Forecast Minimum Bars Required",
+            "type": "integer"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "universe_scan_cache_ttl_hours": {
+            "title": "Universe Scan Cache Ttl Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "forecast_history_lookback_days",
+          "forecast_minimum_bars_required",
+          "daily_briefing_lookback_hours",
+          "universe_scan_cache_ttl_hours",
+          "help_nl"
+        ],
+        "title": "DataWindowSettingsResponse",
+        "type": "object"
       },
       "DecisionPackageChainResponse": {
         "additionalProperties": false,
@@ -1735,6 +2129,154 @@
         "title": "DecisionPackageResponse",
         "type": "object"
       },
+      "DigestAlert": {
+        "properties": {
+          "body_nl": {
+            "title": "Body Nl",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id"
+          },
+          "reference_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Kind"
+          },
+          "severity_nl": {
+            "title": "Severity Nl",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "severity_nl",
+          "title_nl",
+          "body_nl",
+          "reference_kind",
+          "reference_id"
+        ],
+        "title": "DigestAlert",
+        "type": "object"
+      },
+      "DigestTodayResponse": {
+        "properties": {
+          "action_drafts_summary": {
+            "additionalProperties": true,
+            "title": "Action Drafts Summary",
+            "type": "object"
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/DigestAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "briefing_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Briefing Date"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "market_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Code"
+          },
+          "nav_summary": {
+            "additionalProperties": true,
+            "title": "Nav Summary",
+            "type": "object"
+          },
+          "positions_summary": {
+            "additionalProperties": true,
+            "title": "Positions Summary",
+            "type": "object"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          },
+          "suggestions_summary": {
+            "additionalProperties": true,
+            "title": "Suggestions Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "help_nl",
+          "generated_at",
+          "briefing_date",
+          "market_code",
+          "nav_summary",
+          "positions_summary",
+          "suggestions_summary",
+          "action_drafts_summary",
+          "alerts",
+          "safe_for_orders"
+        ],
+        "title": "DigestTodayResponse",
+        "type": "object"
+      },
       "DismissActionDraftRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1753,6 +2295,217 @@
         "title": "DismissActionDraftRequest",
         "type": "object"
       },
+      "DismissRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "DismissRequest",
+        "type": "object"
+      },
+      "DividendKpisOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "gross_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Gross By Currency",
+            "type": "object"
+          },
+          "net_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Net By Currency",
+            "type": "object"
+          },
+          "withholding_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Withholding By Currency",
+            "type": "object"
+          }
+        },
+        "required": [
+          "gross_by_currency",
+          "withholding_by_currency",
+          "net_by_currency",
+          "count"
+        ],
+        "title": "DividendKpisOut",
+        "type": "object"
+      },
+      "DividendListResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DividendOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/DividendKpisOut"
+          },
+          "treaty_defaults_pct_by_country": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Treaty Defaults Pct By Country",
+            "type": "object"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "year",
+          "items",
+          "totals",
+          "treaty_defaults_pct_by_country"
+        ],
+        "title": "DividendListResponse",
+        "type": "object"
+      },
+      "DividendMutationResponse": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "explanation_nl": {
+            "title": "Explanation Nl",
+            "type": "string"
+          },
+          "record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Id"
+          }
+        },
+        "required": [
+          "accepted",
+          "record_id",
+          "explanation_nl"
+        ],
+        "title": "DividendMutationResponse",
+        "type": "object"
+      },
+      "DividendOut": {
+        "properties": {
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "currency_local": {
+            "title": "Currency Local",
+            "type": "string"
+          },
+          "dividend_event_id": {
+            "title": "Dividend Event Id",
+            "type": "string"
+          },
+          "gross_local": {
+            "title": "Gross Local",
+            "type": "string"
+          },
+          "isin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isin"
+          },
+          "net_local": {
+            "title": "Net Local",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "pay_date": {
+            "title": "Pay Date",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "withholding_local": {
+            "title": "Withholding Local",
+            "type": "string"
+          },
+          "withholding_pct": {
+            "title": "Withholding Pct",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dividend_event_id",
+          "symbol",
+          "isin",
+          "pay_date",
+          "currency_local",
+          "gross_local",
+          "withholding_pct",
+          "withholding_local",
+          "net_local",
+          "country_code",
+          "note"
+        ],
+        "title": "DividendOut",
+        "type": "object"
+      },
       "DutchLabelsSummary": {
         "properties": {
           "labels": {
@@ -1767,6 +2520,158 @@
           "labels"
         ],
         "title": "DutchLabelsSummary",
+        "type": "object"
+      },
+      "EarningsEventRow": {
+        "properties": {
+          "earnings_event_id": {
+            "title": "Earnings Event Id",
+            "type": "string"
+          },
+          "event_date": {
+            "title": "Event Date",
+            "type": "string"
+          },
+          "fetched_at": {
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "ibkr_conid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Conid"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "earnings_event_id",
+          "symbol",
+          "ibkr_conid",
+          "event_date",
+          "status",
+          "source",
+          "fetched_at"
+        ],
+        "title": "EarningsEventRow",
+        "type": "object"
+      },
+      "EarningsRefreshRequest": {
+        "properties": {
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          },
+          "window_days": {
+            "default": 21,
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbols"
+        ],
+        "title": "EarningsRefreshRequest",
+        "type": "object"
+      },
+      "EarningsRefreshResponse": {
+        "properties": {
+          "error_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Text"
+          },
+          "fetched_count": {
+            "title": "Fetched Count",
+            "type": "integer"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "symbols_requested": {
+            "title": "Symbols Requested",
+            "type": "integer"
+          },
+          "upserted_count": {
+            "title": "Upserted Count",
+            "type": "integer"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "fetched_count",
+          "upserted_count",
+          "symbols_requested",
+          "window_days",
+          "error_text",
+          "safe_for_orders"
+        ],
+        "title": "EarningsRefreshResponse",
+        "type": "object"
+      },
+      "EarningsUpcomingResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EarningsEventRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "window_days",
+          "items"
+        ],
+        "title": "EarningsUpcomingResponse",
         "type": "object"
       },
       "ErrorLogItem": {
@@ -1911,6 +2816,270 @@
         "title": "EvidenceReferenceResponse",
         "type": "object"
       },
+      "ExclusionRow": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "watchlist_preference_id": {
+            "title": "Watchlist Preference Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "watchlist_preference_id",
+          "symbol",
+          "note",
+          "created_at"
+        ],
+        "title": "ExclusionRow",
+        "type": "object"
+      },
+      "ExclusionsResponse": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExclusionRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "account_id",
+          "items"
+        ],
+        "title": "ExclusionsResponse",
+        "type": "object"
+      },
+      "ExecutionGateSettingsResponse": {
+        "description": "Safety-critical execution toggles. ``ibkr_paper_order_submission_enabled``\nis the API-side master switch for IBKR order submission; the other three\nare worker-side and take effect at the next worker restart.",
+        "properties": {
+          "cancel_sweep_enabled": {
+            "title": "Cancel Sweep Enabled",
+            "type": "boolean"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "ibkr_paper_order_submission_enabled": {
+            "title": "Ibkr Paper Order Submission Enabled",
+            "type": "boolean"
+          },
+          "morning_chain_after_pre_briefing": {
+            "title": "Morning Chain After Pre Briefing",
+            "type": "boolean"
+          },
+          "submission_sweep_enabled": {
+            "title": "Submission Sweep Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ibkr_paper_order_submission_enabled",
+          "submission_sweep_enabled",
+          "cancel_sweep_enabled",
+          "morning_chain_after_pre_briefing",
+          "help_nl"
+        ],
+        "title": "ExecutionGateSettingsResponse",
+        "type": "object"
+      },
+      "ExecutiveSummaryOut": {
+        "properties": {
+          "headline_nl": {
+            "title": "Headline Nl",
+            "type": "string"
+          },
+          "hit_rate_pct": {
+            "title": "Hit Rate Pct",
+            "type": "number"
+          },
+          "net_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Net Local By Currency",
+            "type": "object"
+          },
+          "trade_count": {
+            "title": "Trade Count",
+            "type": "integer"
+          },
+          "vs_baseline_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vs Baseline Eur"
+          }
+        },
+        "required": [
+          "headline_nl",
+          "net_local_by_currency",
+          "vs_baseline_eur",
+          "trade_count",
+          "hit_rate_pct"
+        ],
+        "title": "ExecutiveSummaryOut",
+        "type": "object"
+      },
+      "FavoriteRow": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "latest_blocking_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Blocking Reason"
+          },
+          "latest_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Confidence"
+          },
+          "latest_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Decision"
+          },
+          "latest_generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Generated At"
+          },
+          "latest_summary_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Summary Nl"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "watchlist_preference_id": {
+            "title": "Watchlist Preference Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "watchlist_preference_id",
+          "symbol",
+          "note",
+          "created_at"
+        ],
+        "title": "FavoriteRow",
+        "type": "object"
+      },
+      "FavoritesResponse": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FavoriteRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "account_id",
+          "items"
+        ],
+        "title": "FavoritesResponse",
+        "type": "object"
+      },
       "ForecastByAccountResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1972,6 +3141,10 @@
             "title": "Generated At",
             "type": "string"
           },
+          "horizon_trading_days": {
+            "title": "Horizon Trading Days",
+            "type": "integer"
+          },
           "label": {
             "enum": [
               "Kopen",
@@ -1984,8 +3157,16 @@
             "title": "Label",
             "type": "string"
           },
+          "p10_log_return": {
+            "title": "P10 Log Return",
+            "type": "string"
+          },
           "p50_log_return": {
             "title": "P50 Log Return",
+            "type": "string"
+          },
+          "p90_log_return": {
+            "title": "P90 Log Return",
             "type": "string"
           },
           "prob_positive": {
@@ -2004,7 +3185,10 @@
           "generated_at",
           "p50_log_return",
           "prob_positive",
-          "user_holds_position"
+          "user_holds_position",
+          "horizon_trading_days",
+          "p10_log_return",
+          "p90_log_return"
         ],
         "title": "ForecastByAccountRow",
         "type": "object"
@@ -2248,6 +3432,60 @@
           "per_asset_coverage"
         ],
         "title": "ForecastLatestResponse",
+        "type": "object"
+      },
+      "ForecastMarketSettingsResponse": {
+        "description": "Operator-facing forecast horizon, ensemble toggle, risk profile,\nlocked-universe pick, and market-data feed toggles. Each value falls\nback to the env-var default when no DB row has been saved.",
+        "properties": {
+          "forecast_ensemble_enabled": {
+            "title": "Forecast Ensemble Enabled",
+            "type": "boolean"
+          },
+          "forecast_horizon_trading_days": {
+            "title": "Forecast Horizon Trading Days",
+            "type": "integer"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "ibkr_market_data_enabled": {
+            "title": "Ibkr Market Data Enabled",
+            "type": "boolean"
+          },
+          "ibkr_market_data_type": {
+            "title": "Ibkr Market Data Type",
+            "type": "string"
+          },
+          "market_data_provider": {
+            "title": "Market Data Provider",
+            "type": "string"
+          },
+          "market_data_sync_enabled": {
+            "title": "Market Data Sync Enabled",
+            "type": "boolean"
+          },
+          "suggestions_risk_profile": {
+            "title": "Suggestions Risk Profile",
+            "type": "string"
+          },
+          "universe_set": {
+            "title": "Universe Set",
+            "type": "string"
+          }
+        },
+        "required": [
+          "forecast_horizon_trading_days",
+          "forecast_ensemble_enabled",
+          "suggestions_risk_profile",
+          "universe_set",
+          "market_data_provider",
+          "market_data_sync_enabled",
+          "ibkr_market_data_enabled",
+          "ibkr_market_data_type",
+          "help_nl"
+        ],
+        "title": "ForecastMarketSettingsResponse",
         "type": "object"
       },
       "FreshnessAuditListResponse": {
@@ -2558,6 +3796,47 @@
           "reason_nl"
         ],
         "title": "GateOutcomeResponse",
+        "type": "object"
+      },
+      "GenerateArchiveRequest": {
+        "properties": {
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month"
+        ],
+        "title": "GenerateArchiveRequest",
+        "type": "object"
+      },
+      "GenerateArchiveResponse": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "archive_id": {
+            "title": "Archive Id",
+            "type": "string"
+          },
+          "pdf_size_bytes": {
+            "title": "Pdf Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted",
+          "archive_id",
+          "pdf_size_bytes"
+        ],
+        "title": "GenerateArchiveResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -3591,6 +4870,46 @@
         "title": "IbkrSubmissionLifecycleResponse",
         "type": "object"
       },
+      "IncomeBreakdownOut": {
+        "properties": {
+          "capital_gains_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capital Gains Local By Currency",
+            "type": "object"
+          },
+          "net_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Net Local By Currency",
+            "type": "object"
+          },
+          "tob_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tob Local By Currency",
+            "type": "object"
+          },
+          "ytd_net_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Ytd Net Local By Currency",
+            "type": "object"
+          }
+        },
+        "required": [
+          "capital_gains_local_by_currency",
+          "tob_local_by_currency",
+          "net_local_by_currency",
+          "ytd_net_local_by_currency"
+        ],
+        "title": "IncomeBreakdownOut",
+        "type": "object"
+      },
       "IntegrationCard": {
         "properties": {
           "blocks_related_jobs": {
@@ -3983,6 +5302,92 @@
         "title": "LatestSnapshotStatus",
         "type": "string"
       },
+      "MacroSnapshotResponse": {
+        "properties": {
+          "headline_nl": {
+            "title": "Headline Nl",
+            "type": "string"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "last_evaluated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Evaluated At"
+          },
+          "ma_long_day": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma Long Day"
+          },
+          "ma_short_day": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma Short Day"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "vix_level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vix Level"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "state",
+          "severity",
+          "headline_nl",
+          "vix_level",
+          "ma_short_day",
+          "ma_long_day",
+          "last_evaluated_at",
+          "sample_size"
+        ],
+        "title": "MacroSnapshotResponse",
+        "type": "object"
+      },
       "ManualReviewListResponse": {
         "additionalProperties": false,
         "properties": {
@@ -4327,6 +5732,511 @@
         "title": "MarketDataLatestSnapshotResponse",
         "type": "object"
       },
+      "MarketEventFire": {
+        "description": "One scheduled cron fire for the operator's followed universe.",
+        "properties": {
+          "event_kind": {
+            "title": "Event Kind",
+            "type": "string"
+          },
+          "fire_hour": {
+            "title": "Fire Hour",
+            "type": "integer"
+          },
+          "fire_minute": {
+            "title": "Fire Minute",
+            "type": "integer"
+          },
+          "market_code": {
+            "title": "Market Code",
+            "type": "string"
+          },
+          "market_label_nl": {
+            "title": "Market Label Nl",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "market_code",
+          "market_label_nl",
+          "timezone",
+          "event_kind",
+          "fire_hour",
+          "fire_minute"
+        ],
+        "title": "MarketEventFire",
+        "type": "object"
+      },
+      "MarketEventsSettingsResponse": {
+        "description": "GET payload for the Markt-events settings section.",
+        "properties": {
+          "active_sessions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Active Sessions",
+            "type": "array"
+          },
+          "fires": {
+            "items": {
+              "$ref": "#/components/schemas/MarketEventFire"
+            },
+            "title": "Fires",
+            "type": "array"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "per_market_close_digest_enabled": {
+            "title": "Per Market Close Digest Enabled",
+            "type": "boolean"
+          },
+          "per_market_open_alerts_enabled": {
+            "title": "Per Market Open Alerts Enabled",
+            "type": "boolean"
+          },
+          "universe_codes_selected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Universe Codes Selected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "per_market_close_digest_enabled",
+          "per_market_open_alerts_enabled",
+          "universe_codes_selected",
+          "active_sessions",
+          "fires",
+          "help_nl"
+        ],
+        "title": "MarketEventsSettingsResponse",
+        "type": "object"
+      },
+      "MarketHoursEntry": {
+        "description": "One followed market's open/close + current state.\n\nAll times are exposed as UTC ISO so the client can render in the\noperator's local timezone without server-side tz juggling. The\n``state`` enum is deterministic so the UI dot mapping never has\nto parse Dutch text.",
+        "properties": {
+          "close_at_utc": {
+            "title": "Close At Utc",
+            "type": "string"
+          },
+          "close_local_hhmm": {
+            "title": "Close Local Hhmm",
+            "type": "string"
+          },
+          "market_code": {
+            "title": "Market Code",
+            "type": "string"
+          },
+          "market_label_nl": {
+            "title": "Market Label Nl",
+            "type": "string"
+          },
+          "next_event_at_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Event At Utc"
+          },
+          "next_event_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Event Kind"
+          },
+          "open_at_utc": {
+            "title": "Open At Utc",
+            "type": "string"
+          },
+          "open_local_hhmm": {
+            "title": "Open Local Hhmm",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "state_nl": {
+            "title": "State Nl",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "market_code",
+          "market_label_nl",
+          "timezone",
+          "open_at_utc",
+          "close_at_utc",
+          "open_local_hhmm",
+          "close_local_hhmm",
+          "state",
+          "state_nl",
+          "next_event_kind",
+          "next_event_at_utc"
+        ],
+        "title": "MarketHoursEntry",
+        "type": "object"
+      },
+      "MarketHoursNowResponse": {
+        "description": "Live snapshot of every followed market's hours.",
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "markets": {
+            "items": {
+              "$ref": "#/components/schemas/MarketHoursEntry"
+            },
+            "title": "Markets",
+            "type": "array"
+          },
+          "now_utc": {
+            "title": "Now Utc",
+            "type": "string"
+          },
+          "universe_codes_selected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Universe Codes Selected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "now_utc",
+          "universe_codes_selected",
+          "markets",
+          "help_nl"
+        ],
+        "title": "MarketHoursNowResponse",
+        "type": "object"
+      },
+      "MonthlyReportResponse": {
+        "properties": {
+          "action_draft_activity": {
+            "$ref": "#/components/schemas/ActionDraftActivityOut"
+          },
+          "executive_summary": {
+            "$ref": "#/components/schemas/ExecutiveSummaryOut"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "income": {
+            "$ref": "#/components/schemas/IncomeBreakdownOut"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "notes_nl": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes Nl",
+            "type": "array"
+          },
+          "open_positions_count": {
+            "title": "Open Positions Count",
+            "type": "integer"
+          },
+          "realised_trades": {
+            "items": {
+              "$ref": "#/components/schemas/RealisedTradeOut"
+            },
+            "title": "Realised Trades",
+            "type": "array"
+          },
+          "software_performance": {
+            "$ref": "#/components/schemas/SoftwarePerformanceOut"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "verdict_activity": {
+            "$ref": "#/components/schemas/VerdictActivityOut"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "year",
+          "month",
+          "executive_summary",
+          "open_positions_count",
+          "action_draft_activity",
+          "verdict_activity",
+          "income",
+          "software_performance",
+          "realised_trades",
+          "notes_nl"
+        ],
+        "title": "MonthlyReportResponse",
+        "type": "object"
+      },
+      "MorningExplanationBatchResponse": {
+        "properties": {
+          "blocked_count": {
+            "title": "Blocked Count",
+            "type": "integer"
+          },
+          "blocking_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocking Reasons",
+            "type": "array"
+          },
+          "generated_count": {
+            "title": "Generated Count",
+            "type": "integer"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "package_count": {
+            "title": "Package Count",
+            "type": "integer"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "help_nl",
+          "package_count",
+          "generated_count",
+          "blocked_count",
+          "skipped_count",
+          "blocking_reasons",
+          "safe_for_orders"
+        ],
+        "title": "MorningExplanationBatchResponse",
+        "type": "object"
+      },
+      "NavHistoryPoint": {
+        "description": "One NAV snapshot ready for the sparkline.",
+        "properties": {
+          "nav_value": {
+            "title": "Nav Value",
+            "type": "string"
+          },
+          "recorded_at_utc": {
+            "title": "Recorded At Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recorded_at_utc",
+          "nav_value"
+        ],
+        "title": "NavHistoryPoint",
+        "type": "object"
+      },
+      "NavHistoryResponse": {
+        "properties": {
+          "base_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Currency"
+          },
+          "days_requested": {
+            "title": "Days Requested",
+            "type": "integer"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "ibkr_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Account Id"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/NavHistoryPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "help_nl",
+          "ibkr_account_id",
+          "base_currency",
+          "days_requested",
+          "points"
+        ],
+        "title": "NavHistoryResponse",
+        "type": "object"
+      },
+      "NotificationSettingsResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "notification_send_on_high_confidence_sell": {
+            "title": "Notification Send On High Confidence Sell",
+            "type": "boolean"
+          },
+          "notification_send_on_nav_drop": {
+            "title": "Notification Send On Nav Drop",
+            "type": "boolean"
+          },
+          "notification_send_on_position_drop": {
+            "title": "Notification Send On Position Drop",
+            "type": "boolean"
+          },
+          "notifications_email_enabled": {
+            "title": "Notifications Email Enabled",
+            "type": "boolean"
+          },
+          "notifications_email_real_client_enabled": {
+            "title": "Notifications Email Real Client Enabled",
+            "type": "boolean"
+          },
+          "smtp_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp From"
+          },
+          "smtp_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Host"
+          },
+          "smtp_password_set": {
+            "title": "Smtp Password Set",
+            "type": "boolean"
+          },
+          "smtp_port": {
+            "title": "Smtp Port",
+            "type": "integer"
+          },
+          "smtp_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp To"
+          },
+          "smtp_use_tls": {
+            "title": "Smtp Use Tls",
+            "type": "boolean"
+          },
+          "smtp_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Username"
+          }
+        },
+        "required": [
+          "smtp_host",
+          "smtp_port",
+          "smtp_username",
+          "smtp_from",
+          "smtp_to",
+          "smtp_use_tls",
+          "smtp_password_set",
+          "notifications_email_enabled",
+          "notifications_email_real_client_enabled",
+          "notification_send_on_nav_drop",
+          "notification_send_on_position_drop",
+          "notification_send_on_high_confidence_sell",
+          "help_nl"
+        ],
+        "title": "NotificationSettingsResponse",
+        "type": "object"
+      },
       "OnlineStorageStatusResponse": {
         "properties": {
           "configured": {
@@ -4406,6 +6316,50 @@
         "title": "OpenAiSettingsSection",
         "type": "object"
       },
+      "OrderPolicySettingsResponse": {
+        "description": "Operator-editable defaults for action-draft sizing + the suggestion\nportfolio-context gate. Strings on the wire so Decimal precision\nsurvives the round trip and the form stays parser-friendly.",
+        "properties": {
+          "cost_dominates_ratio": {
+            "title": "Cost Dominates Ratio",
+            "type": "string"
+          },
+          "default_buy_value_eur": {
+            "title": "Default Buy Value Eur",
+            "type": "string"
+          },
+          "default_reduce_pct": {
+            "title": "Default Reduce Pct",
+            "type": "string"
+          },
+          "default_top_up_pct": {
+            "title": "Default Top Up Pct",
+            "type": "string"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "max_sector_pct": {
+            "title": "Max Sector Pct",
+            "type": "string"
+          },
+          "suggestion_valid_minutes": {
+            "title": "Suggestion Valid Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "default_buy_value_eur",
+          "default_top_up_pct",
+          "default_reduce_pct",
+          "max_sector_pct",
+          "cost_dominates_ratio",
+          "suggestion_valid_minutes",
+          "help_nl"
+        ],
+        "title": "OrderPolicySettingsResponse",
+        "type": "object"
+      },
       "PatchActionDraftRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4472,6 +6426,46 @@
           }
         },
         "title": "PatchWatchlistItemRequest",
+        "type": "object"
+      },
+      "PauzeStatusResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "paused_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused At"
+          },
+          "summary_nl": {
+            "title": "Summary Nl",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "paused",
+          "paused_at",
+          "summary_nl"
+        ],
+        "title": "PauzeStatusResponse",
         "type": "object"
       },
       "PerAssetCoverage": {
@@ -5467,6 +7461,256 @@
         "title": "PositionValuationReadinessRow",
         "type": "object"
       },
+      "PredictorPerformanceEntry": {
+        "description": "One predictor's aggregated performance over the window.",
+        "properties": {
+          "mean_brier_score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Brier Score"
+          },
+          "mean_realised_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Realised Return Pct"
+          },
+          "mean_return_spread_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Return Spread Pct"
+          },
+          "model_code": {
+            "title": "Model Code",
+            "type": "string"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "realised_sample_count": {
+            "title": "Realised Sample Count",
+            "type": "integer"
+          },
+          "sample_count": {
+            "title": "Sample Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_code",
+          "model_version",
+          "sample_count",
+          "realised_sample_count",
+          "mean_brier_score",
+          "mean_return_spread_pct",
+          "mean_realised_return_pct"
+        ],
+        "title": "PredictorPerformanceEntry",
+        "type": "object"
+      },
+      "PredictorPerformanceResponse": {
+        "properties": {
+          "best_model_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Model Code"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "lookback_days": {
+            "title": "Lookback Days",
+            "type": "integer"
+          },
+          "predictors": {
+            "items": {
+              "$ref": "#/components/schemas/PredictorPerformanceEntry"
+            },
+            "title": "Predictors",
+            "type": "array"
+          },
+          "safe_for_action_drafts": {
+            "title": "Safe For Action Drafts",
+            "type": "boolean"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          },
+          "total_contributions_considered": {
+            "title": "Total Contributions Considered",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "help_nl",
+          "lookback_days",
+          "total_contributions_considered",
+          "predictors",
+          "best_model_code",
+          "safe_for_orders",
+          "safe_for_action_drafts"
+        ],
+        "title": "PredictorPerformanceResponse",
+        "type": "object"
+      },
+      "PredictorTuningSettingsResponse": {
+        "description": "Power-user predictor knobs surfaced behind the \"Voorspeller-tuning\"\naccordion. Each value falls back to the env-default when no DB row\nhas been saved.",
+        "properties": {
+          "decision_packages_valid_minutes": {
+            "title": "Decision Packages Valid Minutes",
+            "type": "integer"
+          },
+          "forecast_valid_minutes": {
+            "title": "Forecast Valid Minutes",
+            "type": "integer"
+          },
+          "gbm_regime_shift_enabled": {
+            "title": "Gbm Regime Shift Enabled",
+            "type": "boolean"
+          },
+          "gbm_regime_shift_threshold_pct": {
+            "title": "Gbm Regime Shift Threshold Pct",
+            "type": "string"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "prediction_diary_inconclusive_tolerance_pct": {
+            "title": "Prediction Diary Inconclusive Tolerance Pct",
+            "type": "string"
+          }
+        },
+        "required": [
+          "forecast_valid_minutes",
+          "decision_packages_valid_minutes",
+          "prediction_diary_inconclusive_tolerance_pct",
+          "gbm_regime_shift_enabled",
+          "gbm_regime_shift_threshold_pct",
+          "help_nl"
+        ],
+        "title": "PredictorTuningSettingsResponse",
+        "type": "object"
+      },
+      "PreferenceMutationResponse": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "explanation_nl": {
+            "title": "Explanation Nl",
+            "type": "string"
+          },
+          "record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Id"
+          }
+        },
+        "required": [
+          "accepted",
+          "record_id",
+          "explanation_nl"
+        ],
+        "title": "PreferenceMutationResponse",
+        "type": "object"
+      },
+      "ProfitTargetResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "is_doctrine_default": {
+            "title": "Is Doctrine Default",
+            "type": "boolean"
+          },
+          "profit_target_pct": {
+            "title": "Profit Target Pct",
+            "type": "string"
+          },
+          "summary_nl": {
+            "title": "Summary Nl",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "profit_target_pct",
+          "is_doctrine_default",
+          "summary_nl"
+        ],
+        "title": "ProfitTargetResponse",
+        "type": "object"
+      },
+      "ProfitTargetUpdateRequest": {
+        "properties": {
+          "profit_target_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Target Pct"
+          }
+        },
+        "required": [
+          "profit_target_pct"
+        ],
+        "title": "ProfitTargetUpdateRequest",
+        "type": "object"
+      },
       "ProviderCallRow": {
         "additionalProperties": false,
         "properties": {
@@ -6329,6 +8573,59 @@
         "title": "ReadinessValidationStatus",
         "type": "object"
       },
+      "RealisedTradeOut": {
+        "properties": {
+          "buy_date": {
+            "title": "Buy Date",
+            "type": "string"
+          },
+          "currency_local": {
+            "title": "Currency Local",
+            "type": "string"
+          },
+          "gross_local": {
+            "title": "Gross Local",
+            "type": "string"
+          },
+          "hold_days": {
+            "title": "Hold Days",
+            "type": "integer"
+          },
+          "net_local": {
+            "title": "Net Local",
+            "type": "string"
+          },
+          "net_pct_on_cost": {
+            "title": "Net Pct On Cost",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "sell_date": {
+            "title": "Sell Date",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "currency_local",
+          "quantity",
+          "buy_date",
+          "sell_date",
+          "gross_local",
+          "net_local",
+          "hold_days",
+          "net_pct_on_cost"
+        ],
+        "title": "RealisedTradeOut",
+        "type": "object"
+      },
       "ReconciliationAuditListResponse": {
         "additionalProperties": false,
         "properties": {
@@ -6984,6 +9281,108 @@
           "missing_chain_links"
         ],
         "title": "RequestLogResponse",
+        "type": "object"
+      },
+      "ResearchAiExtractionResponse": {
+        "properties": {
+          "blocking_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Reason"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/AiExtractedFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "hallucinated_fact_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Hallucinated Fact Indices",
+            "type": "array"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "library_source_id": {
+            "title": "Library Source Id",
+            "type": "string"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "model_provider_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Provider Code"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "safe_for_suggestions": {
+            "title": "Safe For Suggestions",
+            "type": "boolean"
+          },
+          "source_text_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text Hash"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "help_nl",
+          "library_source_id",
+          "source_text_hash",
+          "model_provider_code",
+          "model_name",
+          "blocking_reason",
+          "hallucinated_fact_indices",
+          "facts",
+          "safe_for_orders",
+          "safe_for_suggestions"
+        ],
+        "title": "ResearchAiExtractionResponse",
         "type": "object"
       },
       "ResearchDocumentClassificationInput": {
@@ -8497,6 +10896,41 @@
         "title": "RiskLimitsResponse",
         "type": "object"
       },
+      "SavePreferenceRequest": {
+        "properties": {
+          "account_id": {
+            "default": "default",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "favorite | excluded",
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "kind"
+        ],
+        "title": "SavePreferenceRequest",
+        "type": "object"
+      },
       "ScheduledRunAuditRow": {
         "additionalProperties": false,
         "properties": {
@@ -8577,6 +11011,30 @@
           "next_scheduled_at"
         ],
         "title": "ScheduledRunAuditRow",
+        "type": "object"
+      },
+      "SchedulerSettingsResponse": {
+        "description": "Operator-editable scheduler cadence \u2014 currently the API-side cron\n+ the IBKR read-only sync interval. Worker-side sweep settings are\na separate overlay (the worker reads its own env vars at startup).",
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "ibkr_sync_interval_minutes": {
+            "title": "Ibkr Sync Interval Minutes",
+            "type": "integer"
+          },
+          "scheduler_daily_briefing_cron": {
+            "title": "Scheduler Daily Briefing Cron",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduler_daily_briefing_cron",
+          "ibkr_sync_interval_minutes",
+          "help_nl"
+        ],
+        "title": "SchedulerSettingsResponse",
         "type": "object"
       },
       "SchedulerV127RunsResponse": {
@@ -8725,6 +11183,373 @@
         ],
         "title": "SectorPreference",
         "type": "string"
+      },
+      "SectorRow": {
+        "properties": {
+          "notional_local_approx": {
+            "title": "Notional Local Approx",
+            "type": "string"
+          },
+          "position_count": {
+            "title": "Position Count",
+            "type": "integer"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "weight_pct": {
+            "title": "Weight Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "sector",
+          "weight_pct",
+          "notional_local_approx",
+          "position_count"
+        ],
+        "title": "SectorRow",
+        "type": "object"
+      },
+      "SectorSpreadResponse": {
+        "properties": {
+          "has_unclassified": {
+            "title": "Has Unclassified",
+            "type": "boolean"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SectorRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "total_positions": {
+            "title": "Total Positions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "items",
+          "total_positions",
+          "has_unclassified"
+        ],
+        "title": "SectorSpreadResponse",
+        "type": "object"
+      },
+      "SellSignalCardResponse": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "card_id": {
+            "title": "Card Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "current_pct_return": {
+            "title": "Current Pct Return",
+            "type": "string"
+          },
+          "current_price": {
+            "title": "Current Price",
+            "type": "string"
+          },
+          "days_held": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Held"
+          },
+          "detail_nl": {
+            "title": "Detail Nl",
+            "type": "string"
+          },
+          "dismissed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed At"
+          },
+          "dismissed_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed Reason"
+          },
+          "entry_price": {
+            "title": "Entry Price",
+            "type": "string"
+          },
+          "expected_net_proceeds_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Net Proceeds Eur"
+          },
+          "first_generated_at": {
+            "title": "First Generated At",
+            "type": "string"
+          },
+          "forecast_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Id"
+          },
+          "forecaster_above_target": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecaster Above Target"
+          },
+          "headline_nl": {
+            "title": "Headline Nl",
+            "type": "string"
+          },
+          "ibkr_account_ref": {
+            "title": "Ibkr Account Ref",
+            "type": "string"
+          },
+          "last_evaluated_at": {
+            "title": "Last Evaluated At",
+            "type": "string"
+          },
+          "position_in_loss": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position In Loss"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "short_term_horizon_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Term Horizon Days"
+          },
+          "short_term_p50": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Term P50"
+          },
+          "short_term_prob_above_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Term Prob Above Pct"
+          },
+          "signal_kind": {
+            "title": "Signal Kind",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "target_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Pct"
+          },
+          "target_reached": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Reached"
+          }
+        },
+        "required": [
+          "card_id",
+          "ibkr_account_ref",
+          "symbol",
+          "currency",
+          "signal_kind",
+          "action",
+          "entry_price",
+          "current_price",
+          "quantity",
+          "current_pct_return",
+          "target_pct",
+          "target_reached",
+          "days_held",
+          "forecast_id",
+          "forecaster_above_target",
+          "position_in_loss",
+          "short_term_p50",
+          "short_term_horizon_days",
+          "short_term_prob_above_pct",
+          "expected_net_proceeds_eur",
+          "headline_nl",
+          "detail_nl",
+          "first_generated_at",
+          "last_evaluated_at",
+          "dismissed_at",
+          "dismissed_reason"
+        ],
+        "title": "SellSignalCardResponse",
+        "type": "object"
+      },
+      "SellSignalListResponse": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/SellSignalCardResponse"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "cards"
+        ],
+        "title": "SellSignalListResponse",
+        "type": "object"
+      },
+      "SellSignalSweepResponse": {
+        "properties": {
+          "completed_at": {
+            "title": "Completed At",
+            "type": "string"
+          },
+          "error_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Text"
+          },
+          "hold_review_cards_upserted": {
+            "title": "Hold Review Cards Upserted",
+            "type": "integer"
+          },
+          "positions_evaluated": {
+            "title": "Positions Evaluated",
+            "type": "integer"
+          },
+          "skipped_no_forecast": {
+            "title": "Skipped No Forecast",
+            "type": "integer"
+          },
+          "skipped_no_position": {
+            "title": "Skipped No Position",
+            "type": "integer"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "take_profit_cards_upserted": {
+            "title": "Take Profit Cards Upserted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "started_at",
+          "completed_at",
+          "positions_evaluated",
+          "take_profit_cards_upserted",
+          "hold_review_cards_upserted",
+          "skipped_no_forecast",
+          "skipped_no_position",
+          "error_text"
+        ],
+        "title": "SellSignalSweepResponse",
+        "type": "object"
       },
       "ServiceStatusCard": {
         "properties": {
@@ -8876,6 +11701,40 @@
           "user_confirmed_no_broker_order"
         ],
         "title": "SetupPreviewInput",
+        "type": "object"
+      },
+      "SoftwarePerformanceOut": {
+        "properties": {
+          "average_hold_days": {
+            "title": "Average Hold Days",
+            "type": "integer"
+          },
+          "confidence_distribution_pct": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Confidence Distribution Pct",
+            "type": "object"
+          },
+          "hit_rate_pct": {
+            "title": "Hit Rate Pct",
+            "type": "number"
+          },
+          "proposals_vs_approved": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Proposals Vs Approved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hit_rate_pct",
+          "average_hold_days",
+          "confidence_distribution_pct",
+          "proposals_vs_approved"
+        ],
+        "title": "SoftwarePerformanceOut",
         "type": "object"
       },
       "SourceToAssetLinkCreateRequest": {
@@ -9177,6 +12036,333 @@
         "title": "StrategyRiskLevel",
         "type": "string"
       },
+      "SuggestionsGridResponse": {
+        "properties": {
+          "actions_allowed": {
+            "title": "Actions Allowed",
+            "type": "boolean"
+          },
+          "changed_count": {
+            "title": "Changed Count",
+            "type": "integer"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "new_count": {
+            "title": "New Count",
+            "type": "integer"
+          },
+          "risk_profile": {
+            "title": "Risk Profile",
+            "type": "string"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "section_count": {
+            "title": "Section Count",
+            "type": "integer"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionsGridSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          },
+          "total_item_count": {
+            "title": "Total Item Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "status_nl",
+          "help_nl",
+          "risk_profile",
+          "actions_allowed",
+          "safe_for_orders",
+          "generated_at",
+          "section_count",
+          "total_item_count",
+          "new_count",
+          "changed_count",
+          "sections"
+        ],
+        "title": "SuggestionsGridResponse",
+        "type": "object"
+      },
+      "SuggestionsGridSection": {
+        "properties": {
+          "action_label_nl": {
+            "title": "Action Label Nl",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionsGridSectionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "section_title_nl": {
+            "title": "Section Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_label_nl",
+          "section_title_nl",
+          "item_count",
+          "items"
+        ],
+        "title": "SuggestionsGridSection",
+        "type": "object"
+      },
+      "SuggestionsGridSectionItem": {
+        "description": "One row in the grid. Mirrors the existing ``serialize_suggestion_for_response``\npayload with three extra display fields: ``diff_status`` for the\nNIEUW / Gewijzigd badge, ``previous_action_label_nl`` (the label the\nasset had yesterday, if any), and ``valid_until_age_minutes`` so the\nUI can show how stale the row is.",
+        "properties": {
+          "action_label": {
+            "title": "Action Label",
+            "type": "string"
+          },
+          "action_label_nl": {
+            "title": "Action Label Nl",
+            "type": "string"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "blocking_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Reason"
+          },
+          "blocking_reason_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Reason Nl"
+          },
+          "branch_reason_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Reason Nl"
+          },
+          "confidence_label": {
+            "title": "Confidence Label",
+            "type": "string"
+          },
+          "confidence_label_nl": {
+            "title": "Confidence Label Nl",
+            "type": "string"
+          },
+          "confidence_score": {
+            "title": "Confidence Score",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "diff_status": {
+            "title": "Diff Status",
+            "type": "string"
+          },
+          "downgrade_reason_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downgrade Reason Nl"
+          },
+          "drivers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Drivers",
+            "type": "array"
+          },
+          "expected_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Return Pct"
+          },
+          "forecast_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Id"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "has_position": {
+            "title": "Has Position",
+            "type": "boolean"
+          },
+          "ibkr_conid": {
+            "title": "Ibkr Conid",
+            "type": "string"
+          },
+          "previous_action_label_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Action Label Nl"
+          },
+          "prob_gain_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prob Gain Pct"
+          },
+          "rationale_nl": {
+            "title": "Rationale Nl",
+            "type": "string"
+          },
+          "risk_profile": {
+            "title": "Risk Profile",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suggestion_id": {
+            "title": "Suggestion Id",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "top_driver_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Driver Nl"
+          },
+          "valid_until": {
+            "title": "Valid Until",
+            "type": "string"
+          },
+          "valid_until_age_minutes": {
+            "title": "Valid Until Age Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "suggestion_id",
+          "ibkr_conid",
+          "symbol",
+          "currency",
+          "forecast_id",
+          "generated_at",
+          "valid_until",
+          "valid_until_age_minutes",
+          "risk_profile",
+          "has_position",
+          "action_label",
+          "action_label_nl",
+          "confidence_label",
+          "confidence_label_nl",
+          "confidence_score",
+          "rationale_nl",
+          "drivers",
+          "blockers",
+          "status",
+          "blocking_reason",
+          "branch_reason_nl",
+          "downgrade_reason_nl",
+          "top_driver_nl",
+          "blocking_reason_nl",
+          "expected_return_pct",
+          "prob_gain_pct",
+          "diff_status",
+          "previous_action_label_nl"
+        ],
+        "title": "SuggestionsGridSectionItem",
+        "type": "object"
+      },
       "SystemEventMutationInput": {
         "properties": {
           "reason_nl": {
@@ -9255,6 +12441,528 @@
         "title": "SystemStatusSummary",
         "type": "object"
       },
+      "TaxGoodHouseholderOut": {
+        "properties": {
+          "average_hold_days": {
+            "title": "Average Hold Days",
+            "type": "integer"
+          },
+          "summary_nl": {
+            "title": "Summary Nl",
+            "type": "string"
+          },
+          "trades_per_year": {
+            "title": "Trades Per Year",
+            "type": "integer"
+          },
+          "trading_capital_share_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trading Capital Share Pct"
+          },
+          "uses_leverage": {
+            "title": "Uses Leverage",
+            "type": "boolean"
+          },
+          "uses_shorts": {
+            "title": "Uses Shorts",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "trades_per_year",
+          "average_hold_days",
+          "trading_capital_share_pct",
+          "uses_leverage",
+          "uses_shorts",
+          "summary_nl"
+        ],
+        "title": "TaxGoodHouseholderOut",
+        "type": "object"
+      },
+      "TaxMonthlyPointOut": {
+        "properties": {
+          "cumulative_net_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Cumulative Net Local By Currency",
+            "type": "object"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "net_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Net Local By Currency",
+            "type": "object"
+          }
+        },
+        "required": [
+          "month",
+          "net_local_by_currency",
+          "cumulative_net_local_by_currency"
+        ],
+        "title": "TaxMonthlyPointOut",
+        "type": "object"
+      },
+      "TaxRealisedTradeOut": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "buy_action_draft_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Action Draft Id"
+          },
+          "buy_date": {
+            "title": "Buy Date",
+            "type": "string"
+          },
+          "buy_exec_id": {
+            "title": "Buy Exec Id",
+            "type": "string"
+          },
+          "buy_fx_rate_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Fx Rate Eur"
+          },
+          "buy_price_local": {
+            "title": "Buy Price Local",
+            "type": "string"
+          },
+          "currency_local": {
+            "title": "Currency Local",
+            "type": "string"
+          },
+          "gross_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Eur"
+          },
+          "gross_local": {
+            "title": "Gross Local",
+            "type": "string"
+          },
+          "hold_days": {
+            "title": "Hold Days",
+            "type": "integer"
+          },
+          "net_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Eur"
+          },
+          "net_local": {
+            "title": "Net Local",
+            "type": "string"
+          },
+          "net_pct_on_cost": {
+            "title": "Net Pct On Cost",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "sell_action_draft_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Action Draft Id"
+          },
+          "sell_date": {
+            "title": "Sell Date",
+            "type": "string"
+          },
+          "sell_exec_id": {
+            "title": "Sell Exec Id",
+            "type": "string"
+          },
+          "sell_fx_rate_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Fx Rate Eur"
+          },
+          "sell_price_local": {
+            "title": "Sell Price Local",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "tob_buy_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tob Buy Eur"
+          },
+          "tob_buy_local": {
+            "title": "Tob Buy Local",
+            "type": "string"
+          },
+          "tob_sell_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tob Sell Eur"
+          },
+          "tob_sell_local": {
+            "title": "Tob Sell Local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "account_id",
+          "currency_local",
+          "quantity",
+          "buy_date",
+          "buy_price_local",
+          "buy_exec_id",
+          "sell_date",
+          "sell_price_local",
+          "sell_exec_id",
+          "gross_local",
+          "tob_buy_local",
+          "tob_sell_local",
+          "net_local",
+          "hold_days",
+          "net_pct_on_cost",
+          "buy_action_draft_id",
+          "sell_action_draft_id"
+        ],
+        "title": "TaxRealisedTradeOut",
+        "type": "object"
+      },
+      "TaxYearReportResponse": {
+        "properties": {
+          "dividends": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Dividends",
+            "type": "array"
+          },
+          "fx_conversion_available": {
+            "title": "Fx Conversion Available",
+            "type": "boolean"
+          },
+          "good_householder": {
+            "$ref": "#/components/schemas/TaxGoodHouseholderOut"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "monthly_points": {
+            "items": {
+              "$ref": "#/components/schemas/TaxMonthlyPointOut"
+            },
+            "title": "Monthly Points",
+            "type": "array"
+          },
+          "notes_nl": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes Nl",
+            "type": "array"
+          },
+          "realised_trades": {
+            "items": {
+              "$ref": "#/components/schemas/TaxRealisedTradeOut"
+            },
+            "title": "Realised Trades",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          },
+          "year_totals": {
+            "$ref": "#/components/schemas/TaxYearTotalsOut"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "year",
+          "realised_trades",
+          "year_totals",
+          "monthly_points",
+          "good_householder",
+          "dividends",
+          "fx_conversion_available",
+          "notes_nl"
+        ],
+        "title": "TaxYearReportResponse",
+        "type": "object"
+      },
+      "TaxYearTotalsOut": {
+        "properties": {
+          "average_hold_days": {
+            "title": "Average Hold Days",
+            "type": "integer"
+          },
+          "earliest_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Close"
+          },
+          "eur_conversion_coverage_pct": {
+            "default": 0.0,
+            "title": "Eur Conversion Coverage Pct",
+            "type": "number"
+          },
+          "gross_eur_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Eur Total"
+          },
+          "gross_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Gross Local By Currency",
+            "type": "object"
+          },
+          "hit_rate_pct": {
+            "title": "Hit Rate Pct",
+            "type": "number"
+          },
+          "latest_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Close"
+          },
+          "net_eur_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Eur Total"
+          },
+          "net_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Net Local By Currency",
+            "type": "object"
+          },
+          "tob_eur_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tob Eur Total"
+          },
+          "tob_local_by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tob Local By Currency",
+            "type": "object"
+          },
+          "trade_count": {
+            "title": "Trade Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "trade_count",
+          "gross_local_by_currency",
+          "tob_local_by_currency",
+          "net_local_by_currency",
+          "average_hold_days",
+          "hit_rate_pct",
+          "earliest_close",
+          "latest_close"
+        ],
+        "title": "TaxYearTotalsOut",
+        "type": "object"
+      },
+      "TestEmailResponse": {
+        "properties": {
+          "detail_nl": {
+            "title": "Detail Nl",
+            "type": "string"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "used_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Host"
+          }
+        },
+        "required": [
+          "sent",
+          "status",
+          "detail_nl",
+          "used_host"
+        ],
+        "title": "TestEmailResponse",
+        "type": "object"
+      },
+      "TobYearToDateResponse": {
+        "properties": {
+          "by_currency": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "By Currency",
+            "type": "object"
+          },
+          "by_security_class": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "By Security Class",
+            "type": "object"
+          },
+          "executions_count": {
+            "title": "Executions Count",
+            "type": "integer"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "note_nl": {
+            "title": "Note Nl",
+            "type": "string"
+          },
+          "safe_for_orders": {
+            "title": "Safe For Orders",
+            "type": "boolean"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "year",
+          "executions_count",
+          "by_currency",
+          "by_security_class",
+          "note_nl",
+          "safe_for_orders"
+        ],
+        "title": "TobYearToDateResponse",
+        "type": "object"
+      },
       "TradingSettingsUpdateInput": {
         "properties": {
           "allowed_universe": {
@@ -9280,6 +12988,53 @@
           "user_strategy"
         ],
         "title": "TradingSettingsUpdateInput",
+        "type": "object"
+      },
+      "UniverseScanIndexOption": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label_nl": {
+            "title": "Label Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label_nl"
+        ],
+        "title": "UniverseScanIndexOption",
+        "type": "object"
+      },
+      "UniverseScanSettingsResponse": {
+        "properties": {
+          "available_codes": {
+            "items": {
+              "$ref": "#/components/schemas/UniverseScanIndexOption"
+            },
+            "title": "Available Codes",
+            "type": "array"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "selected_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "selected_codes",
+          "available_codes",
+          "help_nl"
+        ],
+        "title": "UniverseScanSettingsResponse",
         "type": "object"
       },
       "UnmatchedExecutionListResponse": {
@@ -9390,10 +13145,80 @@
         "title": "UnmatchedExecutionResponse",
         "type": "object"
       },
+      "UpdateAdvancedSettingsRequest": {
+        "properties": {
+          "action_draft_approval_valid_minutes": {
+            "title": "Action Draft Approval Valid Minutes",
+            "type": "integer"
+          },
+          "ai_explanation_provider_code": {
+            "title": "Ai Explanation Provider Code",
+            "type": "string"
+          },
+          "ensemble_weight_strategy": {
+            "title": "Ensemble Weight Strategy",
+            "type": "string"
+          },
+          "gbm_drift_window_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gbm Drift Window Days"
+          },
+          "sharpe_slight_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Sharpe Slight Threshold"
+          },
+          "sharpe_strong_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Sharpe Strong Threshold"
+          }
+        },
+        "required": [
+          "ensemble_weight_strategy",
+          "action_draft_approval_valid_minutes",
+          "ai_explanation_provider_code",
+          "sharpe_strong_threshold",
+          "sharpe_slight_threshold"
+        ],
+        "title": "UpdateAdvancedSettingsRequest",
+        "type": "object"
+      },
       "UpdateConnectionSettingsRequest": {
         "properties": {
+          "ai_email_summary_enabled": {
+            "default": false,
+            "title": "Ai Email Summary Enabled",
+            "type": "boolean"
+          },
           "ai_explanation_enabled": {
             "title": "Ai Explanation Enabled",
+            "type": "boolean"
+          },
+          "ai_explanation_morning_batch_enabled": {
+            "default": false,
+            "title": "Ai Explanation Morning Batch Enabled",
             "type": "boolean"
           },
           "claude_ai_api_key": {
@@ -9480,6 +13305,11 @@
               }
             ],
             "title": "Ibkr Port"
+          },
+          "research_ai_extraction_enabled": {
+            "default": false,
+            "title": "Research Ai Extraction Enabled",
+            "type": "boolean"
           }
         },
         "required": [
@@ -9487,6 +13317,346 @@
           "ai_explanation_enabled"
         ],
         "title": "UpdateConnectionSettingsRequest",
+        "type": "object"
+      },
+      "UpdateDataWindowSettingsRequest": {
+        "properties": {
+          "daily_briefing_lookback_hours": {
+            "title": "Daily Briefing Lookback Hours",
+            "type": "integer"
+          },
+          "forecast_history_lookback_days": {
+            "title": "Forecast History Lookback Days",
+            "type": "integer"
+          },
+          "forecast_minimum_bars_required": {
+            "title": "Forecast Minimum Bars Required",
+            "type": "integer"
+          },
+          "universe_scan_cache_ttl_hours": {
+            "title": "Universe Scan Cache Ttl Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "forecast_history_lookback_days",
+          "forecast_minimum_bars_required",
+          "daily_briefing_lookback_hours",
+          "universe_scan_cache_ttl_hours"
+        ],
+        "title": "UpdateDataWindowSettingsRequest",
+        "type": "object"
+      },
+      "UpdateExecutionGateSettingsRequest": {
+        "properties": {
+          "cancel_sweep_enabled": {
+            "title": "Cancel Sweep Enabled",
+            "type": "boolean"
+          },
+          "ibkr_paper_order_submission_enabled": {
+            "title": "Ibkr Paper Order Submission Enabled",
+            "type": "boolean"
+          },
+          "morning_chain_after_pre_briefing": {
+            "title": "Morning Chain After Pre Briefing",
+            "type": "boolean"
+          },
+          "submission_sweep_enabled": {
+            "title": "Submission Sweep Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ibkr_paper_order_submission_enabled",
+          "submission_sweep_enabled",
+          "cancel_sweep_enabled",
+          "morning_chain_after_pre_briefing"
+        ],
+        "title": "UpdateExecutionGateSettingsRequest",
+        "type": "object"
+      },
+      "UpdateForecastMarketSettingsRequest": {
+        "properties": {
+          "forecast_ensemble_enabled": {
+            "title": "Forecast Ensemble Enabled",
+            "type": "boolean"
+          },
+          "forecast_horizon_trading_days": {
+            "title": "Forecast Horizon Trading Days",
+            "type": "integer"
+          },
+          "ibkr_market_data_enabled": {
+            "title": "Ibkr Market Data Enabled",
+            "type": "boolean"
+          },
+          "ibkr_market_data_type": {
+            "title": "Ibkr Market Data Type",
+            "type": "string"
+          },
+          "market_data_provider": {
+            "title": "Market Data Provider",
+            "type": "string"
+          },
+          "market_data_sync_enabled": {
+            "title": "Market Data Sync Enabled",
+            "type": "boolean"
+          },
+          "suggestions_risk_profile": {
+            "title": "Suggestions Risk Profile",
+            "type": "string"
+          },
+          "universe_set": {
+            "title": "Universe Set",
+            "type": "string"
+          }
+        },
+        "required": [
+          "forecast_horizon_trading_days",
+          "forecast_ensemble_enabled",
+          "suggestions_risk_profile",
+          "universe_set",
+          "market_data_provider",
+          "market_data_sync_enabled",
+          "ibkr_market_data_enabled",
+          "ibkr_market_data_type"
+        ],
+        "title": "UpdateForecastMarketSettingsRequest",
+        "type": "object"
+      },
+      "UpdateMarketEventsSettingsRequest": {
+        "properties": {
+          "per_market_close_digest_enabled": {
+            "title": "Per Market Close Digest Enabled",
+            "type": "boolean"
+          },
+          "per_market_open_alerts_enabled": {
+            "title": "Per Market Open Alerts Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "per_market_close_digest_enabled",
+          "per_market_open_alerts_enabled"
+        ],
+        "title": "UpdateMarketEventsSettingsRequest",
+        "type": "object"
+      },
+      "UpdateNotificationSettingsRequest": {
+        "properties": {
+          "notification_send_on_high_confidence_sell": {
+            "default": true,
+            "title": "Notification Send On High Confidence Sell",
+            "type": "boolean"
+          },
+          "notification_send_on_nav_drop": {
+            "default": true,
+            "title": "Notification Send On Nav Drop",
+            "type": "boolean"
+          },
+          "notification_send_on_position_drop": {
+            "default": true,
+            "title": "Notification Send On Position Drop",
+            "type": "boolean"
+          },
+          "notifications_email_enabled": {
+            "default": false,
+            "title": "Notifications Email Enabled",
+            "type": "boolean"
+          },
+          "smtp_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp From"
+          },
+          "smtp_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Host"
+          },
+          "smtp_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Password"
+          },
+          "smtp_port": {
+            "default": 587,
+            "title": "Smtp Port",
+            "type": "integer"
+          },
+          "smtp_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp To"
+          },
+          "smtp_use_tls": {
+            "default": true,
+            "title": "Smtp Use Tls",
+            "type": "boolean"
+          },
+          "smtp_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Username"
+          }
+        },
+        "title": "UpdateNotificationSettingsRequest",
+        "type": "object"
+      },
+      "UpdateOrderPolicySettingsRequest": {
+        "properties": {
+          "cost_dominates_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Cost Dominates Ratio"
+          },
+          "default_buy_value_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Default Buy Value Eur"
+          },
+          "default_reduce_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Default Reduce Pct"
+          },
+          "default_top_up_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Default Top Up Pct"
+          },
+          "max_sector_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Max Sector Pct"
+          },
+          "suggestion_valid_minutes": {
+            "title": "Suggestion Valid Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "default_buy_value_eur",
+          "default_top_up_pct",
+          "default_reduce_pct",
+          "max_sector_pct",
+          "cost_dominates_ratio",
+          "suggestion_valid_minutes"
+        ],
+        "title": "UpdateOrderPolicySettingsRequest",
+        "type": "object"
+      },
+      "UpdatePredictorTuningSettingsRequest": {
+        "properties": {
+          "decision_packages_valid_minutes": {
+            "title": "Decision Packages Valid Minutes",
+            "type": "integer"
+          },
+          "forecast_valid_minutes": {
+            "title": "Forecast Valid Minutes",
+            "type": "integer"
+          },
+          "gbm_regime_shift_enabled": {
+            "title": "Gbm Regime Shift Enabled",
+            "type": "boolean"
+          },
+          "gbm_regime_shift_threshold_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Gbm Regime Shift Threshold Pct"
+          },
+          "prediction_diary_inconclusive_tolerance_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Prediction Diary Inconclusive Tolerance Pct"
+          }
+        },
+        "required": [
+          "forecast_valid_minutes",
+          "decision_packages_valid_minutes",
+          "prediction_diary_inconclusive_tolerance_pct",
+          "gbm_regime_shift_enabled",
+          "gbm_regime_shift_threshold_pct"
+        ],
+        "title": "UpdatePredictorTuningSettingsRequest",
         "type": "object"
       },
       "UpdateRiskLimitsRequest": {
@@ -9574,6 +13744,81 @@
         "title": "UpdateRiskLimitsRequest",
         "type": "object"
       },
+      "UpdateSchedulerSettingsRequest": {
+        "properties": {
+          "ibkr_sync_interval_minutes": {
+            "title": "Ibkr Sync Interval Minutes",
+            "type": "integer"
+          },
+          "scheduler_daily_briefing_cron": {
+            "title": "Scheduler Daily Briefing Cron",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduler_daily_briefing_cron",
+          "ibkr_sync_interval_minutes"
+        ],
+        "title": "UpdateSchedulerSettingsRequest",
+        "type": "object"
+      },
+      "UpdateUniverseScanSettingsRequest": {
+        "properties": {
+          "selected_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "selected_codes"
+        ],
+        "title": "UpdateUniverseScanSettingsRequest",
+        "type": "object"
+      },
+      "UpdateWorkerSweepSettingsRequest": {
+        "properties": {
+          "eodhd_rate_limit_per_second": {
+            "title": "Eodhd Rate Limit Per Second",
+            "type": "integer"
+          },
+          "sweep_alert_after_consecutive_errors": {
+            "title": "Sweep Alert After Consecutive Errors",
+            "type": "integer"
+          },
+          "sweep_interval_seconds": {
+            "title": "Sweep Interval Seconds",
+            "type": "integer"
+          },
+          "sweep_retry_backoff_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Sweep Retry Backoff Seconds"
+          },
+          "sweep_retry_max_attempts": {
+            "title": "Sweep Retry Max Attempts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sweep_interval_seconds",
+          "sweep_retry_max_attempts",
+          "sweep_retry_backoff_seconds",
+          "sweep_alert_after_consecutive_errors",
+          "eodhd_rate_limit_per_second"
+        ],
+        "title": "UpdateWorkerSweepSettingsRequest",
+        "type": "object"
+      },
       "UserStrategySettings": {
         "properties": {
           "asset_mix_preference": {
@@ -9654,6 +13899,151 @@
             "$ref": "#/components/schemas/StrategyRiskLevel",
             "default": "medium"
           },
+          "trading_confidence_threshold_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "70",
+            "title": "Trading Confidence Threshold Pct"
+          },
+          "trading_earnings_block_days": {
+            "default": 5,
+            "title": "Trading Earnings Block Days",
+            "type": "integer"
+          },
+          "trading_fat_tail_factor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1.15",
+            "title": "Trading Fat Tail Factor"
+          },
+          "trading_horizon_max_months": {
+            "default": 6,
+            "title": "Trading Horizon Max Months",
+            "type": "integer"
+          },
+          "trading_horizon_min_months": {
+            "default": 3,
+            "title": "Trading Horizon Min Months",
+            "type": "integer"
+          },
+          "trading_max_annual_volatility_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "30",
+            "title": "Trading Max Annual Volatility Pct"
+          },
+          "trading_max_position_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "100000",
+            "title": "Trading Max Position Eur"
+          },
+          "trading_max_sector_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "25",
+            "title": "Trading Max Sector Pct"
+          },
+          "trading_min_market_cap_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "5000000000",
+            "title": "Trading Min Market Cap Eur"
+          },
+          "trading_min_position_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "25000",
+            "title": "Trading Min Position Eur"
+          },
+          "trading_news_buy_bias_max_boost_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "5",
+            "title": "Trading News Buy Bias Max Boost Pct"
+          },
+          "trading_target_net_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "4",
+            "title": "Trading Target Net Pct"
+          },
+          "trading_total_budget_eur": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "1000000",
+            "title": "Trading Total Budget Eur"
+          },
           "user_buffer_eur": {
             "anyOf": [
               {
@@ -9709,6 +14099,171 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VerdictActivityOut": {
+        "properties": {
+          "by_decision": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Decision",
+            "type": "object"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "by_decision"
+        ],
+        "title": "VerdictActivityOut",
+        "type": "object"
+      },
+      "VerdictRow": {
+        "properties": {
+          "blocking_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocking Reason"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "details_json": {
+            "additionalProperties": true,
+            "title": "Details Json",
+            "type": "object"
+          },
+          "forecast_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Id"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "ibkr_conid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ibkr Conid"
+          },
+          "summary_nl": {
+            "title": "Summary Nl",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "verdict_id": {
+            "title": "Verdict Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict_id",
+          "symbol",
+          "ibkr_conid",
+          "forecast_id",
+          "generated_at",
+          "decision",
+          "blocking_reason",
+          "summary_nl",
+          "details_json"
+        ],
+        "title": "VerdictRow",
+        "type": "object"
+      },
+      "VerdictsListResponse": {
+        "properties": {
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VerdictRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "items"
+        ],
+        "title": "VerdictsListResponse",
+        "type": "object"
+      },
+      "VerdictsSummaryResponse": {
+        "properties": {
+          "by_decision": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Decision",
+            "type": "object"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "latest_generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Generated At"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title_nl",
+          "help_nl",
+          "total",
+          "by_decision",
+          "latest_generated_at"
+        ],
+        "title": "VerdictsSummaryResponse",
         "type": "object"
       },
       "WatchlistConfirmRequest": {
@@ -9817,6 +14372,45 @@
           "banner_text"
         ],
         "title": "WatchlistConfirmationStateResponse",
+        "type": "object"
+      },
+      "WorkerSweepSettingsResponse": {
+        "description": "Operator-editable worker-side knobs. The values are persisted on\nthe same ``runtime_config`` row the API overlays at startup; the\nworker reads the same row at its own startup so the operator\nedits show up after the worker is restarted (interval-job\nregistration) and immediately for the per-tick reads (retry\nattempts, alert threshold).",
+        "properties": {
+          "eodhd_rate_limit_per_second": {
+            "title": "Eodhd Rate Limit Per Second",
+            "type": "integer"
+          },
+          "help_nl": {
+            "title": "Help Nl",
+            "type": "string"
+          },
+          "sweep_alert_after_consecutive_errors": {
+            "title": "Sweep Alert After Consecutive Errors",
+            "type": "integer"
+          },
+          "sweep_interval_seconds": {
+            "title": "Sweep Interval Seconds",
+            "type": "integer"
+          },
+          "sweep_retry_backoff_seconds": {
+            "title": "Sweep Retry Backoff Seconds",
+            "type": "string"
+          },
+          "sweep_retry_max_attempts": {
+            "title": "Sweep Retry Max Attempts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sweep_interval_seconds",
+          "sweep_retry_max_attempts",
+          "sweep_retry_backoff_seconds",
+          "sweep_alert_after_consecutive_errors",
+          "eodhd_rate_limit_per_second",
+          "help_nl"
+        ],
+        "title": "WorkerSweepSettingsResponse",
         "type": "object"
       }
     }
@@ -11098,6 +15692,141 @@
         ]
       }
     },
+    "/belasting/jaaroverzicht": {
+      "get": {
+        "operationId": "get_jaaroverzicht_belasting_jaaroverzicht_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxYearReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Jaaroverzicht"
+      }
+    },
+    "/belasting/jaaroverzicht.csv": {
+      "get": {
+        "operationId": "get_jaaroverzicht_csv_belasting_jaaroverzicht_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Jaaroverzicht Csv"
+      }
+    },
+    "/belasting/jaaroverzicht.pdf": {
+      "get": {
+        "description": "Render een PDF-versie van het jaaroverzicht voor de accountant\n(V1.2 \u00a7BC). Gebruikt reportlab \u2014 alle data komt uit dezelfde\nengine als JSON + CSV.",
+        "operationId": "get_jaaroverzicht_pdf_belasting_jaaroverzicht_pdf_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Jaaroverzicht Pdf"
+      }
+    },
     "/briefings/daily/compute": {
       "post": {
         "description": "Build and persist one deterministic daily Dutch briefing.\n\nThe briefing is computed from the persisted positions / cash /\nsuggestions / Decision Packages / action drafts / diary entries /\ncritical events. AI never authors the summary.",
@@ -11606,6 +16335,220 @@
         "summary": "Read Latest Decision Package For Conid"
       }
     },
+    "/digests/today": {
+      "get": {
+        "operationId": "get_digest_today_digests_today_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DigestTodayResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Digest Today"
+      }
+    },
+    "/dividenden": {
+      "get": {
+        "operationId": "list_dividenden_dividenden_get",
+        "parameters": [
+          {
+            "description": "Default: huidige jaar.",
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "description": "Default: huidige jaar.",
+              "title": "Year",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DividendListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dividenden"
+      },
+      "post": {
+        "operationId": "create_dividend_dividenden_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDividendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DividendMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dividend"
+      }
+    },
+    "/dividenden/{dividend_event_id}": {
+      "delete": {
+        "operationId": "delete_dividend_dividenden__dividend_event_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dividend_event_id",
+            "required": true,
+            "schema": {
+              "title": "Dividend Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DividendMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Dividend"
+      }
+    },
+    "/earnings/refresh": {
+      "post": {
+        "description": "Trigger a synchronous earnings calendar refresh for the given\nEODHD-shaped symbols (``AAPL.US``, ``ASML.AS``, \u2026).\n\nShort-circuits with ``skipped`` when:\n* The operator's EODHD key is missing, or\n* Storage is disabled.\n\nCaps ``window_days`` at 90 so a bug in the caller doesn't burn\nEODHD quota.",
+        "operationId": "post_refresh_earnings_earnings_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarningsRefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsRefreshResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refresh Earnings"
+      }
+    },
+    "/earnings/upcoming": {
+      "get": {
+        "description": "Return upcoming earnings events within ``days`` of today.\n\nDefaults to 14-day window. Hard cap at 60 days so a careless\n``?days=9999`` doesn't return three years of data.",
+        "operationId": "get_upcoming_earnings_earnings_upcoming_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsUpcomingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Upcoming Earnings"
+      }
+    },
     "/errors": {
       "get": {
         "operationId": "list_errors_errors_get",
@@ -11744,6 +16687,24 @@
           }
         },
         "summary": "Resolve Error"
+      }
+    },
+    "/explanations/morning-batch": {
+      "post": {
+        "operationId": "trigger_morning_explanation_batch_explanations_morning_batch_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MorningExplanationBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Trigger Morning Explanation Batch"
       }
     },
     "/forecast/by-account": {
@@ -13238,6 +18199,256 @@
         "summary": "Run Market Data Sync"
       }
     },
+    "/markets/hours-now": {
+      "get": {
+        "description": "Live open/close + current state per followed market.\n\nPolled by the dashboard's market-hours widget. Re-reads the\noperator's universe-scan selection on every call so a fresh save\nin /instellingen reflects without a worker restart. Never raises:\na storage hiccup falls back to the env-configured codes.",
+        "operationId": "get_market_hours_now_markets_hours_now_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketHoursNowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Market Hours Now"
+      }
+    },
+    "/markets/macro-snapshot": {
+      "get": {
+        "description": "Return the most recent macro-regime snapshot.\n\nReads the latest batch of ``orchestrator_scoring_verdicts`` and\npicks the macro diagnostics from any one row in it \u2014 every row\nin a batch shares the same macro inputs, so the first verdict\nin the burst is representative.",
+        "operationId": "get_macro_snapshot_markets_macro_snapshot_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Macro Snapshot"
+      }
+    },
+    "/notifications/compose-summary": {
+      "post": {
+        "description": "Compose a Dutch summary header for the worker's alert emails.\n\nWorker-only consumer. Fall-through-friendly: any failure path\nreturns ``summary_nl=None`` so the caller sends the template-only\nemail instead of crashing.",
+        "operationId": "compose_alert_summary_endpoint_notifications_compose_summary_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComposeAlertSummaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComposeAlertSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compose Alert Summary Endpoint"
+      }
+    },
+    "/orchestrator-verdicts": {
+      "get": {
+        "description": "Return the most-recent verdicts, newest first.\n\nDefault ``limit`` is 100; the repo caps at storage-level.",
+        "operationId": "list_orchestrator_verdicts_orchestrator_verdicts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerdictsListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Orchestrator Verdicts"
+      }
+    },
+    "/orchestrator-verdicts/today": {
+      "get": {
+        "description": "Aggregate counts of the most recent verdicts per decision code.\n\n\"Most recent\" = the verdicts written at the latest\n``generated_at`` timestamp. The morning-chain leg writes one\nburst per fire, so this surfaces \"what did today's run produce\".",
+        "operationId": "get_orchestrator_verdicts_summary_orchestrator_verdicts_today_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerdictsSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Orchestrator Verdicts Summary"
+      }
+    },
+    "/pauze": {
+      "get": {
+        "operationId": "get_pauze_status_pauze_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PauzeStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Pauze Status"
+      },
+      "post": {
+        "operationId": "pauze_pauze_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PauzeStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pauze"
+      }
+    },
+    "/pauze/hervat": {
+      "post": {
+        "operationId": "hervat_pauze_hervat_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PauzeStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Hervat"
+      }
+    },
+    "/portfolio/nav/history": {
+      "get": {
+        "operationId": "read_nav_history_portfolio_nav_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Nav History"
+      }
+    },
+    "/portfolio/sector-spread": {
+      "get": {
+        "description": "Return current portfolio breakdown by sector, sorted by weight.",
+        "operationId": "get_sector_spread_portfolio_sector_spread_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorSpreadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Sector Spread"
+      }
+    },
     "/portfolio/setup/defaults": {
       "get": {
         "operationId": "read_portfolio_setup_defaults_portfolio_setup_defaults_get",
@@ -13642,6 +18853,286 @@
           }
         },
         "summary": "Read Predictor Leaderboard"
+      }
+    },
+    "/predictors/performance": {
+      "get": {
+        "operationId": "read_predictor_performance_predictors_performance_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lookback_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Lookback Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictorPerformanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Predictor Performance"
+      }
+    },
+    "/rapporten/archief": {
+      "get": {
+        "operationId": "list_archive_rapporten_archief_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Archive"
+      }
+    },
+    "/rapporten/archief/generate": {
+      "post": {
+        "description": "Genereer (of regenereer) een PDF-archief voor \u00e9\u00e9n (year, month).",
+        "operationId": "generate_archive_rapporten_archief_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateArchiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateArchiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Archive"
+      }
+    },
+    "/rapporten/archief/{year}/{month}": {
+      "get": {
+        "operationId": "get_archive_pdf_rapporten_archief__year___month__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "title": "Month",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Archive Pdf"
+      }
+    },
+    "/rapporten/maand": {
+      "get": {
+        "operationId": "get_maandrapport_rapporten_maand_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Maandrapport"
+      }
+    },
+    "/rapporten/maand.pdf": {
+      "get": {
+        "description": "Render \u00e9\u00e9n maandrapport naar PDF (V1.2 \u00a7BC).",
+        "operationId": "get_maandrapport_pdf_rapporten_maand_pdf_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Maandrapport Pdf"
       }
     },
     "/reconciliation/audit": {
@@ -14488,6 +19979,45 @@
           }
         },
         "summary": "Get Research Source"
+      }
+    },
+    "/research/sources/{library_source_id}/ai-extract": {
+      "post": {
+        "operationId": "run_research_ai_extraction_research_sources__library_source_id__ai_extract_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_source_id",
+            "required": true,
+            "schema": {
+              "title": "Library Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchAiExtractionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Research Ai Extraction"
       }
     },
     "/research/sources/{library_source_id}/asset-links": {
@@ -15634,6 +21164,49 @@
         "summary": "Read Scheduler Jobs"
       }
     },
+    "/scheduler/runs": {
+      "get": {
+        "description": "Return the most recent ``daily_briefing`` scheduler runs (audit list).\n\nMirrors ``/scheduler/runs/latest`` but surfaces a window so the\nportefeuille page can show whether recent morning-chain fires\nsucceeded \u2014 until now ``scheduler_runs`` was internal-only and a\nfailing daily briefing was invisible in the UI.",
+        "operationId": "read_recent_scheduler_runs_scheduler_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Read Recent Scheduler Runs Scheduler Runs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Recent Scheduler Runs"
+      }
+    },
     "/scheduler/runs/latest": {
       "get": {
         "description": "Return the most recent scheduler run (optionally filtered by job).",
@@ -15765,6 +21338,176 @@
         "summary": "Read Scheduler V127 Status"
       }
     },
+    "/sell-signals": {
+      "get": {
+        "description": "Lijst actieve SELL-suggestie kaartjes.",
+        "operationId": "list_active_sell_signals_sell_signals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_ref",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Ref"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellSignalListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Active Sell Signals"
+      }
+    },
+    "/sell-signals/sweep": {
+      "post": {
+        "description": "Handmatige trigger voor de SELL-loop sweep.\n\nDe worker-scheduler roept dit elke 15 min aan tijdens\nmarket-hours; de operator kan het via de UI handmatig\ntriggeren voor een verse evaluatie. De endpoint checkt\nbewust GEEN pauze-flag \u2014 CLAUDE.md \u00a711 vraagt dat de\nSELL-monitor blijft draaien.",
+        "operationId": "trigger_sell_signal_sweep_sell_signals_sweep_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellSignalSweepResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Trigger Sell Signal Sweep"
+      }
+    },
+    "/sell-signals/{card_id}/dismiss": {
+      "post": {
+        "description": "Operator: verwijder een SELL-suggestie uit de lijst.",
+        "operationId": "dismiss_sell_signal_sell_signals__card_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellSignalCardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Sell Signal"
+      }
+    },
+    "/settings/advanced": {
+      "get": {
+        "operationId": "get_advanced_settings_settings_advanced_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvancedSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Advanced Settings"
+      },
+      "put": {
+        "operationId": "update_advanced_settings_settings_advanced_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdvancedSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvancedSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Advanced Settings"
+      }
+    },
     "/settings/connection": {
       "get": {
         "operationId": "get_connection_settings_settings_connection_get",
@@ -15819,6 +21562,457 @@
         "summary": "Update Connection Settings"
       }
     },
+    "/settings/data-windows": {
+      "get": {
+        "operationId": "get_data_window_settings_settings_data_windows_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataWindowSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Data Window Settings"
+      },
+      "put": {
+        "operationId": "update_data_window_settings_settings_data_windows_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDataWindowSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataWindowSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Data Window Settings"
+      }
+    },
+    "/settings/execution-gates": {
+      "get": {
+        "operationId": "get_execution_gate_settings_settings_execution_gates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionGateSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Execution Gate Settings"
+      },
+      "put": {
+        "operationId": "update_execution_gate_settings_settings_execution_gates_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExecutionGateSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionGateSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Execution Gate Settings"
+      }
+    },
+    "/settings/forecast-market": {
+      "get": {
+        "operationId": "get_forecast_market_settings_settings_forecast_market_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastMarketSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Forecast Market Settings"
+      },
+      "put": {
+        "operationId": "update_forecast_market_settings_settings_forecast_market_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateForecastMarketSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastMarketSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Forecast Market Settings"
+      }
+    },
+    "/settings/market-events": {
+      "get": {
+        "operationId": "get_market_events_settings_settings_market_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketEventsSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Market Events Settings"
+      },
+      "put": {
+        "operationId": "update_market_events_settings_settings_market_events_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMarketEventsSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketEventsSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Market Events Settings"
+      }
+    },
+    "/settings/notifications": {
+      "get": {
+        "operationId": "get_notification_settings_settings_notifications_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Notification Settings"
+      },
+      "put": {
+        "operationId": "update_notification_settings_settings_notifications_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Notification Settings"
+      }
+    },
+    "/settings/notifications/test-email": {
+      "post": {
+        "description": "Send one test email using the currently-saved SMTP settings.\n\nHonours ``notifications_email_real_client_enabled`` \u2014 when False\nthis returns a ``stubbed`` result without opening an SMTP session.\nThat's the safe default: a fresh deploy with SMTP creds saved but\nno operator opt-in can't accidentally email anyone.",
+        "operationId": "send_test_email_settings_notifications_test_email_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestEmailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Send Test Email"
+      }
+    },
+    "/settings/order-policy": {
+      "get": {
+        "operationId": "get_order_policy_settings_settings_order_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPolicySettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Order Policy Settings"
+      },
+      "put": {
+        "operationId": "update_order_policy_settings_settings_order_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderPolicySettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPolicySettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Order Policy Settings"
+      }
+    },
+    "/settings/predictor-tuning": {
+      "get": {
+        "operationId": "get_predictor_tuning_settings_settings_predictor_tuning_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictorTuningSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Predictor Tuning Settings"
+      },
+      "put": {
+        "operationId": "update_predictor_tuning_settings_settings_predictor_tuning_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePredictorTuningSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictorTuningSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Predictor Tuning Settings"
+      }
+    },
+    "/settings/profit-target": {
+      "get": {
+        "operationId": "get_profit_target_setting_settings_profit_target_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfitTargetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Profit Target Setting"
+      },
+      "put": {
+        "operationId": "update_profit_target_setting_settings_profit_target_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfitTargetUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfitTargetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Profit Target Setting"
+      }
+    },
     "/settings/risk-limits": {
       "get": {
         "operationId": "get_risk_limits_settings_risk_limits_get",
@@ -15871,6 +22065,60 @@
           }
         },
         "summary": "Update Risk Limits"
+      }
+    },
+    "/settings/scheduler": {
+      "get": {
+        "operationId": "get_scheduler_settings_settings_scheduler_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulerSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Scheduler Settings"
+      },
+      "put": {
+        "operationId": "update_scheduler_settings_settings_scheduler_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSchedulerSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulerSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Scheduler Settings"
       }
     },
     "/settings/summary": {
@@ -15949,6 +22197,116 @@
         "summary": "Update Trading Settings"
       }
     },
+    "/settings/universe-scan": {
+      "get": {
+        "description": "Operator's selected scan markets + the full list to choose from.",
+        "operationId": "get_universe_scan_settings_settings_universe_scan_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UniverseScanSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Universe Scan Settings"
+      },
+      "put": {
+        "description": "Persist the operator's multi-select. Validates against\n``LOCKED_INDEX_CODES``; unknown codes raise HTTP 422.",
+        "operationId": "update_universe_scan_settings_settings_universe_scan_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUniverseScanSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UniverseScanSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Universe Scan Settings"
+      }
+    },
+    "/settings/worker-sweeps": {
+      "get": {
+        "operationId": "get_worker_sweep_settings_settings_worker_sweeps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerSweepSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Worker Sweep Settings"
+      },
+      "put": {
+        "operationId": "update_worker_sweep_settings_settings_worker_sweeps_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkerSweepSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerSweepSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Worker Sweep Settings"
+      }
+    },
     "/storage/status": {
       "get": {
         "operationId": "read_storage_status_storage_status_get",
@@ -16004,6 +22362,25 @@
           }
         },
         "summary": "Run Suggestions Sync"
+      }
+    },
+    "/suggestions/grid": {
+      "get": {
+        "description": "Return the daily TODO grid the operator opens at 7am.\n\nSections are returned in locked safety order: Verkopen first,\nGeblokkeerd last. Each row carries a ``diff_status`` (nieuw /\ngewijzigd / ongewijzigd) computed by comparing against the most\nrecent prior suggestion for the same asset.",
+        "operationId": "get_suggestions_grid_suggestions_grid_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionsGridResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Suggestions Grid"
       }
     },
     "/suggestions/latest": {
@@ -16179,6 +22556,53 @@
         "summary": "Read System Status"
       }
     },
+    "/tob/year-to-date": {
+      "get": {
+        "description": "Return realised TOB for the given (or current) calendar year.\n\nAggregates ``compute_tob(fill_price_local * fill_quantity,\nstandard_stock)`` over every fill whose ``fill_time`` falls inside\nthe calendar year. Both BUY and SELL count \u2014 TOB is owed on each\nleg of a round-trip.\n\nPer-currency totals are reported as decimal strings; the response\nnever collapses them into a single EUR figure.",
+        "operationId": "get_tob_year_to_date_tob_year_to_date_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TobYearToDateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Tob Year To Date"
+      }
+    },
     "/ui/dutch-labels": {
       "get": {
         "operationId": "read_dutch_labels_ui_dutch_labels_get",
@@ -16325,6 +22749,184 @@
           }
         },
         "summary": "Read V1 Release Readiness"
+      }
+    },
+    "/watchlist-preferences": {
+      "delete": {
+        "description": "Remove one preference. Idempotent \u2014 deleting a non-existent\nrow returns success because the desired state (gone) holds.",
+        "operationId": "delete_preference_watchlist_preferences_delete",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "default": "default",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenceMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Preference"
+      },
+      "post": {
+        "description": "Add or replace one preference. Idempotent on ``(account,\nsymbol, kind)`` \u2014 re-posting the same triple updates the ``note``\nand creation timestamp without raising.",
+        "operationId": "save_preference_watchlist_preferences_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePreferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenceMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Preference"
+      }
+    },
+    "/watchlist-preferences/favorieten": {
+      "get": {
+        "description": "Return all favorites for one account with the latest\norchestrator verdict per symbol.\n\nThe orchestrator writes one verdict per (account, symbol,\nforecast_id) \u2014 we want the most recent per symbol so the UI\nsurfaces \"what is the doctrine saying about my favorite right\nnow\". We do that client-side by listing all verdicts for the\naccount (capped at 500) and picking the newest per symbol.",
+        "operationId": "list_favorieten_watchlist_preferences_favorieten_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "default": "default",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoritesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Favorieten"
+      }
+    },
+    "/watchlist-preferences/uitsluitingen": {
+      "get": {
+        "description": "Return all exclusions for one account.",
+        "operationId": "list_uitsluitingen_watchlist_preferences_uitsluitingen_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "default": "default",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExclusionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Uitsluitingen"
       }
     },
     "/watchlist/cold-start-items": {

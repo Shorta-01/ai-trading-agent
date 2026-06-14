@@ -113,6 +113,7 @@ def test_exactly_seventy_revision_files_exist_with_expected_names() -> None:
         "0075_runtime_config_profit_target.py",
         "0076_dividend_events.py",
         "0077_monthly_report_archive.py",
+        "0078_sell_signal_cards.py",
     ]
 
 

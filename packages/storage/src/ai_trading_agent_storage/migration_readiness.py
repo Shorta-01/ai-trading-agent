@@ -983,6 +983,22 @@ _EXPECTED_MIGRATION_REVISIONS: tuple[MigrationRevisionInfo, ...] = (
             "year, month)`` zodat re-genereren upsert."
         ),
     ),
+    MigrationRevisionInfo(
+        revision_id="0078_sell_signal_cards",
+        previous_revision_id="0077_monthly_report_archive",
+        filename="0078_sell_signal_cards.py",
+        label_nl="SELL-suggestie kaartjes",
+        description_nl=(
+            "Voegt de ``sell_signal_cards`` tabel toe voor de "
+            "SELL-loop sweep (V1.2 §BF / CLAUDE.md §6). De sweep "
+            "evalueert per held positie het +4 %-take-profit "
+            "signaal (§6.3) en het 6m+ hold-review combo-trigger "
+            "signaal (§6.2) en upsert één rij per ``(account, "
+            "symbol, signal_kind)``. ``safe_for_action_drafts`` "
+            "blijft ``False`` — de software stuurt nooit een "
+            "automatische order (§2)."
+        ),
+    ),
 )
 
 
