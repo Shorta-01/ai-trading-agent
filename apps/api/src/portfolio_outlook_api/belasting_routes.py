@@ -19,11 +19,13 @@ from __future__ import annotations
 import csv
 import io
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 
 from ai_trading_agent_storage import (
     SqlAlchemyDividendEventRepository,
+    SqlAlchemyFxRateRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -34,6 +36,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from portfolio_outlook_api.config import settings
+from portfolio_outlook_api.fx_conversion import FxConverter
 from portfolio_outlook_api.profit_target import get_profit_target_pct
 from portfolio_outlook_api.tax_report import (
     ExecutionRow,
@@ -70,6 +73,13 @@ class TaxRealisedTradeOut(BaseModel):
     net_pct_on_cost: str
     buy_action_draft_id: str | None
     sell_action_draft_id: str | None
+    # V1.2 §BB — EUR-velden (None wanneer geen FX-koers gevonden).
+    buy_fx_rate_eur: str | None = None
+    sell_fx_rate_eur: str | None = None
+    gross_eur: str | None = None
+    tob_buy_eur: str | None = None
+    tob_sell_eur: str | None = None
+    net_eur: str | None = None
 
 
 class TaxYearTotalsOut(BaseModel):
@@ -81,6 +91,11 @@ class TaxYearTotalsOut(BaseModel):
     hit_rate_pct: float
     earliest_close: str | None
     latest_close: str | None
+    # V1.2 §BB — EUR-totalen.
+    gross_eur_total: str | None = None
+    tob_eur_total: str | None = None
+    net_eur_total: str | None = None
+    eur_conversion_coverage_pct: float = 0.0
 
 
 class TaxMonthlyPointOut(BaseModel):
@@ -155,6 +170,16 @@ def _to_response(report: TaxYearReport) -> TaxYearReportResponse:
                 net_pct_on_cost=str(t.net_pct_on_cost),
                 buy_action_draft_id=t.buy_action_draft_id,
                 sell_action_draft_id=t.sell_action_draft_id,
+                buy_fx_rate_eur=(
+                    str(t.buy_fx_rate_eur) if t.buy_fx_rate_eur else None
+                ),
+                sell_fx_rate_eur=(
+                    str(t.sell_fx_rate_eur) if t.sell_fx_rate_eur else None
+                ),
+                gross_eur=str(t.gross_eur) if t.gross_eur is not None else None,
+                tob_buy_eur=str(t.tob_buy_eur) if t.tob_buy_eur else None,
+                tob_sell_eur=str(t.tob_sell_eur) if t.tob_sell_eur else None,
+                net_eur=str(t.net_eur) if t.net_eur is not None else None,
             )
             for t in report.realised_trades
         ],
@@ -167,6 +192,12 @@ def _to_response(report: TaxYearReport) -> TaxYearReportResponse:
             hit_rate_pct=report.year_totals.hit_rate_pct,
             earliest_close=report.year_totals.earliest_close,
             latest_close=report.year_totals.latest_close,
+            gross_eur_total=report.year_totals.gross_eur_total,
+            tob_eur_total=report.year_totals.tob_eur_total,
+            net_eur_total=report.year_totals.net_eur_total,
+            eur_conversion_coverage_pct=(
+                report.year_totals.eur_conversion_coverage_pct
+            ),
         ),
         monthly_points=[
             TaxMonthlyPointOut(
@@ -231,6 +262,34 @@ def _fetch_dividends(year: int) -> list[dict[str, object]]:
         }
         for r in listed.records
     ]
+
+
+def _open_fx_converter() -> tuple[FxConverter | None, "Callable[[], None]"]:
+    """Return a (converter, close_callback) tuple, or (None, noop).
+
+    De caller moet de close-callback aanroepen na het rapport-build
+    zodat de storage-connection vrijkomt.
+    """
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return None, (lambda: None)
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        ctx = provider.checked_connection(require_writable=False)
+        checked = ctx.__enter__()
+        repo = SqlAlchemyFxRateRepository(checked.connection, checked.readiness)
+        converter = FxConverter(repo)
+
+        def _close() -> None:
+            ctx.__exit__(None, None, None)
+
+        return converter, _close
+    except StorageConnectionError as exc:
+        logger.warning("FX converter open failed: %s", exc)
+        return None, (lambda: None)
 
 
 def _fetch_executions(year: int) -> list[ExecutionRow]:
@@ -321,12 +380,17 @@ def get_jaaroverzicht(year: int | None = None) -> TaxYearReportResponse:
         return _to_response(_empty_report(resolved_year))
 
     executions = _fetch_executions(resolved_year)
-    report = build_tax_year_report(
-        year=resolved_year,
-        executions=executions,
-        profit_target_pct=get_profit_target_pct(),
-        dividends=_fetch_dividends(resolved_year),
-    )
+    converter, close_converter = _open_fx_converter()
+    try:
+        report = build_tax_year_report(
+            year=resolved_year,
+            executions=executions,
+            profit_target_pct=get_profit_target_pct(),
+            dividends=_fetch_dividends(resolved_year),
+            fx_converter=converter,
+        )
+    finally:
+        close_converter()
     return _to_response(report)
 
 
@@ -342,12 +406,17 @@ def get_jaaroverzicht_csv(year: int | None = None) -> Response:
         report = _empty_report(resolved_year)
     else:
         executions = _fetch_executions(resolved_year)
-        report = build_tax_year_report(
-            year=resolved_year,
-            executions=executions,
-            profit_target_pct=get_profit_target_pct(),
-            dividends=_fetch_dividends(resolved_year),
-        )
+        converter, close_converter = _open_fx_converter()
+        try:
+            report = build_tax_year_report(
+                year=resolved_year,
+                executions=executions,
+                profit_target_pct=get_profit_target_pct(),
+                dividends=_fetch_dividends(resolved_year),
+                fx_converter=converter,
+            )
+        finally:
+            close_converter()
 
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";")

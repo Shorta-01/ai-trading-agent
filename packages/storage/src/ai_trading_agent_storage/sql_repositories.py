@@ -4705,6 +4705,46 @@ class SqlAlchemyFxRateRepository(_Base):
             provider=row["provider"],
         )
 
+    def get_nearest_rate(
+        self,
+        *,
+        base_currency: str,
+        quote_currency: str,
+        as_of_date: Any,
+        provider: str = "eodhd",
+    ) -> FxRateRecord | None:
+        """Return the most recent rate on or before ``as_of_date``.
+
+        Het FX-feed (EODHD / ECB) levert geen rates op weekends. Voor
+        een transactie op zaterdag/zondag — of een feestdag — willen
+        we de meest recente voorafgaande weekdag-koers gebruiken. Dat
+        is wat een accountant ook gebruikt voor de Belgische aangifte.
+        """
+
+        row = (
+            self._connection.execute(
+                select(fx_rates)
+                .where(fx_rates.c.base_currency == base_currency)
+                .where(fx_rates.c.quote_currency == quote_currency)
+                .where(fx_rates.c.provider == provider)
+                .where(fx_rates.c.as_of_date <= as_of_date)
+                .order_by(fx_rates.c.as_of_date.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            return None
+        return FxRateRecord(
+            base_currency=row["base_currency"],
+            quote_currency=row["quote_currency"],
+            as_of_date=row["as_of_date"],
+            rate=row["rate"],
+            ingested_ts=row["ingested_ts"],
+            provider=row["provider"],
+        )
+
     def get_latest(
         self,
         *,

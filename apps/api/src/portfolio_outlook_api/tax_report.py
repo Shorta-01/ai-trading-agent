@@ -65,8 +65,9 @@ class ExecutionRow:
 class RealisedTradeRow:
     """One FIFO-matched closed lot.
 
-    Money values are local-currency; EUR conversion is a follow-up
-    that needs historical FX data.
+    Money values are local-currency; EUR fields (V1.2 §BB) zijn
+    gevuld wanneer een historische FX-koers beschikbaar was voor de
+    transactiedag.
     """
 
     symbol: str
@@ -88,6 +89,14 @@ class RealisedTradeRow:
     # The pair of action_draft_ids — useful for the audit pane.
     buy_action_draft_id: str | None
     sell_action_draft_id: str | None
+    # V1.2 §BB — EUR-conversie. ``None`` wanneer geen FX-data
+    # beschikbaar was voor de transactiedag.
+    buy_fx_rate_eur: Decimal | None = None
+    sell_fx_rate_eur: Decimal | None = None
+    gross_eur: Decimal | None = None
+    tob_buy_eur: Decimal | None = None
+    tob_sell_eur: Decimal | None = None
+    net_eur: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +109,13 @@ class YearTotals:
     hit_rate_pct: float
     earliest_close: str | None
     latest_close: str | None
+    # V1.2 §BB — EUR-totalen. Strings net als lokale totalen.
+    gross_eur_total: str | None = None
+    tob_eur_total: str | None = None
+    net_eur_total: str | None = None
+    # % van trades waarvoor we een geldige historische FX-koers
+    # vonden. 0 wanneer FX-feed leeg.
+    eur_conversion_coverage_pct: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -382,6 +398,70 @@ def _good_householder_metrics(
     )
 
 
+FxConverterCallable = (
+    "Callable[[Decimal, str, date], tuple[Decimal | None, Decimal | None]]"
+)
+
+
+def _convert_trade_to_eur(
+    trade: RealisedTradeRow,
+    *,
+    fx_converter: object | None,
+) -> RealisedTradeRow:
+    """Geef een nieuwe row terug met EUR-velden ingevuld wanneer
+    een converter beschikbaar was. Voor EUR-trades blijft de
+    converter ongebruikt (rate=1)."""
+
+    if fx_converter is None:
+        return trade
+    convert = getattr(fx_converter, "to_eur", None)
+    if convert is None:
+        return trade
+    buy_amount = trade.gross_local + trade.tob_buy_local + trade.tob_sell_local
+    # We berekenen de FX-koers op buy_date voor cost-side legs, sell_date
+    # voor sell-side. Net = sell-side EUR - buy-side EUR.
+    cost_eur, buy_lookup = convert(
+        amount=trade.quantity * trade.buy_price_local,
+        currency=trade.currency_local,
+        on_date=trade.buy_date,
+    )
+    proceeds_eur, sell_lookup = convert(
+        amount=trade.quantity * trade.sell_price_local,
+        currency=trade.currency_local,
+        on_date=trade.sell_date,
+    )
+    if (
+        cost_eur is None
+        or proceeds_eur is None
+        or buy_lookup is None
+        or sell_lookup is None
+    ):
+        return trade
+    tob_buy_eur, _ = convert(
+        amount=trade.tob_buy_local,
+        currency=trade.currency_local,
+        on_date=trade.buy_date,
+    )
+    tob_sell_eur, _ = convert(
+        amount=trade.tob_sell_local,
+        currency=trade.currency_local,
+        on_date=trade.sell_date,
+    )
+    gross_eur = proceeds_eur - cost_eur
+    net_eur = gross_eur - (tob_buy_eur or Decimal(0)) - (tob_sell_eur or Decimal(0))
+    return RealisedTradeRow(
+        **{
+            **trade.__dict__,
+            "buy_fx_rate_eur": getattr(buy_lookup, "rate_to_eur", None),
+            "sell_fx_rate_eur": getattr(sell_lookup, "rate_to_eur", None),
+            "gross_eur": _quant2(gross_eur),
+            "tob_buy_eur": _quant2(tob_buy_eur) if tob_buy_eur else None,
+            "tob_sell_eur": _quant2(tob_sell_eur) if tob_sell_eur else None,
+            "net_eur": _quant2(net_eur),
+        }
+    )
+
+
 def build_tax_year_report(
     *,
     year: int,
@@ -391,6 +471,7 @@ def build_tax_year_report(
     fx_conversion_available: bool = False,
     profit_target_pct: Decimal = HIT_RATE_TARGET_PCT,
     dividends: Sequence[dict[str, object]] | None = None,
+    fx_converter: object | None = None,
 ) -> TaxYearReport:
     """End-to-end report builder. Pure function — call from the API
     layer after fetching rows."""
@@ -400,7 +481,57 @@ def build_tax_year_report(
     # ``year`` post-match.
     matched = _match_trades(executions)
     in_year = tuple(t for t in matched if t.sell_date.year == year)
-    totals = _aggregate_year(in_year, hit_target_pct=profit_target_pct)
+    if fx_converter is not None:
+        in_year = tuple(
+            _convert_trade_to_eur(t, fx_converter=fx_converter)
+            for t in in_year
+        )
+        covered = sum(1 for t in in_year if t.net_eur is not None)
+        coverage_pct = (
+            round(covered / len(in_year) * 100, 1) if in_year else 0.0
+        )
+        gross_eur_total = sum(
+            (t.gross_eur for t in in_year if t.gross_eur is not None),
+            start=Decimal(0),
+        )
+        tob_eur_total = sum(
+            (
+                (t.tob_buy_eur or Decimal(0)) + (t.tob_sell_eur or Decimal(0))
+                for t in in_year
+            ),
+            start=Decimal(0),
+        )
+        net_eur_total = sum(
+            (t.net_eur for t in in_year if t.net_eur is not None),
+            start=Decimal(0),
+        )
+        fx_conversion_available = covered > 0
+    else:
+        coverage_pct = 0.0
+        gross_eur_total = Decimal(0)
+        tob_eur_total = Decimal(0)
+        net_eur_total = Decimal(0)
+    base_totals = _aggregate_year(in_year, hit_target_pct=profit_target_pct)
+    totals = YearTotals(
+        trade_count=base_totals.trade_count,
+        gross_local_by_currency=base_totals.gross_local_by_currency,
+        tob_local_by_currency=base_totals.tob_local_by_currency,
+        net_local_by_currency=base_totals.net_local_by_currency,
+        average_hold_days=base_totals.average_hold_days,
+        hit_rate_pct=base_totals.hit_rate_pct,
+        earliest_close=base_totals.earliest_close,
+        latest_close=base_totals.latest_close,
+        gross_eur_total=(
+            str(_quant2(gross_eur_total)) if fx_conversion_available else None
+        ),
+        tob_eur_total=(
+            str(_quant2(tob_eur_total)) if fx_conversion_available else None
+        ),
+        net_eur_total=(
+            str(_quant2(net_eur_total)) if fx_conversion_available else None
+        ),
+        eur_conversion_coverage_pct=coverage_pct,
+    )
     monthly = _monthly_breakdown(year, in_year)
     householder = _good_householder_metrics(
         in_year,
@@ -410,9 +541,15 @@ def build_tax_year_report(
     notes: list[str] = []
     if not fx_conversion_available:
         notes.append(
-            "EUR-conversie nog niet beschikbaar — bedragen zijn in "
-            "lokale munt. De accountant past zelf de FX-koers van de "
-            "transactiedag toe."
+            "EUR-conversie nog niet beschikbaar voor deze periode — "
+            "bedragen blijven in lokale munt. Vraag je accountant om "
+            "de FX-koers van de transactiedag toe te passen."
+        )
+    elif coverage_pct < 100:
+        notes.append(
+            f"EUR-conversie beschikbaar voor {coverage_pct} % van de "
+            "trades. Voor de overige trades is geen historische FX-"
+            "koers gevonden — die staan in lokale munt."
         )
     dividend_tuple = tuple(dividends or ())
     if not dividend_tuple:
