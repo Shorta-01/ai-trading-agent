@@ -25,7 +25,7 @@ import {
   type WatchlistFavoritesResponse,
 } from "@/lib/apiClient";
 
-type Tab = "favorieten" | "uitsluitingen";
+type Tab = "favorieten" | "uitsluitingen" | "hybride";
 
 const FAVORIETEN_KEY = ["watchlist-favorieten-settings"];
 const UITSLUITINGEN_KEY = ["watchlist-uitsluitingen-settings"];
@@ -434,9 +434,16 @@ export function WatchlistPreferencesSettings() {
           testId="watchlist-tab-uitsluitingen"
           onClick={() => setTab("uitsluitingen")}
         />
+        {/* V1.2 §BP / CLAUDE.md §5 — 3e tab: Hybride mode-overzicht. */}
+        <TabButton
+          active={tab === "hybride"}
+          label="Hybride mode"
+          testId="watchlist-tab-hybride"
+          onClick={() => setTab("hybride")}
+        />
       </div>
 
-      {tab === "favorieten" ? (
+      {tab === "favorieten" && (
         <div data-testid="watchlist-favorieten-pane">
           <AddForm
             kind="favorite"
@@ -450,7 +457,8 @@ export function WatchlistPreferencesSettings() {
             busy={deleteMutation.isPending}
           />
         </div>
-      ) : (
+      )}
+      {tab === "uitsluitingen" && (
         <div data-testid="watchlist-uitsluitingen-pane">
           <AddForm
             kind="excluded"
@@ -465,6 +473,101 @@ export function WatchlistPreferencesSettings() {
           />
         </div>
       )}
+      {tab === "hybride" && (
+        <HybrideModeOverview
+          favorites={favoritesQuery.data?.items ?? []}
+          exclusions={exclusionsQuery.data?.items ?? []}
+        />
+      )}
     </section>
+  );
+}
+
+function HybrideModeOverview({
+  favorites,
+  exclusions,
+}: {
+  favorites: WatchlistFavoriteRow[];
+  exclusions: WatchlistExclusionRow[];
+}) {
+  return (
+    <div
+      data-testid="watchlist-hybride-pane"
+      style={{
+        background: "#f9fafb",
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
+        padding: 12,
+      }}
+    >
+      <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>
+        Hybride mode — drie bronnen tegelijk (CLAUDE.md §5)
+      </h3>
+      <p
+        style={{
+          margin: "0 0 12px",
+          fontSize: 12,
+          color: "#374151",
+          lineHeight: 1.5,
+        }}
+      >
+        De software werkt met drie bronnen tegelijk: een autonome
+        universum-scan over ~3500 grote namen, jouw{" "}
+        <strong>favorieten</strong> (live confidence-score, ook als ze
+        de gates niet passeren), en jouw{" "}
+        <strong>uitsluitingen</strong> (worden nooit voorgesteld).
+        Wijzigingen aan deze lijsten gelden direct voor de volgende
+        sweep.
+      </p>
+      <div
+        data-testid="watchlist-hybride-summary"
+        style={{
+          display: "flex",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        <div
+          data-testid="watchlist-hybride-favorite-count"
+          style={{
+            padding: "8px 12px",
+            background: "#dcfce7",
+            color: "#166534",
+            borderRadius: 6,
+            fontSize: 13,
+          }}
+        >
+          <strong>{favorites.length}</strong> favoriet
+          {favorites.length === 1 ? "" : "en"}
+        </div>
+        <div
+          data-testid="watchlist-hybride-excluded-count"
+          style={{
+            padding: "8px 12px",
+            background: "#fee2e2",
+            color: "#991b1b",
+            borderRadius: 6,
+            fontSize: 13,
+          }}
+        >
+          <strong>{exclusions.length}</strong> uitsluiting
+          {exclusions.length === 1 ? "" : "en"}
+        </div>
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 11,
+          color: "#6b7280",
+          fontStyle: "italic",
+        }}
+      >
+        Tip: voeg een symbool toe aan je favorieten wanneer je het wilt
+        volgen ondanks lagere confidence. Voeg toe aan uitsluitingen
+        wanneer je het bewust nooit voorgesteld wilt krijgen (bv.
+        sector-aversie, ethiek).
+      </p>
+    </div>
   );
 }
