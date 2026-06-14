@@ -663,6 +663,16 @@ export type MonthlyReportResponse = {
   };
   realised_trades: MonthlyReportRealisedTrade[];
   notes_nl: string[];
+  // V1.2 §CD / GAPS.md P2-11 — operationele events tijdens de maand.
+  events: MonthEventOut[];
+};
+
+export type MonthEventOut = {
+  event_at: string;
+  severity: string;
+  category: string;
+  title_nl: string;
+  message_nl: string;
 };
 
 // V1.2 §AY — pauze-modus.

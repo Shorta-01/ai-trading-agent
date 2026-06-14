@@ -106,6 +106,23 @@ class RealisedTradeOut(BaseModel):
     net_pct_on_cost: str
 
 
+class MonthEventOut(BaseModel):
+    """One operational event during the report month — V1.2 §CD / P2-11.
+
+    CLAUDE.md §13 vraagt expliciet "Pauze-momenten, macro alerts,
+    vermeden earnings, settings wijzigingen". Deze rij komt uit
+    ``system_events`` met severity ≥ warning binnen het maand-venster
+    zodat de operator een chronologisch overzicht heeft van wat de
+    software deze maand heeft gesignaleerd.
+    """
+
+    event_at: str
+    severity: str
+    category: str
+    title_nl: str
+    message_nl: str
+
+
 class MonthlyReportResponse(BaseModel):
     title_nl: str
     help_nl: str
@@ -119,6 +136,8 @@ class MonthlyReportResponse(BaseModel):
     software_performance: SoftwarePerformanceOut
     realised_trades: list[RealisedTradeOut]
     notes_nl: list[str]
+    # V1.2 §CD / GAPS.md P2-11 — operationele events tijdens de maand.
+    events: list[MonthEventOut] = []
 
 
 _HELP_NL = (
@@ -139,7 +158,60 @@ def _resolve(year: int | None, month: int | None) -> tuple[int, int]:
     return year if year is not None else y, month if month is not None else m
 
 
-def _to_response(report: MonthlyReport) -> MonthlyReportResponse:
+def _fetch_month_events(
+    connection: Connection, year: int, month: int
+) -> list[MonthEventOut]:
+    """V1.2 §CD / GAPS.md P2-11 — operationele events binnen het maand-
+    venster ophalen uit ``system_events``.
+
+    Filter op severity ∈ {warning, error, critical} zodat de operator
+    alleen écht relevante items ziet (info-rows blijven in
+    /systeemmeldingen). Sorteert oudste-eerst zodat de chronologie
+    matcht met de overige sectie-tabellen.
+    """
+
+    from datetime import date as _date
+
+    from ai_trading_agent_storage.metadata import system_events
+    from sqlalchemy import select
+
+    start = _date(year, month, 1)
+    next_month = _date(year + 1, 1, 1) if month == 12 else _date(year, month + 1, 1)
+    rows = (
+        connection.execute(
+            select(
+                system_events.c.created_at,
+                system_events.c.severity,
+                system_events.c.category,
+                system_events.c.title_nl,
+                system_events.c.message_nl,
+            )
+            .where(system_events.c.created_at >= start)
+            .where(system_events.c.created_at < next_month)
+            .where(
+                system_events.c.severity.in_(("warning", "error", "critical"))
+            )
+            .order_by(system_events.c.created_at)
+        )
+        .all()
+    )
+    return [
+        MonthEventOut(
+            event_at=r[0].isoformat() if r[0] is not None else "",
+            severity=str(r[1]),
+            category=str(r[2]),
+            title_nl=str(r[3]),
+            message_nl=str(r[4]),
+        )
+        for r in rows
+    ]
+
+
+def _to_response(
+    report: MonthlyReport,
+    *,
+    events: list[MonthEventOut] | None = None,
+) -> MonthlyReportResponse:
     return MonthlyReportResponse(
         title_nl=f"Maandrapport {report.year:04d}-{report.month:02d}",
         help_nl=_HELP_NL,
@@ -197,6 +269,7 @@ def _to_response(report: MonthlyReport) -> MonthlyReportResponse:
             for t in report.realised_trades
         ],
         notes_nl=list(report.notes_nl),
+        events=list(events or []),
     )
 
 
@@ -426,6 +499,9 @@ def get_maandrapport(
             drafts = _fetch_action_drafts(checked.connection)
             verdicts = _fetch_verdicts(checked.connection)
             open_count = _count_open_positions(checked.connection)
+            events = _fetch_month_events(
+                checked.connection, resolved_year, resolved_month
+            )
     except StorageConnectionError as exc:
         logger.warning("rapporten storage error: %s", exc)
         raise HTTPException(
@@ -441,7 +517,7 @@ def get_maandrapport(
         open_positions_count=open_count,
         profit_target_pct=get_profit_target_pct(),
     )
-    return _to_response(report)
+    return _to_response(report, events=events)
 
 
 @router.get("/rapporten/maand.pdf")

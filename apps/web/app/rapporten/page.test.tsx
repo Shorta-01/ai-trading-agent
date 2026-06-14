@@ -79,6 +79,7 @@ function makeReport(
     },
     realised_trades: [],
     notes_nl: ["EUR-conversie nog niet beschikbaar."],
+    events: [],
     ...overrides,
   };
 }
@@ -297,6 +298,7 @@ describe("RapportenPage", () => {
       ok: true as const,
       data: makeReport({
         notes_nl: ["EUR-conversie test", "Dividenden test"],
+        events: [],
       }),
     });
     render(<RapportenPage />);

@@ -6448,9 +6448,36 @@ export interface components {
             /** Universe Codes Selected */
             universe_codes_selected: string[];
         };
+        /**
+         * MonthEventOut
+         * @description One operational event during the report month — V1.2 §CD / P2-11.
+         *
+         *     CLAUDE.md §13 vraagt expliciet "Pauze-momenten, macro alerts,
+         *     vermeden earnings, settings wijzigingen". Deze rij komt uit
+         *     ``system_events`` met severity ≥ warning binnen het maand-venster
+         *     zodat de operator een chronologisch overzicht heeft van wat de
+         *     software deze maand heeft gesignaleerd.
+         */
+        MonthEventOut: {
+            /** Category */
+            category: string;
+            /** Event At */
+            event_at: string;
+            /** Message Nl */
+            message_nl: string;
+            /** Severity */
+            severity: string;
+            /** Title Nl */
+            title_nl: string;
+        };
         /** MonthlyReportResponse */
         MonthlyReportResponse: {
             action_draft_activity: components["schemas"]["ActionDraftActivityOut"];
+            /**
+             * Events
+             * @default []
+             */
+            events: components["schemas"]["MonthEventOut"][];
             executive_summary: components["schemas"]["ExecutiveSummaryOut"];
             /** Help Nl */
             help_nl: string;
