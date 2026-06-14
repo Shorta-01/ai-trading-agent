@@ -34,6 +34,7 @@ from portfolio_outlook_worker.api_trigger import (
     trigger_ibkr_sync,
     trigger_morning_chain,
     trigger_morning_explanation_batch,
+    trigger_sell_signal_sweep,
 )
 from portfolio_outlook_worker.config import (
     IbkrSettings,
@@ -60,6 +61,7 @@ _CANCEL_SWEEP_JOB_ID = "cancel_sweep"
 _MORNING_CHAIN_JOB_ID = "morning_chain_trigger"
 _MORNING_EXPLANATION_BATCH_JOB_ID = "morning_explanation_batch_trigger"
 _IBKR_SYNC_JOB_ID = "ibkr_sync_trigger"
+_SELL_SIGNAL_SWEEP_JOB_ID = "sell_signal_sweep_trigger"
 # Market-aware fires (one per active market session, see market_hours).
 # Job ids follow ``market_close_<EXCHANGE_CODE>`` so they're stable
 # across restarts and visible in /scheduler/runs for audit.
@@ -476,6 +478,22 @@ class PortfolioScheduler:
                 coalesce=True,
                 misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
             )
+        # SELL-signal sweep — V1.2 §BI. CLAUDE.md §6.3 + §11 vraagt
+        # dat de SELL-monitoring blijft draaien (ook tijdens pauze).
+        # Default elke 10 min weekdagen 07:00-22:00 Europe/Brussels —
+        # dekt US + Euronext market-hours. Sweep bypasst pauze-flag
+        # bewust (sell_signal_sweep.py:431). Opt-in via
+        # ``sell_signal_sweep_trigger_enabled``.
+        if self._scheduler_settings.sell_signal_sweep_trigger_enabled:
+            self._scheduler.add_job(
+                self._on_sell_signal_sweep_trigger,
+                trigger=self._build_sell_signal_sweep_trigger(),
+                id=_SELL_SIGNAL_SWEEP_JOB_ID,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
+            )
 
     def _build_morning_chain_trigger(self) -> Any:
         """Parse the configured 5-field cron into a CronTrigger."""
@@ -535,6 +553,36 @@ class PortfolioScheduler:
 
     def _on_morning_explanation_batch_trigger(self) -> None:
         trigger_morning_explanation_batch(
+            base_url=self._scheduler_settings.api_base_url,
+            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        )
+
+    def _build_sell_signal_sweep_trigger(self) -> Any:
+        """Parse de geconfigureerde 5-field cron voor de SELL-sweep
+        (V1.2 §BI)."""
+
+        from apscheduler.triggers.cron import CronTrigger
+
+        parts = (
+            self._scheduler_settings.sell_signal_sweep_cron or ""
+        ).strip().split()
+        if len(parts) != 5:
+            raise ValueError(
+                "scheduler.sell_signal_sweep_cron must be a 5-field cron, got "
+                f"{self._scheduler_settings.sell_signal_sweep_cron!r}"
+            )
+        minute, hour, day, month, day_of_week = parts
+        return CronTrigger(
+            minute=minute,
+            hour=hour,
+            day=day,
+            month=month,
+            day_of_week=day_of_week,
+            timezone=self._scheduler_settings.timezone,
+        )
+
+    def _on_sell_signal_sweep_trigger(self) -> None:
+        trigger_sell_signal_sweep(
             base_url=self._scheduler_settings.api_base_url,
             timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
         )

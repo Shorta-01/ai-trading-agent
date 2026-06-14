@@ -732,3 +732,103 @@ def test_retry_helper_treats_max_attempts_below_one_as_one() -> None:
         sleep_fn=lambda _: None,
     )
     assert calls == [1]
+
+
+# ---- SELL-signal sweep trigger (V1.2 §BI) ---------------------------
+
+
+def _build_with_sell_sweep_trigger(
+    *,
+    sell_signal_sweep_trigger_enabled: bool = False,
+    sell_signal_sweep_cron: str = "*/10 7-22 * * mon-fri",
+    api_base_url: str | None = "http://api:8000",
+) -> PortfolioScheduler:
+    return PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            api_base_url=api_base_url,
+            sell_signal_sweep_trigger_enabled=sell_signal_sweep_trigger_enabled,
+            sell_signal_sweep_cron=sell_signal_sweep_cron,
+        ),
+        worker_id="worker-test-sell-sweep",
+        scheduler_factory=_scheduler_factory,
+    )
+
+
+def test_sell_signal_sweep_job_not_registered_by_default() -> None:
+    scheduler = _build_with_sell_sweep_trigger()
+    try:
+        scheduler.start()
+        assert (
+            scheduler._scheduler.get_job("sell_signal_sweep_trigger") is None
+        )
+    finally:
+        scheduler.stop()
+
+
+def test_sell_signal_sweep_job_registered_when_enabled() -> None:
+    """V1.2 §BI — wanneer de flag aan staat moet de cron op
+    elke 10 min weekdagen 07:00-22:00 Europe/Brussels staan."""
+
+    scheduler = _build_with_sell_sweep_trigger(
+        sell_signal_sweep_trigger_enabled=True,
+        sell_signal_sweep_cron="*/10 7-22 * * mon-fri",
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job("sell_signal_sweep_trigger")
+        assert job is not None
+        cron_repr = repr(job.trigger)
+        assert "minute='*/10'" in cron_repr
+        assert "hour='7-22'" in cron_repr
+        assert "day_of_week='mon-fri'" in cron_repr
+        assert "Europe/Brussels" in cron_repr
+        _assert_explicit_guards(job)
+    finally:
+        scheduler.stop()
+
+
+def test_sell_signal_sweep_handler_calls_trigger(monkeypatch) -> None:
+    """De cron handler moet de api_trigger functie aanroepen met de
+    geconfigureerde base_url + timeout."""
+
+    captured: list[dict[str, object]] = []
+    from portfolio_outlook_worker import scheduler as sched_mod
+
+    def _stub_trigger(*, base_url, timeout_seconds):
+        captured.append({"base_url": base_url, "timeout": timeout_seconds})
+        return {"status": "ok"}
+
+    monkeypatch.setattr(sched_mod, "trigger_sell_signal_sweep", _stub_trigger)
+
+    scheduler = _build_with_sell_sweep_trigger(
+        sell_signal_sweep_trigger_enabled=True,
+        api_base_url="http://api.local",
+    )
+    try:
+        scheduler.start()
+        scheduler._on_sell_signal_sweep_trigger()
+        assert len(captured) == 1
+        assert captured[0]["base_url"] == "http://api.local"
+    finally:
+        scheduler.stop()
+
+
+def test_sell_signal_sweep_cron_rejects_bad_expression() -> None:
+    """Een verkeerd-aantal velden moet vroeg falen, niet in productie."""
+
+    scheduler = _build_with_sell_sweep_trigger(
+        sell_signal_sweep_trigger_enabled=True,
+        sell_signal_sweep_cron="bad cron",
+    )
+    import pytest
+
+    with pytest.raises(ValueError, match="sell_signal_sweep_cron"):
+        scheduler.start()
