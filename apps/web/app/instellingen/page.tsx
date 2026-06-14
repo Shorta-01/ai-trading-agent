@@ -38,6 +38,7 @@ import {
   type TradingSettingsResponse,
 } from "@/lib/apiClient";
 import {
+  ALLOWED_EXCHANGE_TOGGLES,
   ALLOWED_UNIVERSE_TOGGLES,
   ASSET_MIX_OPTIONS,
   CURRENCY_PREFERENCE_OPTIONS,
@@ -1989,6 +1990,45 @@ export default function Page() {
                 <HelpTooltip text={toggle.help_nl} />
               </label>
             ))}
+
+            {/* V1.2 §BQ / CLAUDE.md §4: per-beurs vinkjes. */}
+            <div
+              style={{ marginTop: 18 }}
+              data-testid="instellingen-exchanges-section"
+            >
+              <FieldLabel
+                label_nl="Beurzen (per-exchange aan/uit)"
+                help_nl="Kies welke beurzen het systeem in de universum-scan en suggesties opneemt. CLAUDE.md §4 default: alles aan."
+              />
+              {ALLOWED_EXCHANGE_TOGGLES.map((toggle) => (
+                <label
+                  key={toggle.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginTop: 8,
+                    fontSize: 13,
+                  }}
+                  htmlFor={`exchange-${toggle.key}`}
+                >
+                  <input
+                    id={`exchange-${toggle.key}`}
+                    data-testid={`instellingen-exchange-${toggle.key}`}
+                    type="checkbox"
+                    checked={universe[toggle.key] === true}
+                    onChange={(event) =>
+                      setUniverse({
+                        ...universe,
+                        [toggle.key]: event.target.checked,
+                      })
+                    }
+                  />
+                  {toggle.label_nl}
+                  <HelpTooltip text={toggle.help_nl} />
+                </label>
+              ))}
+            </div>
 
             <div style={{ marginTop: 16 }}>
               <FieldLabel

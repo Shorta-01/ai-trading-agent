@@ -85,6 +85,45 @@ export const ALLOWED_UNIVERSE_TOGGLES: { key: string; label_nl: string; help_nl:
   },
 ];
 
+// V1.2 §BQ / CLAUDE.md §4: per-beurs aan/uit vinkjes. Default-set
+// dekt het volledige doctrine-universum (US + Euronext). Operator
+// kan elk individueel uitschakelen; de universe-scan respecteert
+// dit door de EODHD-suffix uit het kandidaat-universum te filteren.
+export const ALLOWED_EXCHANGE_TOGGLES: {
+  key: string;
+  label_nl: string;
+  help_nl: string;
+}[] = [
+  {
+    key: "nasdaq_enabled",
+    label_nl: "NASDAQ (US)",
+    help_nl:
+      "NASDAQ-noteringen (Apple, Microsoft, …) toelaten in de scan en suggesties.",
+  },
+  {
+    key: "nyse_enabled",
+    label_nl: "NYSE (US)",
+    help_nl:
+      "NYSE-noteringen (Coca-Cola, JNJ, …) toelaten in de scan en suggesties.",
+  },
+  {
+    key: "euronext_brussels_enabled",
+    label_nl: "Euronext Brussel",
+    help_nl:
+      "Belgische BEL20-aandelen (KBC, AB InBev, …) toelaten in de scan.",
+  },
+  {
+    key: "euronext_paris_enabled",
+    label_nl: "Euronext Parijs",
+    help_nl: "Franse CAC40-aandelen (LVMH, TotalEnergies, …) toelaten.",
+  },
+  {
+    key: "euronext_amsterdam_enabled",
+    label_nl: "Euronext Amsterdam",
+    help_nl: "Nederlandse AEX-aandelen (ASML, Heineken, …) toelaten.",
+  },
+];
+
 export const RISK_LIMIT_FIELDS: {
   key: keyof import("./apiClient").RiskLimitsUpdateInput;
   label_nl: string;
