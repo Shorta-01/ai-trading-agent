@@ -959,6 +959,59 @@
         "title": "AssetMixPreference",
         "type": "string"
       },
+      "AutoGenerateArchiveResponse": {
+        "description": "Antwoord op de auto-trigger \u2014 bedoeld voor de worker cron\n(V1.2 \u00a7BN / CLAUDE.md \u00a713).",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "archive_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archive Id"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "pdf_size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Size Bytes"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted",
+          "year",
+          "month",
+          "archive_id",
+          "pdf_size_bytes",
+          "status_nl"
+        ],
+        "title": "AutoGenerateArchiveResponse",
+        "type": "object"
+      },
       "BlockedAssetType": {
         "enum": [
           "options",
@@ -18999,6 +19052,25 @@
           }
         },
         "summary": "List Archive"
+      }
+    },
+    "/rapporten/archief/auto-generate": {
+      "post": {
+        "description": "V1.2 \u00a7BN \u2014 auto-trigger voor de maand-PDF.\n\nCLAUDE.md \u00a713: \"elke 1e van de maand wordt een PDF gegenereerd\nen opgeslagen in /rapporten/archief\". Deze endpoint wordt\naangeroepen door de worker cron-job zonder year/month payload \u2014\nwe berekenen zelf de vorige maand, zodat de cron generic blijft.\n\nIdempotent: als de PDF voor (vorige maand) al bestaat wordt\nhij overschreven (consistent met de operator-handmatige\ngenerate_archive die ook upsert).",
+        "operationId": "auto_generate_archive_rapporten_archief_auto_generate_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoGenerateArchiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auto Generate Archive"
       }
     },
     "/rapporten/archief/generate": {

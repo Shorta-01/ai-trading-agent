@@ -77,6 +77,22 @@ def trigger_sell_signal_sweep(
     return _post(base_url, "/sell-signals/sweep", timeout_seconds)
 
 
+def trigger_monthly_archive_auto_generate(
+    *, base_url: str | None, timeout_seconds: float
+) -> dict[str, Any] | None:
+    """POST ``/rapporten/archief/auto-generate`` on the API (V1.2 §BN).
+
+    CLAUDE.md §13 — "elke 1e van de maand wordt een PDF gegenereerd
+    en opgeslagen in /rapporten/archief". Deze trigger is de cron-
+    aankomst van de operator-uitspraak; de API berekent zelf welke
+    maand er gearchiveerd moet worden (vorige kalendermaand).
+    """
+
+    return _post(
+        base_url, "/rapporten/archief/auto-generate", timeout_seconds
+    )
+
+
 def compose_alert_summary(
     *,
     base_url: str | None,
@@ -145,6 +161,7 @@ def _post(
 __all__ = [
     "compose_alert_summary",
     "trigger_ibkr_sync",
+    "trigger_monthly_archive_auto_generate",
     "trigger_morning_chain",
     "trigger_morning_explanation_batch",
     "trigger_sell_signal_sweep",

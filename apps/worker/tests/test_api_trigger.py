@@ -156,6 +156,31 @@ def test_trigger_sell_signal_sweep_returns_none_on_http_error(
     ) is None
 
 
+def test_trigger_monthly_archive_auto_generate_targets_correct_path(
+    monkeypatch,
+) -> None:
+    """V1.2 §BN — worker cron POST't naar /rapporten/archief/auto-generate."""
+
+    captured: dict[str, str] = {}
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout: (captured.__setitem__("url", url) or _StubResponse()),
+    )
+    api_trigger.trigger_monthly_archive_auto_generate(
+        base_url="http://api:8000", timeout_seconds=1.0
+    )
+    assert captured["url"] == "http://api:8000/rapporten/archief/auto-generate"
+
+
+def test_trigger_monthly_archive_auto_generate_noops_without_base_url() -> None:
+    assert api_trigger.trigger_monthly_archive_auto_generate(
+        base_url=None, timeout_seconds=1.0
+    ) is None
+
+
 def test_trigger_morning_explanation_batch_noops_without_base_url() -> None:
     assert api_trigger.trigger_morning_explanation_batch(
         base_url=None, timeout_seconds=1.0
