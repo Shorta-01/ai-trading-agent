@@ -2104,6 +2104,36 @@ Index(
 )
 
 
+macro_index_snapshots = Table(
+    "macro_index_snapshots",
+    metadata,
+    Column("snapshot_id", Text, primary_key=True),
+    Column("series_code", Text, nullable=False),
+    Column("bar_date", Date, nullable=False),
+    Column("close_value", Numeric(20, 8), nullable=False),
+    Column("raw_payload", JSON, nullable=True),
+    Column("provider", Text, nullable=False),
+    Column("fetched_at", DateTime(timezone=True), nullable=False),
+    CheckConstraint(
+        "series_code <> ''",
+        name="ck_macro_index_snapshots_series_not_empty",
+    ),
+    CheckConstraint(
+        "close_value > 0",
+        name="ck_macro_index_snapshots_close_positive",
+    ),
+    UniqueConstraint(
+        "series_code", "bar_date",
+        name="uq_macro_index_snapshots_series_date",
+    ),
+)
+Index(
+    "ix_macro_index_snapshots_series_date",
+    macro_index_snapshots.c.series_code,
+    macro_index_snapshots.c.bar_date,
+)
+
+
 daily_briefings = Table(
     "daily_briefings",
     metadata,

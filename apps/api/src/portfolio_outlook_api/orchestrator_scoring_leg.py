@@ -69,6 +69,7 @@ from portfolio_outlook_worker.forecasting.orchestrator_scoring_cli import (
 from sqlalchemy import select
 
 from portfolio_outlook_api.config import Settings
+from portfolio_outlook_api.macro_resolver import resolve_macro_data
 from portfolio_outlook_api.morning_chain import (
     LEG_ORCHESTRATOR_SCORING,
     LEG_STATUS_FAILED,
@@ -312,6 +313,8 @@ def _build_inputs(
     held_positions: tuple[HeldPositionRow, ...] = (),
     excluded_symbols: frozenset[str] = frozenset(),
     trading_settings: TradingSettingsSnapshot | None = None,
+    vix_level: Decimal | None = None,
+    index_bars: tuple[HistoricalBar, ...] | None = None,
 ) -> CandidateProviderInputs:
     """Convert live forecast records into provider inputs.
 
@@ -364,8 +367,8 @@ def _build_inputs(
         candidate_bars_by_symbol=bars_by_symbol,
         held_positions=held_positions,
         settings=trading_settings or _DEFAULT_TRADING_SETTINGS,
-        vix_level=Decimal("15"),
-        index_bars=_synthetic_index_bars(),
+        vix_level=vix_level if vix_level is not None else Decimal("15"),
+        index_bars=index_bars or _synthetic_index_bars(),
         next_earnings_by_symbol=next_earnings_by_symbol or {},
         excluded_symbols=excluded_symbols,
     )
@@ -469,6 +472,10 @@ def build_real_orchestrator_scoring_leg(
                 # nu de live scoring. Bij een verse install valt dit
                 # netjes terug op de doctrine-defaults.
                 operator_resolution = load_operator_trading_settings()
+                # V1.2 §BE — echte macro-data uit ``macro_index_snapshots``.
+                # Bij ontbrekende feed valt het netjes terug op de oude
+                # synthetische uptrend + VIX=15.
+                macro = resolve_macro_data(on_date=today)
                 inputs = _build_inputs(
                     forecasts=forecasts,
                     today=today,
@@ -479,6 +486,8 @@ def build_real_orchestrator_scoring_leg(
                     held_positions=held_positions,
                     excluded_symbols=excluded_symbols,
                     trading_settings=operator_resolution.snapshot,
+                    vix_level=macro.vix_level,
+                    index_bars=macro.index_bars,
                 )
                 run = run_scoring_pipeline(
                     connection=checked.connection,
@@ -508,7 +517,9 @@ def build_real_orchestrator_scoring_leg(
                         if operator_resolution.profit_target_overridden
                         else ""
                     )
-                    + "."
+                    + ". "
+                    + f"Macro: VIX-bron={macro.vix_source}, "
+                    + f"index-bron={macro.index_source}."
                 ),
             )
         except Exception as exc:  # noqa: BLE001 — boundary catch

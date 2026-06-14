@@ -75,6 +75,7 @@ from ai_trading_agent_storage.metadata import (
     market_data_snapshots,
     dividend_events,
     earnings_events,
+    macro_index_snapshots,
     monthly_report_archive,
     sell_signal_cards,
     watchlist_preferences,
@@ -132,8 +133,10 @@ from ai_trading_agent_storage.repository_contracts import (
     EarningsEventRecord,
     OrchestratorScoringVerdictRecord,
     DividendEventRecord,
+    MacroIndexSnapshotRecord,
     MonthlyReportArchiveRecord,
     SaveDividendEventRequest,
+    SaveMacroIndexSnapshotRequest,
     SaveMonthlyReportArchiveRequest,
     SELL_SIGNAL_ACTION_SUGGEST_SELL,
     SaveSellSignalCardRequest,
@@ -3889,6 +3892,104 @@ def _row_to_sell_signal_card(row: RowMapping) -> SellSignalCardRecord:
         ),
         safe_for_action_drafts=bool(row["safe_for_action_drafts"]),
     )
+
+
+class SqlAlchemyMacroIndexSnapshotRepository(_Base):
+    """Historische macro-index bars (VIX, S&P 500) — V1.2 §BE.
+
+    Eén tabel voor alle series, geïdentificeerd via ``series_code``.
+    Refetch upsert in plaats van duplicate, dat houdt het simpel
+    voor een feed die elke dag dezelfde range opnieuw kan binnenrollen.
+    """
+
+    def upsert(
+        self, request: SaveMacroIndexSnapshotRequest
+    ) -> StorageWriteResult:
+        # Delete-then-insert mirrors the EarningsEvent + DailyDigest
+        # patterns; keeps the upsert SQLite-portable.
+        self._connection.execute(
+            macro_index_snapshots.delete().where(
+                (macro_index_snapshots.c.series_code == request.series_code)
+                & (macro_index_snapshots.c.bar_date == request.bar_date)
+            )
+        )
+        self._insert(macro_index_snapshots, asdict(request))
+        return StorageWriteResult(
+            True,
+            request.snapshot_id,
+            macro_index_snapshots.name,
+            True,
+            "Macro-index snapshot opgeslagen.",
+        )
+
+    def get_latest_value(
+        self, *, series_code: str, on_or_before: date | None = None
+    ) -> MacroIndexSnapshotRecord | None:
+        """Return de meest recente bar (op of vóór ``on_or_before``).
+
+        Voor de macro-gate willen we ofwel "wat staat VIX nu op" (geen
+        cutoff) of "wat was VIX op een specifieke audit-datum"
+        (cutoff). Handelt weekend/feestdag-gaten af door op-of-vóór
+        lookup.
+        """
+
+        statement = select(macro_index_snapshots).where(
+            macro_index_snapshots.c.series_code == series_code
+        )
+        if on_or_before is not None:
+            statement = statement.where(
+                macro_index_snapshots.c.bar_date <= on_or_before
+            )
+        statement = statement.order_by(
+            macro_index_snapshots.c.bar_date.desc()
+        ).limit(1)
+        row = self._connection.execute(statement).mappings().first()
+        if row is None:
+            return None
+        return MacroIndexSnapshotRecord(**dict(row))
+
+    def list_bars(
+        self,
+        *,
+        series_code: str,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        limit: int = 500,
+    ) -> StorageListResult[MacroIndexSnapshotRecord]:
+        """Return chronologische bars voor één series (oudste eerst).
+
+        De macro-gate eist ~200 bars voor de 50/200-day MA-crossover;
+        ``limit=500`` geeft de gate ruim genoeg historie zonder het
+        antwoord op te blazen.
+        """
+
+        if limit <= 0:
+            raise ValueError("limit must be > 0")
+        statement = select(macro_index_snapshots).where(
+            macro_index_snapshots.c.series_code == series_code
+        )
+        if from_date is not None:
+            statement = statement.where(
+                macro_index_snapshots.c.bar_date >= from_date
+            )
+        if to_date is not None:
+            statement = statement.where(
+                macro_index_snapshots.c.bar_date <= to_date
+            )
+        statement = statement.order_by(
+            macro_index_snapshots.c.bar_date
+        ).limit(limit)
+        rows = (
+            self._connection.execute(statement).mappings().all()
+        )
+        records = tuple(
+            MacroIndexSnapshotRecord(**dict(row)) for row in rows
+        )
+        return StorageListResult(
+            records,
+            macro_index_snapshots.name,
+            f"{len(records)} {series_code}-bars opgehaald.",
+        )
 
 
 class SqlAlchemySchedulerRunRepository(_Base):
