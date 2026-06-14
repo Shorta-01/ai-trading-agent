@@ -315,8 +315,14 @@ def test_morning_chain_route_reports_failed_leg_in_audit_row(monkeypatch) -> Non
     updated: list = []
     _fake_writable_storage(monkeypatch, saved=saved, updated=updated)
 
-    # Replace the default-legs factory with one that fails on leg 2.
+    # Replace the wiring helper with one that returns failing legs.
+    # V1.2 §BG — ``run_morning_chain_manually`` calls
+    # :func:`build_morning_chain_legs_with_real_overrides` now (i.p.v.
+    # rechtstreeks ``build_default_morning_chain_legs``) zodat de
+    # real EODHD-backed earnings leg ook in het HTTP-trigger pad
+    # geïnjecteerd wordt.
     from portfolio_outlook_api import morning_chain as mc
+    from portfolio_outlook_api import morning_chain_legs_wiring as wiring
 
     def _failing_legs(_settings):
         return (
@@ -334,7 +340,9 @@ def test_morning_chain_route_reports_failed_leg_in_audit_row(monkeypatch) -> Non
             ),
         )
 
-    monkeypatch.setattr(mc, "build_default_morning_chain_legs", _failing_legs)
+    monkeypatch.setattr(
+        wiring, "build_morning_chain_legs_with_real_overrides", _failing_legs
+    )
 
     r = client.post("/scheduler/runs/morning-chain")
     body = r.json()

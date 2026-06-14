@@ -245,24 +245,20 @@ def _build_default_morning_chain_callable(
 
     Imported lazily so the scheduler module stays free of the
     chain-orchestrator's imports until the job is wired.
+
+    V1.2 §BG — wiring is now centralised in
+    :func:`build_morning_chain_legs_with_real_overrides` zodat de
+    HTTP-trigger en de legacy in-process cron identiek gedragen.
     """
 
-    from portfolio_outlook_api.earnings_calendar_leg import (
-        build_real_earnings_calendar_leg,
-    )
     from portfolio_outlook_api.morning_chain import (
-        build_default_morning_chain_legs,
         build_scheduler_chain_callable,
     )
-
-    earnings_override = None
-    if getattr(runtime_settings, "earnings_calendar_sync_enabled", False):
-        earnings_override = build_real_earnings_calendar_leg(runtime_settings)
-
-    legs = build_default_morning_chain_legs(
-        runtime_settings,
-        earnings_calendar_leg_override=earnings_override,
+    from portfolio_outlook_api.morning_chain_legs_wiring import (
+        build_morning_chain_legs_with_real_overrides,
     )
+
+    legs = build_morning_chain_legs_with_real_overrides(runtime_settings)
     return build_scheduler_chain_callable(legs_factory=lambda: legs)
 
 
