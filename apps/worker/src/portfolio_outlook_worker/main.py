@@ -219,5 +219,11 @@ def start_worker() -> None:
     _start_scheduler()
 
 
+# GAPS.md P4-3 — externe orchestrators (en de smoke-test prompt)
+# verwachten een ``main`` symbol; geef ze de bestaande start_worker
+# onder die naam zonder de huidige Dockerfile entry te breken.
+main = start_worker
+
+
 if __name__ == "__main__":
     start_worker()
