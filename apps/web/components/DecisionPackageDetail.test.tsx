@@ -65,6 +65,16 @@ const HAPPY: DecisionPackageResponse = {
   audit_trail_hash:
     "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
   previous_package_hash: null,
+  sector: null,
+  market_cap_eur: null,
+  pe_ratio: null,
+  momentum_6m_pct: null,
+  momentum_12m_pct: null,
+  dividend_yield_pct: null,
+  next_earnings_date: null,
+  next_earnings_status: null,
+  expected_dividend_gross_local: null,
+  expected_dividend_currency: null,
   safe_for_action_drafts: false,
   safe_for_orders: false,
 };
@@ -186,5 +196,69 @@ describe("DecisionPackageDetail", () => {
     expect(screen.getByTestId("dp-previous-hash")).toHaveTextContent(
       "fedcba987654…",
     );
+  });
+
+  // V1.2 §BL — Bedrijfsinfo sectie (CLAUDE.md §9 enrichment).
+
+  it("hides Bedrijfsinfo section when all enrichment fields are null", () => {
+    render(<DecisionPackageDetail package={HAPPY} />);
+    expect(screen.queryByTestId("dp-section-company-info")).toBeNull();
+  });
+
+  it("renders Bedrijfsinfo section when any enrichment field is set", () => {
+    const withCompany = {
+      ...HAPPY,
+      sector: "Technology",
+      market_cap_eur: "275000000000",
+      pe_ratio: "32.5",
+      momentum_6m_pct: "5.2",
+      momentum_12m_pct: "12.8",
+      dividend_yield_pct: "0.7",
+      next_earnings_date: "2026-07-15",
+      next_earnings_status: "upcoming",
+      expected_dividend_gross_local: "1.45",
+      expected_dividend_currency: "EUR",
+    };
+    render(<DecisionPackageDetail package={withCompany} />);
+    expect(screen.getByTestId("dp-section-company-info")).toBeTruthy();
+    expect(screen.getByTestId("dp-field-sector")).toHaveTextContent(
+      "Technology",
+    );
+    expect(screen.getByTestId("dp-field-market-cap")).toHaveTextContent(
+      /mrd|mln/i,
+    );
+    expect(screen.getByTestId("dp-field-pe-ratio")).toHaveTextContent(
+      "32,5",
+    );
+    expect(screen.getByTestId("dp-field-momentum")).toHaveTextContent(
+      /6m/i,
+    );
+    expect(screen.getByTestId("dp-field-momentum")).toHaveTextContent(
+      /12m/i,
+    );
+    expect(screen.getByTestId("dp-field-div-yield")).toHaveTextContent(
+      "0,70%",
+    );
+    expect(
+      screen.getByTestId("dp-field-next-earnings"),
+    ).toHaveTextContent("15/07/2026");
+    expect(
+      screen.getByTestId("dp-field-expected-dividend"),
+    ).toHaveTextContent("1.45");
+  });
+
+  it("renders only the present enrichment subset", () => {
+    const partial = {
+      ...HAPPY,
+      sector: "Healthcare",
+      pe_ratio: "18.0",
+      // rest null
+    };
+    render(<DecisionPackageDetail package={partial} />);
+    expect(screen.getByTestId("dp-section-company-info")).toBeTruthy();
+    expect(screen.getByTestId("dp-field-sector")).toBeTruthy();
+    expect(screen.getByTestId("dp-field-pe-ratio")).toBeTruthy();
+    expect(screen.queryByTestId("dp-field-market-cap")).toBeNull();
+    expect(screen.queryByTestId("dp-field-next-earnings")).toBeNull();
   });
 });

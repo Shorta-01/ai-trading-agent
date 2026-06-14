@@ -61,6 +61,146 @@ function fmtPct(value: string, decimals = 0): string {
   return `${pct.toFixed(decimals).replace(".", ",")}%`;
 }
 
+// V1.2 §BL — formatters voor de extra §9 velden. Allemaal accepteren
+// ``null`` (storage gaf geen waarde) en tonen "—" zodat de UI nooit
+// "NaN" of "null" laat zien.
+function fmtNullableNumber(value: string | null, suffix = ""): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (Number.isNaN(n)) return value;
+  return `${n.toLocaleString("nl-BE", { maximumFractionDigits: 2 })}${suffix}`;
+}
+
+function fmtNullablePct(value: string | null): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (Number.isNaN(n)) return value;
+  return `${n.toFixed(2).replace(".", ",")}%`;
+}
+
+function fmtNullableEurCompact(value: string | null): string {
+  if (value === null) return "—";
+  const n = Number(value);
+  if (Number.isNaN(n)) return value;
+  if (n >= 1_000_000_000) return `€${(n / 1_000_000_000).toFixed(1)} mrd`;
+  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)} mln`;
+  return `€${n.toLocaleString("nl-BE", { maximumFractionDigits: 0 })}`;
+}
+
+function fmtNullableDate(value: string | null): string {
+  if (value === null) return "—";
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+  } catch {
+    return value;
+  }
+}
+
+function CompanyInfoSection({
+  pkg,
+}: {
+  pkg: DecisionPackageResponse;
+}) {
+  // Render alleen wanneer minstens één veld waarde heeft — anders
+  // hide de hele sectie zodat een verse install niet vol met "—"
+  // staat.
+  const hasAny =
+    pkg.sector !== null ||
+    pkg.market_cap_eur !== null ||
+    pkg.pe_ratio !== null ||
+    pkg.momentum_6m_pct !== null ||
+    pkg.momentum_12m_pct !== null ||
+    pkg.dividend_yield_pct !== null ||
+    pkg.next_earnings_date !== null ||
+    pkg.expected_dividend_gross_local !== null;
+  if (!hasAny) return null;
+  return (
+    <section
+      data-testid="dp-section-company-info"
+      style={{ marginBottom: 24 }}
+    >
+      <h2 style={{ fontSize: 16, margin: "0 0 8px" }}>Bedrijfsinfo</h2>
+      <dl
+        style={{
+          display: "grid",
+          gridTemplateColumns: "max-content 1fr",
+          gap: "4px 16px",
+          margin: 0,
+          fontSize: 14,
+        }}
+      >
+        {pkg.sector !== null && (
+          <>
+            <dt style={{ fontWeight: 600 }}>Sector</dt>
+            <dd data-testid="dp-field-sector" style={{ margin: 0 }}>
+              {pkg.sector}
+            </dd>
+          </>
+        )}
+        {pkg.market_cap_eur !== null && (
+          <>
+            <dt style={{ fontWeight: 600 }}>Marktkapitalisatie</dt>
+            <dd data-testid="dp-field-market-cap" style={{ margin: 0 }}>
+              {fmtNullableEurCompact(pkg.market_cap_eur)}
+            </dd>
+          </>
+        )}
+        {pkg.pe_ratio !== null && (
+          <>
+            <dt style={{ fontWeight: 600 }}>P/E ratio</dt>
+            <dd data-testid="dp-field-pe-ratio" style={{ margin: 0 }}>
+              {fmtNullableNumber(pkg.pe_ratio)}
+            </dd>
+          </>
+        )}
+        {(pkg.momentum_6m_pct !== null || pkg.momentum_12m_pct !== null) && (
+          <>
+            <dt style={{ fontWeight: 600 }}>Momentum</dt>
+            <dd data-testid="dp-field-momentum" style={{ margin: 0 }}>
+              6m: {fmtNullablePct(pkg.momentum_6m_pct)} · 12m:{" "}
+              {fmtNullablePct(pkg.momentum_12m_pct)}
+            </dd>
+          </>
+        )}
+        {pkg.dividend_yield_pct !== null && (
+          <>
+            <dt style={{ fontWeight: 600 }}>Dividend yield</dt>
+            <dd data-testid="dp-field-div-yield" style={{ margin: 0 }}>
+              {fmtNullablePct(pkg.dividend_yield_pct)}
+            </dd>
+          </>
+        )}
+        {pkg.next_earnings_date !== null && (
+          <>
+            <dt style={{ fontWeight: 600 }}>Volgende earnings</dt>
+            <dd data-testid="dp-field-next-earnings" style={{ margin: 0 }}>
+              {fmtNullableDate(pkg.next_earnings_date)}
+              {pkg.next_earnings_status !== null
+                ? ` (${pkg.next_earnings_status})`
+                : ""}
+            </dd>
+          </>
+        )}
+        {pkg.expected_dividend_gross_local !== null && (
+          <>
+            <dt style={{ fontWeight: 600 }}>Laatst bekend dividend</dt>
+            <dd
+              data-testid="dp-field-expected-dividend"
+              style={{ margin: 0 }}
+            >
+              {pkg.expected_dividend_gross_local}{" "}
+              {pkg.expected_dividend_currency ?? ""} (bruto)
+            </dd>
+          </>
+        )}
+      </dl>
+    </section>
+  );
+}
+
 
 // Task 133 product lock §2: "Maak actie" is only shown for the three
 // actionable labels. Houden / Bekijken aren't action-worthy and the
@@ -238,6 +378,12 @@ export function DecisionPackageDetail({
           </dd>
         </dl>
       </section>
+
+      {/* 3b. Bedrijfsinfo (V1.2 §BL / CLAUDE.md §9) — sector, market_cap,
+            P/E, momentum, dividend yield, next earnings, expected dividend.
+            Velden zijn optioneel en tonen "—" wanneer storage geen rij
+            heeft (CLAUDE.md §15 — geen verzonnen getallen). */}
+      <CompanyInfoSection pkg={pkg} />
 
       {/* 4. Gate-uitkomsten */}
       <section data-testid="dp-section-gates" style={{ marginBottom: 24 }}>
