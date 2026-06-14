@@ -35,6 +35,10 @@ import { RecentDecisionsStrip } from "@/components/RecentDecisionsStrip";
 import { ReconciliationStatusWidget } from "@/components/ReconciliationStatusWidget";
 import { SchedulerStatusBadge } from "@/components/SchedulerStatusBadge";
 import { TodayActionsPanel } from "@/components/TodayActionsPanel";
+import {
+  Stage2ReadyToSendWidget,
+  Stage3SubmittedWidget,
+} from "@/components/WorkflowStageWidgets";
 import { TodaysActionsCounter } from "@/components/TodaysActionsCounter";
 import { TriageStrip } from "@/components/TriageStrip";
 import { WatchlistSnapshot } from "@/components/WatchlistSnapshot";
@@ -69,6 +73,20 @@ export default function HomePage() {
       >
         <TodayActionsPanel />
         <PendingApprovalsPanel />
+      </div>
+
+      {/* V1.2 §BO — Stage 2 + 3 workflow widgets (CLAUDE.md §8). */}
+      <div
+        data-testid="morning-grid-workflow-stages"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
+        <Stage2ReadyToSendWidget />
+        <Stage3SubmittedWidget />
       </div>
 
       <PortfolioKpiTiles />
