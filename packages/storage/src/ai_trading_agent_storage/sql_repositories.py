@@ -811,6 +811,49 @@ class SqlAlchemyMarketDataSnapshotRepository(_Base):
             "Latest market-data snapshots opgehaald voor conids.",
         )
 
+    def list_latest_market_data_snapshots_by_symbols(
+        self, symbols: tuple[str, ...]
+    ) -> StorageListResult[MarketDataLatestSnapshotRecord]:
+        """V1.2 §BR: lookup the latest market_data row per symbol.
+
+        Favorites are stored by symbol only (no conid). To run a forecast
+        on a favorite that isn't currently held we need to recover its
+        ibkr_conid, currency and exchange — the latest market_data row is
+        the canonical mapping. One row per symbol is returned (newest by
+        stored_at, then provider_as_of).
+        """
+
+        if not symbols:
+            return StorageListResult(
+                (),
+                market_data_latest_snapshots.name,
+                "Geen symbolen opgegeven.",
+            )
+        rows = (
+            self._connection.execute(
+                select(market_data_latest_snapshots)
+                .where(market_data_latest_snapshots.c.symbol.in_(symbols))
+                .order_by(
+                    market_data_latest_snapshots.c.symbol.asc(),
+                    market_data_latest_snapshots.c.stored_at.desc(),
+                    market_data_latest_snapshots.c.provider_as_of.desc().nullslast(),
+                )
+            )
+            .mappings()
+            .all()
+        )
+        latest_by_symbol: dict[str, MarketDataLatestSnapshotRecord] = {}
+        for row in rows:
+            rec = MarketDataLatestSnapshotRecord(**dict(row))
+            if rec.symbol is None:
+                continue
+            latest_by_symbol.setdefault(rec.symbol, rec)
+        return StorageListResult(
+            tuple(latest_by_symbol.values()),
+            market_data_latest_snapshots.name,
+            "Latest market-data snapshots opgehaald voor symbolen.",
+        )
+
     def get_latest_by_ibkr_conid(
         self,
         ibkr_conid: str,

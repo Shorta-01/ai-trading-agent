@@ -9,6 +9,7 @@ from uuid import uuid4
 from ai_trading_agent_storage import (
     AssetActionDraftEventRecord,
     AssetActionDraftSubmissionRecord,
+    IbkrPositionSnapshotRecord,
     IbkrSyncRunRecord,
     MarketDataBarRecord,
     PredictorBacktestRunRecord,
@@ -32,6 +33,7 @@ from ai_trading_agent_storage import (
     SqlAlchemyResearchSourceArchiveRepository,
     SqlAlchemySchedulerRunRepository,
     SqlAlchemyUniverseScanRunRepository,
+    SqlAlchemyWatchlistPreferenceRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -966,6 +968,83 @@ def run_market_data_sync() -> dict[str, object]:
     }
 
 
+_FORECAST_FAVORITE_ACCOUNT_REF = "default"
+
+
+def _build_favorite_positions(
+    *,
+    pref_repo: SqlAlchemyWatchlistPreferenceRepository,
+    market_repo: SqlAlchemyMarketDataSnapshotRepository,
+    held_positions: list[IbkrPositionSnapshotRecord],
+    sync_run_id: str,
+) -> list[IbkrPositionSnapshotRecord]:
+    """V1.2 §BR / CLAUDE.md §5: synthesise read-only position records
+    for operator favorites that aren't currently held.
+
+    Favorites are stored by symbol only, so we recover the conid /
+    currency / exchange from the most recent market_data_latest_snapshot
+    for each symbol. Favorites without any prior market_data row are
+    skipped silently — the forecast cycle can't route them through
+    EODHD without an exchange suffix, and the dashboard widget will
+    surface that gap separately.
+
+    ``quantity`` is set to ``Decimal(0)`` so downstream consumers
+    (e.g. ``user_holds_position`` in the decision package) treat the
+    row as "watched, not held".
+    """
+
+    held_symbols = {
+        (pos.symbol or "").strip().upper()
+        for pos in held_positions
+        if pos.symbol
+    }
+    favorites_result = pref_repo.list_for_account(
+        ibkr_account_ref=_FORECAST_FAVORITE_ACCOUNT_REF, kind="favorite"
+    )
+    favorite_symbols = tuple(
+        pref.symbol
+        for pref in favorites_result.records
+        if pref.symbol and pref.symbol.upper() not in held_symbols
+    )
+    if not favorite_symbols:
+        return []
+
+    snapshots_result = market_repo.list_latest_market_data_snapshots_by_symbols(
+        favorite_symbols
+    )
+    snapshots_by_symbol = {
+        snap.symbol: snap
+        for snap in snapshots_result.records
+        if snap.symbol is not None
+    }
+
+    now = datetime.now(UTC)
+    synthetic: list[IbkrPositionSnapshotRecord] = []
+    for symbol in favorite_symbols:
+        snap = snapshots_by_symbol.get(symbol)
+        if snap is None or not snap.ibkr_conid:
+            continue
+        synthetic.append(
+            IbkrPositionSnapshotRecord(
+                snapshot_id=f"favorite_{snap.ibkr_conid}",
+                sync_run_id=sync_run_id,
+                account_ref=_FORECAST_FAVORITE_ACCOUNT_REF,
+                conid=snap.ibkr_conid,
+                symbol=symbol,
+                security_type=snap.asset_class or "STK",
+                currency=snap.currency or "USD",
+                exchange=snap.exchange,
+                primary_exchange=snap.primary_exchange,
+                quantity=Decimal(0),
+                average_cost=None,
+                received_at=now,
+                stored_at=now,
+                ibkr_account_id=None,
+            )
+        )
+    return synthetic
+
+
 def _build_blocked_forecast_response(
     *, reason: str, status_nl: str, help_nl: str
 ) -> dict[str, object]:
@@ -1059,13 +1138,33 @@ def run_forecast_sync() -> dict[str, object]:
                     ),
                 )
             positions = list(ibkr_repo.list_ibkr_position_snapshots(latest_run.sync_run_id))
+            # V1.2 §BR / CLAUDE.md §5: extend the forecast universe with
+            # operator favorites so the dashboard widget can show live
+            # confidence even when the symbol is not (yet) held. We do
+            # this by appending synthetic IBKR position rows reconstructed
+            # from the latest market_data_snapshot per favorite symbol
+            # (quantity=0, average_cost=None). Held positions take
+            # precedence — duplicates on conid are dropped downstream by
+            # ``_unique_positions``.
+            pref_repo = SqlAlchemyWatchlistPreferenceRepository(
+                checked.connection, checked.readiness
+            )
+            favorite_positions = _build_favorite_positions(
+                pref_repo=pref_repo,
+                market_repo=market_repo,
+                held_positions=positions,
+                sync_run_id=latest_run.sync_run_id,
+            )
+            positions.extend(favorite_positions)
             if not positions:
                 return _build_blocked_forecast_response(
                     reason="no_positions",
-                    status_nl="Geen posities in laatste IBKR-sync",
+                    status_nl="Geen posities of favorieten beschikbaar",
                     help_nl=(
-                        "De laatste IBKR-sync bevat geen posities; voer een "
-                        "nieuwe sync uit zodra je posities aanhoudt."
+                        "De laatste IBKR-sync bevat geen posities en er "
+                        "zijn geen favorieten geconfigureerd; voer een "
+                        "nieuwe sync uit of voeg favorieten toe via "
+                        "Instellingen → Watchlist."
                     ),
                 )
             conids = tuple(p.conid for p in positions if p.conid)
