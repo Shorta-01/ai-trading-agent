@@ -18,6 +18,7 @@ import { ForecastDaySummaryWidget } from "@/components/ForecastDaySummaryWidget"
 import { LastVisitDiffStrip } from "@/components/LastVisitDiffStrip";
 import { MacroRegimeStrip } from "@/components/MacroRegimeStrip";
 import { PauzeStrip } from "@/components/PauzeStrip";
+import { SellSignalCards } from "@/components/SellSignalCards";
 import { MarketHoursWidget } from "@/components/MarketHoursWidget";
 import { MorningStatusStrip } from "@/components/MorningStatusStrip";
 import { NavSparkline } from "@/components/NavSparkline";
@@ -52,6 +53,10 @@ export default function HomePage() {
       <section style={{ marginBottom: 12 }}>
         <ForecastDaySummaryWidget />
       </section>
+
+      {/* V1.2 §BJ — SELL-suggestie kaartjes (CLAUDE.md §6.3 + §11).
+          Bovenaan want intraday +4 % hits zijn tijdkritisch. */}
+      <SellSignalCards />
 
       <div
         data-testid="morning-grid-top"
