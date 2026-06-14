@@ -1005,3 +1005,106 @@ def test_macro_feed_refresh_handler_calls_trigger(monkeypatch) -> None:
         assert captured[0]["base_url"] == "http://api.local"
     finally:
         scheduler.stop()
+
+
+# ---- Reconciliation sweep trigger (V1.2 §BM / GAPS.md P0-3) ---------
+
+
+def _build_with_reconciliation_sweep_trigger(
+    *,
+    reconciliation_sweep_trigger_enabled: bool = False,
+    reconciliation_sweep_cron: str = "*/30 * * * mon-fri",
+    api_base_url: str | None = "http://api:8000",
+) -> PortfolioScheduler:
+    return PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            api_base_url=api_base_url,
+            reconciliation_sweep_trigger_enabled=(
+                reconciliation_sweep_trigger_enabled
+            ),
+            reconciliation_sweep_cron=reconciliation_sweep_cron,
+        ),
+        worker_id="worker-test-reconciliation-sweep",
+        scheduler_factory=_scheduler_factory,
+    )
+
+
+def test_reconciliation_sweep_job_not_registered_by_default() -> None:
+    scheduler = _build_with_reconciliation_sweep_trigger()
+    try:
+        scheduler.start()
+        assert (
+            scheduler._scheduler.get_job("reconciliation_sweep_trigger") is None
+        )
+    finally:
+        scheduler.stop()
+
+
+def test_reconciliation_sweep_job_registered_when_enabled() -> None:
+    """V1.2 §BM / GAPS.md P0-3 — wanneer de flag aan staat moet de
+    cron op elke 30 min weekdagen Europe/Brussels staan."""
+
+    scheduler = _build_with_reconciliation_sweep_trigger(
+        reconciliation_sweep_trigger_enabled=True,
+        reconciliation_sweep_cron="*/30 * * * mon-fri",
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job("reconciliation_sweep_trigger")
+        assert job is not None
+        cron_repr = repr(job.trigger)
+        assert "minute='*/30'" in cron_repr
+        assert "day_of_week='mon-fri'" in cron_repr
+        assert "Europe/Brussels" in cron_repr
+        _assert_explicit_guards(job)
+    finally:
+        scheduler.stop()
+
+
+def test_reconciliation_sweep_handler_calls_trigger(monkeypatch) -> None:
+    """De cron handler moet ``trigger_reconciliation_sweep`` aanroepen
+    met de geconfigureerde base_url + timeout."""
+
+    captured: list[dict[str, object]] = []
+    from portfolio_outlook_worker import scheduler as sched_mod
+
+    def _stub_trigger(*, base_url, timeout_seconds):
+        captured.append({"base_url": base_url, "timeout": timeout_seconds})
+        return {"status": "ok"}
+
+    monkeypatch.setattr(
+        sched_mod, "trigger_reconciliation_sweep", _stub_trigger
+    )
+
+    scheduler = _build_with_reconciliation_sweep_trigger(
+        reconciliation_sweep_trigger_enabled=True,
+        api_base_url="http://api.local",
+    )
+    try:
+        scheduler.start()
+        scheduler._on_reconciliation_sweep_trigger()
+        assert len(captured) == 1
+        assert captured[0]["base_url"] == "http://api.local"
+    finally:
+        scheduler.stop()
+
+
+def test_reconciliation_sweep_cron_rejects_bad_expression() -> None:
+    """Een verkeerd-aantal velden moet vroeg falen, niet in productie."""
+
+    import pytest
+
+    scheduler = _build_with_reconciliation_sweep_trigger(
+        reconciliation_sweep_trigger_enabled=True,
+        reconciliation_sweep_cron="bad cron",
+    )
+    with pytest.raises(ValueError, match="reconciliation_sweep_cron"):
+        scheduler.start()
