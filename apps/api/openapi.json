@@ -1981,6 +1981,17 @@
             "title": "Deterministic Dutch Explanation",
             "type": "string"
           },
+          "dividend_yield_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dividend Yield Pct"
+          },
           "evidence_references": {
             "items": {
               "$ref": "#/components/schemas/EvidenceReferenceResponse"
@@ -1998,6 +2009,28 @@
               }
             ],
             "title": "Exchange"
+          },
+          "expected_dividend_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Dividend Currency"
+          },
+          "expected_dividend_gross_local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Dividend Gross Local"
           },
           "expected_volatility_annualized": {
             "title": "Expected Volatility Annualized",
@@ -2062,6 +2095,61 @@
             "title": "Ibkr Account Id",
             "type": "string"
           },
+          "market_cap_eur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Cap Eur"
+          },
+          "momentum_12m_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum 12M Pct"
+          },
+          "momentum_6m_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum 6M Pct"
+          },
+          "next_earnings_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Earnings Date"
+          },
+          "next_earnings_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Earnings Status"
+          },
           "p10_log_return": {
             "title": "P10 Log Return",
             "type": "string"
@@ -2085,6 +2173,17 @@
           "p90_price_eur": {
             "title": "P90 Price Eur",
             "type": "string"
+          },
+          "pe_ratio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pe Ratio"
           },
           "previous_package_hash": {
             "anyOf": [
@@ -2116,6 +2215,17 @@
             "default": false,
             "title": "Safe For Orders",
             "type": "boolean"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
           },
           "suggested_action_label": {
             "enum": [
