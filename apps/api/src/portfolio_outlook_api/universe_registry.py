@@ -59,14 +59,25 @@ LOCKED_UNIVERSE_SETS: Final[frozenset[str]] = frozenset(
         UNIVERSE_SET_ALL_5K,
     }
 )
-# STARTER_50 (Bel20 + AEX, ~45 large/liquid Belgian + Dutch names) is
-# the smallest locked set and the new default. The doctrine of
-# disabled-by-default scanning is intact (``universe_scan_sync_enabled``
-# is still ``False``); but when the operator opts in the system reaches
-# for a 45-name set instead of 325+, so "daily new opportunities"
-# actually surfaces before the EODHD quota becomes a concern. Operators
-# who want the broader universes pick SP500 / EU600 / ALL_5K explicitly.
-DEFAULT_UNIVERSE_SET: Final[str] = UNIVERSE_SET_STARTER_50
+# V1.2 §BS / GAPS.md P1-4 update: SP500 is de nieuwe default zodat
+# de orchestrator-scan op een breed US large-cap universum (~325
+# namen) draait wanneer de operator de scan inschakelt. CLAUDE.md §5
+# vraagt namelijk een "autonoom universum-scan" over ~3500 namen —
+# STARTER_50 (45 namen, alleen Bel20+AEX) dekt dit doctrine-beeld
+# duidelijk niet. SP500 is een pragmatische tussenstop: groot genoeg
+# voor zinvolle daily-opportunity scanning, klein genoeg om de
+# EODHD-quota niet meteen op te eten.
+#
+# Operator die het volledige doctrine-doel wil bereiken kiest
+# expliciet EU600 (~450 namen, incl. Stoxx 600) of ALL_5K
+# (volledige scope). Operator die met een conservatievere set wil
+# starten kan handmatig STARTER_50 selecteren via
+# /instellingen → Beleggingsuniversum.
+#
+# De scan blijft disabled-by-default (``universe_scan_sync_enabled =
+# False``); het wijzigen van de default-SET treft alleen wat er
+# gescand wordt zodra de operator inschakelt.
+DEFAULT_UNIVERSE_SET: Final[str] = UNIVERSE_SET_SP500
 
 
 # ---- Bel20 -----------------------------------------------------------
