@@ -928,3 +928,80 @@ def test_monthly_archive_cron_rejects_bad_expression() -> None:
 
     with pytest.raises(ValueError, match="monthly_archive_auto_generate_cron"):
         scheduler.start()
+
+
+# ---- Macro feed refresh (V1.2 §BT / GAPS.md P1-10) -----------------
+
+
+def _build_with_macro_feed_trigger(
+    *,
+    macro_feed_refresh_enabled: bool = False,
+    macro_feed_refresh_cron: str = "30 17 * * mon-fri",
+    api_base_url: str | None = "http://api:8000",
+) -> PortfolioScheduler:
+    return PortfolioScheduler(
+        gateway=_StubGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+            api_base_url=api_base_url,
+            macro_feed_refresh_enabled=macro_feed_refresh_enabled,
+            macro_feed_refresh_cron=macro_feed_refresh_cron,
+        ),
+        worker_id="worker-test-macro",
+        scheduler_factory=_scheduler_factory,
+    )
+
+
+def test_macro_feed_refresh_job_not_registered_by_default() -> None:
+    scheduler = _build_with_macro_feed_trigger()
+    try:
+        scheduler.start()
+        assert scheduler._scheduler.get_job("macro_feed_refresh") is None
+    finally:
+        scheduler.stop()
+
+
+def test_macro_feed_refresh_job_registered_when_enabled() -> None:
+    scheduler = _build_with_macro_feed_trigger(
+        macro_feed_refresh_enabled=True,
+        macro_feed_refresh_cron="30 17 * * mon-fri",
+    )
+    try:
+        scheduler.start()
+        job = scheduler._scheduler.get_job("macro_feed_refresh")
+        assert job is not None
+        cron_repr = repr(job.trigger)
+        assert "minute='30'" in cron_repr
+        assert "hour='17'" in cron_repr
+        assert "day_of_week='mon-fri'" in cron_repr
+        assert "Europe/Brussels" in cron_repr
+    finally:
+        scheduler.stop()
+
+
+def test_macro_feed_refresh_handler_calls_trigger(monkeypatch) -> None:
+    captured: list[dict[str, object]] = []
+    from portfolio_outlook_worker import scheduler as sched_mod
+
+    def _stub_trigger(*, base_url, timeout_seconds):
+        captured.append({"base_url": base_url, "timeout": timeout_seconds})
+        return {"status": "ok"}
+
+    monkeypatch.setattr(sched_mod, "trigger_macro_feed_refresh", _stub_trigger)
+    scheduler = _build_with_macro_feed_trigger(
+        macro_feed_refresh_enabled=True,
+        api_base_url="http://api.local",
+    )
+    try:
+        scheduler.start()
+        scheduler._on_macro_feed_refresh_trigger()
+        assert len(captured) == 1
+        assert captured[0]["base_url"] == "http://api.local"
+    finally:
+        scheduler.stop()

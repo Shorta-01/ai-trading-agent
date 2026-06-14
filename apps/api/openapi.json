@@ -5355,6 +5355,52 @@
         "title": "LatestSnapshotStatus",
         "type": "string"
       },
+      "MacroFeedRefreshResponse": {
+        "description": "Antwoord op de macro-feed refresh trigger (V1.2 \u00a7BT / P1-10).",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "error_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Text"
+          },
+          "provider_skipped": {
+            "title": "Provider Skipped",
+            "type": "boolean"
+          },
+          "spx_bars_persisted": {
+            "title": "Spx Bars Persisted",
+            "type": "integer"
+          },
+          "status_nl": {
+            "title": "Status Nl",
+            "type": "string"
+          },
+          "vix_bars_persisted": {
+            "title": "Vix Bars Persisted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted",
+          "vix_bars_persisted",
+          "spx_bars_persisted",
+          "provider_skipped",
+          "error_text",
+          "status_nl"
+        ],
+        "title": "MacroFeedRefreshResponse",
+        "type": "object"
+      },
       "MacroSnapshotResponse": {
         "properties": {
           "headline_nl": {
@@ -18362,6 +18408,25 @@
           }
         },
         "summary": "Get Macro Snapshot"
+      }
+    },
+    "/markets/macro-snapshot/refresh": {
+      "post": {
+        "description": "V1.2 \u00a7BT / GAPS.md P1-10 \u2014 handmatige refresh van de macro\nfeed (VIX + S&P 500).\n\nBedoeld voor de worker-cron \u00e9n voor operator-handmatige trigger\nvia dashboard. Roept ``sync_macro_feed()`` aan dat ~380 dagen\nbars via EODHD ophaalt en upsert in ``macro_index_snapshots``.\n\nGeen EODHD-key \u2192 ``provider_skipped=True``, geen 5xx. Zo blijft\nde cron veilig om elke handelsdag te firen zonder dat het de\naudit-chain pollueert.",
+        "operationId": "trigger_macro_feed_refresh_markets_macro_snapshot_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroFeedRefreshResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Trigger Macro Feed Refresh"
       }
     },
     "/notifications/compose-summary": {

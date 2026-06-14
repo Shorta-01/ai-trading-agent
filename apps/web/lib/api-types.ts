@@ -2040,6 +2040,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/markets/macro-snapshot/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Macro Feed Refresh
+         * @description V1.2 §BT / GAPS.md P1-10 — handmatige refresh van de macro
+         *     feed (VIX + S&P 500).
+         *
+         *     Bedoeld voor de worker-cron én voor operator-handmatige trigger
+         *     via dashboard. Roept ``sync_macro_feed()`` aan dat ~380 dagen
+         *     bars via EODHD ophaalt en upsert in ``macro_index_snapshots``.
+         *
+         *     Geen EODHD-key → ``provider_skipped=True``, geen 5xx. Zo blijft
+         *     de cron veilig om elke handelsdag te firen zonder dat het de
+         *     audit-chain pollueert.
+         */
+        post: operations["trigger_macro_feed_refresh_markets_macro_snapshot_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications/compose-summary": {
         parameters: {
             query?: never;
@@ -6158,6 +6187,24 @@ export interface components {
          * @enum {string}
          */
         LatestSnapshotStatus: "not_configured" | "missing_snapshot" | "snapshot_available" | "storage_failure" | "stale_snapshot";
+        /**
+         * MacroFeedRefreshResponse
+         * @description Antwoord op de macro-feed refresh trigger (V1.2 §BT / P1-10).
+         */
+        MacroFeedRefreshResponse: {
+            /** Accepted */
+            accepted: boolean;
+            /** Error Text */
+            error_text: string | null;
+            /** Provider Skipped */
+            provider_skipped: boolean;
+            /** Spx Bars Persisted */
+            spx_bars_persisted: number;
+            /** Status Nl */
+            status_nl: string;
+            /** Vix Bars Persisted */
+            vix_bars_persisted: number;
+        };
         /** MacroSnapshotResponse */
         MacroSnapshotResponse: {
             /** Headline Nl */
@@ -12617,6 +12664,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MacroSnapshotResponse"];
+                };
+            };
+        };
+    };
+    trigger_macro_feed_refresh_markets_macro_snapshot_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroFeedRefreshResponse"];
                 };
             };
         };

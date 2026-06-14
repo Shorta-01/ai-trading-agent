@@ -270,3 +270,26 @@ def test_compose_alert_summary_returns_none_on_http_error(monkeypatch) -> None:
         context_text="",
         alert_lines=["- [Hoog] X: Y"],
     ) is None
+
+
+def test_trigger_macro_feed_refresh_targets_correct_path(monkeypatch) -> None:
+    """V1.2 §BT — worker cron POST't naar /markets/macro-snapshot/refresh."""
+
+    captured: dict[str, str] = {}
+    import httpx
+
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda url, timeout: (captured.__setitem__("url", url) or _StubResponse()),
+    )
+    api_trigger.trigger_macro_feed_refresh(
+        base_url="http://api:8000", timeout_seconds=1.0
+    )
+    assert captured["url"] == "http://api:8000/markets/macro-snapshot/refresh"
+
+
+def test_trigger_macro_feed_refresh_noops_without_base_url() -> None:
+    assert api_trigger.trigger_macro_feed_refresh(
+        base_url=None, timeout_seconds=1.0
+    ) is None

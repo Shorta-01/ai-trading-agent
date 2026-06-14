@@ -32,6 +32,7 @@ from ai_trading_agent_storage import (
 
 from portfolio_outlook_worker.api_trigger import (
     trigger_ibkr_sync,
+    trigger_macro_feed_refresh,
     trigger_monthly_archive_auto_generate,
     trigger_morning_chain,
     trigger_morning_explanation_batch,
@@ -64,6 +65,7 @@ _MORNING_EXPLANATION_BATCH_JOB_ID = "morning_explanation_batch_trigger"
 _IBKR_SYNC_JOB_ID = "ibkr_sync_trigger"
 _SELL_SIGNAL_SWEEP_JOB_ID = "sell_signal_sweep_trigger"
 _MONTHLY_ARCHIVE_JOB_ID = "monthly_archive_auto_generate"
+_MACRO_FEED_REFRESH_JOB_ID = "macro_feed_refresh"
 # Market-aware fires (one per active market session, see market_hours).
 # Job ids follow ``market_close_<EXCHANGE_CODE>`` so they're stable
 # across restarts and visible in /scheduler/runs for audit.
@@ -511,6 +513,21 @@ class PortfolioScheduler:
                 coalesce=True,
                 misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
             )
+        # Macro feed refresh — V1.2 §BT / GAPS.md P1-10. CLAUDE.md
+        # §7.2 macro-regime gate vereist verse VIX + S&P 500 bars.
+        # Default cron: dagelijks 17:30 Europe/Brussels (~ post-
+        # Euronext close, vóór 18:00 EU/US-overlap waar VIX nog
+        # actief beweegt). Werkdag-only.
+        if self._scheduler_settings.macro_feed_refresh_enabled:
+            self._scheduler.add_job(
+                self._on_macro_feed_refresh_trigger,
+                trigger=self._build_macro_feed_refresh_trigger(),
+                id=_MACRO_FEED_REFRESH_JOB_ID,
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=_CRON_MISFIRE_GRACE_SECONDS,
+            )
 
     def _build_morning_chain_trigger(self) -> Any:
         """Parse the configured 5-field cron into a CronTrigger."""
@@ -631,6 +648,36 @@ class PortfolioScheduler:
 
     def _on_monthly_archive_auto_generate_trigger(self) -> None:
         trigger_monthly_archive_auto_generate(
+            base_url=self._scheduler_settings.api_base_url,
+            timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
+        )
+
+    def _build_macro_feed_refresh_trigger(self) -> Any:
+        """Parse de geconfigureerde 5-field cron voor macro-feed
+        refresh (V1.2 §BT)."""
+
+        from apscheduler.triggers.cron import CronTrigger
+
+        parts = (
+            self._scheduler_settings.macro_feed_refresh_cron or ""
+        ).strip().split()
+        if len(parts) != 5:
+            raise ValueError(
+                "scheduler.macro_feed_refresh_cron must be a 5-field cron, "
+                f"got {self._scheduler_settings.macro_feed_refresh_cron!r}"
+            )
+        minute, hour, day, month, day_of_week = parts
+        return CronTrigger(
+            minute=minute,
+            hour=hour,
+            day=day,
+            month=month,
+            day_of_week=day_of_week,
+            timezone=self._scheduler_settings.timezone,
+        )
+
+    def _on_macro_feed_refresh_trigger(self) -> None:
+        trigger_macro_feed_refresh(
             base_url=self._scheduler_settings.api_base_url,
             timeout_seconds=self._scheduler_settings.api_request_timeout_seconds,
         )
