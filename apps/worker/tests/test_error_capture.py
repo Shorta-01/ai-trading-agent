@@ -117,3 +117,43 @@ def test_scheduler_on_job_error_records(tmp_path) -> None:  # type: ignore[no-un
     events = _open_events(storage.database_url or "")
     assert any(e.event_code == "scheduler_job_error" for e in events)
     assert any(e.source_component == "scheduler:hourly" for e in events)
+
+
+def test_record_worker_event_persists_warning(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """V1.2 §BZ follow-up: ``record_worker_event`` schrijft een
+    severity-warning SystemEvent zodat operator-meldingen (b.v. live-
+    account verbonden) op /systeemmeldingen verschijnen."""
+
+    from portfolio_outlook_worker.error_capture import record_worker_event
+
+    storage = _seed(tmp_path)
+    record_worker_event(
+        storage_settings=storage,
+        source_component="ibkr_order_adapter",
+        event_code="order_session_live_account",
+        severity="warning",
+        title_nl="Order-sessie verbonden met LIVE account",
+        message_nl="Order-sessie verbonden met live-account U7654321.",
+    )
+    events = _open_events(storage.database_url or "")
+    matching = [e for e in events if e.event_code == "order_session_live_account"]
+    assert len(matching) == 1
+    assert matching[0].severity == "warning"
+    assert matching[0].source_service == "worker"
+    assert matching[0].source_component == "ibkr_order_adapter"
+    assert "U7654321" in matching[0].message_nl
+
+
+def test_record_worker_event_noop_when_storage_disabled() -> None:
+    """Storage uit → silent no-op, geen exception."""
+
+    from portfolio_outlook_worker.error_capture import record_worker_event
+
+    record_worker_event(
+        storage_settings=StorageSettings(enabled=False),
+        source_component="x",
+        event_code="y",
+        severity="info",
+        title_nl="t",
+        message_nl="m",
+    )

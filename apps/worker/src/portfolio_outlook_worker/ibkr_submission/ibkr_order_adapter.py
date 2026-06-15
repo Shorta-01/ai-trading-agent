@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Literal, Protocol
@@ -124,6 +125,7 @@ class IbkrOrderAdapter:
         contract_factory: Callable[[_StockContractSpec], Any] | None = None,
         perm_id_timeout_s: float = _DEFAULT_PERM_ID_TIMEOUT_S,
         perm_id_poll_s: float = _DEFAULT_PERM_ID_POLL_S,
+        ib_client_factory: Callable[[], OrderCapableIbClientProtocol] | None = None,
     ) -> None:
         self._ib = ib_client
         self._account_id = account_id
@@ -131,6 +133,10 @@ class IbkrOrderAdapter:
         self._contract_factory = contract_factory or _default_stock_contract
         self._perm_id_timeout_s = perm_id_timeout_s
         self._perm_id_poll_s = perm_id_poll_s
+        # V1.2 §BZ follow-up: bewaar de factory zodat
+        # :meth:`reconnect` een nieuwe TWS-sessie kan openen wanneer
+        # de scheduler-heartbeat detecteert dat de sessie is gedropt.
+        self._ib_client_factory = ib_client_factory
 
     @property
     def gateway_session_id(self) -> str:
@@ -139,6 +145,47 @@ class IbkrOrderAdapter:
     @property
     def account_mode(self) -> Literal["paper", "live"]:
         return _mode_from_account_id(self._account_id)
+
+    def is_connected(self) -> bool:
+        """Duck-typed ``ib_insync.IB.isConnected`` proxy.
+
+        Het auto-reconnect heartbeat (V1.2 §BY) gebruikt deze om te
+        beslissen of het de sessie moet heropenen. Returns ``False``
+        wanneer de onderliggende client geen ``isConnected`` method
+        heeft of als die method raise't.
+        """
+
+        is_conn = getattr(self._ib, "isConnected", None)
+        if is_conn is None:
+            return False
+        try:
+            return bool(is_conn())
+        except Exception:  # noqa: BLE001 — boundary
+            return False
+
+    def reconnect(self) -> bool:
+        """Heropent de order-sessie via de bewaarde factory.
+
+        Wanneer er geen factory beschikbaar is (legacy constructie /
+        tests die de client direct injecten) wordt ``False`` geretourneerd
+        — de scheduler-heartbeat logt dan dat reconnect is overgeslagen.
+        Geen exception wordt gepropageerd; falen wordt als ``False``
+        gerapporteerd zodat het heartbeat een volgende tick opnieuw kan
+        proberen.
+        """
+
+        if self._ib_client_factory is None:
+            return False
+        try:
+            with suppress(Exception):
+                disconnect = getattr(self._ib, "disconnect", None)
+                if disconnect is not None:
+                    disconnect()
+            self._ib = self._ib_client_factory()
+        except Exception:  # noqa: BLE001 — boundary; heartbeat must not crash
+            logger.exception("Order-sessie reconnect raised.")
+            return False
+        return self.is_connected()
 
     def fetch_managed_account_id(self) -> str:
         if not self._ib.isConnected():
@@ -307,7 +354,10 @@ def open_order_adapter(
             f"Account {account_id} niet beheerd door deze TWS-sessie."
         )
     return IbkrOrderAdapter(
-        ib_client=client, account_id=account_id, session_id=session_id
+        ib_client=client,
+        account_id=account_id,
+        session_id=session_id,
+        ib_client_factory=ib_client_factory,
     )
 
 
