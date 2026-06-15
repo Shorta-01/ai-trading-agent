@@ -189,6 +189,7 @@ from portfolio_outlook_api.system_event_mutations import (
 from portfolio_outlook_api.system_event_reader import (
     ActiveSystemEventsResponse,
     list_active_system_events,
+    list_ibkr_config_audit,
 )
 from portfolio_outlook_api.trading_settings import (
     TradingSettingsUpdateInput,
@@ -384,6 +385,21 @@ def read_storage_status_online() -> OnlineStorageStatusResponse:
 @router.get("/system/events/active", response_model=ActiveSystemEventsResponse)
 def read_active_system_events() -> ActiveSystemEventsResponse:
     return list_active_system_events(settings.storage)
+
+
+@router.get(
+    "/admin/audit/ibkr-config",
+    response_model=ActiveSystemEventsResponse,
+)
+def read_ibkr_config_audit() -> ActiveSystemEventsResponse:
+    """V1.2 §BZ vervolg — compliance audit-trail van alle IBKR-config
+    events (mode-switches, mismatches, account-id wijzigingen).
+
+    In tegenstelling tot ``/system/events/active`` returnt deze
+    endpoint ook RESOLVED en ARCHIVED events. Bedoeld als "goed
+    huisvader" bewijs voor accountant + belastingrapport (§12)."""
+
+    return list_ibkr_config_audit(settings.storage)
 
 
 @router.post("/system/events/{system_event_id}/resolve")

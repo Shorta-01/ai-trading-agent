@@ -98,6 +98,44 @@ def _try_connect_ibkr() -> None:
                     result.account_mode,
                     result.connection_id,
                 )
+                # V1.2 §BZ vervolg: schrijf een SystemEvent wanneer
+                # het ACTUELE account dat TWS rapporteert verschilt
+                # van het account-id dat de operator in de settings
+                # heeft geconfigureerd. Symmetrisch met de API-sync
+                # mismatch detector (zie ``ibkr_sync.py``).
+                if (
+                    result.account_id
+                    and result.account_id.strip().upper()
+                    != settings.ibkr.account_id.strip().upper()
+                ):
+                    from portfolio_outlook_worker.error_capture import (
+                        record_worker_event,
+                    )
+
+                    record_worker_event(
+                        storage_settings=settings.storage,
+                        source_component="ibkr_gateway",
+                        event_code="account_id_mismatch",
+                        severity="warning",
+                        category="ibkr_config_mismatch",
+                        title_nl="IBKR account-mismatch bij boot",
+                        message_nl=(
+                            f"De geconfigureerde IBKR account-id "
+                            f"({settings.ibkr.account_id}) verschilt "
+                            f"van het account dat TWS rapporteerde "
+                            f"({result.account_id}). De software draait "
+                            f"tegen het door TWS aangeleverde account; "
+                            f"controleer of dit klopt."
+                        ),
+                        help_nl=(
+                            "Pas WORKER_IBKR__ACCOUNT_ID aan in de "
+                            "instellingen of wissel het TWS-account."
+                        ),
+                        technical_summary=(
+                            f"configured={settings.ibkr.account_id} "
+                            f"actual={result.account_id}"
+                        ),
+                    )
             else:
                 logger.warning(
                     "IBKR boot-test geweigerd: %s", result.error_nl

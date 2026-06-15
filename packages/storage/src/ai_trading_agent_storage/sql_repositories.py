@@ -1991,6 +1991,53 @@ class SqlAlchemySystemEventRepository(_Base):
             explanation_nl="Open systeemmeldingen opgehaald.",
         )
 
+    def list_events_by_categories(
+        self,
+        categories: tuple[str, ...],
+        *,
+        include_event_codes: tuple[str, ...] = (),
+        limit: int = 500,
+    ) -> StorageListResult[SystemEventRecord]:
+        """V1.2 §BZ vervolg — list events for the audit-trail view.
+
+        Returns all events (regardless of status) matching any of the
+        given ``categories`` OR ``include_event_codes``. Ordered
+        newest-first. Used by the IBKR config audit endpoint to give
+        the operator + accountant a compliance trail van mode-switches,
+        mismatch detections en account-id wijzigingen.
+        """
+
+        conditions = []
+        if categories:
+            conditions.append(system_events.c.category.in_(categories))
+        if include_event_codes:
+            conditions.append(system_events.c.event_code.in_(include_event_codes))
+        if not conditions:
+            return StorageListResult(
+                records=(),
+                table_name=system_events.name,
+                explanation_nl="Geen filter opgegeven; lege resultaten.",
+            )
+        from sqlalchemy import or_
+
+        rows = (
+            self._connection.execute(
+                select(system_events)
+                .where(or_(*conditions))
+                .order_by(system_events.c.created_at.desc())
+                .limit(limit)
+            )
+            .mappings()
+            .all()
+        )
+        return StorageListResult(
+            records=tuple(SystemEventRecord(**dict(row)) for row in rows),
+            table_name=system_events.name,
+            explanation_nl=(
+                f"{len(rows)} systeemmeldingen opgehaald voor audit-trail."
+            ),
+        )
+
     def mark_resolved(
         self, system_event_id: str, *, reason_nl: str | None = None
     ) -> StorageWriteResult:

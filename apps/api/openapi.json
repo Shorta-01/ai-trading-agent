@@ -15347,6 +15347,25 @@
         "summary": "Submit Action Draft To Paper Endpoint"
       }
     },
+    "/admin/audit/ibkr-config": {
+      "get": {
+        "description": "V1.2 \u00a7BZ vervolg \u2014 compliance audit-trail van alle IBKR-config\nevents (mode-switches, mismatches, account-id wijzigingen).\n\nIn tegenstelling tot ``/system/events/active`` returnt deze\nendpoint ook RESOLVED en ARCHIVED events. Bedoeld als \"goed\nhuisvader\" bewijs voor accountant + belastingrapport (\u00a712).",
+        "operationId": "read_ibkr_config_audit_admin_audit_ibkr_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveSystemEventsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Ibkr Config Audit"
+      }
+    },
     "/assets/listings": {
       "get": {
         "operationId": "list_asset_listings_assets_listings_get",

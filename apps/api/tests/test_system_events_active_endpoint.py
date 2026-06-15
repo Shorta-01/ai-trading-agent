@@ -203,3 +203,142 @@ def test_active_events_connection_failure_returns_safe_response(monkeypatch) -> 
     assert "veilige foutafhandeling" in data["message_nl"].lower()
     assert "postgresql://" not in str(data)
     assert "user:pass" not in str(data)
+
+
+def test_audit_endpoint_returns_events_by_categories_and_codes(monkeypatch) -> None:
+    """V1.2 §BZ vervolg — ``/admin/audit/ibkr-config`` rapporteert
+    ook RESOLVED/ARCHIVED events filtered op categorie en code, zodat
+    de operator/accountant een chronologisch overzicht heeft."""
+
+    captured: dict[str, object] = {}
+
+    class FakeProvider:
+        def __init__(self, _settings) -> None:
+            pass
+
+        def checked_connection(self, *, require_writable: bool):
+            class _Ctx:
+                def __enter__(self_inner):
+                    checked = type(
+                        "Checked",
+                        (),
+                        {"connection": object(), "readiness": _readiness()},
+                    )()
+                    return checked
+
+                def __exit__(self_inner, exc_type, exc, tb):
+                    return False
+
+            return _Ctx()
+
+    def _make_event(
+        event_id: str, code: str, category: str, status: str = "open"
+    ) -> SystemEventRecord:
+        return SystemEventRecord(
+            system_event_id=event_id,
+            created_at=datetime(2026, 5, 19, 10, 0, tzinfo=UTC),
+            severity="warning",
+            category=category,
+            source_service="api",
+            source_component="ibkr_sync",
+            event_code=code,
+            title_nl=f"Title {event_id}",
+            message_nl=f"Message {event_id}",
+            help_nl="",
+            technical_summary=None,
+            redacted_details_json=None,
+            stack_trace_redacted=None,
+            related_entity_type=None,
+            related_entity_id=None,
+            blocks_suggestions=False,
+            blocks_writes=False,
+            blocks_ai_explanation=False,
+            status=status,
+            resolved_at=None,
+            archived_at=None,
+            copied_for_codex_at=None,
+            explanation_nl="",
+        )
+
+    class FakeRepository:
+        def __init__(self, connection, readiness) -> None:
+            pass
+
+        def list_events_by_categories(
+            self, categories, *, include_event_codes=(), limit=500
+        ):
+            captured["categories"] = categories
+            captured["include_event_codes"] = include_event_codes
+            captured["limit"] = limit
+            return type(
+                "Result",
+                (),
+                {
+                    "records": (
+                        _make_event(
+                            "evt-1",
+                            "order_session_live_account",
+                            "runtime_event",
+                            status="open",
+                        ),
+                        # RESOLVED event komt nog steeds terug — kern van audit-trail.
+                        _make_event(
+                            "evt-2",
+                            "account_id_mismatch",
+                            "ibkr_config_mismatch",
+                            status="resolved",
+                        ),
+                        # Archived event ook.
+                        _make_event(
+                            "evt-3",
+                            "ibkr_account_id_changed",
+                            "ibkr_config_change",
+                            status="archived",
+                        ),
+                    )
+                },
+            )()
+
+    from portfolio_outlook_api.system_event_reader import list_ibkr_config_audit
+
+    monkeypatch.setattr(
+        status_routes.settings,
+        "storage",
+        StorageSettings(enabled=True, database_url="postgresql://user:pass@db/app"),
+    )
+    monkeypatch.setattr(
+        "portfolio_outlook_api.status_routes.list_ibkr_config_audit",
+        lambda storage: list_ibkr_config_audit(
+            storage,
+            connection_provider_factory=FakeProvider,
+            repository_factory=FakeRepository,
+        ),
+    )
+
+    client = TestClient(app)
+    response = client.get("/admin/audit/ibkr-config")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["available"] is True
+    assert data["active_count"] == 3
+    statuses = sorted([e["status"] for e in data["events"]])
+    assert statuses == ["archived", "open", "resolved"]
+    # Bevestigt dat de juiste categorieën worden doorgegeven aan het repo.
+    assert "ibkr_config_mismatch" in captured["categories"]
+    assert "ibkr_config_change" in captured["categories"]
+    assert "order_session_live_account" in captured["include_event_codes"]
+    assert "account_id_mismatch" in captured["include_event_codes"]
+    assert "ibkr_account_id_changed" in captured["include_event_codes"]
+
+
+def test_audit_endpoint_storage_disabled_returns_safe_response(monkeypatch) -> None:
+    monkeypatch.setattr(
+        status_routes.settings, "storage", StorageSettings(enabled=False)
+    )
+    client = TestClient(app)
+    response = client.get("/admin/audit/ibkr-config")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["available"] is False
+    assert data["active_count"] == 0
+    assert "opslag" in data["message_nl"].lower()

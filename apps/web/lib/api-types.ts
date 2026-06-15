@@ -325,6 +325,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/audit/ibkr-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Ibkr Config Audit
+         * @description V1.2 §BZ vervolg — compliance audit-trail van alle IBKR-config
+         *     events (mode-switches, mismatches, account-id wijzigingen).
+         *
+         *     In tegenstelling tot ``/system/events/active`` returnt deze
+         *     endpoint ook RESOLVED en ARCHIVED events. Bedoeld als "goed
+         *     huisvader" bewijs voor accountant + belastingrapport (§12).
+         */
+        get: operations["read_ibkr_config_audit_admin_audit_ibkr_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assets/listings": {
         parameters: {
             query?: never;
@@ -10086,6 +10111,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_ibkr_config_audit_admin_audit_ibkr_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveSystemEventsResponse"];
                 };
             };
         };
