@@ -17527,7 +17527,7 @@
     },
     "/ibkr/account/mode": {
       "get": {
-        "description": "Report the IBKR account mode (paper / live) for the dashboard badge.\n\nPer the \u00a721.1 doctrine relock the account-mode is reported, not\ngated. The detected mode comes from the configured\n``ibkr_sync_account_mode`` setting (which mirrors the connected\naccount); future slices will derive this from the IBKR session\nresponse directly.",
+        "description": "Report the IBKR account mode (paper / live) for the dashboard badge.\n\nPer \u00a7BZ wordt de mode bepaald door de IBKR account-id prefix\n(``DU*``/``DF*`` = paper, ``U*`` = live). De oude\n``ibkr_sync_account_mode`` config-string is verwijderd \u2014 die kon\neen safety-hole openen wanneer de operator config + verbonden\naccount uit sync raakten. ``ibkr_account_id_hint`` is nu de bron;\neen toekomstige slice kan dit uitbreiden naar het werkelijk\ndoor TWS gerapporteerde account (uit de laatste sync).",
         "operationId": "read_ibkr_account_mode_ibkr_account_mode_get",
         "responses": {
           "200": {
