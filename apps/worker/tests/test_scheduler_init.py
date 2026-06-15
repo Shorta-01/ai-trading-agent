@@ -19,6 +19,7 @@ from portfolio_outlook_worker.config import (
     SchedulerSettings,
     StorageSettings,
 )
+from portfolio_outlook_worker.ibkr_gateway import IbkrGateway
 from portfolio_outlook_worker.scheduler import (
     _CANCEL_SWEEP_JOB_ID,
     _MARKET_CLOSE_JOB_PREFIX,
@@ -302,6 +303,250 @@ def test_heartbeat_job_has_explicit_guards_and_jitter() -> None:
             "heartbeat interval should carry jitter so multi-replica deploys "
             "don't fire in lockstep"
         )
+    finally:
+        scheduler.stop()
+
+
+# ---- IBKR auto-reconnect heartbeat (V1.2 §BY / GAPS.md P2-1) -------
+
+
+class _ReconnectGateway:
+    """Test-double dat een connectie-cycle (verbroken → connect) modelt."""
+
+    def __init__(self, *, connected: bool = False) -> None:
+        self._connected = connected
+        self.connect_calls: list[dict] = []
+        self.connect_result = type(
+            "_Result",
+            (),
+            {"connected": True, "error_nl": None, "account_mode": "paper"},
+        )()
+
+    def is_connected(self) -> bool:
+        return self._connected
+
+    def connect(
+        self, *, host: str, port: int, client_id: int, account_id: str
+    ):
+        self.connect_calls.append(
+            {
+                "host": host,
+                "port": port,
+                "client_id": client_id,
+                "account_id": account_id,
+            }
+        )
+        # The connect succeeds on first attempt so the test sees the
+        # transition is_connected: False → True.
+        self._connected = self.connect_result.connected
+        return self.connect_result
+
+
+def test_auto_reconnect_disabled_by_default() -> None:
+    """Default ``ibkr_auto_reconnect_enabled=False`` betekent: nooit
+    reconnect-call, ook niet als reconciler-gateway disconnect't."""
+
+    reconciler_gateway = _ReconnectGateway(connected=False)
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=reconciler_gateway,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True, account_id="DU1234567"
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-no-reconnect",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        scheduler._maybe_reconnect_ibkr_gateway()
+        assert reconciler_gateway.connect_calls == []
+    finally:
+        scheduler.stop()
+
+
+def test_auto_reconnect_skips_when_already_connected() -> None:
+    """Wanneer auto-reconnect aanstaat maar de reconciler-gateway
+    verbonden is, geen connect-call (idempotent + zuinig)."""
+
+    reconciler_gateway = _ReconnectGateway(connected=True)
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=reconciler_gateway,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            account_id="DU1234567",
+            ibkr_auto_reconnect_enabled=True,
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reconnect-already-up",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        scheduler._maybe_reconnect_ibkr_gateway()
+        assert reconciler_gateway.connect_calls == []
+    finally:
+        scheduler.stop()
+
+
+def test_auto_reconnect_fires_when_gateway_disconnected() -> None:
+    """V1.2 §BY — auto-reconnect aan + reconciler-gateway disconnected
+    → één connect-call met host/port/account_id en
+    ``reconciler_session_client_id`` (NIET de boot-test client_id)."""
+
+    reconciler_gateway = _ReconnectGateway(connected=False)
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=reconciler_gateway,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            host="127.0.0.1",
+            port=7497,
+            client_id=1,
+            reconciler_session_client_id=3,
+            account_id="DU1234567",
+            ibkr_auto_reconnect_enabled=True,
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reconnect-down",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        scheduler._maybe_reconnect_ibkr_gateway()
+        assert len(reconciler_gateway.connect_calls) == 1
+        assert reconciler_gateway.connect_calls[0] == {
+            "host": "127.0.0.1",
+            "port": 7497,
+            "client_id": 3,
+            "account_id": "DU1234567",
+        }
+        # The mock flipped to connected=True, mirroring SDK behaviour.
+        assert reconciler_gateway.is_connected() is True
+    finally:
+        scheduler.stop()
+
+
+def test_auto_reconnect_skips_without_account_id() -> None:
+    """Geen ``account_id`` → reconnect is een no-op, geen exception."""
+
+    reconciler_gateway = _ReconnectGateway(connected=False)
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=reconciler_gateway,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            ibkr_auto_reconnect_enabled=True,
+            # account_id intentionally left None
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reconnect-no-account",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        scheduler._maybe_reconnect_ibkr_gateway()
+        assert reconciler_gateway.connect_calls == []
+    finally:
+        scheduler.stop()
+
+
+def test_auto_reconnect_skips_when_no_reconciler_gateway() -> None:
+    """V1.2 §BM-2 + §BY interplay: wanneer er geen
+    ``reconciler_gateway`` is geinjecteerd (reconciliation cron uit)
+    moet de heartbeat een no-op zijn — de hoofdgateway is een
+    disconnected boot-stub en mag NIET geraakt worden."""
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        # No reconciler_gateway — production-pad wanneer cron uit staat.
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            account_id="DU1234567",
+            ibkr_auto_reconnect_enabled=True,
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reconnect-no-reconciler",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        # Should not raise even though gateway has no .connect.
+        scheduler._maybe_reconnect_ibkr_gateway()
+    finally:
+        scheduler.stop()
+
+
+def test_auto_reconnect_swallows_connect_exception() -> None:
+    """Een raise tijdens connect mag de scheduler-loop niet crashen."""
+
+    class _BadGateway:
+        def is_connected(self) -> bool:
+            return False
+
+        def connect(self, **_kwargs):
+            raise RuntimeError("TWS unreachable")
+
+    bad_gateway = _BadGateway()
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=bad_gateway,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            account_id="DU1234567",
+            ibkr_auto_reconnect_enabled=True,
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reconnect-raise",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        # Should NOT raise.
+        scheduler._maybe_reconnect_ibkr_gateway()
     finally:
         scheduler.stop()
 
