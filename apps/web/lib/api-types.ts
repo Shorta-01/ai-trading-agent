@@ -1385,12 +1385,21 @@ export interface paths {
          * @description Report the IBKR account mode (paper / live) for the dashboard badge.
          *
          *     Per §BZ wordt de mode bepaald door de IBKR account-id prefix
-         *     (``DU*``/``DF*`` = paper, ``U*`` = live). De oude
-         *     ``ibkr_sync_account_mode`` config-string is verwijderd — die kon
-         *     een safety-hole openen wanneer de operator config + verbonden
-         *     account uit sync raakten. ``ibkr_account_id_hint`` is nu de bron;
-         *     een toekomstige slice kan dit uitbreiden naar het werkelijk
-         *     door TWS gerapporteerde account (uit de laatste sync).
+         *     (``DU*``/``DF*`` = paper, ``U*`` = live). De endpoint detecteert
+         *     de actuele mode via een twee-staps lookup:
+         *
+         *     1. **Connection audit log** — als de worker een geslaagde
+         *        ``connect_success`` heeft geschreven en de sessie nog actief is,
+         *        gebruikt de badge het account-id dat TWS daadwerkelijk
+         *        rapporteerde. Dit sluit de safety-hole waar de operator een
+         *        paper-hint had geconfigureerd maar per ongeluk een live-account
+         *        had aangesloten.
+         *     2. **``IBKR_ACCOUNT_ID_HINT`` fallback** — wanneer er nog geen
+         *        actieve sessie is (boot, storage uit, etc.) valt de detectie
+         *        terug op de operator-geconfigureerde hint.
+         *
+         *     Het ``detected_source`` veld in de response maakt voor de operator
+         *     expliciet welk pad is gebruikt.
          */
         get: operations["read_ibkr_account_mode_ibkr_account_mode_get"];
         put?: never;
