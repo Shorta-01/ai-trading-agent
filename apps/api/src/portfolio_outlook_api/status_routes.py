@@ -3587,6 +3587,7 @@ def read_ibkr_account_mode() -> dict[str, object]:
     from contextlib import suppress
 
     from portfolio_outlook_api.ibkr_connection_read_model import (
+        mask_account_id,
         read_connection_status,
     )
     from portfolio_outlook_api.ibkr_status import detect_account_mode_from_id
@@ -3607,12 +3608,33 @@ def read_ibkr_account_mode() -> dict[str, object]:
     account_id = actual_account_id or settings.ibkr_account_id_hint
     detected = detect_account_mode_from_id(account_id)
     display = "PAPER" if detected == "paper" else "LIVE" if detected == "live" else "UNKNOWN"
+
+    # V1.2 §BZ vervolg: rapporteer een hint↔actual mismatch direct in
+    # de badge response zodat het dashboard een waarschuwingsbanner
+    # kan tonen zonder dat de operator naar /systeemmeldingen hoeft.
+    # IDs worden gemaskeerd voor privacy (DU•••4567 / U•••4321).
+    hint = settings.ibkr_account_id_hint
+    hint_mismatch = bool(
+        hint and actual_account_id and hint.strip().upper() != actual_account_id.strip().upper()
+    )
+    hint_mismatch_nl: str | None = None
+    if hint_mismatch:
+        hint_mismatch_nl = (
+            f"De geconfigureerde IBKR_ACCOUNT_ID_HINT ({mask_account_id(hint)}) "
+            f"verschilt van het actueel verbonden account ({mask_account_id(actual_account_id)}). "
+            f"De badge volgt het verbonden account; controleer of dit klopt."
+        )
+
     return {
         "status": "ok",
         "mode": detected,
         "display_label": display,
         "expected_environment": settings.ibkr_expected_environment,
         "detected_source": detected_source,
+        "hint_account_id_masked": mask_account_id(hint),
+        "actual_account_id_masked": mask_account_id(actual_account_id),
+        "hint_mismatch": hint_mismatch,
+        "hint_mismatch_nl": hint_mismatch_nl,
         "help_nl": (
             "De modus wordt door het verbonden IBKR-account bepaald, niet "
             "door een app-side gate. Bron: het connection-audit log "
