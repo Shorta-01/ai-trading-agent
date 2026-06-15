@@ -551,6 +551,90 @@ def test_auto_reconnect_swallows_connect_exception() -> None:
         scheduler.stop()
 
 
+class _ReconnectingOrderAdapter:
+    """Test stub voor de §BZ-follow-up order-adapter heartbeat."""
+
+    def __init__(self, *, connected: bool) -> None:
+        self._connected = connected
+        self.reconnect_calls = 0
+
+    def is_connected(self) -> bool:
+        return self._connected
+
+    def reconnect(self) -> bool:
+        self.reconnect_calls += 1
+        self._connected = True
+        return True
+
+
+def test_order_adapter_reconnect_fires_when_disconnected() -> None:
+    """V1.2 §BZ follow-up: heartbeat heropent ook de order-sessie
+    wanneer die dropt — niet alleen het reconciler-gateway."""
+
+    adapter = _ReconnectingOrderAdapter(connected=False)
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        order_adapter=adapter,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            account_id="DU1234567",
+            ibkr_auto_reconnect_enabled=True,
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-order-reconnect",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        scheduler._maybe_reconnect_order_adapter()
+        assert adapter.reconnect_calls == 1
+        assert adapter.is_connected() is True
+        # Second tick: already connected → no-op.
+        scheduler._maybe_reconnect_order_adapter()
+        assert adapter.reconnect_calls == 1
+    finally:
+        scheduler.stop()
+
+
+def test_order_adapter_reconnect_skips_when_flag_off() -> None:
+    """Default ``ibkr_auto_reconnect_enabled=False`` betekent: nooit
+    reconnect-call op de order-adapter."""
+
+    adapter = _ReconnectingOrderAdapter(connected=False)
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        order_adapter=adapter,
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True,
+            account_id="DU1234567",
+            # auto_reconnect default False
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-order-reconnect-off",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        scheduler._maybe_reconnect_order_adapter()
+        assert adapter.reconnect_calls == 0
+    finally:
+        scheduler.stop()
+
+
 def test_submission_sweep_honors_configurable_interval_and_jitter() -> None:
     scheduler = _build_with_sweeps(
         order_adapter=object(),

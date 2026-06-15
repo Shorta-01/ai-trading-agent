@@ -11,6 +11,27 @@ lezen.
 > software. De operator-approval workflow (CLAUDE.md §2) is de
 > veiligheidsgarantie tegen ongewenste live trades.
 
+### Migratie vanaf pre-§BZ deploys
+
+Heb je een `.env` met `WORKER_PAPER_ONLY_MODE=true` of
+`PAPER_ONLY_MODE=true`? Die env-vars worden sinds §BZ stil genegeerd
+(pydantic `extra="ignore"`); je hoeft ze niet te verwijderen, maar
+operator-housekeeping raadt het wel aan. De `IBKR_EXPECTED_ENVIRONMENT`
+setting blijft bestaan als informatief veld (operator's deploy-time
+verwachting); het blokkeert geen functionaliteit meer. De actuele
+mode wordt gedetecteerd via de IBKR account-id prefix. Bij mismatch
+tussen `IBKR_ACCOUNT_ID_HINT` en het actuele TWS-account schrijft de
+sync automatisch een waarschuwing op `/systeemmeldingen`.
+
+### Operator-zichtbare runtime-meldingen (post-§BZ)
+
+| Event | Trigger | Severity |
+|---|---|---|
+| `order_session_live_account` | Worker opent order-sessie tegen een `U*` account | warning |
+| `account_id_mismatch` | IBKR sync ontvangt een ander account dan `IBKR_ACCOUNT_ID_HINT` | warning |
+
+Beide meldingen verschijnen op `/systeemmeldingen`; ze blokkeren geen sweeps.
+
 ## 1. Stack draait
 
 - [ ] `docker compose up` zonder fouten.

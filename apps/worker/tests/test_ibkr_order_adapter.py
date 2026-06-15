@@ -271,3 +271,47 @@ def test_open_order_adapter_refuses_unmanaged_account() -> None:
             session_id="s",
             ib_client_factory=lambda: _FakeIB(managed=["DU9999999"]),
         )
+
+
+def test_order_adapter_reconnect_recreates_client_via_factory() -> None:
+    """V1.2 §BZ follow-up: heartbeat reconnect roept de bewaarde
+    ``ib_client_factory`` opnieuw aan en swap't de interne client."""
+
+    clients: list[_FakeIB] = []
+
+    def _factory() -> _FakeIB:
+        ib = _FakeIB(managed=["DU1234567"])
+        clients.append(ib)
+        return ib
+
+    adapter = open_order_adapter(
+        host="127.0.0.1",
+        port=7497,
+        client_id=2,
+        account_id="DU1234567",
+        session_id="s",
+        ib_client_factory=_factory,
+    )
+    assert len(clients) == 1
+    # Simulate a dropped session.
+    clients[0]._connected = False
+    assert adapter.is_connected() is False
+    assert adapter.reconnect() is True
+    assert len(clients) == 2
+    assert adapter.is_connected() is True
+
+
+def test_order_adapter_reconnect_returns_false_without_factory() -> None:
+    """Legacy constructie (geen factory) → reconnect is een no-op,
+    geen crash."""
+
+    from portfolio_outlook_worker.ibkr_submission.ibkr_order_adapter import (
+        IbkrOrderAdapter,
+    )
+
+    fake = _FakeIB(connected=False, managed=["DU1234567"])
+    adapter = IbkrOrderAdapter(
+        ib_client=fake, account_id="DU1234567", session_id="s"
+    )
+    assert adapter.is_connected() is False
+    assert adapter.reconnect() is False  # no factory → cannot reconnect
