@@ -108,7 +108,7 @@ def test_ibkr_status_explicit_tws_setting_without_client_stays_blocked() -> None
     assert payload["actions_allowed"] is False
     assert payload["order_submission_allowed"] is False
 
-def test_ibkr_status_wrong_account_mode_via_fake_adapter() -> None:
+def test_ibkr_status_account_mode_mismatch_via_fake_adapter() -> None:
     payload = build_ibkr_status_placeholder(
         Settings(
             ibkr_enabled=True,
@@ -118,14 +118,14 @@ def test_ibkr_status_wrong_account_mode_via_fake_adapter() -> None:
         ),
         session_status_adapter=FakeStatusAdapter(
             IbkrSessionStatusAdapterResult(
-                connection_status="connected_wrong_account_mode",
+                connection_status="connected_account_mode_mismatch",
                 account_mode_status="mismatch",
                 session_status_reason="account_mode_mismatch",
             )
         ),
     )
 
-    assert payload["connection_status"] == "connected_wrong_account_mode"
+    assert payload["connection_status"] == "connected_account_mode_mismatch"
     assert payload["blocks_orders"] is True
     assert payload["sync_allowed"] is False
     assert payload["actions_allowed"] is False
@@ -196,7 +196,7 @@ def test_ibkr_status_account_mode_match_via_fake_adapter() -> None:
     assert payload["blocks_orders"] is True
 
 
-def test_ibkr_status_infers_wrong_account_mode_from_adapter_account_mode() -> None:
+def test_ibkr_status_infers_account_mode_mismatch_from_adapter_account_mode() -> None:
     payload = build_ibkr_status_placeholder(
         Settings(
             ibkr_enabled=True,
@@ -214,7 +214,7 @@ def test_ibkr_status_infers_wrong_account_mode_from_adapter_account_mode() -> No
         ),
     )
 
-    assert payload["connection_status"] == "connected_wrong_account_mode"
+    assert payload["connection_status"] == "connected_account_mode_mismatch"
     assert payload["account_mode_status"] == "mismatch"
     assert payload["sync_allowed"] is False
     assert payload["actions_allowed"] is False
