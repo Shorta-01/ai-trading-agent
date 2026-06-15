@@ -1063,22 +1063,35 @@ class PortfolioScheduler:
         self._maybe_reload_runtime_config()
 
     def _maybe_reload_runtime_config(self) -> None:
-        """V1.2 §BZ vervolg — handle SIGHUP-triggered config reload.
+        """V1.2 §BZ vervolg — runtime_config reload met twee triggers.
 
-        ``main._sighup`` zet ``_runtime_config_reload_requested=True``;
-        deze heartbeat-hook detecteert dat, herleest runtime_config
-        van de DB en past het overlay opnieuw toe op het settings
-        singleton. De TWS-sessies worden NIET automatisch heropend
-        — die staan al onder ``_maybe_reconnect_*`` controle en zien
-        de nieuwe ``account_id`` bij hun eerstvolgende tick zodra de
-        sessie gedropt wordt. Best-effort: alle exceptions worden
-        gelogd maar nooit gepropageerd."""
+        Trigger A (SIGHUP): ``main._sighup`` zet
+        ``_runtime_config_reload_requested=True`` zodat operators
+        ``docker exec worker kill -SIGHUP 1`` kunnen gebruiken.
 
-        if not getattr(self, "_runtime_config_reload_requested", False):
-            return
-        # Reset de flag direct zodat een herhaalde fout niet elke
-        # heartbeat opnieuw probeert.
+        Trigger B (auto-poll): elke heartbeat polled
+        ``runtime_config.updated_at`` van de DB en triggert een reload
+        wanneer die tijdstempel nieuwer is dan de laatst geziene. Dit
+        is het cross-container vriendelijke pad — operator slaat op
+        via ``/instellingen`` en hoeft niks meer manueel te doen.
+
+        Best-effort: alle exceptions worden gelogd maar nooit
+        gepropageerd; een heartbeat-tick mag nooit crashen."""
+
+        should_reload = bool(
+            getattr(self, "_runtime_config_reload_requested", False)
+        )
+        # Direct resetten zodat een herhaalde fout niet elke heartbeat
+        # opnieuw probeert.
         self._runtime_config_reload_requested = False
+
+        # Trigger B: poll runtime_config.updated_at.
+        if not should_reload:
+            should_reload = self._poll_runtime_config_changed()
+
+        if not should_reload:
+            return
+
         try:
             from portfolio_outlook_worker.config import settings
             from portfolio_outlook_worker.runtime_config_overlay import (
@@ -1092,7 +1105,7 @@ class PortfolioScheduler:
             # reconnect-heartbeats de nieuwe waarde zien.
             self._ibkr_settings = settings.ibkr
             logger.info(
-                "Runtime-config reload via SIGHUP: account_id %s → %s",
+                "Runtime-config reload: account_id %s → %s",
                 previous_account_id,
                 new_account_id,
             )
@@ -1100,6 +1113,59 @@ class PortfolioScheduler:
             logger.exception(
                 "Runtime-config reload mislukt; oude waarden blijven actief."
             )
+
+    def _fetch_runtime_config_record(self) -> Any | None:
+        """Storage-side helper voor :meth:`_poll_runtime_config_changed`.
+
+        Geseparated zodat tests dit makkelijk kunnen patchen zonder
+        storage-internals te moeten faken. Returns ``None`` bij
+        elke fout of ontbrekende DB-rij."""
+
+        storage = self._storage_settings
+        if not storage.enabled or not storage.database_url:
+            return None
+        try:
+            from ai_trading_agent_storage import (
+                SqlAlchemyRuntimeConfigRepository,
+                StorageConnectionProvider,
+                build_database_connection_settings,
+            )
+
+            provider = StorageConnectionProvider(
+                build_database_connection_settings(storage.database_url)
+            )
+            with provider.checked_connection(
+                require_writable=False
+            ) as checked:
+                repo = SqlAlchemyRuntimeConfigRepository(
+                    checked.connection, checked.readiness
+                )
+                return repo.get()
+        except Exception:  # noqa: BLE001 — boundary
+            return None
+
+    def _poll_runtime_config_changed(self) -> bool:
+        """Returns True wanneer ``runtime_config.updated_at`` nieuwer is
+        dan de laatst geziene waarde, OF wanneer dit de eerste poll na
+        boot is en er al een DB-rij bestaat (cold-start case).
+
+        Best-effort: storage-fouten geven False terug zonder log-spam
+        op elke heartbeat (één warn-log per session)."""
+
+        record = self._fetch_runtime_config_record()
+        if record is None:
+            return False
+        last_seen = getattr(self, "_last_runtime_config_updated_at", None)
+        if last_seen is None:
+            # Eerste poll: markeer als gezien (cold-start = geen reload
+            # nodig; we hebben net apply_worker_runtime_config_overlay
+            # bij boot al gedraaid).
+            self._last_runtime_config_updated_at = record.updated_at
+            return False
+        if record.updated_at > last_seen:
+            self._last_runtime_config_updated_at = record.updated_at
+            return True
+        return False
 
     def _maybe_reconnect_ibkr_gateway(self) -> None:
         """Re-open de TWS-sessie wanneer de heartbeat detecteert dat

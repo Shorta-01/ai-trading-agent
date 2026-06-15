@@ -12811,6 +12811,50 @@
         "title": "TaxGoodHouseholderOut",
         "type": "object"
       },
+      "TaxIbkrConfigAuditOut": {
+        "description": "V1.2 \u00a7BZ vervolg \u2014 \u00e9\u00e9n regel IBKR-config audit-trail\n(mode-switch / mismatch / account-id wijziging).",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_code": {
+            "title": "Event Code",
+            "type": "string"
+          },
+          "message_nl": {
+            "title": "Message Nl",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title_nl": {
+            "title": "Title Nl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "event_code",
+          "severity",
+          "status",
+          "source",
+          "title_nl",
+          "message_nl"
+        ],
+        "title": "TaxIbkrConfigAuditOut",
+        "type": "object"
+      },
       "TaxMonthlyPointOut": {
         "properties": {
           "cumulative_net_local_by_currency": {
@@ -13038,6 +13082,14 @@
           "help_nl": {
             "title": "Help Nl",
             "type": "string"
+          },
+          "ibkr_config_audit": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TaxIbkrConfigAuditOut"
+            },
+            "title": "Ibkr Config Audit",
+            "type": "array"
           },
           "monthly_points": {
             "items": {

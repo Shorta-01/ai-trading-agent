@@ -297,4 +297,54 @@ describe("BelastingPage", () => {
       await screen.findByTestId("tax-dividends-info"),
     ).toBeInTheDocument();
   });
+
+  it("renders IBKR-config audit-trail section with rows when events exist", async () => {
+    getTaxYearReport.mockResolvedValue({
+      ok: true as const,
+      data: makeReport({
+        ibkr_config_audit: [
+          {
+            created_at: "2026-03-12T10:00:00+00:00",
+            event_code: "account_id_mismatch",
+            severity: "warning",
+            status: "resolved",
+            source: "api:ibkr_sync",
+            title_nl: "Mismatch",
+            message_nl: "DU1234567 vs U7654321",
+          },
+          {
+            created_at: "2026-05-01T09:00:00+00:00",
+            event_code: "ibkr_account_id_changed",
+            severity: "info",
+            status: "open",
+            source: "api:runtime_config_routes",
+            title_nl: "Account-id gewijzigd",
+            message_nl: "DU1111111 -> DU2222222",
+          },
+        ],
+      }),
+    });
+    render(<BelastingPage />);
+    expect(
+      await screen.findByTestId("tax-ibkr-config-audit-table"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("tax-ibkr-config-audit-row-account_id_mismatch"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("tax-ibkr-config-audit-row-ibkr_account_id_changed"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("DU1234567 vs U7654321")).toBeInTheDocument();
+  });
+
+  it("renders empty-state when no IBKR-config events for the year", async () => {
+    getTaxYearReport.mockResolvedValue({
+      ok: true as const,
+      data: makeReport({ ibkr_config_audit: [] }),
+    });
+    render(<BelastingPage />);
+    expect(
+      await screen.findByTestId("tax-ibkr-config-audit-empty"),
+    ).toBeInTheDocument();
+  });
 });

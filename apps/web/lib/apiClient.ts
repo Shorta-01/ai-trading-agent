@@ -598,6 +598,18 @@ export type TaxGoodHouseholder = {
   summary_nl: string;
 };
 
+// V1.2 §BZ vervolg — IBKR-config audit-trail entry zoals in de
+// belasting jaaroverzicht response.
+export type TaxIbkrConfigAuditEntry = {
+  created_at: string;
+  event_code: string;
+  severity: string;
+  status: string;
+  source: string;
+  title_nl: string;
+  message_nl: string;
+};
+
 export type TaxYearReportResponse = {
   title_nl: string;
   help_nl: string;
@@ -609,6 +621,7 @@ export type TaxYearReportResponse = {
   dividends: unknown[];
   fx_conversion_available: boolean;
   notes_nl: string[];
+  ibkr_config_audit?: TaxIbkrConfigAuditEntry[];
 };
 
 // V1.2 §AX — maandrapport.

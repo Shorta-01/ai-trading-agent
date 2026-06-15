@@ -8925,6 +8925,27 @@ export interface components {
             /** Uses Shorts */
             uses_shorts: boolean;
         };
+        /**
+         * TaxIbkrConfigAuditOut
+         * @description V1.2 §BZ vervolg — één regel IBKR-config audit-trail
+         *     (mode-switch / mismatch / account-id wijziging).
+         */
+        TaxIbkrConfigAuditOut: {
+            /** Created At */
+            created_at: string;
+            /** Event Code */
+            event_code: string;
+            /** Message Nl */
+            message_nl: string;
+            /** Severity */
+            severity: string;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Title Nl */
+            title_nl: string;
+        };
         /** TaxMonthlyPointOut */
         TaxMonthlyPointOut: {
             /** Cumulative Net Local By Currency */
@@ -9000,6 +9021,11 @@ export interface components {
             good_householder: components["schemas"]["TaxGoodHouseholderOut"];
             /** Help Nl */
             help_nl: string;
+            /**
+             * Ibkr Config Audit
+             * @default []
+             */
+            ibkr_config_audit: components["schemas"]["TaxIbkrConfigAuditOut"][];
             /** Monthly Points */
             monthly_points: components["schemas"]["TaxMonthlyPointOut"][];
             /** Notes Nl */

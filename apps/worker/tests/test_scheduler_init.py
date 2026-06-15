@@ -731,6 +731,77 @@ def test_sighup_runtime_config_reload_swallows_exceptions(monkeypatch) -> None:
         scheduler.stop()
 
 
+def test_poll_runtime_config_changed_returns_true_when_updated_at_advances() -> None:
+    """V1.2 §BZ vervolg — auto-poll bemerkt een DB-update zonder
+    SIGHUP nodig te hebben."""
+
+    from datetime import UTC, datetime
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=True,
+            database_url="postgresql://fake",
+            writes_enabled=True,
+        ),
+        ibkr_settings=IbkrSettings(enabled=True, account_id="DU1111111"),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-poll",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    class _FakeRecord:
+        def __init__(self, updated_at):
+            self.updated_at = updated_at
+
+    times = iter(
+        [
+            datetime(2026, 6, 15, 10, 0, 0, tzinfo=UTC),
+            datetime(2026, 6, 15, 10, 0, 0, tzinfo=UTC),  # zelfde
+            datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC),  # nieuwer
+        ]
+    )
+
+    # Stub de storage helper i.p.v. echte DB-connectie te mocken.
+    # Direct op de instance — geen scheduler.start() nodig (die zou
+    # de echte storage proberen te raken voor het heartbeat-audit).
+    scheduler._fetch_runtime_config_record = lambda: _FakeRecord(next(times))  # type: ignore[method-assign]
+
+    # Eerste poll = cold-start markering, geen reload.
+    assert scheduler._poll_runtime_config_changed() is False
+    # Tweede poll = zelfde updated_at, geen reload.
+    assert scheduler._poll_runtime_config_changed() is False
+    # Derde poll = nieuwere updated_at, MOET reload triggeren.
+    assert scheduler._poll_runtime_config_changed() is True
+
+
+def test_poll_runtime_config_changed_returns_false_when_storage_disabled() -> None:
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(enabled=True, account_id="DU1111111"),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-poll-off",
+        scheduler_factory=_scheduler_factory,
+    )
+    try:
+        scheduler.start()
+        # Storage uit → poll is een no-op.
+        assert scheduler._poll_runtime_config_changed() is False
+    finally:
+        scheduler.stop()
+
+
 def test_submission_sweep_honors_configurable_interval_and_jitter() -> None:
     scheduler = _build_with_sweeps(
         order_adapter=object(),
