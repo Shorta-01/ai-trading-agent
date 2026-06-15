@@ -115,7 +115,6 @@ class Settings(BaseSettings):
     ibkr_sync_host: str | None = None
     ibkr_sync_port: int | None = None
     ibkr_sync_client_id: int | None = None
-    ibkr_sync_account_mode: str = "paper"
     ibkr_sync_readonly: bool = True
     ibkr_sync_timeout_seconds: int = 10
     ibkr_sync_provider_code: str = "ibkr"

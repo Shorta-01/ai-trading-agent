@@ -34,9 +34,10 @@ def build_real_sync_adapter(
     * ``ibkr_sync_readonly`` must remain True.
     * Host / port / client-id must all be configured.
 
-    De ``ibkr_sync_account_mode`` setting is informatief — de IBKR
-    account-id prefix bepaalt of er paper- of live-orders worden
-    geplaatst, niet een software-side gate.
+    V1.2 §BZ: de mode wordt bepaald door de IBKR account-id prefix
+    (``DU*``/``DF*`` = paper, ``U*`` = live), niet door een software-
+    side gate. De voormalige ``ibkr_sync_account_mode`` setting is
+    volledig verwijderd.
 
     Optional ``app`` parameter lets tests inject a fake ibapi application so the
     real-adapter path can be exercised in CI without a TWS/Gateway.

@@ -287,7 +287,6 @@ def test_submit_happy_path_with_fake_submission_client(monkeypatch) -> None:
     api_settings.ibkr_paper_order_submission_host = "127.0.0.1"
     api_settings.ibkr_paper_order_submission_port = 4002
     api_settings.ibkr_paper_order_submission_client_id = 11
-    api_settings.ibkr_sync_account_mode = "paper"
     api_settings.ibkr_expected_environment = "paper"
     api_settings.storage.enabled = True
     api_settings.storage.database_url = "postgresql://fake"

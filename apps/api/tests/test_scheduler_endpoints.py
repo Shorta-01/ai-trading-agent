@@ -21,7 +21,6 @@ def _reset() -> None:
     api_settings.storage.database_url = None
     api_settings.storage.writes_enabled = False
     api_settings.scheduler_enabled = False
-    api_settings.ibkr_sync_account_mode = "paper"
     api_settings.ibkr_expected_environment = "paper"
 
 
@@ -189,7 +188,11 @@ def test_recent_runs_bounds_limit(monkeypatch) -> None:
 # ---- GET /ibkr/account/mode -------------------------------------------
 
 
-def test_account_mode_endpoint_reports_paper_by_default() -> None:
+def test_account_mode_endpoint_reports_paper_when_hint_is_paper_account() -> None:
+    """V1.2 §BZ — mode-detectie via account-id prefix. ``DU*``/``DF*``
+    prefix → paper."""
+
+    api_settings.ibkr_account_id_hint = "DU1234567"
     r = client.get("/ibkr/account/mode")
     body = r.json()
     assert r.status_code == 200
@@ -199,8 +202,11 @@ def test_account_mode_endpoint_reports_paper_by_default() -> None:
     assert body["safe_for_orders"] is False
 
 
-def test_account_mode_endpoint_reports_live_when_setting_says_live() -> None:
-    api_settings.ibkr_sync_account_mode = "live"
+def test_account_mode_endpoint_reports_live_when_hint_is_live_account() -> None:
+    """V1.2 §BZ — ``U*`` prefix → live. De badge volgt het feitelijk
+    geconfigureerde account, niet een static config-string."""
+
+    api_settings.ibkr_account_id_hint = "U7654321"
     r = client.get("/ibkr/account/mode")
     body = r.json()
     assert body["mode"] == "live"
@@ -211,8 +217,8 @@ def test_account_mode_endpoint_reports_live_when_setting_says_live() -> None:
     assert body["blocks_orders"] is True
 
 
-def test_account_mode_endpoint_reports_unknown_when_setting_is_empty() -> None:
-    api_settings.ibkr_sync_account_mode = ""
+def test_account_mode_endpoint_reports_unknown_when_hint_is_unset() -> None:
+    api_settings.ibkr_account_id_hint = None
     r = client.get("/ibkr/account/mode")
     body = r.json()
     assert body["mode"] == "unknown"

@@ -45,6 +45,28 @@ def _normalize_account_mode(raw_mode: str | None) -> str | None:
     return None
 
 
+def detect_account_mode_from_id(account_id: str | None) -> str:
+    """V1.2 §BZ: detect IBKR mode from the account-id prefix.
+
+    ``DU*``/``DF*`` → ``"paper"``, ``U*`` → ``"live"``, anders
+    ``"unknown"``. Dit is de canonieke detectie — vervangt de oude
+    ``ibkr_sync_account_mode`` setting die een static config-string was
+    en bij een onverwacht aangesloten account de safety-hole kon openen
+    (badge zegt PAPER terwijl het account live is).
+    """
+
+    if not account_id:
+        return "unknown"
+    upper = account_id.strip().upper()
+    if not upper:
+        return "unknown"
+    if upper.startswith(("DU", "DF")):
+        return "paper"
+    if upper.startswith("U"):
+        return "live"
+    return "unknown"
+
+
 def _status_content(connection_status: str) -> tuple[str, str, str, str]:
     if connection_status == "disabled":
         return (

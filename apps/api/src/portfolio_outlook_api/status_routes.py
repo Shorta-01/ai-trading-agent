@@ -3566,14 +3566,18 @@ def run_morning_chain_manually() -> dict[str, object]:
 def read_ibkr_account_mode() -> dict[str, object]:
     """Report the IBKR account mode (paper / live) for the dashboard badge.
 
-    Per the §21.1 doctrine relock the account-mode is reported, not
-    gated. The detected mode comes from the configured
-    ``ibkr_sync_account_mode`` setting (which mirrors the connected
-    account); future slices will derive this from the IBKR session
-    response directly.
+    Per §BZ wordt de mode bepaald door de IBKR account-id prefix
+    (``DU*``/``DF*`` = paper, ``U*`` = live). De oude
+    ``ibkr_sync_account_mode`` config-string is verwijderd — die kon
+    een safety-hole openen wanneer de operator config + verbonden
+    account uit sync raakten. ``ibkr_account_id_hint`` is nu de bron;
+    een toekomstige slice kan dit uitbreiden naar het werkelijk
+    door TWS gerapporteerde account (uit de laatste sync).
     """
 
-    detected = (settings.ibkr_sync_account_mode or "").strip().lower() or "unknown"
+    from portfolio_outlook_api.ibkr_status import detect_account_mode_from_id
+
+    detected = detect_account_mode_from_id(settings.ibkr_account_id_hint)
     display = "PAPER" if detected == "paper" else "LIVE" if detected == "live" else "UNKNOWN"
     return {
         "status": "ok",
