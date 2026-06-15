@@ -1,6 +1,6 @@
 # CLAUDE.md — AI Trading Agent Operator Doctrine
 
-**Version**: V1.2 §AO — vastgelegd Sat 2026-06-13 in een design-discussie met de operator.
+**Version**: V1.2 §BZ — vastgelegd Mon 2026-06-15 in een design-discussie met de operator (paper_only_mode flag geschrapt als doctrine-lock; mode-detectie loopt nu uitsluitend via de IBKR account-prefix). Initial V1.2 §AO vastgelegd Sat 2026-06-13.
 
 **Doel van dit document**: Bij elke nieuwe Claude Code sessie kan deze file als naslagwerk worden ingelezen zodat de doctrine niet opnieuw moet worden uitgelegd. De doctrine bepaalt **wat de software moet doen**; de bestaande `docs/intent/_trading-system-doctrine.md` blijft de technische uitwerking.
 
@@ -15,7 +15,7 @@
 | Veilige basis | €5.000.000 op termijnrekening (~€7.300/maand netto baseline) |
 | Trading-budget | **€1.000.000 maximum**, geleidelijk op te bouwen |
 | Trading start | **€50.000** clean cash, ramp naar **€100.000** wanneer de operator comfortabel is |
-| Mode | **IBKR paper** (paper_only_mode = True; doctrine-lock blijft) |
+| Mode | **IBKR-account bepaalt mode** — paper-account (`DU*`/`DF*`) of live-account (`U*`). De software werkt VOLLEDIG in beide modi; geen software-side flag bepaalt of er live geld kan bewegen, alleen het account waar IBKR de software op laat verbinden |
 | Income behoefte | +4% per trade vormt de operator's maandelijkse income — niet herinvesteren |
 
 ---
@@ -26,7 +26,7 @@
 
 Dit principe is bovengeschikt aan alle andere doctrine-regels. Het overrulet alle gates, alle suggesties, alle automatiseringen. Concreet:
 
-- Buy-orders: operator klikt "Goedkeuren" → action draft krijgt status `user_approved` → operator klikt "Verzend alle naar IBKR" → orders gaan naar IBKR paper
+- Buy-orders: operator klikt "Goedkeuren" → action draft krijgt status `user_approved` → operator klikt "Verzend alle naar IBKR" → orders gaan naar IBKR (paper of live; de gekoppelde account bepaalt het)
 - Sell-orders bij +4%: software toont **SELL-suggestie kaartje** op dashboard, operator beslist
 - Sell-orders bij 6m+ trigger: software toont SELL-suggestie, operator beslist
 - Position averaging / re-entry: software stelt voor, operator beslist
@@ -157,7 +157,7 @@ Maar de software laat alle voorstellen door. Operator beslist of hij in deze omg
 | Stage | Status (DB) | UI label | Acties |
 |---|---|---|---|
 | 1 | `proposed` / `edited` | **"Voorstellen vandaag"** | Per voorstel: **Goedkeuren** / **Aanpassen** (aantal + limit-prijs) / **Afwijzen** |
-| 2 | `user_approved` | **"Te verzenden naar IBKR"** (operator's to-do) | Nog bewerkbaar (aantal/prijs). Per regel **"Verwijder uit lijst"** knop. Eén grote knop bovenaan: **"Verzend alle X orders naar IBKR paper"** met modal-bevestiging |
+| 2 | `user_approved` | **"Te verzenden naar IBKR"** (operator's to-do) | Nog bewerkbaar (aantal/prijs). Per regel **"Verwijder uit lijst"** knop. Eén grote knop bovenaan: **"Verzend alle X orders naar IBKR"** met modal-bevestiging |
 | 3 | `submitted` → `working` / `filled` | **"Verzonden naar IBKR"** | Read-only, live updates van IBKR. Reconciliation pikt fills automatisch op |
 
 **Approval-mechaniek (geen typen meer):**
@@ -266,7 +266,7 @@ Bestaande pagina krijgt extra secties voor de doctrine:
 ## 15. Bestaande locks die intact blijven
 
 Alle bestaande doctrine-locks blijven:
-- **`paper_only_mode = True`** — geen live geld
+- **Mode-detectie via IBKR-account, NIET via software-flag** — een paper-account (`DU*`/`DF*`) bepaalt dat orders naar paper-IBKR gaan, een live-account (`U*`) dat ze naar live-IBKR gaan. **De software werkt fully en correctly in beide modi.** Er is geen `paper_only_mode` flag meer die functionaliteit blokkeert. Het §2 fundamentele principe (operator moet ALTIJD klikken; software plaatst NOOIT zelfstandig een order) is de veiligheidsgarantie tegen ongewenste live trades — niet een software-side mode-lock.
 - **`safe_for_*` flags** blijven op False voor decision-makers (orchestrator, suggestion, action-draft, etc.)
 - **AI verboden als forecaster** — Claude/LLM mag alleen NL uitleggen, nooit getallen origineren
 - **Belgian TOB-aware** — 0,35% × 2 = 0,70% round-trip blijft in alle berekeningen
@@ -298,7 +298,8 @@ Elke PR komt met:
 - Volledige test-coverage (unit + integration + UI)
 - mypy + ruff + eslint + tsc clean
 - Doctrine constraints behouden
-- Geen wijziging aan paper_only_mode of safe_for_* flags
+- Geen wijziging aan `safe_for_*` flags
+- Software werkt voor beide IBKR account-modes (paper én live); geen pad mag alleen draaien onder een paper-account-aanname
 
 ---
 
