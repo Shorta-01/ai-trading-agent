@@ -17527,7 +17527,7 @@
     },
     "/ibkr/account/mode": {
       "get": {
-        "description": "Report the IBKR account mode (paper / live) for the dashboard badge.\n\nPer \u00a7BZ wordt de mode bepaald door de IBKR account-id prefix\n(``DU*``/``DF*`` = paper, ``U*`` = live). De oude\n``ibkr_sync_account_mode`` config-string is verwijderd \u2014 die kon\neen safety-hole openen wanneer de operator config + verbonden\naccount uit sync raakten. ``ibkr_account_id_hint`` is nu de bron;\neen toekomstige slice kan dit uitbreiden naar het werkelijk\ndoor TWS gerapporteerde account (uit de laatste sync).",
+        "description": "Report the IBKR account mode (paper / live) for the dashboard badge.\n\nPer \u00a7BZ wordt de mode bepaald door de IBKR account-id prefix\n(``DU*``/``DF*`` = paper, ``U*`` = live). De endpoint detecteert\nde actuele mode via een twee-staps lookup:\n\n1. **Connection audit log** \u2014 als de worker een geslaagde\n   ``connect_success`` heeft geschreven en de sessie nog actief is,\n   gebruikt de badge het account-id dat TWS daadwerkelijk\n   rapporteerde. Dit sluit de safety-hole waar de operator een\n   paper-hint had geconfigureerd maar per ongeluk een live-account\n   had aangesloten.\n2. **``IBKR_ACCOUNT_ID_HINT`` fallback** \u2014 wanneer er nog geen\n   actieve sessie is (boot, storage uit, etc.) valt de detectie\n   terug op de operator-geconfigureerde hint.\n\nHet ``detected_source`` veld in de response maakt voor de operator\nexpliciet welk pad is gebruikt.",
         "operationId": "read_ibkr_account_mode_ibkr_account_mode_get",
         "responses": {
           "200": {

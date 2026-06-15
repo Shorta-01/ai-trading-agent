@@ -223,6 +223,96 @@ def test_account_mode_endpoint_reports_unknown_when_hint_is_unset() -> None:
     body = r.json()
     assert body["mode"] == "unknown"
     assert body["display_label"] == "UNKNOWN"
+    # Storage is uit in deze test → val terug op hint (None).
+    assert body["detected_source"] == "hint"
+
+
+def test_account_mode_endpoint_prefers_actual_tws_account_over_stale_hint(
+    monkeypatch,
+) -> None:
+    """V1.2 §BZ vervolg — sluit de residuele safety-hole:
+
+    De operator configureert een paper-hint (``DU1234567``) maar
+    verbindt PER ONGELUK een live-account (``U7654321``). Het audit-log
+    rapporteert ``U*``. De badge MOET LIVE tonen, niet PAPER — anders
+    denkt de operator paper te draaien terwijl er live geld kan
+    bewegen."""
+
+    from portfolio_outlook_api import (
+        ibkr_connection_read_model as conn_module,
+    )
+    from portfolio_outlook_api import status_routes
+    from portfolio_outlook_api.ibkr_connection_read_model import (
+        IbkrConnectionStatus,
+    )
+
+    api_settings.ibkr_account_id_hint = "DU1234567"  # operator's intent
+
+    def _fake_read(_storage, *, configured_account_id, audit_limit=200):
+        # TWS daadwerkelijk verbonden met een live-account.
+        return IbkrConnectionStatus(
+            connected=True,
+            account_mode="live",
+            account_id="U7654321",
+            verified_at=None,
+            error_nl=None,
+        )
+
+    monkeypatch.setattr(
+        status_routes, "read_connection_status", _fake_read, raising=False
+    )
+    # Inject ook in de read-model module zodat de lokale import in
+    # de endpoint dezelfde patched function pakt.
+    monkeypatch.setattr(
+        conn_module, "read_connection_status", _fake_read
+    )
+
+    r = client.get("/ibkr/account/mode")
+    body = r.json()
+
+    # CRITISCH: de badge volgt het ACTUELE verbonden account, niet de hint.
+    assert body["mode"] == "live"
+    assert body["display_label"] == "LIVE"
+    assert body["detected_source"] == "connected_session"
+    # Safety flags blijven ongewijzigd — endpoint authoriseert niets.
+    assert body["safe_for_orders"] is False
+    assert body["blocks_orders"] is True
+
+
+def test_account_mode_endpoint_falls_back_to_hint_when_no_active_session(
+    monkeypatch,
+) -> None:
+    """Wanneer er geen actieve sessie is (status.connected=False) valt
+    de detectie terug op de hint. ``detected_source`` rapporteert dat
+    expliciet."""
+
+    from portfolio_outlook_api import (
+        ibkr_connection_read_model as conn_module,
+    )
+    from portfolio_outlook_api.ibkr_connection_read_model import (
+        IbkrConnectionStatus,
+    )
+
+    api_settings.ibkr_account_id_hint = "DU1234567"
+
+    def _fake_read(_storage, *, configured_account_id, audit_limit=200):
+        # Niet verbonden → moet hint gebruiken.
+        return IbkrConnectionStatus(
+            connected=False,
+            account_mode=None,
+            account_id=None,
+            verified_at=None,
+            error_nl="niet verbonden",
+        )
+
+    monkeypatch.setattr(conn_module, "read_connection_status", _fake_read)
+
+    r = client.get("/ibkr/account/mode")
+    body = r.json()
+
+    assert body["mode"] == "paper"
+    assert body["display_label"] == "PAPER"
+    assert body["detected_source"] == "hint"
 
 
 # ---- POST /scheduler/runs/morning-chain (Slice 21) --------------------

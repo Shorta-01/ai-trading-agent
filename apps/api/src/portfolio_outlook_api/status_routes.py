@@ -3567,27 +3567,56 @@ def read_ibkr_account_mode() -> dict[str, object]:
     """Report the IBKR account mode (paper / live) for the dashboard badge.
 
     Per §BZ wordt de mode bepaald door de IBKR account-id prefix
-    (``DU*``/``DF*`` = paper, ``U*`` = live). De oude
-    ``ibkr_sync_account_mode`` config-string is verwijderd — die kon
-    een safety-hole openen wanneer de operator config + verbonden
-    account uit sync raakten. ``ibkr_account_id_hint`` is nu de bron;
-    een toekomstige slice kan dit uitbreiden naar het werkelijk
-    door TWS gerapporteerde account (uit de laatste sync).
+    (``DU*``/``DF*`` = paper, ``U*`` = live). De endpoint detecteert
+    de actuele mode via een twee-staps lookup:
+
+    1. **Connection audit log** — als de worker een geslaagde
+       ``connect_success`` heeft geschreven en de sessie nog actief is,
+       gebruikt de badge het account-id dat TWS daadwerkelijk
+       rapporteerde. Dit sluit de safety-hole waar de operator een
+       paper-hint had geconfigureerd maar per ongeluk een live-account
+       had aangesloten.
+    2. **``IBKR_ACCOUNT_ID_HINT`` fallback** — wanneer er nog geen
+       actieve sessie is (boot, storage uit, etc.) valt de detectie
+       terug op de operator-geconfigureerde hint.
+
+    Het ``detected_source`` veld in de response maakt voor de operator
+    expliciet welk pad is gebruikt.
     """
 
+    from contextlib import suppress
+
+    from portfolio_outlook_api.ibkr_connection_read_model import (
+        read_connection_status,
+    )
     from portfolio_outlook_api.ibkr_status import detect_account_mode_from_id
 
-    detected = detect_account_mode_from_id(settings.ibkr_account_id_hint)
+    # Voorkeur: actuele TWS-account uit het audit-log. Best-effort
+    # — storage-uitval / geen sessie → val terug op de hint.
+    actual_account_id: str | None = None
+    detected_source = "hint"
+    with suppress(Exception):
+        status = read_connection_status(
+            settings.storage,
+            configured_account_id=settings.ibkr_account_id_hint,
+        )
+        if status.connected and status.account_id:
+            actual_account_id = status.account_id
+            detected_source = "connected_session"
+
+    account_id = actual_account_id or settings.ibkr_account_id_hint
+    detected = detect_account_mode_from_id(account_id)
     display = "PAPER" if detected == "paper" else "LIVE" if detected == "live" else "UNKNOWN"
     return {
         "status": "ok",
         "mode": detected,
         "display_label": display,
         "expected_environment": settings.ibkr_expected_environment,
+        "detected_source": detected_source,
         "help_nl": (
             "De modus wordt door het verbonden IBKR-account bepaald, niet "
-            "door een app-side gate. Het dashboard toont de modus voor "
-            "elke approval."
+            "door een app-side gate. Bron: het connection-audit log "
+            "(actuele sessie) of IBKR_ACCOUNT_ID_HINT als fallback."
         ),
         "safe_for_orders": False,
         "blocks_orders": True,
