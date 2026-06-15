@@ -2,14 +2,27 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 
 import type { ActionDraftResponse } from "@/lib/apiClient";
 
 import { ActionDraftGrid } from "./ActionDraftGrid";
+
+// V1.2 §BZ vervolg: ``BulkSubmitBar`` gebruikt React Query; wrap
+// alle renders zodat hooks een client vinden.
+function render(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 const HAPPY: ActionDraftResponse = {
   action_draft_id: "draft-1",
@@ -58,6 +71,22 @@ vi.mock("@/lib/apiClient", async () => {
       deleteActionDraft: vi.fn(),
       patchActionDraft: vi.fn(),
       submitActionDraftToPaper: vi.fn(),
+      // V1.2 §BZ vervolg: ``BulkSubmitBar`` queries het IBKR
+      // account-mode endpoint zodat de live-confirmation modal kan
+      // weten of er extra waarschuwing nodig is. Default paper-mock
+      // zodat bestaande tests onveranderd blijven.
+      getIbkrAccountMode: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          status: "ok",
+          mode: "paper",
+          display_label: "PAPER",
+          expected_environment: "paper",
+          help_nl: "",
+          safe_for_orders: false,
+          blocks_orders: true,
+        },
+      }),
     },
   };
 });
@@ -315,6 +344,100 @@ describe("ActionDraftGrid", () => {
     expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledWith("draft-1");
     expect(apiClient.submitActionDraftToPaper).toHaveBeenCalledWith("draft-2");
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it("shows extra LIVE warning in bulk-submit modal when account mode is live", async () => {
+    // V1.2 §BZ vervolg: bij live-account moet de operator een
+    // EXTRA waarschuwing zien voordat orders met echt geld de markt
+    // raken. De banner + button label + modal copy passen zich aan.
+    (apiClient.getIbkrAccountMode as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      data: {
+        status: "ok",
+        mode: "live",
+        display_label: "LIVE",
+        expected_environment: "live",
+        detected_source: "connected_session",
+        actual_account_id_masked: "U7•••4321",
+        hint_account_id_masked: "U7•••4321",
+        hint_mismatch: false,
+        hint_mismatch_nl: null,
+        help_nl: "",
+        safe_for_orders: false,
+        blocks_orders: true,
+      },
+    });
+    render(
+      <ActionDraftGrid
+        drafts={[
+          { ...HAPPY, action_draft_id: "draft-1", status: "user_approved" },
+        ]}
+        onChange={() => {}}
+      />,
+    );
+
+    // Wacht tot de async query is opgelost zodat de UI is bijgewerkt.
+    const button = await screen.findByTestId("action-draft-bulk-submit-button");
+    await waitFor(() => {
+      expect(button.getAttribute("data-account-mode")).toBe("live");
+    });
+    expect(button.textContent).toContain("LIVE");
+    expect(button.textContent).toContain("⚠️");
+
+    // Open de modal.
+    fireEvent.click(button);
+
+    // De live-warning block moet zichtbaar zijn met masked account-id
+    // zodat de operator ziet TEGEN welk live-account hij gaat handelen.
+    const warning = await screen.findByTestId(
+      "action-draft-bulk-submit-live-warning",
+    );
+    expect(warning.textContent).toContain("LIVE");
+    expect(warning.textContent).toContain("U7•••4321");
+    expect(warning.textContent).toContain("ECHT geld");
+
+    // Confirm-label benoemt LIVE expliciet.
+    expect(
+      screen.getByTestId("action-draft-bulk-submit-modal-confirm").textContent,
+    ).toContain("LIVE");
+  });
+
+  it("does NOT show LIVE warning when account mode is paper", async () => {
+    // Expliciete paper-mock — vi.clearAllMocks() reset alleen call-
+    // history, niet de implementation, dus we zetten 'em hier weer.
+    (apiClient.getIbkrAccountMode as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      data: {
+        status: "ok",
+        mode: "paper",
+        display_label: "PAPER",
+        expected_environment: "paper",
+        help_nl: "",
+        safe_for_orders: false,
+        blocks_orders: true,
+      },
+    });
+    render(
+      <ActionDraftGrid
+        drafts={[
+          { ...HAPPY, action_draft_id: "draft-1", status: "user_approved" },
+        ]}
+        onChange={() => {}}
+      />,
+    );
+
+    const button = await screen.findByTestId("action-draft-bulk-submit-button");
+    await waitFor(() => {
+      expect(button.getAttribute("data-account-mode")).toBe("paper");
+    });
+    expect(button.textContent).not.toContain("LIVE");
+
+    fireEvent.click(button);
+
+    // Live-warning block mag NIET aanwezig zijn.
+    expect(
+      screen.queryByTestId("action-draft-bulk-submit-live-warning"),
+    ).toBeNull();
   });
 
   it("calls dismissActionDraft with reason when user enters one", async () => {

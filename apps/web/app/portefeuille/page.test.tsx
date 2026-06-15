@@ -171,4 +171,49 @@ describe("PortfolioPage data state machine", () => {
     const tile = await screen.findByTestId("scheduler-recent-runs");
     expect(tile).toHaveTextContent("Nog geen runs.");
   });
+
+  it("renders the hint↔actual mismatch warning banner when hint_mismatch=true", async () => {
+    // V1.2 §BZ vervolg: wanneer de API rapporteert dat het
+    // geconfigureerde hint NIET matcht met het actueel verbonden
+    // TWS-account, MOET het dashboard een prominente waarschuwings-
+    // banner tonen — anders mist de operator de safety-info.
+    mockAllOk();
+    fns.getIbkrAccountMode.mockReturnValue(
+      ok({
+        status: "ok",
+        mode: "live",
+        display_label: "LIVE",
+        expected_environment: "paper",
+        detected_source: "connected_session",
+        hint_account_id_masked: "DU•••4567",
+        actual_account_id_masked: "U7•••4321",
+        hint_mismatch: true,
+        hint_mismatch_nl:
+          "De geconfigureerde IBKR_ACCOUNT_ID_HINT (DU•••4567) verschilt van het actueel verbonden account (U7•••4321).",
+        help_nl: "",
+        safe_for_orders: false,
+        blocks_orders: true,
+      }),
+    );
+    render(<PortfolioPage />);
+
+    const banner = await screen.findByTestId(
+      "account-mode-hint-mismatch-banner",
+    );
+    expect(banner.getAttribute("role")).toBe("alert");
+    expect(banner.textContent).toContain("DU•••4567");
+    expect(banner.textContent).toContain("U7•••4321");
+    expect(banner.textContent).toContain("mismatch");
+  });
+
+  it("does NOT render the mismatch banner when there is no mismatch", async () => {
+    // Default mock (hint_mismatch undefined / false) — geen banner.
+    mockAllOk();
+    render(<PortfolioPage />);
+    // findByTestId waits for the page; query for the banner specifically.
+    await screen.findByText(/Portefeuille/i);
+    expect(
+      screen.queryByTestId("account-mode-hint-mismatch-banner"),
+    ).toBeNull();
+  });
 });

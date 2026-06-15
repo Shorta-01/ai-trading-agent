@@ -19,9 +19,14 @@
  * knop die de inline ``ActionDraftEditForm`` opent.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiClient, type ActionDraftResponse } from "@/lib/apiClient";
+import {
+  apiClient,
+  type ActionDraftResponse,
+  type IbkrAccountModeResponse,
+} from "@/lib/apiClient";
 import {
   computeEurEquivalent,
   computeFxSensitivity,
@@ -568,6 +573,19 @@ function BulkSubmitBar({
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
 
+  // V1.2 §BZ vervolg: detect of de geconfigureerde IBKR-sessie tegen
+  // een live-account verbonden is. ``useQuery`` met dezelfde queryKey
+  // als ``/portefeuille`` zodat React Query de fetch dedup't.
+  const accountModeQuery = useQuery({
+    queryKey: ["portefeuille-account-mode"],
+    queryFn: async (): Promise<IbkrAccountModeResponse | null> => {
+      const res = await apiClient.getIbkrAccountMode();
+      return res.ok ? res.data : null;
+    },
+  });
+  const accountMode = accountModeQuery.data ?? null;
+  const isLiveAccount = accountMode?.mode === "live";
+
   const totalEur = approvedDrafts.reduce(
     (sum, d) => sum + Number(d.notional_eur || 0),
     0,
@@ -642,8 +660,13 @@ function BulkSubmitBar({
         data-testid="action-draft-bulk-submit-button"
         onClick={() => setModalOpen(true)}
         disabled={busy}
+        data-account-mode={accountMode?.mode ?? "unknown"}
         style={{
-          background: busy ? "#9ca3af" : "#15803d",
+          background: busy
+            ? "#9ca3af"
+            : isLiveAccount
+              ? "#b91c1c"
+              : "#15803d",
           color: "#ffffff",
           border: "none",
           borderRadius: 6,
@@ -653,7 +676,9 @@ function BulkSubmitBar({
           cursor: busy ? "not-allowed" : "pointer",
         }}
       >
-        Verzend alle {approvedDrafts.length} orders naar IBKR paper
+        {isLiveAccount
+          ? `⚠️ Verzend alle ${approvedDrafts.length} orders naar IBKR LIVE`
+          : `Verzend alle ${approvedDrafts.length} orders naar IBKR`}
       </button>
       {error ? (
         <div
@@ -674,13 +699,44 @@ function BulkSubmitBar({
       <ConfirmModal
         open={modalOpen}
         testId="action-draft-bulk-submit-modal"
-        title="Alle orders verzenden naar IBKR paper?"
+        title={
+          isLiveAccount
+            ? "⚠️ Alle orders verzenden naar IBKR LIVE — echt geld"
+            : "Alle orders verzenden naar IBKR?"
+        }
         body={
           <>
+            {isLiveAccount ? (
+              <div
+                data-testid="action-draft-bulk-submit-live-warning"
+                role="alert"
+                style={{
+                  background: "#fef2f2",
+                  border: "2px solid #b91c1c",
+                  color: "#7f1d1d",
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  marginBottom: 12,
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong style={{ display: "block", marginBottom: 4 }}>
+                  Je verbindt met een LIVE IBKR-account
+                  {accountMode?.actual_account_id_masked
+                    ? ` (${accountMode.actual_account_id_masked})`
+                    : ""}
+                  .
+                </strong>
+                Deze orders gaan met ECHT geld naar de markt. Controleer
+                aantal, limit-prijs en symbool nog éénmaal voor je
+                bevestigt — dit is niet ongedaan te maken.
+              </div>
+            ) : null}
             <p style={{ margin: "0 0 10px" }}>
               Je staat op het punt{" "}
               <strong>{approvedDrafts.length} orders</strong> te verzenden naar
-              IBKR paper, totaal{" "}
+              IBKR{isLiveAccount ? " LIVE" : ""}, totaal{" "}
               <strong>
                 €
                 {totalEur.toLocaleString("nl-BE", {
@@ -701,7 +757,11 @@ function BulkSubmitBar({
             </ul>
           </>
         }
-        confirmLabel={`Ja, verzend ${approvedDrafts.length} orders`}
+        confirmLabel={
+          isLiveAccount
+            ? `Ja, ${approvedDrafts.length} LIVE orders verzenden`
+            : `Ja, verzend ${approvedDrafts.length} orders`
+        }
         busy={busy}
         onConfirm={confirmBulkSubmit}
         onCancel={() => setModalOpen(false)}

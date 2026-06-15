@@ -101,7 +101,7 @@ describe("Reconciliation admin page", () => {
     expect(
       await screen.findByTestId("reconciliation-status-card"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Account: DU1234567")).toBeInTheDocument();
+    expect(screen.getByText("Account: DU•••4567")).toBeInTheDocument();
     expect(screen.getByText("Voltooid")).toBeInTheDocument();
   });
 

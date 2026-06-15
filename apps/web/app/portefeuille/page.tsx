@@ -292,6 +292,28 @@ export default function PortfolioPage() {
         </div>
         <p className="top-sub">Read-only weergave van laatst opgeslagen IBKR snapshots voor posities, cash, open orders en uitvoeringen.</p>
 
+        {accountMode?.hint_mismatch ? (
+          <div
+            data-testid="account-mode-hint-mismatch-banner"
+            role="alert"
+            style={{
+              padding: "0.7rem 0.9rem",
+              borderRadius: "0.5rem",
+              background: "var(--ata-warning, #f59e0b)",
+              color: "white",
+              marginBottom: "0.8rem",
+              fontSize: "0.9rem",
+              fontWeight: 500,
+              lineHeight: 1.4,
+            }}
+          >
+            <strong style={{ display: "block", marginBottom: "0.2rem" }}>
+              ⚠️ IBKR account-mismatch
+            </strong>
+            {accountMode.hint_mismatch_nl}
+          </div>
+        ) : null}
+
         {loading ? <EmptyState title="Waardering laden" message="Even wachten, er worden geen waarden verzonnen." /> : null}
         {!loading && !valuationReadiness ? <EmptyState title="Waardering niet beschikbaar" message="De waarderingsstatus kon niet worden opgehaald. Er worden geen waarden verzonnen." /> : null}
         {valuationReadiness ? (

@@ -22,6 +22,7 @@ import {
   type TaxRealisedTrade,
   type TaxYearReportResponse,
 } from "@/lib/apiClient";
+import { maskAccountId } from "@/lib/maskAccountId";
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
@@ -55,7 +56,7 @@ function TradeRow({ trade }: { trade: TaxRealisedTrade }) {
   return (
     <tr data-testid={`tax-trade-row-${trade.buy_exec_id}-${trade.sell_exec_id}`}>
       <td>{trade.symbol}</td>
-      <td>{trade.account_id}</td>
+      <td>{maskAccountId(trade.account_id)}</td>
       <td>{trade.currency_local}</td>
       <td style={{ textAlign: "right" }}>{trade.quantity}</td>
       <td>{trade.buy_date}</td>
