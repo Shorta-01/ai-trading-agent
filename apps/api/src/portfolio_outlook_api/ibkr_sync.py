@@ -15,7 +15,10 @@ from ai_trading_agent_storage import (
 
 from portfolio_outlook_api.config import Settings
 from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapter
-from portfolio_outlook_api.ibkr_status import build_ibkr_status_placeholder
+from portfolio_outlook_api.ibkr_status import (
+    build_ibkr_status_placeholder,
+    detect_account_mode_from_id,
+)
 from portfolio_outlook_api.ibkr_sync_contracts import (
     IbkrCash,
     IbkrExecution,
@@ -346,8 +349,12 @@ def run_sync(
         "started_at": now.isoformat(),
         "completed_at": completed_at.isoformat(),
         "provider_code": settings.ibkr_sync_provider_code,
-        "provider_environment": settings.ibkr_sync_account_mode,
-        "account_mode": settings.ibkr_sync_account_mode,
+        "provider_environment": detect_account_mode_from_id(
+            settings.ibkr_account_id_hint
+        ),
+        "account_mode": detect_account_mode_from_id(
+            settings.ibkr_account_id_hint
+        ),
         "readonly": settings.ibkr_sync_readonly,
         "status": result_status,
         "account_summary_status": account_summary_status,
@@ -412,8 +419,12 @@ def run_sync(
                     started_at=now,
                     completed_at=completed_at,
                     provider_code=settings.ibkr_sync_provider_code,
-                    provider_environment=settings.ibkr_sync_account_mode,
-                    account_mode=settings.ibkr_sync_account_mode,
+                    provider_environment=detect_account_mode_from_id(
+                        settings.ibkr_account_id_hint
+                    ),
+                    account_mode=detect_account_mode_from_id(
+                        settings.ibkr_account_id_hint
+                    ),
                     readonly=settings.ibkr_sync_readonly,
                     status=result_status,
                     account_summary_status=account_summary_status,
@@ -529,8 +540,12 @@ def read_status(
     return {
         "status": status,
         "provider_code": settings.ibkr_sync_provider_code,
-        "provider_environment": settings.ibkr_sync_account_mode,
-        "account_mode": settings.ibkr_sync_account_mode,
+        "provider_environment": detect_account_mode_from_id(
+            settings.ibkr_account_id_hint
+        ),
+        "account_mode": detect_account_mode_from_id(
+            settings.ibkr_account_id_hint
+        ),
         "readonly": settings.ibkr_sync_readonly,
         "account_summary_status": latest["account_summary_status"] if latest else "disabled",
         "positions_status": latest["positions_status"] if latest else "disabled",

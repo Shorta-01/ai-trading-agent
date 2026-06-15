@@ -18,7 +18,6 @@ def _ready_settings(**overrides: object) -> Settings:
         "ibkr_sync_host": "127.0.0.1",
         "ibkr_sync_port": 4002,
         "ibkr_sync_client_id": 11,
-        "ibkr_sync_account_mode": "paper",
         "ibkr_sync_readonly": True,
         "ibkr_sync_real_client_enabled": True,
         "ibkr_sync_timeout_seconds": 5,
@@ -74,16 +73,16 @@ def test_factory_returns_none_when_sync_disabled() -> None:
     assert build_real_sync_adapter(settings, app=_NoopApp()) is None
 
 
-def test_factory_builds_adapter_regardless_of_account_mode_setting() -> None:
-    """V1.2 §BZ — ``ibkr_sync_account_mode`` is informatief. De factory
-    bouwt de adapter ongeacht of de operator "paper" of "live" heeft
-    geconfigureerd; de IBKR account-id prefix bepaalt de actuele mode."""
+def test_factory_builds_adapter_regardless_of_account_id_hint() -> None:
+    """V1.2 §BZ — de factory bouwt de adapter ongeacht of de operator
+    een paper- (``DU*``) of live-prefix (``U*``) account heeft
+    geconfigureerd; de IBKR account-id prefix is informatief."""
 
-    paper = _ready_settings(ibkr_sync_account_mode="paper")
+    paper = _ready_settings(ibkr_account_id_hint="DU1234567")
     assert isinstance(
         build_real_sync_adapter(paper, app=_NoopApp()), IbapiReadOnlySyncClient
     )
-    live = _ready_settings(ibkr_sync_account_mode="live")
+    live = _ready_settings(ibkr_account_id_hint="U7654321")
     assert isinstance(
         build_real_sync_adapter(live, app=_NoopApp()), IbapiReadOnlySyncClient
     )

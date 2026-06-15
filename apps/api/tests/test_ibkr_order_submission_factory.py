@@ -42,7 +42,6 @@ def _ready_settings(**overrides) -> Settings:  # type: ignore[no-untyped-def]
         "ibkr_paper_order_submission_host": "127.0.0.1",
         "ibkr_paper_order_submission_port": 4002,
         "ibkr_paper_order_submission_client_id": 11,
-        "ibkr_sync_account_mode": "paper",
         "ibkr_expected_environment": "paper",
     }
     values.update(overrides)
@@ -73,17 +72,17 @@ def test_factory_returns_none_when_real_client_flag_off() -> None:
     )
 
 
-def test_factory_no_longer_blocks_on_live_account_mode() -> None:
-    """V1 §21.1 relock: the factory no longer rejects live mode.
+def test_factory_no_longer_blocks_on_live_account_hint() -> None:
+    """V1 §21.1 relock + V1.2 §BZ: the factory no longer rejects live mode.
 
-    The connected IBKR account is the authority on paper vs. live, not
-    an app-side `ibkr_sync_account_mode` setting. The remaining gates
-    (enabled + real_client_enabled + host/port/client-id) are
-    unchanged.
+    The connected IBKR account is the authority on paper vs. live; de
+    voormalige ``ibkr_sync_account_mode`` setting is verwijderd. De
+    overige gates (enabled + real_client_enabled + host/port/client-id)
+    blijven ongewijzigd.
     """
 
     client = build_real_order_submission_client(
-        _ready_settings(ibkr_sync_account_mode="live"), app=_NoopApp()
+        _ready_settings(ibkr_account_id_hint="U7654321"), app=_NoopApp()
     )
     assert client is not None
 

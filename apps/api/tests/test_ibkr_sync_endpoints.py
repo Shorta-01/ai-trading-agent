@@ -62,7 +62,6 @@ def _base_settings(**kwargs):
         "ibkr_sync_host": "127.0.0.1",
         "ibkr_sync_port": 4002,
         "ibkr_sync_client_id": 7,
-        "ibkr_sync_account_mode": "paper",
         "ibkr_sync_readonly": True,
         "ibkr_enabled": True,
         "ibkr_status_check_enabled": True,
@@ -233,7 +232,10 @@ def test_sync_status_no_longer_blocks_for_paper_only_relock() -> None:
     not on an app-side paper-only flag."""
 
     response = ibkr_sync.read_status(
-        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="paper")
+        _base_settings(
+            ibkr_account_id_hint="U7654321",  # live-prefix
+            ibkr_expected_environment="paper",
+        )
     )
     assert response["sync_readiness_reason"] != "version1_paper_only"
 
@@ -249,7 +251,10 @@ def test_sync_status_needs_control_when_status_check_disabled() -> None:
 
 def test_sync_status_ready_for_explicit_readonly_paper_status() -> None:
     response = build_ibkr_sync_readiness(
-        _base_settings(ibkr_expected_environment="paper", ibkr_sync_account_mode="paper"),
+        _base_settings(
+            ibkr_expected_environment="paper",
+            ibkr_account_id_hint="DU123",  # paper-prefix
+        ),
         {
             "connection_status": "connected_readonly",
             "account_mode_status": "match",
@@ -299,12 +304,15 @@ def test_sync_run_no_longer_blocks_on_account_mode_mismatch() -> None:
     The previous ``account_mode_mismatch`` / ``version1_paper_only``
     readiness blockers are removed. With a ready paper session adapter
     the readiness status must no longer drop to ``blocked`` because of
-    a paper-vs-live mismatch between the operator's
-    `ibkr_sync_account_mode` setting and the session adapter's mode.
+    a paper-vs-live mismatch tussen het ``ibkr_account_id_hint`` (en
+    de daaruit gedetecteerde mode) en de session-adapter's mode.
     """
 
     body = ibkr_sync.run_sync(
-        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="paper"),
+        _base_settings(
+            ibkr_account_id_hint="U7654321",  # live-prefix
+            ibkr_expected_environment="paper",
+        ),
         adapter=RaisingSyncAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
@@ -320,7 +328,10 @@ def test_sync_run_no_longer_blocks_on_live_expected_environment() -> None:
     connected IBKR account is the authority on paper vs. live."""
 
     body = ibkr_sync.run_sync(
-        _base_settings(ibkr_sync_account_mode="live", ibkr_expected_environment="live"),
+        _base_settings(
+            ibkr_account_id_hint="U7654321",  # live-prefix
+            ibkr_expected_environment="live",
+        ),
         adapter=RaisingSyncAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
@@ -360,7 +371,10 @@ def test_blocking_session_states_do_not_call_adapter() -> None:
 
 def test_explicit_ready_paper_session_allows_fake_adapter() -> None:
     body = ibkr_sync.run_sync(
-        _base_settings(ibkr_expected_environment="paper", ibkr_sync_account_mode="paper"),
+        _base_settings(
+            ibkr_expected_environment="paper",
+            ibkr_account_id_hint="DU123",  # paper-prefix
+        ),
         adapter=ValidFixtureAdapter(),
         session_status_adapter=FakeReadyPaperSessionStatusAdapter(),
     )
