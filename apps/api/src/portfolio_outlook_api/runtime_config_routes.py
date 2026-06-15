@@ -23,13 +23,17 @@ overlay the non-null DB values onto the settings singleton.
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
+from uuid import uuid4
 
 from ai_trading_agent_storage import (
+    CreateSystemEventRequest,
     RuntimeConfigRecord,
     SqlAlchemyRuntimeConfigRepository,
+    SqlAlchemySystemEventRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -278,6 +282,64 @@ def update_connection_settings(
             except (ValueError, InvalidOperation) as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             repo.upsert(record)
+            # V1.2 §BZ vervolg: detecteer wijziging in
+            # ``ibkr_account_id`` en informeer de operator dat de
+            # worker een herstart nodig heeft om het nieuwe account
+            # daadwerkelijk te gebruiken (de API picks up nieuwe
+            # settings inline, de worker pas bij boot).
+            previous_account_id = (
+                existing.ibkr_account_id if existing else None
+            )
+            new_account_id = payload.ibkr_account_id
+            if (
+                new_account_id
+                and new_account_id != previous_account_id
+                and previous_account_id is not None
+            ):
+                event_repo = SqlAlchemySystemEventRepository(
+                    checked.connection, checked.readiness
+                )
+                with suppress(Exception):
+                    event_repo.create_event(
+                        CreateSystemEventRequest(
+                            system_event_id=f"system-event-{uuid4()}",
+                            created_at=now,
+                            severity="info",
+                            category="ibkr_config_change",
+                            source_service="api",
+                            source_component="runtime_config_routes",
+                            event_code="ibkr_account_id_changed",
+                            title_nl="IBKR account-id gewijzigd",
+                            message_nl=(
+                                f"Het IBKR-account is gewijzigd van "
+                                f"{previous_account_id} naar "
+                                f"{new_account_id}. Herstart de "
+                                f"worker zodat de nieuwe account-id "
+                                f"actief wordt voor sync + orders."
+                            ),
+                            help_nl=(
+                                "De API gebruikt de nieuwe waarde "
+                                "direct, maar de worker leest 'm "
+                                "alleen bij boot."
+                            ),
+                            technical_summary=(
+                                f"previous={previous_account_id} "
+                                f"new={new_account_id}"
+                            ),
+                            redacted_details_json=None,
+                            stack_trace_redacted=None,
+                            related_entity_type=None,
+                            related_entity_id=None,
+                            blocks_suggestions=False,
+                            blocks_writes=False,
+                            blocks_ai_explanation=False,
+                            status="open",
+                            explanation_nl=(
+                                "Operator wijzigde IBKR account-id "
+                                "via /instellingen."
+                            ),
+                        )
+                    )
             checked.connection.commit()
             # Reflect the operator's choices on the running settings
             # singleton so the next request picks them up immediately

@@ -18,6 +18,7 @@ const fns = vi.hoisted(() => ({
   getLatestForecasts: vi.fn(),
   getLatestSuggestions: vi.fn(),
   getActiveSystemEvents: vi.fn(),
+  resolveSystemEvent: vi.fn(),
   getLatestDecisionPackages: vi.fn(),
   getLatestActionDrafts: vi.fn(),
   getLatestDailyBriefing: vi.fn(),
@@ -325,5 +326,42 @@ describe("PortfolioPage data state machine", () => {
         "ibkr-config-event-banner-order_session_live_account",
       ),
     ).toBeNull();
+  });
+
+  it("dismiss button on the SystemEvent banner calls resolveSystemEvent", async () => {
+    // V1.2 §BZ vervolg: operator klikt "Begrepen" → ``resolveSystemEvent``
+    // wordt aangeroepen + de query wordt geinvalideerd zodat de banner
+    // verdwijnt.
+    const { default: userEvent } = await import("@testing-library/user-event");
+    mockAllOk();
+    fns.getActiveSystemEvents.mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-dismiss-1",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "IBKR account-mismatch",
+            message_nl: "details",
+            help_nl: "",
+            created_at: "2026-06-15T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    fns.resolveSystemEvent.mockResolvedValue(ok({ success: true }));
+    render(<PortfolioPage />);
+    const dismiss = await screen.findByTestId(
+      "ibkr-config-event-banner-dismiss-account_id_mismatch",
+    );
+    await userEvent.click(dismiss);
+    expect(fns.resolveSystemEvent).toHaveBeenCalledWith("evt-dismiss-1");
   });
 });

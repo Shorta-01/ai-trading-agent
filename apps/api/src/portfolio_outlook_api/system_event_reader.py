@@ -145,3 +145,101 @@ def list_active_system_events(
             message_nl="Systeemmeldingen niet beschikbaar door veilige foutafhandeling.",
             events=[],
         )
+
+
+# V1.2 §BZ vervolg: audit-trail constants for the IBKR config view.
+# Houdt alle SystemEvent-codes / categorieën die de operator over de
+# tijd ziet rondom IBKR mode-switches, mismatch detections en
+# account-id wijzigingen samen, zodat een nieuwe code (b.v. uit een
+# follow-up PR) automatisch in het audit-rapport landt.
+_IBKR_CONFIG_AUDIT_CATEGORIES: tuple[str, ...] = (
+    "ibkr_config_mismatch",
+    "ibkr_config_change",
+)
+_IBKR_CONFIG_AUDIT_EVENT_CODES: tuple[str, ...] = (
+    "order_session_live_account",
+    "account_id_mismatch",
+    "ibkr_account_id_changed",
+)
+
+
+def list_ibkr_config_audit(
+    storage_settings: StorageSettings,
+    connection_provider_factory: ConnectionProviderFactory | None = None,
+    repository_factory: RepositoryFactory | None = None,
+    *,
+    limit: int = 500,
+) -> ActiveSystemEventsResponse:
+    """V1.2 §BZ vervolg — compliance audit-trail van alle IBKR-config events.
+
+    Returnt ook RESOLVED + ARCHIVED events (in tegenstelling tot
+    :func:`list_active_system_events` die alleen open events laat zien).
+    Dit geeft de operator en accountant een chronologisch overzicht
+    van mode-switches, mismatches en account-id wijzigingen — bewijs
+    voor het "goed huisvader" §12 belastingrapport.
+    """
+
+    if connection_provider_factory is None:
+        connection_provider_factory = StorageConnectionProvider
+    if repository_factory is None:
+        repository_factory = SqlAlchemySystemEventRepository
+
+    if not storage_settings.enabled:
+        return ActiveSystemEventsResponse(
+            available=False,
+            storage_configured=False,
+            events_loaded=False,
+            active_count=0,
+            status_nl="Niet beschikbaar",
+            message_nl="Audit-trail niet beschikbaar: opslag staat uit.",
+            events=[],
+        )
+
+    database_url = storage_settings.database_url
+    if database_url is None or database_url.strip() == "":
+        return ActiveSystemEventsResponse(
+            available=False,
+            storage_configured=False,
+            events_loaded=False,
+            active_count=0,
+            status_nl="Niet beschikbaar",
+            message_nl="Audit-trail niet beschikbaar: database-url ontbreekt.",
+            events=[],
+        )
+
+    provider = connection_provider_factory(
+        build_database_connection_settings(database_url)
+    )
+
+    try:
+        with provider.checked_connection(require_writable=False) as checked:
+            repository = repository_factory(
+                checked.connection, checked.readiness
+            )
+            result = repository.list_events_by_categories(
+                _IBKR_CONFIG_AUDIT_CATEGORIES,
+                include_event_codes=_IBKR_CONFIG_AUDIT_EVENT_CODES,
+                limit=limit,
+            )
+            mapped = [_map_event_summary(record) for record in result.records]
+            return ActiveSystemEventsResponse(
+                available=True,
+                storage_configured=True,
+                events_loaded=True,
+                active_count=len(mapped),
+                status_nl="Beschikbaar",
+                message_nl=(
+                    f"{len(mapped)} IBKR-config events in het audit-trail."
+                ),
+                events=mapped,
+            )
+    except StorageConnectionError:
+        return ActiveSystemEventsResponse(
+            available=False,
+            storage_configured=True,
+            events_loaded=False,
+            active_count=0,
+            status_nl="Niet beschikbaar",
+            message_nl="Audit-trail niet beschikbaar door veilige foutafhandeling.",
+            events=[],
+        )

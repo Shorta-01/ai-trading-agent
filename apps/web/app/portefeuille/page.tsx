@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
@@ -129,6 +129,8 @@ export default function PortfolioPage() {
     },
   });
   const accountMode = accountModeQuery.data ?? null;
+
+  const queryClient = useQueryClient();
 
   // V1.2 §BZ vervolg: query active system events zodat
   // ``order_session_live_account`` (worker) en
@@ -334,13 +336,50 @@ export default function PortfolioPage() {
                   lineHeight: 1.4,
                 }}
               >
-                <strong style={{ display: "block", marginBottom: "0.2rem" }}>
-                  {event.event_code === "order_session_live_account"
-                    ? "🔴 "
-                    : "⚠️ "}
-                  {event.title_nl}
-                </strong>
-                {event.message_nl}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ display: "block", marginBottom: "0.2rem" }}>
+                      {event.event_code === "order_session_live_account"
+                        ? "🔴 "
+                        : "⚠️ "}
+                      {event.title_nl}
+                    </strong>
+                    {event.message_nl}
+                  </div>
+                  <button
+                    type="button"
+                    data-testid={`ibkr-config-event-banner-dismiss-${event.event_code}`}
+                    onClick={async () => {
+                      await apiClient.resolveSystemEvent(
+                        event.system_event_id,
+                      );
+                      await queryClient.invalidateQueries({
+                        queryKey: ["portefeuille-ibkr-config-events"],
+                      });
+                    }}
+                    title="Begrepen — verwijder deze melding"
+                    style={{
+                      background: "rgba(255,255,255,0.18)",
+                      color: "white",
+                      border: "1px solid rgba(255,255,255,0.4)",
+                      borderRadius: "0.3rem",
+                      padding: "0.2rem 0.55rem",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Begrepen
+                  </button>
+                </div>
               </div>
             ))}
           </div>

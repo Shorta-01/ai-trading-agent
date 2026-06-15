@@ -432,3 +432,97 @@ def test_apply_runtime_config_overlay_applies_ai_feature_flags() -> None:
     assert dummy.ai_explanation_morning_batch_enabled is True
     assert dummy.ai_email_summary_enabled is True
     assert dummy.research_ai_extraction_enabled is True
+
+
+def test_put_writes_system_event_when_ibkr_account_id_changes(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    """V1.2 §BZ vervolg: bij wijziging van het IBKR account-id
+    moet de API een SystemEvent schrijven zodat de operator op
+    /portefeuille een banner ziet "herstart worker voor nieuwe
+    account-id"."""
+
+    from ai_trading_agent_storage import SqlAlchemySystemEventRepository
+
+    _seed(tmp_path)
+
+    # Eerste save met een paper-account.
+    first = {
+        "ibkr_enabled": True,
+        "ibkr_account_id": "DU1111111",
+        "ibkr_host": None,
+        "ibkr_port": None,
+        "ibkr_client_id": None,
+        "ai_explanation_enabled": False,
+        "claude_ai_explanation_model": None,
+        "claude_ai_budget_monthly_eur": None,
+        "claude_ai_api_key": None,
+    }
+    assert client.put("/settings/connection", json=first).status_code == 200
+
+    # Geen SystemEvent bij eerste save (er was nog geen previous waarde).
+    db_url = api_settings.storage.database_url
+    assert db_url is not None
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        repo = SqlAlchemySystemEventRepository(conn, None)
+        events_after_first = repo.list_open_events().records
+    first_change_events = [
+        e for e in events_after_first if e.event_code == "ibkr_account_id_changed"
+    ]
+    assert first_change_events == []
+
+    # Tweede save met een ander (live) account.
+    second = {**first, "ibkr_account_id": "U7654321"}
+    assert client.put("/settings/connection", json=second).status_code == 200
+
+    with engine.begin() as conn:
+        repo = SqlAlchemySystemEventRepository(conn, None)
+        events_after_second = repo.list_open_events().records
+    change_events = [
+        e
+        for e in events_after_second
+        if e.event_code == "ibkr_account_id_changed"
+    ]
+    assert len(change_events) == 1
+    evt = change_events[0]
+    assert evt.severity == "info"
+    assert evt.category == "ibkr_config_change"
+    assert evt.source_component == "runtime_config_routes"
+    # Bevat zowel oude als nieuwe account-id in de message.
+    assert "DU1111111" in evt.message_nl
+    assert "U7654321" in evt.message_nl
+    assert evt.status == "open"
+
+
+def test_put_does_not_write_event_when_account_id_unchanged(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    from ai_trading_agent_storage import SqlAlchemySystemEventRepository
+
+    _seed(tmp_path)
+    payload = {
+        "ibkr_enabled": True,
+        "ibkr_account_id": "DU1111111",
+        "ibkr_host": None,
+        "ibkr_port": None,
+        "ibkr_client_id": None,
+        "ai_explanation_enabled": False,
+        "claude_ai_explanation_model": None,
+        "claude_ai_budget_monthly_eur": None,
+        "claude_ai_api_key": None,
+    }
+    assert client.put("/settings/connection", json=payload).status_code == 200
+    assert client.put("/settings/connection", json=payload).status_code == 200
+
+    db_url = api_settings.storage.database_url
+    assert db_url is not None
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        repo = SqlAlchemySystemEventRepository(conn, None)
+        all_open = repo.list_open_events().records
+    # Geen change event ook al was er een DB-row.
+    change_events = [
+        e for e in all_open if e.event_code == "ibkr_account_id_changed"
+    ]
+    assert change_events == []
