@@ -1054,6 +1054,9 @@ class PortfolioScheduler:
         # weer een echte client zien. Default-off zodat bestaande
         # deploys onveranderd blijven; opt-in via ``ibkr_auto_reconnect_enabled``.
         self._maybe_reconnect_ibkr_gateway()
+        # V1.2 §BZ follow-up: zelfde heartbeat-pattern voor de order-
+        # sessie zodat een gedropte order_adapter ook wordt heropend.
+        self._maybe_reconnect_order_adapter()
 
     def _maybe_reconnect_ibkr_gateway(self) -> None:
         """Re-open de TWS-sessie wanneer de heartbeat detecteert dat
@@ -1112,6 +1115,47 @@ class PortfolioScheduler:
             logger.warning(
                 "IBKR auto-reconnect: connect geweigerd (%s).",
                 getattr(result, "error_nl", "onbekende reden"),
+            )
+
+    def _maybe_reconnect_order_adapter(self) -> None:
+        """V1.2 §BZ follow-up: zelfde heartbeat-pattern voor de
+        order_adapter sessie.
+
+        Wanneer de order-sessie 's nachts dropt (TWS reset, netwerk),
+        blijven de submission + cancel sweeps stilletjes skip'en tot
+        de operator de worker herstart. De heartbeat detecteert dat
+        en heropent de sessie via ``adapter.reconnect()``.
+        """
+
+        if not self._ibkr_settings.ibkr_auto_reconnect_enabled:
+            return
+        if self._order_adapter is None:
+            return
+        is_connected = getattr(self._order_adapter, "is_connected", None)
+        if is_connected is None:
+            return
+        try:
+            if is_connected():
+                return
+        except Exception:  # noqa: BLE001 — boundary
+            logger.exception(
+                "Order-adapter is_connected check raised; skip reconnect."
+            )
+            return
+        reconnect = getattr(self._order_adapter, "reconnect", None)
+        if reconnect is None:
+            return
+        try:
+            reconnected = bool(reconnect())
+        except Exception:  # noqa: BLE001 — boundary
+            logger.exception("Order-adapter reconnect attempt raised.")
+            return
+        if reconnected:
+            logger.info("Order-adapter auto-reconnect: opnieuw verbonden.")
+        else:
+            logger.warning(
+                "Order-adapter auto-reconnect: heropenen mislukt; sweeps "
+                "blijven skip'en tot volgende heartbeat."
             )
 
     def _brussels_hour_now(self) -> int:

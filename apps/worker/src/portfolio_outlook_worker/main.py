@@ -209,7 +209,35 @@ def _maybe_open_order_adapter() -> Any | None:
     except Exception:  # noqa: BLE001 — boundary
         logger.exception("Order-sessie kon niet openen; sweeps blijven uit.")
         return None
-    logger.info("Writable IBKR order-sessie geopend (paper-gated).")
+    logger.info(
+        "Writable IBKR order-sessie geopend (account_mode=%s).",
+        adapter.account_mode,
+    )
+    # V1.2 §BZ follow-up: schrijf een zichtbare operator-melding op
+    # /systeemmeldingen wanneer de order-sessie tegen een LIVE account
+    # opent. Een log-line alleen is voor de operator onzichtbaar; de
+    # SystemEvent zorgt dat de dashboard-banner triggert.
+    if adapter.account_mode == "live":
+        from portfolio_outlook_worker.error_capture import record_worker_event
+
+        record_worker_event(
+            storage_settings=settings.storage,
+            source_component="ibkr_order_adapter",
+            event_code="order_session_live_account",
+            severity="warning",
+            title_nl="Order-sessie verbonden met LIVE account",
+            message_nl=(
+                f"De order-sessie is verbonden met live-account "
+                f"{ibkr.account_id}. Orders die de operator goedkeurt "
+                f"worden tegen echt geld uitgevoerd. Controleer dat dit "
+                f"is wat je bedoelt."
+            ),
+            help_nl=(
+                "Als je paper wilt draaien: pas de IBKR account-id "
+                "in de instellingen aan naar een DU*/DF* account en "
+                "herstart de worker."
+            ),
+        )
     return adapter
 
 

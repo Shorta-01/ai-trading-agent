@@ -617,3 +617,123 @@ def test_route_passes_none_when_factory_returns_none(monkeypatch) -> None:
     response = client.post("/ibkr/sync/run")
     assert response.status_code == 200
     assert captured_adapter == [None]
+
+
+# ----------------------------------------------------------------------
+# V1.2 §BZ follow-up: account_id mismatch detector
+# ----------------------------------------------------------------------
+
+
+def test_account_id_mismatch_detector_no_hint_is_noop() -> None:
+    """Geen ``hint`` → geen SystemEvent (er valt niets te vergelijken)."""
+
+    from decimal import Decimal
+
+    from portfolio_outlook_api.ibkr_sync import (
+        _maybe_record_account_id_mismatch,
+    )
+    from portfolio_outlook_api.ibkr_sync_contracts import IbkrCash
+
+    cash = IbkrCash(
+        account_ref="U7654321",  # would mismatch if hint were set
+        base_currency="EUR",
+        cash=Decimal("1000"),
+        available_funds=None,
+        buying_power=None,
+    )
+    # Should NOT raise / NOT try to write — no hint = no comparison.
+    _maybe_record_account_id_mismatch(
+        hint=None,
+        cash_items=[cash],
+        positions=[],
+        storage_database_url="postgresql://fake",
+        storage_writes_enabled=True,
+    )
+
+
+def test_account_id_mismatch_detector_matching_account_is_noop() -> None:
+    """``hint`` matcht het actuele account → geen SystemEvent."""
+
+    from decimal import Decimal
+
+    from portfolio_outlook_api.ibkr_sync import (
+        _maybe_record_account_id_mismatch,
+    )
+    from portfolio_outlook_api.ibkr_sync_contracts import IbkrCash
+
+    cash = IbkrCash(
+        account_ref="DU1234567",
+        base_currency="EUR",
+        cash=Decimal("1000"),
+        available_funds=None,
+        buying_power=None,
+    )
+    # Should NOT raise / NOT try to write — hint == actual.
+    _maybe_record_account_id_mismatch(
+        hint="DU1234567",
+        cash_items=[cash],
+        positions=[],
+        storage_database_url="postgresql://fake",
+        storage_writes_enabled=True,
+    )
+
+
+def test_account_id_mismatch_detector_storage_disabled_is_noop() -> None:
+    """Storage uit → geen DB-write poging, geen exception."""
+
+    from decimal import Decimal
+
+    from portfolio_outlook_api.ibkr_sync import (
+        _maybe_record_account_id_mismatch,
+    )
+    from portfolio_outlook_api.ibkr_sync_contracts import IbkrCash
+
+    cash = IbkrCash(
+        account_ref="U7654321",  # mismatch with hint below
+        base_currency="EUR",
+        cash=Decimal("1000"),
+        available_funds=None,
+        buying_power=None,
+    )
+    # Would mismatch, but storage off → no write attempt.
+    _maybe_record_account_id_mismatch(
+        hint="DU1234567",
+        cash_items=[cash],
+        positions=[],
+        storage_database_url=None,  # storage off
+        storage_writes_enabled=True,
+    )
+    _maybe_record_account_id_mismatch(
+        hint="DU1234567",
+        cash_items=[cash],
+        positions=[],
+        storage_database_url="postgresql://fake",
+        storage_writes_enabled=False,  # writes off
+    )
+
+
+def test_account_id_mismatch_detector_swallows_storage_errors() -> None:
+    """V1.2 §BZ — best-effort: storage-fout mag NOOIT propageren."""
+
+    from decimal import Decimal
+
+    from portfolio_outlook_api.ibkr_sync import (
+        _maybe_record_account_id_mismatch,
+    )
+    from portfolio_outlook_api.ibkr_sync_contracts import IbkrCash
+
+    cash = IbkrCash(
+        account_ref="U7654321",
+        base_currency="EUR",
+        cash=Decimal("1000"),
+        available_funds=None,
+        buying_power=None,
+    )
+    # Bad URL → connection error inside; helper must swallow.
+    _maybe_record_account_id_mismatch(
+        hint="DU1234567",
+        cash_items=[cash],
+        positions=[],
+        storage_database_url="postgresql://invalid_host:9/bogus",
+        storage_writes_enabled=True,
+    )
