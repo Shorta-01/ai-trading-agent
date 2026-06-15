@@ -74,9 +74,19 @@ def test_factory_returns_none_when_sync_disabled() -> None:
     assert build_real_sync_adapter(settings, app=_NoopApp()) is None
 
 
-def test_factory_returns_none_when_account_mode_is_not_paper() -> None:
-    settings = _ready_settings(ibkr_sync_account_mode="live")
-    assert build_real_sync_adapter(settings, app=_NoopApp()) is None
+def test_factory_builds_adapter_regardless_of_account_mode_setting() -> None:
+    """V1.2 §BZ — ``ibkr_sync_account_mode`` is informatief. De factory
+    bouwt de adapter ongeacht of de operator "paper" of "live" heeft
+    geconfigureerd; de IBKR account-id prefix bepaalt de actuele mode."""
+
+    paper = _ready_settings(ibkr_sync_account_mode="paper")
+    assert isinstance(
+        build_real_sync_adapter(paper, app=_NoopApp()), IbapiReadOnlySyncClient
+    )
+    live = _ready_settings(ibkr_sync_account_mode="live")
+    assert isinstance(
+        build_real_sync_adapter(live, app=_NoopApp()), IbapiReadOnlySyncClient
+    )
 
 
 def test_factory_returns_none_when_readonly_is_off() -> None:

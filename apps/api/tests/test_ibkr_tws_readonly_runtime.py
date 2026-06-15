@@ -170,13 +170,24 @@ def test_happy_path_connect_check_disconnect() -> None:
     _assert_safety_flags_false(result)
 
 
-def test_wrong_account_mode_blocks() -> None:
+def test_account_mode_mismatch_no_longer_blocks_status_check() -> None:
+    """V1.2 §BZ — software werkt VOLLEDIG in beide modi. Een mismatch
+    tussen ``expected_environment`` (operator-config) en het actuele
+    account-mode mag de manual status-check NIET meer blokkeren; het
+    wordt informatief gerapporteerd via ``account_mode_status="mismatch"``.
+
+    De #665 mismatch detector schrijft een SystemEvent voor de operator-
+    zichtbare waarschuwing; deze check rapporteert alleen de status."""
+
     client = FakeRuntimeClient(account_mode="live")
     result = run_manual_tws_readonly_status_check(
-        _fake_client_ready_settings(),
+        _fake_client_ready_settings(),  # expected_environment="paper"
         runtime_client=client,
     )
-    assert result.status == "wrong_account_mode"
+    assert result.status == "manual_status_check_completed"
+    assert result.account_mode == "live"
+    assert result.account_mode_status == "mismatch"
+    # Connection still made + disconnected cleanly — no early-return.
     assert client.connect_calls == 1
     assert client.disconnect_calls == 1
     _assert_safety_flags_false(result)

@@ -125,13 +125,19 @@ def test_injected_fake_paper_client_completed() -> None:
     _assert_safety_flags_false(payload)
 
 
-def test_injected_fake_wrong_mode_client_blocked() -> None:
+def test_injected_fake_mismatched_mode_completes_with_mismatch_status() -> None:
+    """V1.2 §BZ — mismatch tussen expected en actual account-mode
+    is informatief, niet blokkerend. De endpoint completeert
+    normaal en rapporteert ``account_mode_status="mismatch"``."""
+
     fake = FakeRuntimeClient(account_mode="live")
     payload = _run_manual_tws_readonly_status_check_endpoint(
-        _fake_client_ready_settings(),
+        _fake_client_ready_settings(),  # expected=paper
         runtime_client=fake,
     )
-    assert payload["status"] == "wrong_account_mode"
+    assert payload["status"] == "manual_status_check_completed"
+    assert payload["account_mode"] == "live"
+    assert payload["account_mode_status"] == "mismatch"
     assert payload["disconnect_attempted"] is True
     _assert_safety_flags_false(payload)
 

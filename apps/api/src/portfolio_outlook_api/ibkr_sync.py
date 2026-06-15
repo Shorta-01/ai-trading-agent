@@ -248,8 +248,6 @@ def run_sync(
 
     if not settings.ibkr_sync_enabled:
         result_status = "disabled"
-    elif settings.ibkr_sync_account_mode.lower() != "paper":
-        result_status = "wrong_account_mode"
     elif not settings.ibkr_sync_readonly:
         result_status = "provider_error"
     elif not _configured(settings):
@@ -516,8 +514,11 @@ def read_status(
     if latest is not None:
         status = str(latest["status"])
         if status == "wrong_account_mode":
-            status_nl = "Alleen papiermodus toegestaan"
-            next_step_nl = "Controleer accountmodus paper."
+            # Historische sync-rijen kunnen deze status nog hebben (uit
+            # pre-§BZ runs). De software produceert hem niet meer
+            # actief, maar we rapporteren 'em hier nog informatief.
+            status_nl = "Account-modus mismatch (historisch)"
+            next_step_nl = "Geen actie; nieuwe sync gebruikt account-detectie."
         else:
             status_nl = "Read-only synchronisatie"
             next_step_nl = "Geen orders mogelijk"
