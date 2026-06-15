@@ -1532,6 +1532,11 @@ export type IbkrAccountModeResponse = {
   mode: string;
   display_label: string;
   expected_environment: string;
+  detected_source?: string;
+  hint_account_id_masked?: string | null;
+  actual_account_id_masked?: string | null;
+  hint_mismatch?: boolean;
+  hint_mismatch_nl?: string | null;
   help_nl: string;
   safe_for_orders: boolean;
   blocks_orders: boolean;

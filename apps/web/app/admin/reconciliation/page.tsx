@@ -27,6 +27,7 @@ import {
   type ReconciliationStatusResponse,
   type UnmatchedExecutionRow,
 } from "@/lib/apiClient";
+import { maskAccountId } from "@/lib/maskAccountId";
 
 const MODE_LABELS: Record<string, string> = {
   completed: "Voltooid",
@@ -122,7 +123,7 @@ export default function Page() {
     <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
       <h1 style={{ marginBottom: 4 }}>IBKR-reconciliatie</h1>
       <p style={{ marginTop: 0, color: "#6b7280", fontSize: 14 }}>
-        Account: {status.ibkr_account_id}
+        Account: {maskAccountId(status.ibkr_account_id)}
       </p>
 
       {/* Status summary */}
