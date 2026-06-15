@@ -215,39 +215,20 @@ def run_manual_tws_readonly_status_check(
                 disconnect_error_ignored=disconnect_error_ignored,
             )
 
-        if account_mode != expected_mode:
-            result = _result_from_gate(
-                gate,
-                status="wrong_account_mode",
-                status_nl="Verkeerde accountmodus",
-                connection_status="connected_wrong_account_mode",
-                account_mode_status="mismatch",
-                account_mode=account_mode,
-                session_status_reason="wrong_account_mode",
-                connect_attempted=connect_attempted,
-                disconnect_attempted=False,
-                disconnect_error_ignored=False,
-            )
-            disconnect_attempted, disconnect_error_ignored = _disconnect()
-            return _result_from_gate(
-                gate,
-                status=result.status,
-                status_nl=result.status_nl,
-                connection_status=result.connection_status,
-                account_mode_status=result.account_mode_status,
-                account_mode=result.account_mode,
-                session_status_reason=result.session_status_reason,
-                connect_attempted=connect_attempted,
-                disconnect_attempted=disconnect_attempted,
-                disconnect_error_ignored=disconnect_error_ignored,
-            )
+        # V1.2 §BZ — geen software-side mode-blok. Mismatch tussen het
+        # operator-geconfigureerde ``expected_mode`` en het gedetecteerde
+        # ``account_mode`` wordt informatief gerapporteerd (zodat het
+        # dashboard de discrepantie kan tonen), maar de check faalt
+        # niet en de sessie blijft bruikbaar. De #665 mismatch detector
+        # zorgt voor de operator-zichtbare SystemEvent.
+        account_mode_status = "match" if account_mode == expected_mode else "mismatch"
 
         result = _result_from_gate(
             gate,
             status="manual_status_check_completed",
             status_nl="Handmatige read-only statuscontrole uitgevoerd",
             connection_status="connected_readonly",
-            account_mode_status="match",
+            account_mode_status=account_mode_status,
             account_mode=account_mode,
             session_status_reason="manual_status_check_completed",
             connect_attempted=connect_attempted,

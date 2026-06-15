@@ -27,13 +27,16 @@ def build_real_sync_adapter(
 ) -> IbkrReadOnlyAdapter | None:
     """Return a real read-only sync adapter when configured, otherwise ``None``.
 
-    Gating:
+    Gating (V1.2 §BZ — geen software-side mode-blok meer):
 
     * ``ibkr_sync_real_client_enabled`` must be True.
     * ``ibkr_sync_enabled`` must be True.
-    * ``ibkr_sync_account_mode`` must be ``"paper"`` (Version 1 safety boundary).
     * ``ibkr_sync_readonly`` must remain True.
     * Host / port / client-id must all be configured.
+
+    De ``ibkr_sync_account_mode`` setting is informatief — de IBKR
+    account-id prefix bepaalt of er paper- of live-orders worden
+    geplaatst, niet een software-side gate.
 
     Optional ``app`` parameter lets tests inject a fake ibapi application so the
     real-adapter path can be exercised in CI without a TWS/Gateway.
@@ -42,8 +45,6 @@ def build_real_sync_adapter(
     if not settings.ibkr_sync_real_client_enabled:
         return None
     if not settings.ibkr_sync_enabled:
-        return None
-    if settings.ibkr_sync_account_mode.lower() != "paper":
         return None
     if not settings.ibkr_sync_readonly:
         return None
