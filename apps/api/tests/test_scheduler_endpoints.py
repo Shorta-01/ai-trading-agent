@@ -315,6 +315,121 @@ def test_account_mode_endpoint_falls_back_to_hint_when_no_active_session(
     assert body["detected_source"] == "hint"
 
 
+def test_account_mode_endpoint_surfaces_hint_mismatch_for_dashboard_banner(
+    monkeypatch,
+) -> None:
+    """V1.2 §BZ vervolg — wanneer de hint (paper) niet matcht met het
+    actueel verbonden account (live), MOET de endpoint dat actief
+    rapporteren via ``hint_mismatch=True`` + een NL-melding. Het
+    dashboard gebruikt dat om een waarschuwingsbanner te tonen
+    zonder dat de operator naar /systeemmeldingen hoeft."""
+
+    from portfolio_outlook_api import (
+        ibkr_connection_read_model as conn_module,
+    )
+    from portfolio_outlook_api.ibkr_connection_read_model import (
+        IbkrConnectionStatus,
+    )
+
+    api_settings.ibkr_account_id_hint = "DU1234567"
+
+    def _fake_read(_storage, *, configured_account_id, audit_limit=200):
+        return IbkrConnectionStatus(
+            connected=True,
+            account_mode="live",
+            account_id="U7654321",
+            verified_at=None,
+            error_nl=None,
+        )
+
+    monkeypatch.setattr(conn_module, "read_connection_status", _fake_read)
+
+    r = client.get("/ibkr/account/mode")
+    body = r.json()
+
+    # Mode-detectie volgt het verbonden account (zie #671), maar daarnaast:
+    assert body["hint_mismatch"] is True
+    assert body["hint_mismatch_nl"] is not None
+    # Gemaskeerde IDs zodat het dashboard ze veilig kan tonen.
+    # ``mask_account_id`` houdt 2-char prefix + 4-char suffix.
+    assert body["hint_account_id_masked"] == "DU•••4567"
+    assert body["actual_account_id_masked"] == "U7•••4321"
+    # NL-melding bevat beide gemaskeerde IDs zodat de operator ziet
+    # wat config zegt en wat TWS rapporteert.
+    assert "DU•••4567" in body["hint_mismatch_nl"]
+    assert "U7•••4321" in body["hint_mismatch_nl"]
+
+
+def test_account_mode_endpoint_no_mismatch_when_hint_matches_actual(
+    monkeypatch,
+) -> None:
+    """Wanneer hint en actueel account hetzelfde zijn, is er geen
+    mismatch — geen banner moet getoond worden."""
+
+    from portfolio_outlook_api import (
+        ibkr_connection_read_model as conn_module,
+    )
+    from portfolio_outlook_api.ibkr_connection_read_model import (
+        IbkrConnectionStatus,
+    )
+
+    api_settings.ibkr_account_id_hint = "DU1234567"
+
+    def _fake_read(_storage, *, configured_account_id, audit_limit=200):
+        return IbkrConnectionStatus(
+            connected=True,
+            account_mode="paper",
+            account_id="DU1234567",  # zelfde als hint
+            verified_at=None,
+            error_nl=None,
+        )
+
+    monkeypatch.setattr(conn_module, "read_connection_status", _fake_read)
+
+    r = client.get("/ibkr/account/mode")
+    body = r.json()
+
+    assert body["hint_mismatch"] is False
+    assert body["hint_mismatch_nl"] is None
+    assert body["hint_account_id_masked"] == "DU•••4567"
+    assert body["actual_account_id_masked"] == "DU•••4567"
+
+
+def test_account_mode_endpoint_no_mismatch_when_no_actual_session(
+    monkeypatch,
+) -> None:
+    """Geen actieve sessie → kan geen mismatch bestaan (we hebben
+    geen actual om mee te vergelijken)."""
+
+    from portfolio_outlook_api import (
+        ibkr_connection_read_model as conn_module,
+    )
+    from portfolio_outlook_api.ibkr_connection_read_model import (
+        IbkrConnectionStatus,
+    )
+
+    api_settings.ibkr_account_id_hint = "DU1234567"
+
+    def _fake_read(_storage, *, configured_account_id, audit_limit=200):
+        return IbkrConnectionStatus(
+            connected=False,
+            account_mode=None,
+            account_id=None,
+            verified_at=None,
+            error_nl="niet verbonden",
+        )
+
+    monkeypatch.setattr(conn_module, "read_connection_status", _fake_read)
+
+    r = client.get("/ibkr/account/mode")
+    body = r.json()
+
+    assert body["hint_mismatch"] is False
+    assert body["hint_mismatch_nl"] is None
+    assert body["hint_account_id_masked"] == "DU•••4567"
+    assert body["actual_account_id_masked"] is None
+
+
 # ---- POST /scheduler/runs/morning-chain (Slice 21) --------------------
 
 
