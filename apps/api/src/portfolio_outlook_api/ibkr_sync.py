@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
 from ai_trading_agent_storage import (
+    CreateSystemEventRequest,
     SqlAlchemyIbkrSyncSnapshotRepository,
+    SqlAlchemySystemEventRepository,
     StorageConnectionError,
     StorageConnectionProvider,
     build_database_connection_settings,
@@ -31,6 +34,8 @@ from portfolio_outlook_api.ibkr_sync_persistence import (
 )
 from portfolio_outlook_api.ibkr_sync_readiness import build_ibkr_sync_readiness
 from portfolio_outlook_api.ibkr_sync_validation import validate_ibkr_sync_payloads
+
+_logger = logging.getLogger(__name__)
 
 
 class NotConfiguredIbkrAdapter(IbkrReadOnlyAdapter):
@@ -66,6 +71,89 @@ def _configured(settings: Settings) -> bool:
         and settings.ibkr_sync_port is not None
         and settings.ibkr_sync_client_id is not None
     )
+
+
+def _maybe_record_account_id_mismatch(
+    *,
+    hint: str | None,
+    cash_items: list[IbkrCash],
+    positions: list[IbkrPosition],
+    storage_database_url: str | None,
+    storage_writes_enabled: bool,
+) -> None:
+    """V1.2 §BZ follow-up: SystemEvent wanneer ``ibkr_account_id_hint``
+    niet matcht met het account dat TWS rapporteert.
+
+    Doel: operator-zichtbare waarschuwing op ``/systeemmeldingen`` zodat
+    iemand die paper denkt te draaien maar live verbonden is (of
+    andersom) het direct ziet, in plaats van pas wanneer een trade
+    onverwacht geld kost.
+
+    Best-effort: storage-fouten worden gelogd maar niet ge-raised; de
+    sync resultaat-pad is niet afhankelijk van deze write.
+    """
+
+    if not hint or not storage_database_url or not storage_writes_enabled:
+        return
+    actual: str | None = None
+    if cash_items:
+        actual = cash_items[0].account_ref
+    elif positions:
+        actual = positions[0].account_ref
+    if actual is None or actual == hint:
+        return
+
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage_database_url)
+        )
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemySystemEventRepository(
+                checked.connection, checked.readiness
+            )
+            repo.create_event(
+                CreateSystemEventRequest(
+                    system_event_id=f"system-event-{uuid4()}",
+                    created_at=datetime.now(UTC),
+                    severity="warning",
+                    category="ibkr_config_mismatch",
+                    source_service="api",
+                    source_component="ibkr_sync",
+                    event_code="account_id_mismatch",
+                    title_nl="IBKR account-mismatch gedetecteerd",
+                    message_nl=(
+                        f"De geconfigureerde IBKR account-id is "
+                        f"{hint!r}, maar TWS rapporteerde {actual!r}. "
+                        f"De software draait tegen het account dat TWS "
+                        f"levert; controleer of dit is wat je bedoelt "
+                        f"(paper vs live)."
+                    ),
+                    help_nl=(
+                        "Pas ``IBKR_ACCOUNT_ID_HINT`` aan, of wissel "
+                        "het TWS-account zodat beide overeenstemmen."
+                    ),
+                    technical_summary=(
+                        f"hint={hint} actual={actual}"
+                    ),
+                    redacted_details_json=None,
+                    stack_trace_redacted=None,
+                    related_entity_type=None,
+                    related_entity_id=None,
+                    blocks_suggestions=False,
+                    blocks_writes=False,
+                    blocks_ai_explanation=False,
+                    status="open",
+                    explanation_nl=(
+                        "Account-id hint en actuele TWS-account "
+                        "verschillen."
+                    ),
+                )
+            )
+            checked.connection.commit()
+    except Exception:  # noqa: BLE001 — recording must never raise
+        _logger.exception(
+            "Kon account-id mismatch SystemEvent niet vastleggen."
+        )
 
 
 def _resolve_repo(
@@ -173,6 +261,21 @@ def run_sync(
             positions = active_adapter.sync_positions()
             open_orders = active_adapter.sync_open_orders()
             executions = active_adapter.sync_executions()
+            # V1.2 §BZ follow-up: vergelijk de operator's
+            # ``ibkr_account_id_hint`` (deploy-time configuratie) met het
+            # actuele account dat TWS rapporteert. Bij mismatch zou de
+            # operator denken paper te draaien terwijl het live is (of
+            # andersom). Schrijft één SystemEvent als operator-zichtbare
+            # waarschuwing; sync gaat gewoon door.
+            _maybe_record_account_id_mismatch(
+                hint=settings.ibkr_account_id_hint,
+                cash_items=cash_items,
+                positions=positions,
+                storage_database_url=settings.storage.database_url,
+                storage_writes_enabled=(
+                    settings.storage.enabled and settings.storage.writes_enabled
+                ),
+            )
             account_summary_status = "account_summary_received" if cash_items else "partial_data"
             positions_status = "positions_received" if positions else "partial_data"
             open_orders_status = "open_orders_received" if open_orders else "no_open_orders"

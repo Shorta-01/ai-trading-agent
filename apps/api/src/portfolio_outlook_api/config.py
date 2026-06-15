@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     environment: str = "development"
     storage: StorageSettings = StorageSettings()
     ibkr_enabled: bool = False
+    # CLAUDE.md §15 (V1.2 §BZ): de IBKR account-id prefix bepaalt de
+    # actuele mode (DU*/DF*=paper, U*=live). Dit veld is INFORMATIEF —
+    # operator's deploy-time verwachting — en blokkeert geen
+    # functionaliteit meer (zie ``ibkr_sync.py`` mismatch-detector
+    # voor de actuele check). Default "paper" voor backwards-compat
+    # met bestaande deploys.
     ibkr_expected_environment: str = "paper"
     ibkr_account_id_hint: str | None = None
     ibkr_gateway_url: str | None = None

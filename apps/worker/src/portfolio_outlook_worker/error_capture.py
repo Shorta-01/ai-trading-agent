@@ -72,4 +72,63 @@ def record_worker_error(
         logger.exception("Kon worker-fout niet vastleggen in de foutlog.")
 
 
-__all__ = ["record_worker_error"]
+def record_worker_event(
+    *,
+    storage_settings: StorageSettings,
+    source_component: str,
+    event_code: str,
+    severity: str,
+    title_nl: str,
+    message_nl: str,
+    help_nl: str | None = None,
+    category: str = "runtime_event",
+    technical_summary: str | None = None,
+) -> None:
+    """Persist een non-error worker-event als open ``system_event``.
+
+    Gebruikt voor zichtbare operator-meldingen die geen technische fout
+    zijn (b.v. "order-sessie verbonden met LIVE account"). Severity is
+    ``"warning"`` of ``"info"`` — voor harde fouten gebruik
+    :func:`record_worker_error`. Recording mag NOOIT raise — wordt
+    silently weggegooid als storage uit staat of niet bereikbaar is.
+    """
+
+    if not storage_settings.enabled or not storage_settings.database_url:
+        return
+    request = CreateSystemEventRequest(
+        system_event_id=f"system-event-{uuid4()}",
+        created_at=datetime.now(UTC),
+        severity=severity,
+        category=category,
+        source_service="worker",
+        source_component=source_component[:200],
+        event_code=event_code,
+        title_nl=title_nl[:200],
+        message_nl=message_nl[:500],
+        help_nl=(help_nl or "Operator-actie vereist.")[:500],
+        technical_summary=(technical_summary[:2000] if technical_summary else None),
+        redacted_details_json=None,
+        stack_trace_redacted=None,
+        related_entity_type=None,
+        related_entity_id=None,
+        blocks_suggestions=False,
+        blocks_writes=False,
+        blocks_ai_explanation=False,
+        status="open",
+        explanation_nl="Automatisch vastgelegd als operator-melding.",
+    )
+    try:
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage_settings.database_url)
+        )
+        with provider.checked_connection(require_writable=True) as checked:
+            repo = SqlAlchemySystemEventRepository(
+                checked.connection, checked.readiness
+            )
+            repo.create_event(request)
+            checked.connection.commit()
+    except Exception:  # noqa: BLE001 — recording must never raise
+        logger.exception("Kon worker-event niet vastleggen.")
+
+
+__all__ = ["record_worker_error", "record_worker_event"]
