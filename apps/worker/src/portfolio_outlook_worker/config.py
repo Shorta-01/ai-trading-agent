@@ -72,6 +72,11 @@ class IbkrSettings(BaseModel):
     # queue raken. Range 1-72 uur; verder verandert het reconciler-
     # gedrag niet.
     reconciler_pass_c_timeout_hours: int = 24
+    # V1.2 §BM-2 / GAPS.md P0-3 — eigen client_id voor de in-process
+    # reconciliation TWS-sessie. Spiegel van ``order_session_client_id``
+    # zodat de drie worker-side TWS-sessies (boot-test → 1, order →
+    # 2, reconciler → 3) elkaar niet in de weg zitten. Default 3.
+    reconciler_session_client_id: int = 3
 
 
 class EodhdSettings(BaseModel):
