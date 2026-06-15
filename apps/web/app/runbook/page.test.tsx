@@ -39,12 +39,12 @@ function makeItem(
   overrides: Partial<RunbookItemResponse> = {},
 ): RunbookItemResponse {
   return {
-    code: "paper_only_mode",
+    code: "ibkr_account_mode",
     group: "doctrine_locks",
-    label_nl: "Paper-only modus",
-    status: "ok",
-    value_nl: "Aan: ja",
-    what_it_means_nl: "Doctrine §1 + §15 — geen live geld.",
+    label_nl: "IBKR account-mode",
+    status: "info",
+    value_nl: "Paper-account: DU1234567",
+    what_it_means_nl: "CLAUDE.md §15 — account-id prefix bepaalt mode.",
     ...overrides,
   };
 }
@@ -123,7 +123,7 @@ describe("RunbookPage", () => {
       ok: true,
       data: makeRunbook({
         items: [
-          makeItem({ code: "paper_only_mode", group: "doctrine_locks" }),
+          makeItem({ code: "ibkr_account_mode", group: "doctrine_locks" }),
           makeItem({
             code: "storage_writable",
             group: "provider_config",

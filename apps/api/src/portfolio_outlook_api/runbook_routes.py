@@ -4,9 +4,10 @@ CLAUDE.md §16 noemt een 8-12 PR roadmap voor de doctrine; deze
 endpoint is de operator-facing checklist die toont waar het systeem
 qua go-live readiness staat. Drie groepen items:
 
-1. **Doctrine-locks** — bevestigt dat ``paper_only_mode`` aan staat,
-   geen leverage-flags actief zijn, AI niet als forecaster gebruikt
-   wordt, etc.
+1. **Doctrine-locks** — toont welke IBKR account-mode actief is
+   (paper vs live, gedetecteerd via de account-id prefix per
+   CLAUDE.md §15 V1.2 §BZ), bevestigt dat geen leverage-flags
+   actief zijn, AI niet als forecaster gebruikt wordt, etc.
 2. **Provider configuratie** — IBKR/EODHD/Claude/SMTP keys aanwezig,
    storage schrijfbaar, etc.
 3. **Doctrine-features** — earnings calendar enabled, orchestrator
@@ -90,19 +91,38 @@ def _yes_no(value: bool) -> str:
 
 
 def _doctrine_lock_items() -> list[RunbookItem]:
-    """Hard doctrine-locks die NOOIT mogen omklappen in V1."""
+    """Hard doctrine-locks + IBKR account-mode detectie.
+
+    Per CLAUDE.md §15 (V1.2 §BZ) is er geen software-side mode-lock
+    meer; de IBKR account-id prefix bepaalt of orders naar paper- of
+    live-IBKR gaan. Deze rij is informatief — de operator ziet welk
+    account is geconfigureerd en welke mode dat implicit selecteert.
+    """
+
+    account_id = settings.ibkr_account_id_hint
+    if not account_id:
+        mode_value_nl = "Geen account geconfigureerd"
+    elif account_id.startswith(("DU", "DF")):
+        mode_value_nl = f"Paper-account: {account_id}"
+    elif account_id.startswith("U"):
+        mode_value_nl = f"Live-account: {account_id}"
+    else:
+        mode_value_nl = f"Onbekend account-prefix: {account_id}"
 
     items: list[RunbookItem] = [
         RunbookItem(
-            code="paper_only_mode",
+            code="ibkr_account_mode",
             group="doctrine_locks",
-            label_nl="Paper-only modus",
-            status=STATUS_OK if settings.paper_only_mode else STATUS_BLOCKING,
-            value_nl=f"Aan: {_yes_no(settings.paper_only_mode)}",
+            label_nl="IBKR account-mode",
+            status=STATUS_INFO,
+            value_nl=mode_value_nl,
             what_it_means_nl=(
-                "CLAUDE.md §1 + §15 — geen live geld. Mag NOOIT op False "
-                "in productie. Als deze blocking is moet je hem terug "
-                "naar True zetten voor je iets anders doet."
+                "CLAUDE.md §15 (V1.2 §BZ) — IBKR account-id prefix "
+                "bepaalt de mode: DU*/DF* = paper, U* = live. De "
+                "software werkt VOLLEDIG in beide modi. Operator-"
+                "approval (CLAUDE.md §2) is de veiligheidsgarantie "
+                "tegen ongewenste live trades, niet een software-"
+                "side flag."
             ),
         ),
     ]

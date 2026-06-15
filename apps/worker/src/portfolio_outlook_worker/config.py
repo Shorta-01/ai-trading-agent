@@ -238,7 +238,6 @@ class NotificationSettings(BaseModel):
 class Settings(BaseSettings):
     service_name: str = "Portfolio Outlook Manager Worker"
     environment: str = "development"
-    paper_only_mode: bool = True
     storage: StorageSettings = StorageSettings()
     ibkr: IbkrSettings = IbkrSettings()
     scheduler: SchedulerSettings = SchedulerSettings()

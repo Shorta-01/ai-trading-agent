@@ -178,9 +178,11 @@ def _maybe_open_order_adapter() -> Any | None:
     """Open the writable IBKR order session iff a sweep is enabled (T-045).
 
     Fails closed: returns None (so no order sweeps register) unless IBKR is
-    enabled, an account id is configured, a sweep flag is on, AND
-    ``open_order_adapter`` accepts the account under ``paper_only_mode``. Any
-    failure returns None — the worker still runs, just without order sweeps.
+    enabled, an account id is configured, and a sweep flag is on. The
+    adapter zelf werkt voor zowel paper- als live-accounts (CLAUDE.md §15
+    V1.2 §BZ); mode wordt gedetecteerd via de IBKR account-id prefix.
+    Operator-approval (CLAUDE.md §2) is de veiligheidsgarantie tegen
+    ongewenste live trades.
     """
 
     ibkr = settings.ibkr
@@ -200,7 +202,6 @@ def _maybe_open_order_adapter() -> Any | None:
             client_id=ibkr.order_session_client_id,
             account_id=ibkr.account_id,
             session_id=f"order-{ibkr.account_id}",
-            paper_only_mode=settings.paper_only_mode,
         )
     except OrderSessionRefusedError as exc:
         logger.error("Order-sessie geweigerd; sweeps blijven uit: %s", exc)
@@ -307,10 +308,8 @@ def start_worker() -> None:
     # Settings page.
     apply_worker_runtime_config_overlay(settings)
     logger.info(
-        "Worker gestart (env=%s, paper_only_mode=%s, ibkr_enabled=%s, "
-        "scheduler_enabled=%s).",
+        "Worker gestart (env=%s, ibkr_enabled=%s, scheduler_enabled=%s).",
         settings.environment,
-        settings.paper_only_mode,
         settings.ibkr.enabled,
         settings.scheduler.enabled,
     )

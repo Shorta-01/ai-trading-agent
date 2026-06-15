@@ -47,7 +47,6 @@ def _settings(**updates: object) -> Settings:
         ibkr_tws_readonly_adapter_enabled=False,
         ibkr_tws_readonly_runtime_enabled=False,
         ibkr_expected_environment="paper",
-        paper_only_mode=True,
         ibkr_sync_host="127.0.0.1",
         ibkr_sync_port=4002,
         ibkr_sync_client_id=1,
@@ -63,7 +62,6 @@ def _fake_client_ready_settings(**updates: object) -> Settings:
         "ibkr_tws_readonly_runtime_enabled": True,
         "ibkr_tws_readonly_real_client_enabled": True,
         "ibkr_expected_environment": "paper",
-        "paper_only_mode": True,
         "ibkr_sync_host": "127.0.0.1",
         "ibkr_sync_port": 4002,
         "ibkr_sync_client_id": 1,
@@ -142,18 +140,20 @@ def test_runtime_opt_in_without_client_blocked() -> None:
     assert result.connect_attempted is False
 
 
-def test_expected_mode_not_paper_blocked() -> None:
+def test_expected_mode_live_no_longer_blocks() -> None:
+    """V1.2 §BZ — software werkt VOLLEDIG in beide modi. Een
+    ``ibkr_expected_environment=live`` mag de runtime niet meer
+    blokkeren via een ``expected_account_mode_not_paper`` reason."""
+
     client = FakeRuntimeClient(account_mode="paper")
     result = run_manual_tws_readonly_status_check(
-        _settings(
-            ibkr_tws_readonly_runtime_enabled=True,
-            ibkr_tws_readonly_adapter_enabled=True,
+        _fake_client_ready_settings(
             ibkr_expected_environment="live",
         ),
         runtime_client=client,
     )
-    assert "expected_account_mode_not_paper" in result.blocked_reasons
-    assert client.connect_calls == 0
+    assert "expected_account_mode_not_paper" not in result.blocked_reasons
+    assert "paper_only_required" not in result.blocked_reasons
 
 
 def test_happy_path_connect_check_disconnect() -> None:

@@ -229,17 +229,23 @@ def test_cancel_order_noop_when_perm_id_not_open() -> None:
 # ---- open_order_adapter fail-closed gate -------------------------------
 
 
-def test_open_order_adapter_refuses_live_account_under_paper_only() -> None:
-    with pytest.raises(OrderSessionRefusedError):
-        open_order_adapter(
-            host="127.0.0.1",
-            port=7497,
-            client_id=2,
-            account_id="U7654321",  # live-looking
-            session_id="s",
-            paper_only_mode=True,
-            ib_client_factory=lambda: _FakeIB(managed=["U7654321"]),
-        )
+def test_open_order_adapter_opens_for_live_account() -> None:
+    """V1.2 §BZ — software werkt VOLLEDIG in beide modi. Een
+    live-account (U* prefix) mag NIET meer geweigerd worden door
+    de order adapter; mode wordt informatief gerapporteerd via
+    ``account_mode='live'``. Operator-approval workflow (CLAUDE.md
+    §2) is de veiligheidsgarantie."""
+
+    adapter = open_order_adapter(
+        host="127.0.0.1",
+        port=7497,
+        client_id=2,
+        account_id="U7654321",
+        session_id="s",
+        ib_client_factory=lambda: _FakeIB(managed=["U7654321"]),
+    )
+    assert adapter.account_mode == "live"
+    assert adapter.fetch_managed_account_id() == "U7654321"
 
 
 def test_open_order_adapter_opens_for_paper_account() -> None:
@@ -249,7 +255,6 @@ def test_open_order_adapter_opens_for_paper_account() -> None:
         client_id=2,
         account_id="DU1234567",
         session_id="s",
-        paper_only_mode=True,
         ib_client_factory=lambda: _FakeIB(managed=["DU1234567"]),
     )
     assert adapter.account_mode == "paper"
@@ -264,6 +269,5 @@ def test_open_order_adapter_refuses_unmanaged_account() -> None:
             client_id=2,
             account_id="DU1234567",
             session_id="s",
-            paper_only_mode=True,
             ib_client_factory=lambda: _FakeIB(managed=["DU9999999"]),
         )

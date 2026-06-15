@@ -53,7 +53,6 @@ def _fake_client_ready_settings(**kwargs: object) -> Settings:
         "ibkr_tws_readonly_runtime_enabled": True,
         "ibkr_tws_readonly_real_client_enabled": True,
         "ibkr_expected_environment": "paper",
-        "paper_only_mode": True,
         "ibkr_sync_host": "127.0.0.1",
         "ibkr_sync_port": 4002,
         "ibkr_sync_client_id": 1,
@@ -249,18 +248,22 @@ def test_readiness_runtime_enabled_adapter_disabled() -> None:
     assert payload["connect_attempted"] is False
 
 
-def test_readiness_paper_only_and_expected_mode_blockers() -> None:
+def test_readiness_no_longer_blocks_on_paper_only_or_expected_mode() -> None:
+    """V1.2 §BZ — software werkt VOLLEDIG in beide modi. Geen van
+    ``paper_only_required`` of ``expected_account_mode_not_paper``
+    mogen nog in ``blocked_reasons`` zitten, zelfs niet wanneer de
+    expected environment ``live`` is."""
+
     payload = build_manual_tws_readonly_status_check_readiness(
         _settings(
             ibkr_tws_readonly_runtime_enabled=True,
             ibkr_tws_readonly_adapter_enabled=True,
-            paper_only_mode=False,
             ibkr_expected_environment="live",
         ),
         runtime_client=None,
     ).__dict__
-    assert "paper_only_required" in payload["blocked_reasons"]
-    assert "expected_account_mode_not_paper" in payload["blocked_reasons"]
+    assert "paper_only_required" not in payload["blocked_reasons"]
+    assert "expected_account_mode_not_paper" not in payload["blocked_reasons"]
     assert payload["runtime_client_available"] is False
     assert payload["endpoint"] == "/ibkr/session/manual-readonly-status-check"
     assert payload["method"] == "POST"
