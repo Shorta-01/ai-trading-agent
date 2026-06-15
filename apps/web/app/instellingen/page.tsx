@@ -144,6 +144,76 @@ function FieldLabel({
   );
 }
 
+// V1.2 §BZ vervolg: real-time PAPER/LIVE mode-preview onder het IBKR
+// account-id veld. Helpt de operator voor save al zien of hij paper
+// of live aan het configureren is.
+function AccountIdModePreview({ accountId }: { accountId: string }) {
+  const trimmed = accountId.trim().toUpperCase();
+  const mode: "paper" | "live" | "unknown" = trimmed.startsWith("DU")
+    || trimmed.startsWith("DF")
+    ? "paper"
+    : trimmed.startsWith("U")
+      ? "live"
+      : "unknown";
+
+  if (mode === "unknown") {
+    return (
+      <span
+        data-testid="instellingen-account-id-mode-preview"
+        data-mode="unknown"
+        style={{
+          marginTop: 4,
+          fontSize: 12,
+          color: "#6b7280",
+        }}
+      >
+        Onbekend account-prefix — controleer of dit klopt (DU*/DF* = paper, U* = live).
+      </span>
+    );
+  }
+
+  if (mode === "live") {
+    return (
+      <span
+        data-testid="instellingen-account-id-mode-preview"
+        data-mode="live"
+        role="alert"
+        style={{
+          marginTop: 4,
+          padding: "4px 8px",
+          borderRadius: 4,
+          background: "#fef2f2",
+          color: "#7f1d1d",
+          border: "1px solid #b91c1c",
+          fontSize: 12,
+          fontWeight: 600,
+        }}
+      >
+        ⚠️ LIVE account — orders gaan met ECHT geld naar de markt.
+      </span>
+    );
+  }
+
+  return (
+    <span
+      data-testid="instellingen-account-id-mode-preview"
+      data-mode="paper"
+      style={{
+        marginTop: 4,
+        padding: "4px 8px",
+        borderRadius: 4,
+        background: "#eff6ff",
+        color: "#1e3a8a",
+        border: "1px solid #93c5fd",
+        fontSize: 12,
+        fontWeight: 600,
+      }}
+    >
+      PAPER account — orders gaan naar IBKR paper (geen echt geld).
+    </span>
+  );
+}
+
 function Dropdown({
   id,
   testId,
@@ -4019,6 +4089,11 @@ export default function Page() {
                   setConnectionField("ibkr_account_id", event.target.value)
                 }
               />
+              {connection.ibkr_account_id.trim() ? (
+                <AccountIdModePreview
+                  accountId={connection.ibkr_account_id}
+                />
+              ) : null}
             </label>
 
             <label style={LABEL_STYLE} htmlFor="connection-ibkr_host">

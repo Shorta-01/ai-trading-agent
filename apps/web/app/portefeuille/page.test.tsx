@@ -17,6 +17,7 @@ const fns = vi.hoisted(() => ({
   getIbkrExecutions: vi.fn(),
   getLatestForecasts: vi.fn(),
   getLatestSuggestions: vi.fn(),
+  getActiveSystemEvents: vi.fn(),
   getLatestDecisionPackages: vi.fn(),
   getLatestActionDrafts: vi.fn(),
   getLatestDailyBriefing: vi.fn(),
@@ -214,6 +215,115 @@ describe("PortfolioPage data state machine", () => {
     await screen.findByText(/Portefeuille/i);
     expect(
       screen.queryByTestId("account-mode-hint-mismatch-banner"),
+    ).toBeNull();
+  });
+
+  it("renders the order_session_live_account banner when the event is open", async () => {
+    // V1.2 §BZ vervolg: de worker schrijft een
+    // ``order_session_live_account`` SystemEvent wanneer de
+    // order-sessie tegen een live account verbindt. Dat moet ook
+    // bovenaan /portefeuille verschijnen, niet alleen op
+    // /systeemmeldingen.
+    mockAllOk();
+    fns.getActiveSystemEvents = vi.fn().mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-1",
+            severity: "warning",
+            category: "runtime_event",
+            source_service: "worker",
+            source_component: "ibkr_order_adapter",
+            event_code: "order_session_live_account",
+            title_nl: "Order-sessie verbonden met LIVE account",
+            message_nl:
+              "De order-sessie is verbonden met live-account U7654321.",
+            help_nl: "",
+            created_at: "2026-06-15T08:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    render(<PortfolioPage />);
+    const banner = await screen.findByTestId(
+      "ibkr-config-event-banner-order_session_live_account",
+    );
+    expect(banner.getAttribute("role")).toBe("alert");
+    expect(banner.getAttribute("data-event-code")).toBe(
+      "order_session_live_account",
+    );
+    expect(banner.textContent).toContain("LIVE");
+    expect(banner.textContent).toContain("U7654321");
+  });
+
+  it("renders the account_id_mismatch event banner when open", async () => {
+    mockAllOk();
+    fns.getActiveSystemEvents = vi.fn().mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-2",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "IBKR account-mismatch gedetecteerd",
+            message_nl:
+              "Hint DU1234567 verschilt van actueel U7654321.",
+            help_nl: "",
+            created_at: "2026-06-15T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    render(<PortfolioPage />);
+    const banner = await screen.findByTestId(
+      "ibkr-config-event-banner-account_id_mismatch",
+    );
+    expect(banner.textContent).toContain("mismatch");
+    expect(banner.textContent).toContain("DU1234567");
+  });
+
+  it("filters out resolved events from the banner", async () => {
+    mockAllOk();
+    fns.getActiveSystemEvents = vi.fn().mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-1",
+            severity: "warning",
+            category: "runtime_event",
+            source_service: "worker",
+            source_component: "ibkr_order_adapter",
+            event_code: "order_session_live_account",
+            title_nl: "Order-sessie verbonden met LIVE account",
+            message_nl: "details",
+            help_nl: "",
+            created_at: "2026-06-15T08:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            // Closed → moet NIET zichtbaar zijn.
+            status: "resolved",
+          },
+        ],
+      }),
+    );
+    render(<PortfolioPage />);
+    await screen.findByText(/Portefeuille/i);
+    expect(
+      screen.queryByTestId(
+        "ibkr-config-event-banner-order_session_live_account",
+      ),
     ).toBeNull();
   });
 });

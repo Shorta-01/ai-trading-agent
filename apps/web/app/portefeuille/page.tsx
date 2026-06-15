@@ -130,6 +130,26 @@ export default function PortfolioPage() {
   });
   const accountMode = accountModeQuery.data ?? null;
 
+  // V1.2 §BZ vervolg: query active system events zodat
+  // ``order_session_live_account`` (worker) en
+  // ``account_id_mismatch`` (api sync) ook prominent op
+  // /portefeuille worden getoond, niet alleen op /systeemmeldingen.
+  const ibkrConfigEventsQuery = useQuery({
+    queryKey: ["portefeuille-ibkr-config-events"],
+    queryFn: async () => {
+      const res = await apiClient.getActiveSystemEvents();
+      if (!res.ok) return [];
+      return res.data.events.filter(
+        (e) =>
+          e.status === "open"
+          && (e.event_code === "order_session_live_account"
+            || e.event_code === "account_id_mismatch"
+            || e.category === "ibkr_config_mismatch"),
+      );
+    },
+  });
+  const ibkrConfigEvents = ibkrConfigEventsQuery.data ?? [];
+
   const schedulerQuery = useQuery({
     queryKey: ["portefeuille-scheduler"],
     queryFn: async () => {
@@ -291,6 +311,40 @@ export default function PortfolioPage() {
           </div>
         </div>
         <p className="top-sub">Read-only weergave van laatst opgeslagen IBKR snapshots voor posities, cash, open orders en uitvoeringen.</p>
+
+        {ibkrConfigEvents.length > 0 ? (
+          <div data-testid="ibkr-config-events-banner-list">
+            {ibkrConfigEvents.map((event) => (
+              <div
+                key={event.system_event_id}
+                data-testid={`ibkr-config-event-banner-${event.event_code}`}
+                data-event-code={event.event_code}
+                role="alert"
+                style={{
+                  padding: "0.7rem 0.9rem",
+                  borderRadius: "0.5rem",
+                  background:
+                    event.event_code === "order_session_live_account"
+                      ? "var(--ata-danger, #b91c1c)"
+                      : "var(--ata-warning, #f59e0b)",
+                  color: "white",
+                  marginBottom: "0.5rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 500,
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong style={{ display: "block", marginBottom: "0.2rem" }}>
+                  {event.event_code === "order_session_live_account"
+                    ? "🔴 "
+                    : "⚠️ "}
+                  {event.title_nl}
+                </strong>
+                {event.message_nl}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         {accountMode?.hint_mismatch ? (
           <div

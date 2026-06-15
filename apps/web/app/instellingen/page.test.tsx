@@ -577,6 +577,50 @@ describe("InstellingenPage", () => {
     expect(payload.user_strategy).toEqual(TRADING.user_strategy);
   });
 
+  it("renders PAPER mode-preview when ibkr_account_id has a DU prefix", async () => {
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "DU1234567");
+    const preview = await screen.findByTestId(
+      "instellingen-account-id-mode-preview",
+    );
+    expect(preview.getAttribute("data-mode")).toBe("paper");
+    expect(preview.textContent).toContain("PAPER");
+  });
+
+  it("renders LIVE warning preview with role=alert for U-prefix accounts", async () => {
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "U7654321");
+    const preview = await screen.findByTestId(
+      "instellingen-account-id-mode-preview",
+    );
+    expect(preview.getAttribute("data-mode")).toBe("live");
+    expect(preview.getAttribute("role")).toBe("alert");
+    expect(preview.textContent).toContain("LIVE");
+    expect(preview.textContent).toContain("ECHT geld");
+  });
+
+  it("renders UNKNOWN preview for non-prefixed input so operator can correct typos", async () => {
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "XYZ123");
+    const preview = await screen.findByTestId(
+      "instellingen-account-id-mode-preview",
+    );
+    expect(preview.getAttribute("data-mode")).toBe("unknown");
+    expect(preview.textContent).toContain("Onbekend account-prefix");
+  });
+
   it("saves an edited connection field via updateConnectionSettings", async () => {
     updateConnectionSettings.mockReturnValue(
       ok({ ...CONNECTION, ibkr_account_id: "DU9999999" }),
