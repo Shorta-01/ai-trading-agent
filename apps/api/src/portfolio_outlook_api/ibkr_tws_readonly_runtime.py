@@ -78,7 +78,6 @@ class IbkrTwsReadonlyStatusCheckReadinessResult:
     host_configured: bool
     port_configured: bool
     client_id_configured: bool
-    paper_only_mode: bool
     expected_account_mode: str | None
     runtime_client_available: bool
     runtime_connection_allowed: bool
@@ -115,12 +114,11 @@ def check_tws_readonly_runtime_preflight(
         blocked_reasons.append("adapter_disabled")
     if not settings.ibkr_tws_readonly_real_client_enabled:
         blocked_reasons.append("real_client_disabled")
-    if not settings.paper_only_mode:
-        blocked_reasons.append("paper_only_required")
 
-    expected_mode = _normalize_mode(settings.ibkr_expected_environment)
-    if expected_mode != "paper":
-        blocked_reasons.append("expected_account_mode_not_paper")
+    # CLAUDE.md §15 (V1.2 §BZ): geen software-side mode-block. De runtime
+    # mag connecten tegen elk account dat IBKR aanbiedt; de account-id
+    # prefix bepaalt of we live of paper zijn (geëxposeerd via
+    # ``expected_account_mode`` in de status-response).
 
     if settings.ibkr_sync_host is None:
         blocked_reasons.append("missing_host")
@@ -419,7 +417,6 @@ def build_manual_tws_readonly_status_check_readiness(
         host_configured=settings.ibkr_sync_host is not None,
         port_configured=settings.ibkr_sync_port is not None,
         client_id_configured=settings.ibkr_sync_client_id is not None,
-        paper_only_mode=settings.paper_only_mode,
         expected_account_mode=expected_mode,
         runtime_client_available=runtime_client is not None,
         runtime_connection_allowed=gate.runtime_connection_allowed,
@@ -495,8 +492,6 @@ def _reason_nl(reason: str) -> str:
         "missing_port": "TWS/Gateway poort ontbreekt",
         "missing_client_id": "Client-ID ontbreekt",
         "missing_runtime_client": "Runtime-client ontbreekt",
-        "paper_only_required": "Paper-only is verplicht",
-        "expected_account_mode_not_paper": "Verwachte accountmodus moet paper zijn",
         "authentication_required": "Authenticatie vereist",
         "pacing_limited": "Pacing-limiet bereikt",
         "connection_failed": "Verbinding mislukt",

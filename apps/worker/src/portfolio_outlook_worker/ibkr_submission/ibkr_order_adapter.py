@@ -3,19 +3,16 @@
 This is the real network-write adapter the submission + cancel sweeps depend
 on. The orchestration (``IbkrSubmitter`` / ``SubmissionSweep``) is fully
 tested with fakes; this module is the part that actually drives an IBKR TWS
-session, so it carries two hard constraints:
+session, so it carries one hard constraint:
 
 * **Order-capable session is NOT read-only.** The long-lived sync gateway
   (``ibkr_gateway.py``) connects ``readonly=True`` on purpose — orders are
   rejected on a read-only API session. Order placement therefore needs a
-  separate, non-read-only session, opened only via :func:`open_order_adapter`,
-  which **fails closed**: under ``paper_only_mode`` it refuses to open against
-  anything that doesn't look like a paper account (``DU*`` / ``DF*``).
-* **UNVERIFIED against a live broker.** The logic below (async permId wait,
-  open-trade cancel lookup, contract-detail tick size) is exercised here only
-  through a fake ``ib_insync`` client. It MUST be validated against an IBKR
-  *paper* account through full order lifecycles before any real-money use.
-  Nothing here flips ``paper_only_mode``.
+  separate, non-read-only session, opened only via :func:`open_order_adapter`.
+
+CLAUDE.md §15 (V1.2 §BZ): de IBKR account-id prefix is de enige mode-bron
+(``DU*``/``DF*`` = paper, ``U*`` = live). De software werkt VOLLEDIG in beide
+modi; ``account_mode`` is een informatief veld op de adapter, geen gate.
 """
 
 from __future__ import annotations
@@ -269,25 +266,28 @@ def open_order_adapter(
     client_id: int,
     account_id: str,
     session_id: str,
-    paper_only_mode: bool,
     ib_client_factory: Callable[[], OrderCapableIbClientProtocol] | None = None,
 ) -> IbkrOrderAdapter:
-    """Open a NON-read-only order session, failing closed under paper-only.
+    """Open a NON-read-only order session voor zowel paper- als live-accounts.
 
-    Refuses (``OrderSessionRefusedError``) when ``paper_only_mode`` is set and
-    ``account_id`` does not look like a paper account (``DU*`` / ``DF*``) — so
-    a misconfiguration can never open an order-capable session against a live
-    account while the system is in paper-only mode.
+    CLAUDE.md §15 (V1.2 §BZ): geen software-side mode-lock. De IBKR
+    account-id prefix bepaalt de mode (``DU*``/``DF*`` = paper, ``U*`` =
+    live) en de adapter rapporteert die via ``account_mode``; de
+    operator-approval workflow (CLAUDE.md §2) is de veiligheidsgarantie
+    tegen ongewenste live trades, niet een hard refusal hier.
 
-    NOTE: this opens a real TWS connection and is unverified against a live
-    broker; it must be exercised against an IBKR paper account first.
+    NOTE: deze module is alleen tegen fakes getest. Voor een eerste live
+    of paper-deploy moet de operator een end-to-end paper-walkthrough
+    doen voordat een live-account wordt aangesloten.
     """
 
     mode = _mode_from_account_id(account_id)
-    if paper_only_mode and mode != "paper":
-        raise OrderSessionRefusedError(
-            f"Weiger order-sessie: paper_only_mode actief maar account "
-            f"{account_id!r} lijkt live. Order-sessie niet geopend."
+    if mode == "live":
+        logger.warning(
+            "Order-sessie wordt geopend tegen LIVE account %s. "
+            "Operator-approval blijft de veiligheidsgarantie tegen "
+            "ongewenste trades.",
+            account_id,
         )
 
     if ib_client_factory is None:

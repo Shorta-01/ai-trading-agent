@@ -81,7 +81,6 @@ class Settings(BaseSettings):
     app_name: str = "Portfolio Outlook Manager API"
     version: str = "0.1.0"
     environment: str = "development"
-    paper_only_mode: bool = True
     storage: StorageSettings = StorageSettings()
     ibkr_enabled: bool = False
     ibkr_expected_environment: str = "paper"

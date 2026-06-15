@@ -19,7 +19,7 @@ def _reset_settings():  # type: ignore[no-untyped-def]
     """
 
     snapshot = {
-        "paper_only_mode": api_settings.paper_only_mode,
+        "ibkr_account_id_hint": api_settings.ibkr_account_id_hint,
         "storage_enabled": api_settings.storage.enabled,
         "storage_database_url": api_settings.storage.database_url,
         "storage_writes_enabled": api_settings.storage.writes_enabled,
@@ -38,7 +38,7 @@ def _reset_settings():  # type: ignore[no-untyped-def]
         "daily_briefing_sync_enabled": api_settings.daily_briefing_sync_enabled,
     }
     yield
-    api_settings.paper_only_mode = snapshot["paper_only_mode"]
+    api_settings.ibkr_account_id_hint = snapshot["ibkr_account_id_hint"]
     api_settings.storage.enabled = snapshot["storage_enabled"]
     api_settings.storage.database_url = snapshot["storage_database_url"]
     api_settings.storage.writes_enabled = snapshot["storage_writes_enabled"]
@@ -89,24 +89,31 @@ def test_runbook_returns_structured_response() -> None:
     )
 
 
-def test_runbook_lists_paper_only_mode_as_ok_when_locked() -> None:
-    api_settings.paper_only_mode = True
+def test_runbook_account_mode_paper_account_shown_as_info() -> None:
+    """V1.2 §BZ — paper-account (DU* prefix) is informatief, NIET
+    blocking. De software werkt VOLLEDIG in beide modi."""
+
+    api_settings.ibkr_account_id_hint = "DU1234567"
     body = _client().get("/runbook").json()
     items = _items_by_code(body)
-    assert items["paper_only_mode"]["status"] == "ok"
+    assert items["ibkr_account_mode"]["status"] == "info"
+    assert "Paper-account" in items["ibkr_account_mode"]["value_nl"]
+    assert "DU1234567" in items["ibkr_account_mode"]["value_nl"]
 
 
-def test_runbook_flags_paper_only_mode_as_blocking_when_off() -> None:
-    """Hypothetical guardrail — paper_only_mode=False zou NOOIT
-    mogen voorkomen in productie. De runbook MOET dit als blocking
-    flaggen."""
+def test_runbook_account_mode_live_account_shown_as_info_not_blocking() -> None:
+    """V1.2 §BZ — live-account (U* prefix) is informatief, NIET
+    blocking. De software werkt fully op live; operator-approval
+    (CLAUDE.md §2) is de veiligheidsgarantie."""
 
-    api_settings.paper_only_mode = False
+    api_settings.ibkr_account_id_hint = "U7654321"
     body = _client().get("/runbook").json()
     items = _items_by_code(body)
-    assert items["paper_only_mode"]["status"] == "blocking"
-    assert body["ready_for_paper_go_live"] is False
-    assert "Paper-only modus" in body["summary_nl"]
+    # Critical: NOT blocking — that was the whole point of V1.2 §BZ.
+    assert items["ibkr_account_mode"]["status"] == "info"
+    assert items["ibkr_account_mode"]["status"] != "blocking"
+    assert "Live-account" in items["ibkr_account_mode"]["value_nl"]
+    assert "U7654321" in items["ibkr_account_mode"]["value_nl"]
 
 
 # ----------------------------------------------------------------------
@@ -115,7 +122,6 @@ def test_runbook_flags_paper_only_mode_as_blocking_when_off() -> None:
 
 
 def test_runbook_flags_storage_blocking_when_disabled() -> None:
-    api_settings.paper_only_mode = True
     api_settings.storage.enabled = False
     api_settings.storage.database_url = None
     api_settings.storage.writes_enabled = False
@@ -126,7 +132,6 @@ def test_runbook_flags_storage_blocking_when_disabled() -> None:
 
 
 def test_runbook_storage_ok_when_all_flags_set() -> None:
-    api_settings.paper_only_mode = True
     api_settings.storage.enabled = True
     api_settings.storage.database_url = "postgresql://fake"
     api_settings.storage.writes_enabled = True
@@ -187,7 +192,6 @@ def test_runbook_features_on_show_as_ok() -> None:
 
 
 def test_runbook_ready_when_all_doctrine_locks_pass_and_features_on() -> None:
-    api_settings.paper_only_mode = True
     api_settings.storage.enabled = True
     api_settings.storage.database_url = "postgresql://fake"
     api_settings.storage.writes_enabled = True
@@ -215,7 +219,6 @@ def test_runbook_ready_with_warnings_when_some_features_off() -> None:
     de operator krijgt alleen een warning dat sommige legs op
     skipped vallen."""
 
-    api_settings.paper_only_mode = True
     api_settings.storage.enabled = True
     api_settings.storage.database_url = "postgresql://fake"
     api_settings.storage.writes_enabled = True
@@ -233,8 +236,6 @@ def test_runbook_summary_includes_blocking_labels() -> None:
     summary zichtbaar zijn zodat de operator snel weet wat te
     fixen."""
 
-    api_settings.paper_only_mode = False  # blocking
     api_settings.storage.enabled = False  # blocking
     body = _client().get("/runbook").json()
-    assert "Paper-only modus" in body["summary_nl"]
     assert "Opslag" in body["summary_nl"]

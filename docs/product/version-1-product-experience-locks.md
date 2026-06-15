@@ -230,7 +230,7 @@ Deze sectie vervangt **niet** secties 1-20 hierboven; ze verfijnt drie eerdere l
 - Account-mode (paper / live) wordt vastgesteld door het verbonden IBKR-account, **niet** door een app-side gate.
 - De runtime gedraagt zich identiek voor paper en live: dezelfde sync, dezelfde forecast, dezelfde Decision Package, dezelfde action-draft + approval flow, dezelfde submission.
 - Het dashboard **labelt** zichtbaar welke modus IBKR rapporteert (`PAPER` / `LIVE` badge), zodat de gebruiker dit weet vóór elke approval.
-- De `paper_only_mode` setting + `ibkr_expected_environment` check + `account_mode_mismatch` dry-run failure worden gewijzigd van "blocks order" naar "reports mode".
+- De `paper_only_mode` setting is volledig verwijderd (V1.2 §BZ); de `ibkr_expected_environment` check en `account_mode_mismatch` dry-run failure rapporteren mode in plaats van een order te blokkeren.
 - Real-money veiligheid leeft op het IBKR-accountkeuze-niveau en op de manual per-draft approval — niet in een app-side `paper_only` flag.
 
 ### 21.2. AI lock — relaxed to ensemble vote

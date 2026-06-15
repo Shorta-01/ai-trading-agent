@@ -1,13 +1,15 @@
-# Go-Live Runbook (V1.2 §BH)
+# Go-Live Runbook (V1.2 §BH; bijgewerkt §BZ)
 
-Operator-checklist voor het in productie zetten van de AI-Trading-Agent
-op paper-mode. Iedere stap heeft een tegenhanger in de
-`GET /runbook` endpoint zodat de operator de status kan zien in de UI
-zonder dit document opnieuw te lezen.
+Operator-checklist voor het in productie zetten van de AI-Trading-Agent.
+Iedere stap heeft een tegenhanger in de `GET /runbook` endpoint zodat
+de operator de status kan zien in de UI zonder dit document opnieuw te
+lezen.
 
-> **Belangrijk**: CLAUDE.md §1 + §15 vergrendelen `paper_only_mode=True`.
-> Deze runbook is uitsluitend voor paper-mode go-live. Live trading is
-> niet ondersteund en mag NOOIT worden ingeschakeld in V1.
+> **Belangrijk**: CLAUDE.md §15 (V1.2 §BZ) — de IBKR account-id prefix
+> bepaalt of er paper- of live-orders worden geplaatst (`DU*`/`DF*` =
+> paper, `U*` = live). Er is GEEN `paper_only_mode` flag meer in de
+> software. De operator-approval workflow (CLAUDE.md §2) is de
+> veiligheidsgarantie tegen ongewenste live trades.
 
 ## 1. Stack draait
 
@@ -18,8 +20,10 @@ zonder dit document opnieuw te lezen.
 
 ## 2. Doctrine-locks (hard vereist)
 
-- [ ] `paper_only_mode=True` (`GET /runbook` → groep `doctrine_locks`).
-      Mag nooit op `False` staan.
+- [ ] IBKR account-mode is zichtbaar (`GET /runbook` → groep
+      `doctrine_locks` → `ibkr_account_mode`). Bevestig dat het
+      gerapporteerde account (paper of live) overeenstemt met wat
+      de operator verwacht aangesloten te hebben.
 - [ ] `safe_for_*` booleans staan op `False` op alle decision-records
       (orchestrator, suggestion, action-draft, etc.). Dit is doctrine
       via dataclass `__post_init__` validatie — kan niet per ongeluk
