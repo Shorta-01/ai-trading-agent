@@ -1044,6 +1044,14 @@ export type ActiveSystemEventsResponse = {
   events: SystemEventSummary[];
   storage_available?: boolean;
   summary_nl?: string;
+  // V1.2 §BZ vervolg — velden uit ``/system/events/active`` +
+  // ``/admin/audit/ibkr-config`` voor de audit-trail UI.
+  available?: boolean;
+  storage_configured?: boolean;
+  events_loaded?: boolean;
+  active_count?: number;
+  status_nl?: string;
+  message_nl?: string;
 };
 
 export type ErrorLogItem = {
@@ -2896,6 +2904,7 @@ export const apiClient = {
       payload,
     ),
   getActiveSystemEvents: () => getJson<ActiveSystemEventsResponse>("/system/events/active"),
+  getIbkrConfigAudit: () => getJson<ActiveSystemEventsResponse>("/admin/audit/ibkr-config"),
   resolveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>
     postJson<{ success: boolean }>(`/system/events/${systemEventId}/resolve`, payload),
   archiveSystemEvent: (systemEventId: string, payload?: SystemEventActionInput) =>

@@ -41,6 +41,7 @@ from portfolio_outlook_api.pdf_export import render_tax_year_report_pdf
 from portfolio_outlook_api.profit_target import get_profit_target_pct
 from portfolio_outlook_api.tax_report import (
     ExecutionRow,
+    IbkrConfigAuditEntry,
     TaxYearReport,
     build_tax_year_report,
 )
@@ -226,6 +227,58 @@ def _to_response(report: TaxYearReport) -> TaxYearReportResponse:
     )
 
 
+def _fetch_ibkr_config_audit(year: int) -> list[IbkrConfigAuditEntry]:
+    """V1.2 §BZ vervolg — IBKR-config audit-trail voor het belastingjaar.
+
+    Filtert de ``system_events`` op de §BZ codes/categorieën én op
+    ``created_at`` binnen het opgegeven jaar. Wordt toegevoegd aan
+    de TaxYearReport zodat PDF + CSV een "goed huisvader"-bewijs
+    bevatten van elke mode-switch / mismatch / account-wijziging.
+    """
+
+    storage = settings.storage
+    if not storage.enabled or not storage.database_url:
+        return []
+    try:
+        from ai_trading_agent_storage import SqlAlchemySystemEventRepository
+
+        provider = StorageConnectionProvider(
+            build_database_connection_settings(storage.database_url)
+        )
+        with provider.checked_connection(require_writable=False) as checked:
+            repo = SqlAlchemySystemEventRepository(
+                checked.connection, checked.readiness
+            )
+            result = repo.list_events_by_categories(
+                ("ibkr_config_mismatch", "ibkr_config_change"),
+                include_event_codes=(
+                    "order_session_live_account",
+                    "account_id_mismatch",
+                    "ibkr_account_id_changed",
+                ),
+                limit=2000,
+            )
+    except StorageConnectionError as exc:
+        logger.warning("belasting ibkr-config audit lookup error: %s", exc)
+        return []
+    entries: list[IbkrConfigAuditEntry] = []
+    for record in result.records:
+        if record.created_at.year != year:
+            continue
+        entries.append(
+            IbkrConfigAuditEntry(
+                created_at=record.created_at.isoformat(),
+                event_code=record.event_code,
+                severity=record.severity,
+                status=record.status,
+                source=f"{record.source_service}:{record.source_component}",
+                title_nl=record.title_nl,
+                message_nl=record.message_nl,
+            )
+        )
+    return entries
+
+
 def _fetch_dividends(year: int) -> list[dict[str, object]]:
     """Return manually-tracked dividenden voor dit jaar als plain
     dicts zodat de tax_report engine puur op data werkt."""
@@ -389,6 +442,7 @@ def get_jaaroverzicht(year: int | None = None) -> TaxYearReportResponse:
             profit_target_pct=get_profit_target_pct(),
             dividends=_fetch_dividends(resolved_year),
             fx_converter=converter,
+            ibkr_config_audit=_fetch_ibkr_config_audit(resolved_year),
         )
     finally:
         close_converter()
@@ -415,6 +469,7 @@ def get_jaaroverzicht_csv(year: int | None = None) -> Response:
                 profit_target_pct=get_profit_target_pct(),
                 dividends=_fetch_dividends(resolved_year),
                 fx_converter=converter,
+                ibkr_config_audit=_fetch_ibkr_config_audit(resolved_year),
             )
         finally:
             close_converter()
@@ -462,6 +517,37 @@ def get_jaaroverzicht_csv(year: int | None = None) -> Response:
                 str(t.net_pct_on_cost),
             ]
         )
+    # V1.2 §BZ vervolg — IBKR-config audit-trail als aparte sectie
+    # onderaan de CSV. Lege regel + section header zodat de accountant
+    # de twee blokken visueel kan onderscheiden in Excel.
+    if report.ibkr_config_audit:
+        writer.writerow([])
+        writer.writerow(
+            ["IBKR-CONFIG AUDIT-TRAIL (§BZ goed huisvader bewijs)"]
+        )
+        writer.writerow(
+            [
+                "tijd_utc",
+                "event_code",
+                "severity",
+                "status",
+                "source",
+                "titel",
+                "bericht",
+            ]
+        )
+        for entry in report.ibkr_config_audit:
+            writer.writerow(
+                [
+                    entry.created_at,
+                    entry.event_code,
+                    entry.severity,
+                    entry.status,
+                    entry.source,
+                    entry.title_nl,
+                    entry.message_nl,
+                ]
+            )
     body = buffer.getvalue()
     filename = f"belasting-{resolved_year}.csv"
     return Response(
@@ -497,6 +583,7 @@ def get_jaaroverzicht_pdf(year: int | None = None) -> Response:
                 profit_target_pct=get_profit_target_pct(),
                 dividends=_fetch_dividends(resolved_year),
                 fx_converter=converter,
+                ibkr_config_audit=_fetch_ibkr_config_audit(resolved_year),
             )
         finally:
             close_converter()

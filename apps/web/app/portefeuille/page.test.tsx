@@ -328,10 +328,11 @@ describe("PortfolioPage data state machine", () => {
     ).toBeNull();
   });
 
-  it("dismiss button on the SystemEvent banner calls resolveSystemEvent", async () => {
-    // V1.2 §BZ vervolg: operator klikt "Begrepen" → ``resolveSystemEvent``
-    // wordt aangeroepen + de query wordt geinvalideerd zodat de banner
-    // verdwijnt.
+  it("dismiss flow opens reason form and confirms with reason_nl payload", async () => {
+    // V1.2 §BZ vervolg: operator klikt "Begrepen" → reason-form
+    // verschijnt → typt context → "Bevestig" → resolveSystemEvent
+    // krijgt ``{ reason_nl: ... }`` payload zodat de audit-trail
+    // operator-context heeft.
     const { default: userEvent } = await import("@testing-library/user-event");
     mockAllOk();
     fns.getActiveSystemEvents.mockReturnValue(
@@ -358,10 +359,68 @@ describe("PortfolioPage data state machine", () => {
     );
     fns.resolveSystemEvent.mockResolvedValue(ok({ success: true }));
     render(<PortfolioPage />);
-    const dismiss = await screen.findByTestId(
+    const dismissBtn = await screen.findByTestId(
       "ibkr-config-event-banner-dismiss-account_id_mismatch",
     );
-    await userEvent.click(dismiss);
-    expect(fns.resolveSystemEvent).toHaveBeenCalledWith("evt-dismiss-1");
+    await userEvent.click(dismissBtn);
+    // Reason form verschijnt.
+    const reasonInput = await screen.findByTestId(
+      "ibkr-config-event-banner-reason-input-account_id_mismatch",
+    );
+    await userEvent.type(reasonInput, "live is intentional");
+    await userEvent.click(
+      screen.getByTestId(
+        "ibkr-config-event-banner-reason-confirm-account_id_mismatch",
+      ),
+    );
+    expect(fns.resolveSystemEvent).toHaveBeenCalledWith(
+      "evt-dismiss-1",
+      { reason_nl: "live is intentional" },
+    );
+  });
+
+  it("dismiss flow without typed reason sends no reason_nl payload", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    mockAllOk();
+    fns.getActiveSystemEvents.mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-dismiss-2",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "title",
+            message_nl: "msg",
+            help_nl: "",
+            created_at: "2026-06-15T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    fns.resolveSystemEvent.mockResolvedValue(ok({ success: true }));
+    render(<PortfolioPage />);
+    await userEvent.click(
+      await screen.findByTestId(
+        "ibkr-config-event-banner-dismiss-account_id_mismatch",
+      ),
+    );
+    await userEvent.click(
+      await screen.findByTestId(
+        "ibkr-config-event-banner-reason-confirm-account_id_mismatch",
+      ),
+    );
+    // Empty reason → no payload (undefined) zodat de API geen
+    // lege-string reden persist't.
+    expect(fns.resolveSystemEvent).toHaveBeenCalledWith(
+      "evt-dismiss-2",
+      undefined,
+    );
   });
 });

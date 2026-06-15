@@ -169,6 +169,47 @@ def render_tax_year_report_pdf(report: Any) -> bytes:
         for note in report.notes_nl:
             flow.append(Paragraph(f"• {note}", styles["BodyText"]))
 
+    # V1.2 §BZ vervolg — IBKR-config audit-trail als "goed huisvader"
+    # bewijs. Toont elke mode-switch / mismatch / account-id wijziging
+    # in chronologische volgorde zodat de accountant kan verifiëren
+    # dat de operator zorgvuldig met live vs paper omging.
+    audit = getattr(report, "ibkr_config_audit", ())
+    if audit:
+        flow.append(Spacer(1, 6 * mm))
+        flow.append(
+            Paragraph(
+                "IBKR-config audit-trail (§BZ goed huisvader bewijs)",
+                styles["Heading3"],
+            )
+        )
+        audit_rows = [
+            ["Tijd (UTC)", "Event", "Severity", "Status", "Bericht"]
+        ]
+        for entry in audit:
+            audit_rows.append(
+                [
+                    entry.created_at,
+                    entry.event_code,
+                    entry.severity,
+                    entry.status,
+                    entry.message_nl[:80]
+                    + ("…" if len(entry.message_nl) > 80 else ""),
+                ]
+            )
+        audit_table = Table(audit_rows, repeatRows=1)
+        audit_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        flow.append(audit_table)
+
     doc.build(flow)
     return buffer.getvalue()
 
