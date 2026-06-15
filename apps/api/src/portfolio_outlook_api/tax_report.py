@@ -144,6 +144,26 @@ class GoodHouseholderMetrics:
 
 
 @dataclass(frozen=True)
+class IbkrConfigAuditEntry:
+    """V1.2 §BZ vervolg — één regel in het IBKR-config audit-trail.
+
+    Per ``CLAUDE.md §12`` is dit "goed huisvader"-bewijs: de operator
+    laat de accountant zien welke mode-switches, mismatches en
+    account-id wijzigingen er over het belastingjaar zijn geweest.
+    Komt direct uit de ``system_events`` tabel; de tax-report wrapper
+    filtert op de IBKR-config codes en categorieën.
+    """
+
+    created_at: str  # ISO timestamp
+    event_code: str
+    severity: str
+    status: str
+    source: str  # "<service>:<component>"
+    title_nl: str
+    message_nl: str
+
+
+@dataclass(frozen=True)
 class TaxYearReport:
     year: int
     realised_trades: tuple[RealisedTradeRow, ...]
@@ -153,6 +173,10 @@ class TaxYearReport:
     dividends: tuple[dict[str, object], ...] = field(default_factory=tuple)
     fx_conversion_available: bool = False
     notes_nl: tuple[str, ...] = field(default_factory=tuple)
+    # V1.2 §BZ vervolg — IBKR-config audit-trail meeneemen in PDF + CSV.
+    ibkr_config_audit: tuple[IbkrConfigAuditEntry, ...] = field(
+        default_factory=tuple
+    )
 
 
 def _quant2(value: Decimal) -> Decimal:
@@ -471,6 +495,7 @@ def build_tax_year_report(
     profit_target_pct: Decimal = HIT_RATE_TARGET_PCT,
     dividends: Sequence[dict[str, object]] | None = None,
     fx_converter: object | None = None,
+    ibkr_config_audit: Sequence[IbkrConfigAuditEntry] | None = None,
 ) -> TaxYearReport:
     """End-to-end report builder. Pure function — call from the API
     layer after fetching rows."""
@@ -566,6 +591,7 @@ def build_tax_year_report(
         dividends=dividend_tuple,
         fx_conversion_available=fx_conversion_available,
         notes_nl=tuple(notes),
+        ibkr_config_audit=tuple(ibkr_config_audit or ()),
     )
 
 

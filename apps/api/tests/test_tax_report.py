@@ -293,3 +293,46 @@ def test_excess_sell_without_matching_buy_is_skipped() -> None:
     # Only the 2 shares that have a matching BUY are reported.
     assert len(trades) == 1
     assert trades[0].quantity == Decimal("2")
+
+
+def test_ibkr_config_audit_passes_through_to_report() -> None:
+    """V1.2 §BZ vervolg — ``ibkr_config_audit`` entries die meegegeven
+    worden moeten in de TaxYearReport landen zodat PDF + CSV ze kunnen
+    renderen voor de accountant."""
+
+    from portfolio_outlook_api.tax_report import IbkrConfigAuditEntry
+
+    entries = (
+        IbkrConfigAuditEntry(
+            created_at="2026-03-12T10:00:00+00:00",
+            event_code="account_id_mismatch",
+            severity="warning",
+            status="resolved",
+            source="api:ibkr_sync",
+            title_nl="Mismatch",
+            message_nl="DU1234567 vs U7654321",
+        ),
+        IbkrConfigAuditEntry(
+            created_at="2026-05-01T09:00:00+00:00",
+            event_code="ibkr_account_id_changed",
+            severity="info",
+            status="open",
+            source="api:runtime_config_routes",
+            title_nl="Account-id gewijzigd",
+            message_nl="DU1111111 -> DU2222222",
+        ),
+    )
+    report = build_tax_year_report(
+        year=2026,
+        executions=(),
+        ibkr_config_audit=entries,
+    )
+    assert report.ibkr_config_audit == entries
+
+
+def test_ibkr_config_audit_defaults_to_empty_when_not_supplied() -> None:
+    """Backwards-compat: een report zonder audit-trail moet nog steeds
+    correct opgebouwd worden (default tuple-leeg)."""
+
+    report = build_tax_year_report(year=2026, executions=())
+    assert report.ibkr_config_audit == ()

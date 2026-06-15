@@ -635,6 +635,102 @@ def test_order_adapter_reconnect_skips_when_flag_off() -> None:
         scheduler.stop()
 
 
+def test_sighup_runtime_config_reload_re_overlays_account_id(monkeypatch) -> None:
+    """V1.2 §BZ vervolg — SIGHUP zet flag; heartbeat hook leest
+    runtime_config opnieuw en swap't ``settings.ibkr.account_id``."""
+
+    from portfolio_outlook_worker import runtime_config_overlay
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True, account_id="DU1111111"
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-sighup",
+        scheduler_factory=_scheduler_factory,
+    )
+    # Mock de overlay zodat 'm de account_id naar DU2222222 wijzigt.
+    overlay_called: list[bool] = []
+
+    def _fake_overlay(settings_obj):
+        overlay_called.append(True)
+        settings_obj.ibkr.account_id = "DU2222222"
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _fake_overlay,
+    )
+    try:
+        scheduler.start()
+        # Zonder flag: geen overlay-call.
+        scheduler._maybe_reload_runtime_config()
+        assert overlay_called == []
+        # Met flag: één overlay-call + scheduler's ibkr_settings is bijgewerkt.
+        scheduler._runtime_config_reload_requested = True
+        scheduler._maybe_reload_runtime_config()
+        assert overlay_called == [True]
+        assert scheduler._ibkr_settings.account_id == "DU2222222"
+        # Flag wordt direct gereset zodat een herhaalde fout niet
+        # elke heartbeat opnieuw probeert.
+        assert (
+            getattr(scheduler, "_runtime_config_reload_requested", False)
+            is False
+        )
+    finally:
+        scheduler.stop()
+
+
+def test_sighup_runtime_config_reload_swallows_exceptions(monkeypatch) -> None:
+    """Een crash in de overlay mag de scheduler-loop niet kapot maken."""
+
+    from portfolio_outlook_worker import runtime_config_overlay
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(enabled=True, account_id="DU1111111"),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-sighup-raise",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _bad_overlay(_settings_obj):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _bad_overlay,
+    )
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        # Should NOT raise.
+        scheduler._maybe_reload_runtime_config()
+        # Flag is reset zelfs bij fout.
+        assert (
+            getattr(scheduler, "_runtime_config_reload_requested", False)
+            is False
+        )
+    finally:
+        scheduler.stop()
+
+
 def test_submission_sweep_honors_configurable_interval_and_jitter() -> None:
     scheduler = _build_with_sweeps(
         order_adapter=object(),

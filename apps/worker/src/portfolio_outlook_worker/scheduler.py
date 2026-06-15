@@ -1057,6 +1057,49 @@ class PortfolioScheduler:
         # V1.2 §BZ follow-up: zelfde heartbeat-pattern voor de order-
         # sessie zodat een gedropte order_adapter ook wordt heropend.
         self._maybe_reconnect_order_adapter()
+        # V1.2 §BZ vervolg: SIGHUP heeft mogelijk gevraagd om een
+        # runtime_config reload. Het signaal-pad mag geen storage I/O
+        # doen; dat gebeurt safely hier op de heartbeat-thread.
+        self._maybe_reload_runtime_config()
+
+    def _maybe_reload_runtime_config(self) -> None:
+        """V1.2 §BZ vervolg — handle SIGHUP-triggered config reload.
+
+        ``main._sighup`` zet ``_runtime_config_reload_requested=True``;
+        deze heartbeat-hook detecteert dat, herleest runtime_config
+        van de DB en past het overlay opnieuw toe op het settings
+        singleton. De TWS-sessies worden NIET automatisch heropend
+        — die staan al onder ``_maybe_reconnect_*`` controle en zien
+        de nieuwe ``account_id`` bij hun eerstvolgende tick zodra de
+        sessie gedropt wordt. Best-effort: alle exceptions worden
+        gelogd maar nooit gepropageerd."""
+
+        if not getattr(self, "_runtime_config_reload_requested", False):
+            return
+        # Reset de flag direct zodat een herhaalde fout niet elke
+        # heartbeat opnieuw probeert.
+        self._runtime_config_reload_requested = False
+        try:
+            from portfolio_outlook_worker.config import settings
+            from portfolio_outlook_worker.runtime_config_overlay import (
+                apply_worker_runtime_config_overlay,
+            )
+
+            previous_account_id = self._ibkr_settings.account_id
+            apply_worker_runtime_config_overlay(settings)
+            new_account_id = settings.ibkr.account_id
+            # Sync de scheduler's eigen reference zodat de
+            # reconnect-heartbeats de nieuwe waarde zien.
+            self._ibkr_settings = settings.ibkr
+            logger.info(
+                "Runtime-config reload via SIGHUP: account_id %s → %s",
+                previous_account_id,
+                new_account_id,
+            )
+        except Exception:  # noqa: BLE001 — boundary
+            logger.exception(
+                "Runtime-config reload mislukt; oude waarden blijven actief."
+            )
 
     def _maybe_reconnect_ibkr_gateway(self) -> None:
         """Re-open de TWS-sessie wanneer de heartbeat detecteert dat

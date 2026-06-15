@@ -58,6 +58,186 @@ function formatMissingInputs(row: PortfolioValuationReadinessRow): string {
   return missing.join(", ");
 }
 
+// V1.2 §BZ vervolg: dismiss-with-reason banner voor IBKR-config
+// SystemEvents. Operator klikt "Begrepen" → inline reden-veld
+// verschijnt → "Bevestig" stuurt ``resolveSystemEvent`` met
+// ``reason_nl``. Audit-trail krijgt zo operator-context
+// (b.v. "live is intentional" vs "config-fout, account gefixt").
+function IbkrConfigEventBanner({
+  event,
+  onDismissed,
+}: {
+  event: {
+    system_event_id: string;
+    event_code: string;
+    title_nl: string;
+    message_nl: string;
+  };
+  onDismissed: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function confirmDismiss() {
+    setSubmitting(true);
+    try {
+      const trimmed = reason.trim();
+      await apiClient.resolveSystemEvent(
+        event.system_event_id,
+        trimmed ? { reason_nl: trimmed } : undefined,
+      );
+      onDismissed();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      data-testid={`ibkr-config-event-banner-${event.event_code}`}
+      data-event-code={event.event_code}
+      role="alert"
+      style={{
+        padding: "0.7rem 0.9rem",
+        borderRadius: "0.5rem",
+        background:
+          event.event_code === "order_session_live_account"
+            ? "var(--ata-danger, #b91c1c)"
+            : "var(--ata-warning, #f59e0b)",
+        color: "white",
+        marginBottom: "0.5rem",
+        fontSize: "0.9rem",
+        fontWeight: 500,
+        lineHeight: 1.4,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "0.5rem",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <strong style={{ display: "block", marginBottom: "0.2rem" }}>
+            {event.event_code === "order_session_live_account" ? "🔴 " : "⚠️ "}
+            {event.title_nl}
+          </strong>
+          {event.message_nl}
+        </div>
+        {!expanded ? (
+          <button
+            type="button"
+            data-testid={`ibkr-config-event-banner-dismiss-${event.event_code}`}
+            onClick={() => setExpanded(true)}
+            title="Begrepen — verwijder deze melding"
+            style={{
+              background: "rgba(255,255,255,0.18)",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.4)",
+              borderRadius: "0.3rem",
+              padding: "0.2rem 0.55rem",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Begrepen
+          </button>
+        ) : null}
+      </div>
+      {expanded ? (
+        <div
+          data-testid={`ibkr-config-event-banner-reason-form-${event.event_code}`}
+          style={{
+            marginTop: "0.5rem",
+            padding: "0.5rem",
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: "0.3rem",
+          }}
+        >
+          <label
+            style={{
+              display: "block",
+              fontSize: "0.75rem",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Optionele reden (b.v. &ldquo;live is intentional&rdquo;):
+          </label>
+          <input
+            type="text"
+            data-testid={`ibkr-config-event-banner-reason-input-${event.event_code}`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reden voor audit-trail (optioneel)"
+            style={{
+              width: "100%",
+              padding: "0.3rem 0.5rem",
+              borderRadius: "0.25rem",
+              border: "1px solid rgba(255,255,255,0.5)",
+              background: "rgba(255,255,255,0.92)",
+              color: "#1f2937",
+              fontSize: "0.85rem",
+            }}
+            disabled={submitting}
+          />
+          <div
+            style={{
+              display: "flex",
+              gap: "0.4rem",
+              marginTop: "0.4rem",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              type="button"
+              data-testid={`ibkr-config-event-banner-reason-cancel-${event.event_code}`}
+              onClick={() => {
+                setExpanded(false);
+                setReason("");
+              }}
+              disabled={submitting}
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.4)",
+                borderRadius: "0.25rem",
+                padding: "0.2rem 0.55rem",
+                fontSize: "0.8rem",
+                cursor: "pointer",
+              }}
+            >
+              Annuleer
+            </button>
+            <button
+              type="button"
+              data-testid={`ibkr-config-event-banner-reason-confirm-${event.event_code}`}
+              onClick={confirmDismiss}
+              disabled={submitting}
+              style={{
+                background: "white",
+                color: "#1f2937",
+                border: "none",
+                borderRadius: "0.25rem",
+                padding: "0.2rem 0.7rem",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                cursor: submitting ? "wait" : "pointer",
+              }}
+            >
+              {submitting ? "Bezig…" : "Bevestig"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function PortfolioPage() {
   const [explanations, setExplanations] = useState<Record<string, DecisionPackageExplanationResponse | null>>({});
   const [explanationStatuses, setExplanationStatuses] = useState<Record<string, string>>({});
@@ -317,70 +497,15 @@ export default function PortfolioPage() {
         {ibkrConfigEvents.length > 0 ? (
           <div data-testid="ibkr-config-events-banner-list">
             {ibkrConfigEvents.map((event) => (
-              <div
+              <IbkrConfigEventBanner
                 key={event.system_event_id}
-                data-testid={`ibkr-config-event-banner-${event.event_code}`}
-                data-event-code={event.event_code}
-                role="alert"
-                style={{
-                  padding: "0.7rem 0.9rem",
-                  borderRadius: "0.5rem",
-                  background:
-                    event.event_code === "order_session_live_account"
-                      ? "var(--ata-danger, #b91c1c)"
-                      : "var(--ata-warning, #f59e0b)",
-                  color: "white",
-                  marginBottom: "0.5rem",
-                  fontSize: "0.9rem",
-                  fontWeight: 500,
-                  lineHeight: 1.4,
+                event={event}
+                onDismissed={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["portefeuille-ibkr-config-events"],
+                  });
                 }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <strong style={{ display: "block", marginBottom: "0.2rem" }}>
-                      {event.event_code === "order_session_live_account"
-                        ? "🔴 "
-                        : "⚠️ "}
-                      {event.title_nl}
-                    </strong>
-                    {event.message_nl}
-                  </div>
-                  <button
-                    type="button"
-                    data-testid={`ibkr-config-event-banner-dismiss-${event.event_code}`}
-                    onClick={async () => {
-                      await apiClient.resolveSystemEvent(
-                        event.system_event_id,
-                      );
-                      await queryClient.invalidateQueries({
-                        queryKey: ["portefeuille-ibkr-config-events"],
-                      });
-                    }}
-                    title="Begrepen — verwijder deze melding"
-                    style={{
-                      background: "rgba(255,255,255,0.18)",
-                      color: "white",
-                      border: "1px solid rgba(255,255,255,0.4)",
-                      borderRadius: "0.3rem",
-                      padding: "0.2rem 0.55rem",
-                      fontSize: "0.8rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Begrepen
-                  </button>
-                </div>
-              </div>
+              />
             ))}
           </div>
         ) : null}

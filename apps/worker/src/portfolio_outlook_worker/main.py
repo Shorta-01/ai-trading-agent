@@ -361,10 +361,30 @@ def _start_scheduler() -> None:
             with suppress(Exception):
                 reconciler_gateway.disconnect()
 
-    with suppress(ValueError):
-        signal.signal(signal.SIGTERM, _shutdown)
-    with suppress(ValueError):
-        signal.signal(signal.SIGINT, _shutdown)
+    # V1.2 §BZ vervolg — SIGHUP triggert een runtime_config reload
+    # zodat de operator een gewijzigd IBKR account-id zonder volledige
+    # worker-restart actief kan maken. Het signaal handler doet
+    # bewust GEEN storage I/O zelf — het zet alleen een flag die de
+    # heartbeat job picks up. Sessie-reconnect gebeurt safely buiten
+    # signal-context.
+    def _sighup(signum: int, _frame: Any) -> None:
+        logger.info(
+            "SIGHUP ontvangen; runtime_config wordt bij volgende "
+            "heartbeat opnieuw ingelezen."
+        )
+        if _active_scheduler is not None:
+            _active_scheduler._runtime_config_reload_requested = True
+
+    def _shutdown_signals() -> None:
+        with suppress(ValueError):
+            signal.signal(signal.SIGTERM, _shutdown)
+        with suppress(ValueError):
+            signal.signal(signal.SIGINT, _shutdown)
+        with suppress(ValueError, AttributeError):
+            # SIGHUP bestaat niet op Windows; AttributeError geignored.
+            signal.signal(signal.SIGHUP, _sighup)
+
+    _shutdown_signals()
 
 
 def start_worker() -> None:
