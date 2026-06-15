@@ -504,6 +504,89 @@ export default function BelastingPage() {
           <DividendenManager year={year} />
         </div>
       </section>
+
+      {/* V1.2 §BZ vervolg — IBKR-config audit-trail section. Parity
+          met de PDF + CSV exports: laat de operator (en accountant)
+          in-browser zien welke mode-switches, mismatches en
+          account-id wijzigingen er in dit belastingjaar zijn
+          geweest. */}
+      <section
+        data-testid="tax-ibkr-config-audit-section"
+        style={{
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: 12,
+          marginTop: 16,
+        }}
+      >
+        <h2 style={{ margin: 0 }}>IBKR-config audit-trail (§BZ)</h2>
+        <p style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
+          Chronologisch overzicht van mode-switches, account-mismatches
+          en account-id wijzigingen voor dit belastingjaar — &ldquo;goed
+          huisvader&rdquo;-bewijs voor de accountant. Zelfde data zit
+          in PDF + CSV exports hierboven.
+        </p>
+        {(report?.ibkr_config_audit ?? []).length === 0 ? (
+          <p
+            data-testid="tax-ibkr-config-audit-empty"
+            style={{
+              fontStyle: "italic",
+              color: "#6b7280",
+              fontSize: 13,
+            }}
+          >
+            Geen IBKR-config events in {year}. Dit betekent dat er geen
+            mode-switches of account-id wijzigingen waren — een schone
+            audit-trail.
+          </p>
+        ) : (
+          <table
+            data-testid="tax-ibkr-config-audit-table"
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginTop: 8,
+              fontSize: 12,
+            }}
+          >
+            <thead>
+              <tr style={{ background: "#f3f4f6", textAlign: "left" }}>
+                <th style={{ padding: "6px 8px" }}>Tijd</th>
+                <th style={{ padding: "6px 8px" }}>Event</th>
+                <th style={{ padding: "6px 8px" }}>Severity</th>
+                <th style={{ padding: "6px 8px" }}>Status</th>
+                <th style={{ padding: "6px 8px" }}>Bericht</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(report?.ibkr_config_audit ?? []).map((entry) => (
+                <tr
+                  key={`${entry.created_at}-${entry.event_code}`}
+                  data-testid={`tax-ibkr-config-audit-row-${entry.event_code}`}
+                  style={{ borderBottom: "1px solid #e5e7eb" }}
+                >
+                  <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
+                    {entry.created_at}
+                  </td>
+                  <td
+                    style={{
+                      padding: "6px 8px",
+                      fontFamily: "monospace",
+                      fontSize: 11,
+                    }}
+                  >
+                    {entry.event_code}
+                  </td>
+                  <td style={{ padding: "6px 8px" }}>{entry.severity}</td>
+                  <td style={{ padding: "6px 8px" }}>{entry.status}</td>
+                  <td style={{ padding: "6px 8px" }}>{entry.message_nl}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </main>
   );
 }

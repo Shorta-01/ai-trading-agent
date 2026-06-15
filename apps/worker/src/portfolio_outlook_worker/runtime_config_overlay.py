@@ -64,6 +64,12 @@ def apply_worker_runtime_config_overlay(settings_obj: Settings) -> None:
         return
 
     ibkr = settings_obj.ibkr
+    # V1.2 §BZ vervolg — pas het door operator opgeslagen IBKR
+    # account-id ook toe op de worker-side settings. Zonder deze
+    # overlay zou de worker permanent vasthouden aan het env-var
+    # ``WORKER_IBKR__ACCOUNT_ID`` ook na een /instellingen save.
+    if record.ibkr_account_id is not None and record.ibkr_account_id.strip():
+        ibkr.account_id = record.ibkr_account_id.strip()
     if record.sweep_interval_seconds is not None:
         ibkr.sweep_interval_seconds = record.sweep_interval_seconds
     if record.sweep_retry_max_attempts is not None:

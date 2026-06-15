@@ -115,6 +115,19 @@ class TaxGoodHouseholderOut(BaseModel):
     summary_nl: str
 
 
+class TaxIbkrConfigAuditOut(BaseModel):
+    """V1.2 §BZ vervolg — één regel IBKR-config audit-trail
+    (mode-switch / mismatch / account-id wijziging)."""
+
+    created_at: str
+    event_code: str
+    severity: str
+    status: str
+    source: str
+    title_nl: str
+    message_nl: str
+
+
 class TaxYearReportResponse(BaseModel):
     title_nl: str
     help_nl: str
@@ -126,6 +139,10 @@ class TaxYearReportResponse(BaseModel):
     dividends: list[dict[str, object]]
     fx_conversion_available: bool
     notes_nl: list[str]
+    # V1.2 §BZ vervolg — IBKR-config audit-trail meegeven aan de UI
+    # zodat de in-browser /belasting pagina parity heeft met de PDF
+    # en CSV exports.
+    ibkr_config_audit: list[TaxIbkrConfigAuditOut] = []
 
 
 _HELP_NL = (
@@ -224,6 +241,18 @@ def _to_response(report: TaxYearReport) -> TaxYearReportResponse:
         dividends=list(report.dividends),
         fx_conversion_available=report.fx_conversion_available,
         notes_nl=list(report.notes_nl),
+        ibkr_config_audit=[
+            TaxIbkrConfigAuditOut(
+                created_at=entry.created_at,
+                event_code=entry.event_code,
+                severity=entry.severity,
+                status=entry.status,
+                source=entry.source,
+                title_nl=entry.title_nl,
+                message_nl=entry.message_nl,
+            )
+            for entry in report.ibkr_config_audit
+        ],
     )
 
 
