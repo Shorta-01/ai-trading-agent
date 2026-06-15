@@ -74,7 +74,7 @@ class IbkrTwsReadonlySessionStatusAdapter(IbkrSessionStatusAdapter):
 
             if expected_mode is not None and account_mode != expected_mode:
                 return IbkrSessionStatusAdapterResult(
-                    connection_status="connected_wrong_account_mode",
+                    connection_status="connected_account_mode_mismatch",
                     account_mode_status="mismatch",
                     account_mode=account_mode,
                     session_status_reason="account_mode_mismatch",

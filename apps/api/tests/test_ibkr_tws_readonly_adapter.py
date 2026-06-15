@@ -76,14 +76,18 @@ def test_connected_paper_maps_to_connected_readonly() -> None:
     assert result.account_mode == "paper"
 
 
-def test_connected_wrong_mode_maps_to_mismatch() -> None:
+def test_connected_mismatched_mode_maps_to_account_mode_mismatch() -> None:
+    """V1.2 §BZ — de neutrale ``connected_account_mode_mismatch``
+    status vervangt het oude ``connected_wrong_account_mode``;
+    "wrong" implicit dat live fout is, wat onder §BZ niet meer waar is."""
+
     adapter = IbkrTwsReadonlySessionStatusAdapter(
         client=FakeReadonlyClient(account_mode="live")
     )
 
     result = adapter.check_session_status(_settings())
 
-    assert result.connection_status == "connected_wrong_account_mode"
+    assert result.connection_status == "connected_account_mode_mismatch"
     assert result.account_mode_status == "mismatch"
     assert result.account_mode == "live"
 

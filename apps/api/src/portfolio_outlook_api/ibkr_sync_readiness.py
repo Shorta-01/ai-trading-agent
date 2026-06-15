@@ -41,16 +41,16 @@ def build_ibkr_sync_readiness(
         status_nl = "Geblokkeerd"
         reason = "readonly_required"
         help_nl = "Schakel read-only in; brokeracties blijven geblokkeerd."
-    # V1 §21.1 relock: account-mode is reported, not gated. The
-    # previous `version1_paper_only` / `account_mode_mismatch`
-    # blockers used to fail readiness when the connected account did
-    # not match the operator's expected mode; both gates are removed.
-    # The dashboard renders the actual mode IBKR reports as a badge.
+    # V1 §21.1 relock + V1.2 §BZ: account-mode is reported, not gated.
+    # ``connected_account_mode_mismatch`` (en de legacy variant
+    # ``connected_wrong_account_mode``) zit bewust NIET in de blocking
+    # set — een mode-mismatch blokkeert de sync niet meer; de #665
+    # mismatch detector schrijft een operator-zichtbare SystemEvent
+    # voor die situatie.
     elif connection_status in {
         "connection_failed",
         "authentication_required",
         "pacing_limited",
-        "connected_wrong_account_mode",
         "unknown",
     }:
         status = "blocked"

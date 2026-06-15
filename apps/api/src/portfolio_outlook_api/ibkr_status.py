@@ -10,6 +10,9 @@ from portfolio_outlook_api.ibkr_session_status import IbkrSessionStatusAdapter
 _KNOWN_CONNECTION_STATUSES = {
     "configured_not_connected",
     "connected_readonly",
+    "connected_account_mode_mismatch",
+    # Backwards-compat: oude responses / records kunnen nog deze
+    # naam gebruiken. Wordt niet meer geproduceerd door nieuwe code.
     "connected_wrong_account_mode",
     "connection_failed",
     "authentication_required",
@@ -64,13 +67,17 @@ def _status_content(connection_status: str) -> tuple[str, str, str, str]:
             "Zet sessiecontrole alleen handmatig aan als dit nodig is.",
             "Er wordt geen auto-connect gestart en orders blijven geblokkeerd.",
         )
-    if connection_status == "connected_wrong_account_mode":
+    if connection_status in ("connected_account_mode_mismatch", "connected_wrong_account_mode"):
         return (
-            "Verkeerde accountmodus",
-            ("De sessie mag niet gebruikt worden zolang de accountmodus niet "
-            "overeenkomt met de veilige instelling."),
-            "Controleer accountmodus en blijf in veilige paper-only read-only modus.",
-            "Geen sync, geen orders en geen brokeracties toegestaan.",
+            "Account-modus mismatch",
+            (
+                "Het verbonden account heeft een andere mode "
+                "(paper/live) dan in de configuratie verwacht. "
+                "De sessie blijft bruikbaar; controleer of dit is "
+                "wat je bedoelt."
+            ),
+            "Pas IBKR_ACCOUNT_ID_HINT aan of wissel het TWS-account.",
+            "De sync draait door; operator-approval blijft de safety boundary.",
         )
     if connection_status == "connected_readonly":
         return (
@@ -199,7 +206,10 @@ def build_ibkr_status_placeholder(
             final_account_mode_status = adapter_account_mode_status
             final_session_status_reason = result.session_status_reason or "adapter_result"
 
-            if final_connection_status == "connected_wrong_account_mode":
+            if final_connection_status in (
+                "connected_account_mode_mismatch",
+                "connected_wrong_account_mode",
+            ):
                 final_account_mode_status = "mismatch"
 
             if (
@@ -208,7 +218,7 @@ def build_ibkr_status_placeholder(
                 and adapter_account_mode is not None
                 and adapter_account_mode != expected_mode
             ):
-                final_connection_status = "connected_wrong_account_mode"
+                final_connection_status = "connected_account_mode_mismatch"
                 final_account_mode_status = "mismatch"
                 final_session_status_reason = "account_mode_mismatch"
 
@@ -225,7 +235,11 @@ def build_ibkr_status_placeholder(
             if (
                 final_account_mode_status == "unknown"
                 and adapter_account_mode is None
-                and final_connection_status != "connected_wrong_account_mode"
+                and final_connection_status
+                not in (
+                    "connected_account_mode_mismatch",
+                    "connected_wrong_account_mode",
+                )
             ):
                 final_account_mode_status = "unknown"
 
