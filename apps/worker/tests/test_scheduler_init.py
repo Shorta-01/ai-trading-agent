@@ -961,6 +961,115 @@ def test_sighup_runtime_config_reload_swallows_exceptions(monkeypatch) -> None:
         scheduler.stop()
 
 
+def test_reload_writes_runtime_config_reload_failed_event_on_exception(
+    monkeypatch,
+) -> None:
+    """V1.2 §BZ vervolg — wanneer de overlay raise't, MOET er een
+    ``runtime_config_reload_failed`` SystemEvent worden geschreven
+    zodat de operator op /portefeuille ziet dat de auto-reload
+    faalde i.p.v. stil een lege response te krijgen."""
+
+    from portfolio_outlook_worker import error_capture, runtime_config_overlay
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(enabled=True, account_id="DU1111111"),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reload-failed-event",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _bad_overlay(_settings_obj):
+        raise RuntimeError("simulated overlay failure")
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _bad_overlay,
+    )
+    captured: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        error_capture,
+        "record_worker_event",
+        lambda **kwargs: captured.append(kwargs),
+    )
+
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        # Mag niet raise't.
+        scheduler._maybe_reload_runtime_config()
+        # Er moet precies één error-event geschreven zijn.
+        assert len(captured) == 1
+        evt = captured[0]
+        assert evt["event_code"] == "runtime_config_reload_failed"
+        assert evt["severity"] == "error"
+        assert evt["category"] == "ibkr_config_change"
+        # Technische details bevatten de exception-class.
+        assert "RuntimeError" in evt["message_nl"]
+        assert "simulated overlay failure" in evt["technical_summary"]
+    finally:
+        scheduler.stop()
+
+
+def test_reload_failed_event_swallows_record_worker_event_crash(
+    monkeypatch,
+) -> None:
+    """Defensief: zelfs als ``record_worker_event`` zelf raise't,
+    mag de scheduler-loop niet crashen. Anders zou een storage-fout
+    de hele heartbeat killing."""
+
+    from portfolio_outlook_worker import error_capture, runtime_config_overlay
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(enabled=True, account_id="DU1111111"),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-double-failure",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _bad_overlay(_settings_obj):
+        raise RuntimeError("first failure")
+
+    def _bad_recorder(**_kwargs):
+        raise RuntimeError("second failure (storage)")
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _bad_overlay,
+    )
+    monkeypatch.setattr(
+        error_capture,
+        "record_worker_event",
+        _bad_recorder,
+    )
+
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        # Should NOT raise — zelfs niet als zowel overlay als event-
+        # recorder crashen.
+        scheduler._maybe_reload_runtime_config()
+    finally:
+        scheduler.stop()
+
+
 def test_poll_runtime_config_changed_returns_true_when_updated_at_advances() -> None:
     """V1.2 §BZ vervolg — auto-poll bemerkt een DB-update zonder
     SIGHUP nodig te hebben."""

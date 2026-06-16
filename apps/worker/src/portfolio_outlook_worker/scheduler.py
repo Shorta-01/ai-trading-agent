@@ -1147,10 +1147,41 @@ class PortfolioScheduler:
                 # het nieuwe account-id. Best-effort: een disconnect-
                 # fout mag de reload-loop niet kapot maken.
                 self._disconnect_sessions_for_account_change()
-        except Exception:  # noqa: BLE001 — boundary
+        except Exception as exc:  # noqa: BLE001 — boundary
             logger.exception(
                 "Runtime-config reload mislukt; oude waarden blijven actief."
             )
+            # V1.2 §BZ vervolg — schrijf een SystemEvent (severity
+            # ``error``) zodat de operator OP /portefeuille ziet dat
+            # de auto-reload faalde. Tot deze toevoeging werd de
+            # fout alleen gelogd; de operator wist niet beter dan
+            # dat zijn /instellingen save was opgepikt.
+            from contextlib import suppress as _suppress
+
+            with _suppress(Exception):
+                from portfolio_outlook_worker.error_capture import (
+                    record_worker_event,
+                )
+
+                record_worker_event(
+                    storage_settings=self._storage_settings,
+                    source_component="scheduler",
+                    event_code="runtime_config_reload_failed",
+                    severity="error",
+                    category="ibkr_config_change",
+                    title_nl="Worker config-reload mislukt",
+                    message_nl=(
+                        f"De worker kon de nieuwe IBKR-instellingen "
+                        f"niet toepassen. Oude waarden blijven actief. "
+                        f"Technische details: {type(exc).__name__}."
+                    ),
+                    help_nl=(
+                        "Controleer de worker-log voor de stack trace. "
+                        "Als de fout aanhoudt, herstart de worker met "
+                        "``docker compose restart worker``."
+                    ),
+                    technical_summary=str(exc)[:500],
+                )
 
     def _disconnect_sessions_for_account_change(self) -> None:
         """V1.2 §BZ vervolg — disconnect ``_reconciler_gateway`` en
