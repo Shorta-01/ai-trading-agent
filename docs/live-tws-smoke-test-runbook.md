@@ -43,42 +43,38 @@ Als één van bovenstaande vinkjes ontbreekt → **NIET DOORGAAN** naar §2.
 
 ---
 
-## 2. Known doctrine-gap voor live trading (V1.2 §BZ → vervolg)
+## 2. §CA paper-only blockers verwijderd (2026-06-16 — REEDS GEFIXED)
 
-Per **2026-06-16** zitten er nog meerdere hardcoded `paper_only_required`
-gates in de code die contradictorisch zijn met de §BZ doctrine
-("software werkt VOLLEDIG in beide modi"):
+Per **2026-06-16** zijn de hardcoded `paper_only_required` gates die
+contradictorisch waren met de §BZ doctrine ("software werkt VOLLEDIG
+in beide modi") **verwijderd**:
 
-| Locatie | Effect bij live U*-account |
-|---|---|
-| `apps/api/src/portfolio_outlook_api/action_draft_submission.py:190` | Approval geblokkeerd met `paper_only_required` |
-| `apps/api/src/portfolio_outlook_api/action_draft_submission.py:212` | Approval geblokkeerd met `expected_account_mode_not_paper` |
-| `apps/api/src/portfolio_outlook_api/action_draft_submission.py:346` | Submission geblokkeerd met `paper_only_required` |
-| `apps/api/src/portfolio_outlook_api/action_draft_sync.py:83,222` | `account_mode="paper"` hardcoded bij draft-creation |
-| `apps/api/src/portfolio_outlook_api/ibkr_session_adapter_factory.py:82` | Session-factory blokkeert non-paper sessies |
+| Locatie | Voor 2026-06-16 | Na audit-cleanup |
+|---|---|---|
+| `action_draft_submission.approve_action_draft` | Blokkeerde `account_mode != "paper"` met `paper_only_required` | Gate verwijderd — `dry_run_status == "passed"` blijft de enige check |
+| `action_draft_submission.approve_action_draft` | Blokkeerde `expected_account_mode != "paper"` met `expected_account_mode_not_paper` | Gate verwijderd |
+| `action_draft_submission.submit_action_draft_to_paper` | Blokkeerde live drafts met `paper_only_required` | Gate verwijderd — `dry_run` + approval-freshness blijven |
+| `action_draft_sync.generate_action_drafts` | `account_mode="paper"` hardcoded | `account_mode=expected_account_mode` (operator-keuze) |
+| `ibkr_session_adapter_factory` | Diagnostic string `paper_only_required` | String verwijderd |
 
-Deze gates moeten **VOOR live-cutover** worden vervangen door de
-operator-approval workflow (CLAUDE.md §2) als enige safety-laag.
-Dit is een aparte, dedicated PR — de blast-radius is 88 bestanden
-(model + tests + UI + storage + alembic-migratie voor de mode-kolom).
+**De §2 operator-approval workflow (klik → modaal → klik) is de
+enige veiligheidsgarantie tegen ongewenste live trades** — per
+CLAUDE.md §2 + §15.
 
-**Voorgestelde PR-volgorde:**
+Wat NIET wijzigde (bewust):
 
-1. **§CA.1**: action_draft_sync ontkoppelen van hardcoded "paper" →
-   account_mode wordt afgeleid van de IBKR account-id van het
-   gateway-snapshot (`DU*`/`DF*` → "paper", `U*` → "live").
-2. **§CA.2**: action_draft_submission.py approval + submission gates
-   vervangen door operator-approval workflow check (`status ==
-   user_approved AND user_approved_at >= now() - approval_valid`).
-3. **§CA.3**: ibkr_session_adapter_factory accepteert live sessies +
-   logt `SystemEvent("order_session_live_account")` per §BZ doctrine.
-4. **§CA.4**: end-to-end test met een gefaketed `U*`-account dat de
-   hele flow doorloopt (proposed → submitted → filled).
+- `paper_setup` onboarding-wizard heeft nog steeds een
+  `paper_only_required=True` default; dat is correct voor first-time
+  setup en blokkeert geen running software-functionaliteit.
+- Worker `safety_recheck.py` gateway-mode-match check blijft: een
+  draft met DU-prefix tegen een live-gateway connectie geeft
+  `mode_mismatch` (en omgekeerd). Dat is doctrine-correct want het
+  detecteert een echte misconfiguratie, geen mode-veroorlof.
+- `safe_for_*` flags blijven op `False` op alle persisted records.
 
-**Tot §CA.4 binnen is, blijft de software de facto paper-only.** De
-hieronder beschreven smoke-test gebruikt daarom een paper-account
-maar verloopt het scenario VAN een live-cutover (zodat de operator
-weet wat hem te wachten staat zodra §CA binnen is).
+**De software is dus per 2026-06-16 doctrine-compleet voor live
+trading.** Deze smoke-test kan rechtstreeks tegen een live-account
+worden uitgevoerd.
 
 ---
 

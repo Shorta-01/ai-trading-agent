@@ -146,7 +146,11 @@ def test_approve_blocks_when_dry_run_not_passed() -> None:
     assert any(e.event_type == "approval_blocked" for e in event_repo.saved)
 
 
-def test_approve_blocks_when_account_mode_is_not_paper() -> None:
+def test_approve_works_on_live_account_per_bz_doctrine() -> None:
+    """V1.2 §BZ (CLAUDE.md §15): software werkt VOLLEDIG in paper én
+    live. De §2 operator-approval workflow is de safety-laag, niet
+    een mode-side software lock. Geen `paper_only_required` block."""
+
     submission_repo = FakeSubmissionRepo()
     event_repo = FakeEventRepo()
 
@@ -154,15 +158,18 @@ def test_approve_blocks_when_account_mode_is_not_paper() -> None:
         draft=_draft(account_mode="live"),
         submission_repo=submission_repo,
         event_repo=event_repo,
-        expected_account_mode="paper",
+        expected_account_mode="live",
         provider_code="ibkr",
     )
 
-    assert result.status == "blocked"
-    assert result.blocking_reason == "paper_only_required"
+    assert result.status == "approved"
+    assert result.blocking_reason is None
 
 
-def test_approve_blocks_when_expected_account_mode_is_not_paper() -> None:
+def test_approve_works_when_expected_account_mode_is_live() -> None:
+    """V1.2 §BZ vervolg: `expected_account_mode=live` is geen
+    blokkering; de IBKR account-id prefix bepaalt de mode."""
+
     submission_repo = FakeSubmissionRepo()
     event_repo = FakeEventRepo()
 
@@ -174,8 +181,8 @@ def test_approve_blocks_when_expected_account_mode_is_not_paper() -> None:
         provider_code="ibkr",
     )
 
-    assert result.status == "blocked"
-    assert result.blocking_reason == "expected_account_mode_not_paper"
+    assert result.status == "approved"
+    assert result.blocking_reason is None
 
 
 def test_approve_persists_user_approved_submission_with_safety_flags_false() -> None:
@@ -208,7 +215,7 @@ def test_approve_persists_user_approved_submission_with_safety_flags_false() -> 
 
 
 def _existing_approved_submission(
-    *, approved_minutes_ago: int = 1
+    *, approved_minutes_ago: int = 1, account_mode: str = "paper"
 ) -> AssetActionDraftSubmissionRecord:
     approved_at = datetime.now(UTC) - timedelta(minutes=approved_minutes_ago)
     return AssetActionDraftSubmissionRecord(
@@ -232,8 +239,8 @@ def _existing_approved_submission(
         cancellation_reason=None,
         rejected_reason=None,
         reconciled_at=None,
-        account_mode="paper",
-        expected_account_mode="paper",
+        account_mode=account_mode,
+        expected_account_mode=account_mode,
         provider_code="ibkr",
         created_at=approved_at,
         updated_at=approved_at,
@@ -259,8 +266,15 @@ def test_submit_blocks_when_submission_client_is_none() -> None:
     assert result.blocking_reason == "submission_client_unavailable"
 
 
-def test_submit_blocks_when_draft_is_not_paper_account_mode() -> None:
-    submission_repo = FakeSubmissionRepo(existing=_existing_approved_submission())
+def test_submit_works_on_live_account_per_bz_doctrine() -> None:
+    """V1.2 §BZ (CLAUDE.md §15): submission tegen een live-account
+    is geen blokkering; de §2 operator-approval workflow is de
+    enige safety-laag. De IBKR account-id prefix bepaalt of de
+    order naar paper- of live-IBKR gaat — niet de software."""
+
+    submission_repo = FakeSubmissionRepo(
+        existing=_existing_approved_submission(account_mode="live")
+    )
     event_repo = FakeEventRepo()
     client = FakeSubmissionClient(
         result=OrderSubmissionResult(True, 100, 500, 11, "Submitted", None)
@@ -271,13 +285,15 @@ def test_submit_blocks_when_draft_is_not_paper_account_mode() -> None:
         submission_repo=submission_repo,
         event_repo=event_repo,
         submission_client=client,  # type: ignore[arg-type]
-        expected_account_mode="paper",
+        expected_account_mode="live",
         provider_code="ibkr",
         approval_valid_minutes=5,
     )
 
-    assert result.status == "blocked"
-    assert result.blocking_reason == "paper_only_required"
+    assert result.status == "submitted"
+    assert result.blocking_reason is None
+    assert result.ibkr_order_id == 100
+    assert result.ibkr_perm_id == 500
 
 
 def test_submit_blocks_when_approval_is_missing() -> None:
