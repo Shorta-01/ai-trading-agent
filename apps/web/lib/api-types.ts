@@ -4483,6 +4483,8 @@ export interface components {
         };
         /** ActiveSystemEventSummary */
         ActiveSystemEventSummary: {
+            /** Archived At */
+            archived_at?: string | null;
             /** Blocks Ai Explanation */
             blocks_ai_explanation: boolean;
             /** Blocks Suggestions */
@@ -4499,6 +4501,8 @@ export interface components {
             help_nl: string;
             /** Message Nl */
             message_nl: string;
+            /** Resolved At */
+            resolved_at?: string | null;
             /** Severity */
             severity: string;
             /** Source Component */

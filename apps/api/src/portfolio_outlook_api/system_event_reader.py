@@ -34,6 +34,13 @@ class ActiveSystemEventSummary(BaseModel):
     blocks_writes: bool
     blocks_ai_explanation: bool
     status: str
+    # V1.2 §BZ vervolg — surface resolved_at / archived_at zodat het
+    # audit-trail (en het belastingrapport) een chronologische
+    # geschiedenis kan tonen: WANNEER heeft de operator een event
+    # weggeklikt of gearchiveerd? Compliance-relevant. Beide None
+    # zolang het event nog in ``status="open"`` zit.
+    resolved_at: str | None = None
+    archived_at: str | None = None
 
 
 class ActiveSystemEventsResponse(BaseModel):
@@ -71,6 +78,16 @@ def _map_event_summary(record: SystemEventRecord) -> ActiveSystemEventSummary:
         blocks_writes=record.blocks_writes,
         blocks_ai_explanation=record.blocks_ai_explanation,
         status=record.status,
+        resolved_at=(
+            record.resolved_at.isoformat()
+            if record.resolved_at is not None
+            else None
+        ),
+        archived_at=(
+            record.archived_at.isoformat()
+            if record.archived_at is not None
+            else None
+        ),
     )
 
 
