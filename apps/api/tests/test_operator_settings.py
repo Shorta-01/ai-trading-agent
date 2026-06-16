@@ -107,10 +107,14 @@ def _seed_profit_override(db_url: str, pct: Decimal) -> None:
 
 
 def test_snapshot_uses_doctrine_defaults_for_empty_blob() -> None:
+    # Audit-correctie 2026-06-16: ``min_position_eur`` is per CLAUDE.md §3
+    # **€5.000** (was foutief €25.000). ``max_sector_pct`` is 100 (= geen
+    # cap) per §7.3 "Geen harde cap — sector-verdeling wordt INFO".
     snap = _snapshot_from_strategy_blob({})
     assert snap.target_net_pct == Decimal("4")
     assert snap.confidence_threshold_pct == Decimal("70")
-    assert snap.min_position_eur == Decimal("25000")
+    assert snap.min_position_eur == Decimal("5000")
+    assert snap.max_sector_pct == Decimal("100")
     assert snap.earnings_block_days == 5
 
 

@@ -5271,6 +5271,16 @@ export interface components {
             note: string | null;
             /** Pay Date */
             pay_date: string;
+            /**
+             * Rv Shortfall Local
+             * @default 0
+             */
+            rv_shortfall_local: string;
+            /**
+             * Rv Shortfall Pct
+             * @default 0
+             */
+            rv_shortfall_pct: string;
             /** Symbol */
             symbol: string;
             /** Withholding Local */

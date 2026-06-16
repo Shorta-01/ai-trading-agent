@@ -329,22 +329,32 @@ def _fetch_dividends(year: int) -> list[dict[str, object]]:
     except StorageConnectionError as exc:
         logger.warning("belasting dividend lookup error: %s", exc)
         return []
-    return [
-        {
-            "dividend_event_id": r.dividend_event_id,
-            "symbol": r.symbol,
-            "isin": r.isin,
-            "pay_date": r.pay_date.isoformat(),
-            "currency_local": r.currency_local,
-            "gross_local": str(r.gross_local),
-            "withholding_pct": str(r.withholding_pct),
-            "withholding_local": str(r.withholding_local),
-            "net_local": str(r.net_local),
-            "country_code": r.country_code,
-            "note": r.note,
-        }
-        for r in listed.records
-    ]
+    from portfolio_outlook_api.dividenden_routes import _compute_rv_shortfall
+
+    enriched: list[dict[str, object]] = []
+    for r in listed.records:
+        rv_pct, rv_local = _compute_rv_shortfall(
+            gross_local=r.gross_local,
+            withholding_pct=r.withholding_pct,
+        )
+        enriched.append(
+            {
+                "dividend_event_id": r.dividend_event_id,
+                "symbol": r.symbol,
+                "isin": r.isin,
+                "pay_date": r.pay_date.isoformat(),
+                "currency_local": r.currency_local,
+                "gross_local": str(r.gross_local),
+                "withholding_pct": str(r.withholding_pct),
+                "withholding_local": str(r.withholding_local),
+                "net_local": str(r.net_local),
+                "country_code": r.country_code,
+                "note": r.note,
+                "rv_shortfall_pct": str(rv_pct),
+                "rv_shortfall_local": str(rv_local),
+            }
+        )
+    return enriched
 
 
 def _open_fx_converter() -> tuple[FxConverter | None, Callable[[], None]]:

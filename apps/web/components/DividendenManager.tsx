@@ -336,6 +336,9 @@ export function DividendenManager({ year }: { year: number }) {
                 <th style={{ textAlign: "right" }}>Bronbelasting %</th>
                 <th style={{ textAlign: "right" }}>Bronbelasting</th>
                 <th style={{ textAlign: "right" }}>Netto</th>
+                <th style={{ textAlign: "right" }} title="Belgische 30% RV - reeds afgehouden bronbelasting = nog te declareren via aangifte">
+                  RV-tekort (30%)
+                </th>
                 <th></th>
               </tr>
             </thead>
@@ -366,6 +369,16 @@ export function DividendenManager({ year }: { year: number }) {
                     }}
                   >
                     {fmtMoney(d.net_local)}
+                  </td>
+                  <td
+                    data-testid={`dividend-rv-shortfall-${d.dividend_event_id}`}
+                    style={{
+                      textAlign: "right",
+                      color: Number(d.rv_shortfall_local) > 0 ? "#92400e" : "#6b7280",
+                    }}
+                    title={`${fmtMoney(d.rv_shortfall_pct)}% Belgische RV nog te declareren in de aangifte`}
+                  >
+                    {fmtMoney(d.rv_shortfall_local)}
                   </td>
                   <td>
                     <button

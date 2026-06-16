@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from ai_trading_agent_storage.metadata import metadata
 from fastapi.testclient import TestClient
@@ -222,3 +224,68 @@ def test_get_filters_per_year(tmp_path) -> None:  # type: ignore[no-untyped-def]
     body_2026 = client.get("/dividenden?year=2026").json()
     assert len(body_2025["items"]) == 1
     assert len(body_2026["items"]) == 1
+
+
+def test_rv_shortfall_15pct_for_us_dividend(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """V1.2 audit-correctie 2026-06-16: een US dividend met 15%
+    bronbelasting MOET een 15% RV-tekort rapporteren (30% Belgische
+    RV - 15% al ingehouden = 15% nog te declareren)."""
+
+    client = _client(_seed_db(tmp_path))
+    client.post(
+        "/dividenden",
+        json={
+            "symbol": "AAPL",
+            "pay_date": "2026-05-12",
+            "currency_local": "USD",
+            "gross_local": "100",
+            "country_code": "US",
+        },
+    )
+    body = client.get("/dividenden?year=2026").json()
+    item = body["items"][0]
+    assert Decimal(item["rv_shortfall_pct"]) == Decimal("15")
+    assert Decimal(item["rv_shortfall_local"]) == Decimal("15.00")
+
+
+def test_rv_shortfall_30pct_for_belgian_dividend(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Belgisch dividend zonder bronbelasting → volledige 30% RV
+    moet nog worden gedeclareerd in de aangifte."""
+
+    client = _client(_seed_db(tmp_path))
+    client.post(
+        "/dividenden",
+        json={
+            "symbol": "KBC",
+            "pay_date": "2026-05-12",
+            "currency_local": "EUR",
+            "gross_local": "200",
+            "country_code": "BE",
+        },
+    )
+    body = client.get("/dividenden?year=2026").json()
+    item = body["items"][0]
+    assert Decimal(item["rv_shortfall_pct"]) == Decimal("30")
+    assert Decimal(item["rv_shortfall_local"]) == Decimal("60.00")
+
+
+def test_rv_shortfall_zero_when_withholding_already_at_30_pct(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Edge case: bronbelasting ≥ 30% → geen Belgische aanvulling
+    meer nodig (theoretisch — de meeste verdragen blijven onder)."""
+
+    client = _client(_seed_db(tmp_path))
+    client.post(
+        "/dividenden",
+        json={
+            "symbol": "XYZ",
+            "pay_date": "2026-05-12",
+            "currency_local": "EUR",
+            "gross_local": "500",
+            "country_code": "XX",
+            "withholding_pct": "30",
+        },
+    )
+    body = client.get("/dividenden?year=2026").json()
+    item = body["items"][0]
+    assert Decimal(item["rv_shortfall_pct"]) == Decimal("0")
+    assert Decimal(item["rv_shortfall_local"]) == Decimal("0.00")

@@ -13,7 +13,8 @@
  *  - Software-prestatie (hit-rate, gemiddelde hold, confidence-bins)
  *  - Audit-tabel per gesloten trade
  *
- * Auto-PDF archief volgt in een opvolg-PR (geen PDF-library in V1).
+ * Auto-PDF archief is GELEVERD: zie ``ArchivePanel`` onderaan +
+ * ``trigger_monthly_archive_auto_generate`` in de worker scheduler.
  */
 
 import { useQuery } from "@tanstack/react-query";

@@ -50,17 +50,25 @@ from portfolio_outlook_api.profit_target import (
 logger = logging.getLogger(__name__)
 
 
-# Doctrine defaults (CLAUDE.md §3, §6.1, §7.1, §7.2). Deze blijven
-# de fallback wanneer de operator nog niets heeft opgeslagen.
+# Doctrine defaults (CLAUDE.md §3, §6.1, §7.1, §7.2, §7.3). Deze
+# blijven de fallback wanneer de operator nog niets heeft opgeslagen.
+#
+# Audit-correctie 2026-06-16:
+#   * ``min_position_eur`` van €25.000 → €5.000 conform §3
+#     ("Minimum €5.000 per positie — TOB-efficient").
+#   * ``max_sector_pct`` blijft schema-wise bestaan voor backwards
+#     compat met persisted records + bestaande UI-velden, maar
+#     krijgt nu de doctrine-correcte default ``100`` (= geen cap)
+#     per §7.3 ("Geen harde cap — sector-verdeling wordt INFO").
 DOCTRINE_DEFAULTS = TradingSettingsSnapshot(
     target_net_pct=DOCTRINE_DEFAULT_PCT,
     confidence_threshold_pct=Decimal("70"),
-    min_position_eur=Decimal("25000"),
+    min_position_eur=Decimal("5000"),
     max_position_eur=Decimal("100000"),
     total_budget_eur=Decimal("1000000"),
     min_market_cap_eur=Decimal("5000000000"),
     max_annual_volatility_pct=Decimal("30"),
-    max_sector_pct=Decimal("25"),
+    max_sector_pct=Decimal("100"),
     fat_tail_factor=Decimal("1.15"),
     earnings_block_days=5,
     news_buy_bias_max_boost_pct=Decimal("5"),

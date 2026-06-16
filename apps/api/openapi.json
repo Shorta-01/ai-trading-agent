@@ -2662,6 +2662,16 @@
             "title": "Pay Date",
             "type": "string"
           },
+          "rv_shortfall_local": {
+            "default": "0",
+            "title": "Rv Shortfall Local",
+            "type": "string"
+          },
+          "rv_shortfall_pct": {
+            "default": "0",
+            "title": "Rv Shortfall Pct",
+            "type": "string"
+          },
           "symbol": {
             "title": "Symbol",
             "type": "string"
