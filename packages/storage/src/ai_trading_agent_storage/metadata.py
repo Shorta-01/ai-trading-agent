@@ -1721,7 +1721,16 @@ asset_action_draft_submissions = Table(
     "asset_action_draft_submissions",
     metadata,
     Column("submission_id", Text, primary_key=True),
-    Column("draft_id", Text, nullable=False, unique=True),
+    # §CB.2 audit-cleanup 2026-06-16: FK constraint vinkje toegevoegd
+    # (migration 0081). Voorkomt orphan submission-rijen wanneer een
+    # draft gewist wordt.
+    Column(
+        "draft_id",
+        Text,
+        ForeignKey("asset_action_drafts.draft_id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    ),
     Column("state", Text, nullable=False),
     Column("approval_status", Text, nullable=False),
     Column("approved_at", DateTime(timezone=True), nullable=True),
@@ -1755,7 +1764,13 @@ asset_action_draft_events = Table(
     "asset_action_draft_events",
     metadata,
     Column("event_id", Text, primary_key=True),
-    Column("draft_id", Text, nullable=False),
+    # §CB.2 audit-cleanup 2026-06-16: FK constraint (migration 0081).
+    Column(
+        "draft_id",
+        Text,
+        ForeignKey("asset_action_drafts.draft_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
     Column("submission_id", Text, nullable=True),
     Column("event_type", Text, nullable=False),
     Column("severity", Text, nullable=False),
@@ -2282,7 +2297,13 @@ action_draft_order_conditions = Table(
     "action_draft_order_conditions",
     metadata,
     Column("condition_id", Text, primary_key=True),
-    Column("draft_id", Text, nullable=False),
+    # §CB.2 audit-cleanup 2026-06-16: FK constraint (migration 0081).
+    Column(
+        "draft_id",
+        Text,
+        ForeignKey("asset_action_drafts.draft_id", ondelete="CASCADE"),
+        nullable=False,
+    ),
     Column("condition_index", Integer, nullable=False),
     Column("condition_kind", Text, nullable=False),
     Column("comparator", Text, nullable=False),
