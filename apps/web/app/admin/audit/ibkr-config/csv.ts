@@ -28,6 +28,9 @@ export function buildAuditCsv(events: SystemEventSummary[]): string {
       "source_component",
       "title_nl",
       "message_nl",
+      // V1.2 §BZ vervolg — timeline columns voor compliance trail.
+      "resolved_at_utc",
+      "archived_at_utc",
     ],
   ];
   for (const e of events) {
@@ -41,6 +44,8 @@ export function buildAuditCsv(events: SystemEventSummary[]): string {
       e.source_component,
       e.title_nl,
       e.message_nl,
+      e.resolved_at ?? "",
+      e.archived_at ?? "",
     ]);
   }
   return rows

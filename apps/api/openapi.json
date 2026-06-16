@@ -388,6 +388,17 @@
       },
       "ActiveSystemEventSummary": {
         "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
           "blocks_ai_explanation": {
             "title": "Blocks Ai Explanation",
             "type": "boolean"
@@ -419,6 +430,17 @@
           "message_nl": {
             "title": "Message Nl",
             "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
           },
           "severity": {
             "title": "Severity",

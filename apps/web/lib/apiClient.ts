@@ -1051,6 +1051,10 @@ export type SystemEventSummary = {
   blocks_writes: boolean;
   blocks_ai_explanation: boolean;
   status: string;
+  // V1.2 §BZ vervolg — alleen gevuld wanneer de operator het event
+  // weggeklikt of gearchiveerd heeft (zie audit-trail timeline).
+  resolved_at?: string | null;
+  archived_at?: string | null;
 };
 
 export type ActiveSystemEventsResponse = {

@@ -359,6 +359,11 @@ export default function IbkrConfigAuditPage() {
                   <th style={{ padding: "8px 10px" }}>Event-code</th>
                   <th style={{ padding: "8px 10px" }}>Source</th>
                   <th style={{ padding: "8px 10px" }}>Bericht</th>
+                  {/* V1.2 §BZ vervolg: chronologische timeline-kolom
+                      die laat zien WANNEER de operator een event heeft
+                      weggeklikt of gearchiveerd. Compliance-relevant
+                      voor het belastingrapport. */}
+                  <th style={{ padding: "8px 10px" }}>Timeline</th>
                 </tr>
               </thead>
               <tbody>
@@ -394,6 +399,40 @@ export default function IbkrConfigAuditPage() {
                         {event.title_nl}
                       </strong>
                       <span style={{ color: "#4b5563" }}>{event.message_nl}</span>
+                    </td>
+                    <td
+                      style={{
+                        padding: "8px 10px",
+                        fontSize: 11,
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                      }}
+                      data-testid={`audit-event-timeline-${event.system_event_id}`}
+                    >
+                      <div>
+                        <span style={{ color: "#6b7280" }}>Aangemaakt:</span>{" "}
+                        {formatLocalDate(event.created_at)}
+                      </div>
+                      {event.resolved_at ? (
+                        <div data-testid={`audit-event-resolved-${event.system_event_id}`}>
+                          <span style={{ color: "#15803d" }}>Resolved:</span>{" "}
+                          {formatLocalDate(event.resolved_at)}
+                        </div>
+                      ) : null}
+                      {event.archived_at ? (
+                        <div data-testid={`audit-event-archived-${event.system_event_id}`}>
+                          <span style={{ color: "#6b7280" }}>Archived:</span>{" "}
+                          {formatLocalDate(event.archived_at)}
+                        </div>
+                      ) : null}
+                      {!event.resolved_at && !event.archived_at ? (
+                        <div
+                          style={{ fontStyle: "italic", color: "#6b7280" }}
+                          data-testid={`audit-event-open-${event.system_event_id}`}
+                        >
+                          Nog open
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

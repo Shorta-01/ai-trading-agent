@@ -348,6 +348,126 @@ describe("IBKR-config audit-trail page", () => {
     expect(button).toBeDisabled();
     expect(button.textContent).toContain("(0)");
   });
+
+  it("shows the Timeline column with Aangemaakt + Resolved when resolved_at is set", async () => {
+    // V1.2 §BZ vervolg — chronologische timeline-kolom: aangemaakt,
+    // resolved, archived. Compliance-relevant voor de accountant.
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 1,
+        status_nl: "Beschikbaar",
+        message_nl: "1 event",
+        events: [
+          {
+            system_event_id: "evt-resolved",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "Mismatch",
+            message_nl: "details",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "resolved",
+            resolved_at: "2026-03-13T08:30:00+00:00",
+            archived_at: null,
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+    const resolved = screen.getByTestId("audit-event-resolved-evt-resolved");
+    expect(resolved.textContent).toContain("Resolved");
+    // Open + archived markers mogen NIET aanwezig zijn.
+    expect(screen.queryByTestId("audit-event-archived-evt-resolved")).toBeNull();
+    expect(screen.queryByTestId("audit-event-open-evt-resolved")).toBeNull();
+  });
+
+  it("shows 'Nog open' marker in the Timeline when neither resolved nor archived", async () => {
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 1,
+        status_nl: "Beschikbaar",
+        message_nl: "1 event",
+        events: [
+          {
+            system_event_id: "evt-open",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "Mismatch",
+            message_nl: "details",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+            resolved_at: null,
+            archived_at: null,
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+    const open = screen.getByTestId("audit-event-open-evt-open");
+    expect(open.textContent).toContain("Nog open");
+  });
+
+  it("shows Archived line when archived_at is set", async () => {
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 1,
+        status_nl: "Beschikbaar",
+        message_nl: "1 event",
+        events: [
+          {
+            system_event_id: "evt-archived",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "api",
+            source_component: "runtime_config_routes",
+            event_code: "ibkr_account_id_changed",
+            title_nl: "Wijziging",
+            message_nl: "details",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "archived",
+            resolved_at: "2026-03-13T08:00:00+00:00",
+            archived_at: "2026-04-01T00:00:00+00:00",
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+    expect(
+      screen.getByTestId("audit-event-resolved-evt-archived"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("audit-event-archived-evt-archived"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("buildAuditCsv", () => {
@@ -375,10 +495,39 @@ describe("buildAuditCsv", () => {
     expect(lines[0]).toContain("created_at_utc");
     expect(lines[0]).toContain("event_code");
     expect(lines[0]).toContain("message_nl");
+    // V1.2 §BZ vervolg — timeline kolommen in de CSV.
+    expect(lines[0]).toContain("resolved_at_utc");
+    expect(lines[0]).toContain("archived_at_utc");
     expect(lines[1]).toContain("account_id_mismatch");
     expect(lines[1]).toContain("warning");
     expect(lines[1]).toContain("resolved");
     expect(lines[1]).toContain("DU1234567 vs U7654321");
+  });
+
+  it("includes resolved_at + archived_at columns with values when set", async () => {
+    const { buildAuditCsv } = await import("./csv");
+    const csv = buildAuditCsv([
+      {
+        system_event_id: "evt-1",
+        severity: "warning",
+        category: "ibkr_config_mismatch",
+        source_service: "api",
+        source_component: "ibkr_sync",
+        event_code: "account_id_mismatch",
+        title_nl: "Mismatch",
+        message_nl: "details",
+        help_nl: "",
+        created_at: "2026-03-12T10:00:00+00:00",
+        blocks_suggestions: false,
+        blocks_writes: false,
+        blocks_ai_explanation: false,
+        status: "archived",
+        resolved_at: "2026-03-13T08:00:00+00:00",
+        archived_at: "2026-04-01T00:00:00+00:00",
+      },
+    ]);
+    expect(csv).toContain("2026-03-13T08:00:00+00:00");
+    expect(csv).toContain("2026-04-01T00:00:00+00:00");
   });
 
   it("CSV-escapes embedded double quotes via the standard \"\"-doubling", async () => {
