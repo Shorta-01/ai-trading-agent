@@ -50,5 +50,22 @@ export default function AuditPage() {
     <section className="dashboard-card"><h3>Request logs</h3><p className="filtered-count">{countFilteredItems(flogs.length, logs.items.length)}</p>{flogs.length === 0 ? <p className="fallback-text">Geen records gevonden.</p> : <div className="audit-record-list">{flogs.map((i) => <div className="audit-record-card" key={i.request_log_id}><p>{i.request_log_id}</p><p>{i.provider_code} · {i.request_status} · {i.data_domain}</p><p>{formatDateTime(i.created_at)}</p><Link href={`/audit/request-logs/${i.request_log_id}`}>Open detail</Link></div>)}</div>}</section>
     <section className="dashboard-card"><h3>Provider/source metadata</h3><p className="filtered-count">{countFilteredItems(fsources.length, sources.items.length)}</p>{fsources.length === 0 ? <p className="fallback-text">Geen records gevonden.</p> : <div className="audit-record-list">{fsources.map((i) => <div className="audit-record-card" key={i.provider_source_id}><p>{i.provider_source_id}</p><p>{i.provider_code} · {i.provider_kind} · {i.data_domain} · {i.source_type}</p><Link href={`/audit/provider-sources/${i.provider_source_id}`}>Open detail</Link></div>)}</div>}</section>
     <section className="dashboard-card"><h3>Freshness-audits</h3><p className="filtered-count">{countFilteredItems(ffresh.length, freshness.items.length)}</p>{ffresh.length === 0 ? <p className="fallback-text">Geen records gevonden.</p> : <div className="audit-record-list">{ffresh.map((i) => <div className="audit-record-card" key={i.freshness_audit_id}><p>{i.freshness_audit_id}</p><p>{i.freshness_status} · {i.reason_code ?? "-"} · {i.data_domain}</p><p>{formatDateTime(i.source_timestamp ?? i.evaluated_at)}</p><Link href={`/audit/freshness-audits/${i.freshness_audit_id}`}>Open detail</Link></div>)}</div>}</section>
+    {/* V1.2 §BZ vervolg — discoverability: vanaf het overzichts-audit
+        scherm naar de IBKR-config audit-trail (mode-switches,
+        mismatches, account-id wijzigingen). Eigen page omdat de data
+        uit ``system_events`` komt, niet uit de provider-pipeline. */}
+    <section className="dashboard-card" data-testid="audit-ibkr-config-card">
+      <h3>IBKR-config audit-trail</h3>
+      <p className="fallback-text">
+        Chronologisch overzicht van mode-switches, account-mismatches en
+        account-id wijzigingen — &ldquo;goed huisvader&rdquo;-bewijs voor §12.
+      </p>
+      <Link
+        data-testid="audit-ibkr-config-link"
+        href="/admin/audit/ibkr-config"
+      >
+        Open IBKR-config audit-trail →
+      </Link>
+    </section>
   </main>;
 }

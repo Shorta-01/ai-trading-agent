@@ -1140,10 +1140,55 @@ class PortfolioScheduler:
                         f"new={new_account_id}"
                     ),
                 )
+                # V1.2 §BZ vervolg — proactive disconnect van bestaande
+                # TWS-sessies zodat ze NIET tegen het oude account-id
+                # blijven hangen. De §BY reconnect-heartbeat pikt het
+                # op de volgende tick weer op en re-establishet ze met
+                # het nieuwe account-id. Best-effort: een disconnect-
+                # fout mag de reload-loop niet kapot maken.
+                self._disconnect_sessions_for_account_change()
         except Exception:  # noqa: BLE001 — boundary
             logger.exception(
                 "Runtime-config reload mislukt; oude waarden blijven actief."
             )
+
+    def _disconnect_sessions_for_account_change(self) -> None:
+        """V1.2 §BZ vervolg — disconnect ``_reconciler_gateway`` en
+        ``_order_adapter`` zodat de §BY reconnect-heartbeat ze
+        re-establishet met het nieuwe ``account_id``.
+
+        Roept bewust GEEN reconnect logic zelf aan — dat is de
+        verantwoordelijkheid van ``_maybe_reconnect_ibkr_gateway`` en
+        ``_maybe_reconnect_order_adapter``, die op de volgende
+        heartbeat al de juiste account-id zien (we syncten
+        ``self._ibkr_settings = settings.ibkr`` net hierboven).
+        """
+
+        from contextlib import suppress
+
+        if self._reconciler_gateway is not None:
+            disconnect = getattr(self._reconciler_gateway, "disconnect", None)
+            if disconnect is not None:
+                with suppress(Exception):
+                    disconnect()
+                    logger.info(
+                        "Reconciler gateway disconnected na account-id "
+                        "wijziging; volgende heartbeat reconnect."
+                    )
+        if self._order_adapter is not None:
+            # ``IbkrOrderAdapter.reconnect()`` doet zelf disconnect +
+            # reconnect. Wij willen alleen disconnect; check eerst of er
+            # een ``disconnect``/``_ib.disconnect`` is, anders skip.
+            ib_attr = getattr(self._order_adapter, "_ib", None)
+            if ib_attr is not None:
+                disconnect = getattr(ib_attr, "disconnect", None)
+                if disconnect is not None:
+                    with suppress(Exception):
+                        disconnect()
+                        logger.info(
+                            "Order adapter disconnected na account-id "
+                            "wijziging; volgende heartbeat reconnect."
+                        )
 
     def _fetch_runtime_config_record(self) -> Any | None:
         """Storage-side helper voor :meth:`_poll_runtime_config_changed`.
