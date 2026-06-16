@@ -80,7 +80,11 @@ def _context_from_package(
         currency=package.currency,
         exchange=None,
         primary_exchange=None,
-        account_mode="paper",
+        # V1.2 §BZ (CLAUDE.md §15): account_mode tracks de operator-
+        # verwachte account aan draft-tijd. De actuele IBKR-account
+        # bepaalt het bestemmings-account bij submission; software
+        # werkt VOLLEDIG in paper én live.
+        account_mode=expected_account_mode,
         expected_account_mode=expected_account_mode,
         action_label=package.suggestion_action_label,
         action_label_nl=package.suggestion_action_label_nl,
@@ -219,7 +223,11 @@ def generate_action_drafts(
             currency=package.currency,
             exchange=exchange,
             primary_exchange=primary_exchange,
-            account_mode="paper",
+            # V1.2 §BZ (CLAUDE.md §15): account_mode tracks de operator-
+        # verwachte account aan draft-tijd. De actuele IBKR-account
+        # bepaalt het bestemmings-account bij submission; software
+        # werkt VOLLEDIG in paper én live.
+        account_mode=expected_account_mode,
             expected_account_mode=expected_account_mode,
             action_side=sizing.action_side,
             order_type=LOCKED_ORDER_TYPE,

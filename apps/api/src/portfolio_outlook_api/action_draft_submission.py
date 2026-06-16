@@ -5,10 +5,14 @@ Three operations:
 * ``approve_action_draft`` — re-runs the dry-run against the **current**
   market/cash/forecast snapshots, and persists an approval record + event
   if everything still passes.
-* ``submit_action_draft_to_paper`` — gates again on approval + paper mode +
-  approval freshness, calls the injected real ``ibapi`` submission client,
-  and persists the resulting state (SUBMITTED → AWAITING_IBKR_REPLY or
-  REJECTED on failure).
+* ``submit_action_draft_to_paper`` — gates again on approval + approval
+  freshness, calls the injected real ``ibapi`` submission client, and
+  persists the resulting state (SUBMITTED → AWAITING_IBKR_REPLY or
+  REJECTED on failure). De functienaam dateert van V1.0 (paper-only
+  scope); sinds V1.2 §BZ werkt deze flow VOLLEDIG tegen paper én live
+  — de IBKR account-id prefix bepaalt het bestemmings-account, niet
+  een software-flag. De naam blijft uit naam-stabiliteit (88 callsites
+  + de publieke API-route).
 * ``record_state_event`` — append-only audit log helper used by both of
   the above.
 
@@ -181,45 +185,17 @@ def approve_action_draft(
     """Re-validate the draft and persist an approval record.
 
     The dry-run on the draft itself was computed at generation time. Here
-    we re-check that the draft's persisted dry-run was actually ``passed``,
-    that the account mode is paper, and that the draft itself hasn't been
-    already approved-and-submitted (idempotency: re-approving an already
-    submitted draft is a no-op blocked response).
+    we re-check that the draft's persisted dry-run was actually ``passed``
+    and that the draft itself hasn't been already approved-and-submitted
+    (idempotency: re-approving an already submitted draft is a no-op
+    blocked response). De software werkt voor zowel paper- als
+    live-accounts per CLAUDE.md §15 (V1.2 §BZ).
     """
 
-    if draft.account_mode.strip().lower() != "paper":
-        event_repo.save_asset_action_draft_event(
-            _event(
-                draft_id=draft.draft_id,
-                submission_id=None,
-                event_type="approval_blocked",
-                severity="critical",
-                from_state=None,
-                to_state=None,
-                rationale_nl="Approval geblokkeerd: alleen paper-account toegestaan.",
-            )
-        )
-        return ApproveActionDraftResult(
-            status="blocked",
-            status_nl="Approval geblokkeerd",
-            help_nl="Alleen paper-account orders zijn toegestaan in V1.",
-            submission_id=None,
-            state=ActionDraftState.DRAFT.value,
-            blocking_reason="paper_only_required",
-            failures=("paper_only_required",),
-        )
-
-    if expected_account_mode.strip().lower() != "paper":
-        return ApproveActionDraftResult(
-            status="blocked",
-            status_nl="Approval geblokkeerd",
-            help_nl="Verwacht account-mode moet 'paper' zijn.",
-            submission_id=None,
-            state=ActionDraftState.DRAFT.value,
-            blocking_reason="expected_account_mode_not_paper",
-            failures=("expected_account_mode_not_paper",),
-        )
-
+    # V1.2 §BZ doctrine (CLAUDE.md §15): software werkt VOLLEDIG in
+    # beide modi (paper én live). De §2 operator-approval workflow
+    # (klik → modaal → klik) is de enige veiligheidsgarantie tegen
+    # ongewenste live trades — geen mode-side software lock.
     if draft.dry_run_status != "passed":
         event_repo.save_asset_action_draft_event(
             _event(
@@ -299,7 +275,7 @@ def approve_action_draft(
     return ApproveActionDraftResult(
         status="approved",
         status_nl="Draft goedgekeurd",
-        help_nl="Klik op verzenden om de paper order naar IBKR te sturen.",
+        help_nl="Klik op verzenden om de order naar IBKR te sturen.",
         submission_id=submission_id,
         state=ActionDraftState.USER_APPROVED.value,
         blocking_reason=None,
@@ -320,11 +296,13 @@ def submit_action_draft_to_paper(
     provider_code: str,
     approval_valid_minutes: int,
 ) -> SubmitActionDraftResult:
-    """Submit a previously-approved draft to the IBKR paper gateway.
+    """Submit a previously-approved draft to the IBKR gateway.
 
     Every gate is re-checked here. The injected ``submission_client`` is
     the only path to ``placeOrder`` — if the factory returned ``None`` the
     response is a blocked record with reason ``submission_client_unavailable``.
+    Works against zowel paper- als live-accounts; de IBKR account-id
+    prefix bepaalt het bestemmings-account (CLAUDE.md §15 / V1.2 §BZ).
     """
 
     if submission_client is None:
@@ -332,8 +310,8 @@ def submit_action_draft_to_paper(
             status="blocked",
             status_nl="Submission client niet geconfigureerd",
             help_nl=(
-                "Stel `IBKR_PAPER_ORDER_SUBMISSION_REAL_CLIENT_ENABLED=true` "
-                "en de host/port/client-id in om paper orders te kunnen verzenden."
+                "Stel `IBKR_ORDER_SUBMISSION_REAL_CLIENT_ENABLED=true` "
+                "en de host/port/client-id in om orders te kunnen verzenden."
             ),
             submission_id=None,
             state=ActionDraftState.USER_APPROVED.value,
@@ -343,19 +321,9 @@ def submit_action_draft_to_paper(
             blocking_reason="submission_client_unavailable",
         )
 
-    if draft.account_mode.strip().lower() != "paper":
-        return SubmitActionDraftResult(
-            status="blocked",
-            status_nl="Submission geblokkeerd",
-            help_nl="Alleen paper-account orders zijn toegestaan in V1.",
-            submission_id=None,
-            state=ActionDraftState.USER_APPROVED.value,
-            ibkr_order_id=None,
-            ibkr_perm_id=None,
-            ibkr_status_text=None,
-            blocking_reason="paper_only_required",
-        )
-
+    # V1.2 §BZ doctrine (CLAUDE.md §15): geen mode-side software lock.
+    # Paper én live worden behandeld via dezelfde flow; de §2
+    # operator-approval workflow is de veiligheidsgarantie.
     if draft.dry_run_status != "passed":
         return SubmitActionDraftResult(
             status="blocked",
@@ -506,7 +474,7 @@ def submit_action_draft_to_paper(
     if result.accepted:
         return SubmitActionDraftResult(
             status="submitted",
-            status_nl="Order verzonden naar IBKR paper",
+            status_nl="Order verzonden naar IBKR",
             help_nl=(
                 "De order is verzonden. De status wordt bijgewerkt zodra IBKR-sync "
                 "de bevestiging verwerkt."
