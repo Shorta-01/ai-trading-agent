@@ -79,7 +79,6 @@ def build_ibkr_session_status_adapter(
             ),
             tws_readonly_adapter_blocked_reasons=(
                 (
-                    "paper_only_required",
                     "network_runtime_not_implemented",
                     "adapter_selected_but_blocked",
                 )
