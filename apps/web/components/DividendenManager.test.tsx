@@ -98,6 +98,8 @@ describe("DividendenManager", () => {
             net_local: "85",
             country_code: "US",
             note: null,
+            rv_shortfall_pct: "15",
+            rv_shortfall_local: "15.00",
           },
         ],
       }),
@@ -167,6 +169,8 @@ describe("DividendenManager", () => {
             net_local: "85",
             country_code: "US",
             note: null,
+            rv_shortfall_pct: "15",
+            rv_shortfall_local: "15.00",
           },
         ],
       }),
@@ -181,6 +185,34 @@ describe("DividendenManager", () => {
     await waitFor(() => {
       expect(deleteDividend).toHaveBeenCalledWith("d1");
     });
+  });
+
+  it("shows RV-tekort column for Belgian 30% regularisation", async () => {
+    listDividenden.mockResolvedValue({
+      ok: true as const,
+      data: makeResp({
+        items: [
+          {
+            dividend_event_id: "d1",
+            symbol: "AAPL",
+            isin: null,
+            pay_date: "2026-05-12",
+            currency_local: "USD",
+            gross_local: "100",
+            withholding_pct: "15",
+            withholding_local: "15",
+            net_local: "85",
+            country_code: "US",
+            note: null,
+            rv_shortfall_pct: "15",
+            rv_shortfall_local: "15.00",
+          },
+        ],
+      }),
+    });
+    render(<DividendenManager year={2026} />);
+    const cell = await screen.findByTestId("dividend-rv-shortfall-d1");
+    expect(cell.textContent).toContain("15,00");
   });
 
   it("renders the year totals when items are present", async () => {
@@ -200,6 +232,8 @@ describe("DividendenManager", () => {
             net_local: "85",
             country_code: "US",
             note: null,
+            rv_shortfall_pct: "15",
+            rv_shortfall_local: "15.00",
           },
         ],
         totals: {

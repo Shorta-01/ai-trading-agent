@@ -1417,6 +1417,72 @@ def _build_lock(connection: Any) -> SingleFlightLockProtocol:
     return PostgresAdvisoryLock(connection)
 
 
+# Audit-correctie 2026-06-16 — IBKR errorCode-aware backoff.
+#
+# IBKR API gebruikt enkele specifieke errorCodes voor "te veel
+# requests" en "verbinding gereset". Een generieke 2/4/8s
+# exponentiële backoff is te kort voor pacing: IBKR clears het pacing
+# window pas na ~60 sec, dus 2s + 4s + 8s = 14s retries genereren
+# alleen MEER pacing-errors.
+#
+# IBKR errorCodes (zie ``ib_insync`` / TWS API docs):
+#   *  100 — Max rate of messages per second exceeded
+#   *  162 — Historical data request pacing violation
+#   *  420 — Order pacing violation (sustained burst)
+#   * 1100 — Connectivity between IB and TWS lost
+#
+# Voor 1100 willen we juist SNEL retryen (sessie kan binnen seconden
+# terug zijn). Voor 100/162/420 wachten we minimaal 60 seconden
+# zodat het pacing-window kan resetten.
+_IBKR_PACING_ERROR_CODES: frozenset[int] = frozenset({100, 162, 420})
+_IBKR_CONNECTIVITY_ERROR_CODES: frozenset[int] = frozenset({1100})
+_IBKR_PACING_MIN_BACKOFF_SECONDS: float = 60.0
+
+
+def _extract_ibkr_error_code(result: Any) -> int | None:
+    """Best-effort: pull an IBKR errorCode uit een sweep-result.
+
+    Kijkt eerst naar ``result.error_code`` (modernen sweeps zetten dit
+    expliciet), valt dan terug op ``error_details_json["error_code"]``.
+    Returns ``None`` wanneer geen code te vinden is."""
+
+    code = getattr(result, "error_code", None)
+    if code is not None:
+        try:
+            return int(code)
+        except (TypeError, ValueError):
+            return None
+    details = getattr(result, "error_details_json", None)
+    if isinstance(details, dict):
+        raw = details.get("error_code") or details.get("ibkr_error_code")
+        if raw is not None:
+            try:
+                return int(raw)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _compute_backoff_seconds(
+    *,
+    base_backoff_seconds: float,
+    attempt_n: int,
+    result: Any,
+) -> float:
+    """Bereken de wait tussen attempt_n en attempt_n+1.
+
+    Standaard: exponential ``base * 2 ** (n - 1)``. Met IBKR pacing-
+    errorcode 100/162/420: minimaal 60 seconden zodat het pacing-
+    window kan resetten. Met connectivity errorcode 1100: standaard
+    exponential — sessie kan binnen seconden terug zijn."""
+
+    exponential = float(base_backoff_seconds * (2 ** (attempt_n - 1)))
+    code = _extract_ibkr_error_code(result)
+    if code is not None and code in _IBKR_PACING_ERROR_CODES:
+        return float(max(exponential, _IBKR_PACING_MIN_BACKOFF_SECONDS))
+    return exponential
+
+
 def _run_sweep_with_backoff(
     *,
     attempt: Callable[[], Any],
@@ -1433,6 +1499,11 @@ def _run_sweep_with_backoff(
     tick instead of waiting a full ``sweep_interval_seconds`` for the
     next scheduled fire. ``sleep_fn`` is injectable so tests don't
     actually sleep.
+
+    Audit-correctie 2026-06-16: detecteert IBKR pacing-errorcodes
+    (100/162/420) en gebruikt minimum 60s backoff zodat het pacing-
+    window kan resetten. Blind exponential werkt averechts bij
+    pacing — de retries genereren alleen meer pacing-errors.
     """
 
     max_attempts = max(1, max_attempts)
@@ -1441,7 +1512,13 @@ def _run_sweep_with_backoff(
     for n in range(1, max_attempts):
         if result.mode != "error":
             return result
-        sleep_fn(base_backoff_seconds * (2 ** (n - 1)))
+        sleep_fn(
+            _compute_backoff_seconds(
+                base_backoff_seconds=base_backoff_seconds,
+                attempt_n=n,
+                result=result,
+            )
+        )
         result = attempt()
     return result
 

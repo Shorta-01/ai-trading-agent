@@ -787,6 +787,8 @@ export type DividendRow = {
   net_local: string;
   country_code: string | null;
   note: string | null;
+  rv_shortfall_pct: string;
+  rv_shortfall_local: string;
 };
 
 export type DividendKpis = {

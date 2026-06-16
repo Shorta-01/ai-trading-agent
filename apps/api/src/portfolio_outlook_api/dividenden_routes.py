@@ -54,6 +54,14 @@ class DividendOut(BaseModel):
     net_local: str
     country_code: str | None
     note: str | None
+    # V1.2 audit-correctie 2026-06-16: Belgische 30% RV regularisatie
+    # auto-berekend per CLAUDE.md §12. Belgische bewoner is netto
+    # 30% RV verschuldigd; ingehouden bronbelasting telt mee, dus
+    # tekort = ``max(30 - withholding_pct, 0)``. ``rv_shortfall_local``
+    # is ``gross_local * shortfall_pct / 100`` zodat de accountant
+    # direct ziet hoeveel extra in de aangifte moet worden opgenomen.
+    rv_shortfall_pct: str = "0"
+    rv_shortfall_local: str = "0"
 
 
 class DividendKpisOut(BaseModel):
@@ -133,6 +141,35 @@ def _parse_date(raw: str, *, field: str) -> date:
         ) from exc
 
 
+# V1.2 audit-correctie 2026-06-16: Belgische roerende voorheffing
+# is 30%. Bronbelasting ingehouden door buitenlands rechtsgebied
+# telt mee; het tekort = ``max(30 - withholding_pct, 0)`` moet de
+# operator nog declareren in zijn aangifte (RV-aanvulling).
+_BELGIAN_RV_RATE_PCT: Decimal = Decimal("30")
+
+
+def _compute_rv_shortfall(
+    *,
+    gross_local: Decimal,
+    withholding_pct: Decimal,
+) -> tuple[Decimal, Decimal]:
+    """Returnt (shortfall_pct, shortfall_local) per CLAUDE.md §12.
+
+    Voorbeeld: US dividend $100 met 15% bronbelasting →
+    shortfall_pct = 15%, shortfall_local = $15. Operator moet die
+    $15 extra in aangifte opnemen om de Belgische 30% RV te halen.
+
+    Wanneer bronbelasting al ≥ 30% is (theoretische edge case) is
+    er geen tekort en wordt 0 geretourneerd.
+    """
+
+    shortfall_pct = max(_BELGIAN_RV_RATE_PCT - withholding_pct, Decimal(0))
+    shortfall_local = (gross_local * shortfall_pct / Decimal(100)).quantize(
+        Decimal("0.01")
+    )
+    return shortfall_pct, shortfall_local
+
+
 def _default_withholding(country_code: str | None) -> Decimal:
     if country_code is None:
         return Decimal(0)
@@ -210,22 +247,29 @@ def list_dividenden(
             status_code=503, detail="Opslag is niet beschikbaar."
         ) from exc
 
-    items = [
-        DividendOut(
-            dividend_event_id=r.dividend_event_id,
-            symbol=r.symbol,
-            isin=r.isin,
-            pay_date=r.pay_date.isoformat(),
-            currency_local=r.currency_local,
-            gross_local=str(r.gross_local),
-            withholding_pct=str(r.withholding_pct),
-            withholding_local=str(r.withholding_local),
-            net_local=str(r.net_local),
-            country_code=r.country_code,
-            note=r.note,
+    items = []
+    for r in listed.records:
+        rv_shortfall_pct, rv_shortfall_local = _compute_rv_shortfall(
+            gross_local=r.gross_local,
+            withholding_pct=r.withholding_pct,
         )
-        for r in listed.records
-    ]
+        items.append(
+            DividendOut(
+                dividend_event_id=r.dividend_event_id,
+                symbol=r.symbol,
+                isin=r.isin,
+                pay_date=r.pay_date.isoformat(),
+                currency_local=r.currency_local,
+                gross_local=str(r.gross_local),
+                withholding_pct=str(r.withholding_pct),
+                withholding_local=str(r.withholding_local),
+                net_local=str(r.net_local),
+                country_code=r.country_code,
+                note=r.note,
+                rv_shortfall_pct=str(rv_shortfall_pct),
+                rv_shortfall_local=str(rv_shortfall_local),
+            )
+        )
     return DividendListResponse(
         title_nl=f"Dividenden {resolved}",
         help_nl=_HELP_NL,

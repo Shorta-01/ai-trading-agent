@@ -237,7 +237,10 @@ def test_next_runs_lists_both_jobs_after_start() -> None:
         # Memory-backed scheduler returns next_run_time only after the
         # first tick; with no fires yet, APScheduler still populates
         # the trigger so next_run_time is set immediately.
-        assert len(runs) == 2
+        # Sinds 2026-06-16 staat reconciliation_sweep_trigger_enabled
+        # default-aan (audit-correctie §AO/§AT) → het reconciliation-
+        # sweep job draait standaard mee, dus 3 jobs in plaats van 2.
+        assert len(runs) == 3
     finally:
         scheduler.stop()
 
@@ -1567,6 +1570,126 @@ def test_retry_helper_treats_max_attempts_below_one_as_one() -> None:
         sleep_fn=lambda _: None,
     )
     assert calls == [1]
+
+
+class _ResultWithCode:
+    """Test fake for sweep result with IBKR errorCode field."""
+
+    def __init__(self, mode: str, error_code: int | None = None) -> None:
+        self.mode = mode
+        self.error_code = error_code
+
+
+def test_retry_helper_uses_60s_minimum_backoff_on_ibkr_pacing_code_162() -> None:
+    """Audit-correctie 2026-06-16: IBKR pacing-errorcode 162 MOET
+    minimaal 60 seconden backoff krijgen i.p.v. de generieke 2/4/8s.
+    Blind exponential werkt averechts bij pacing."""
+
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    slept: list[float] = []
+
+    def _attempt() -> _ResultWithCode:
+        if not slept:
+            return _ResultWithCode("error", error_code=162)
+        return _ResultWithCode("completed")
+
+    _run_sweep_with_backoff(
+        attempt=_attempt,
+        max_attempts=3,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    assert len(slept) == 1
+    assert slept[0] >= 60.0
+
+
+def test_retry_helper_uses_60s_minimum_backoff_on_ibkr_pacing_code_100() -> None:
+    """ErrorCode 100 (Max rate of messages per second) is ook pacing."""
+
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    slept: list[float] = []
+
+    def _attempt() -> _ResultWithCode:
+        if not slept:
+            return _ResultWithCode("error", error_code=100)
+        return _ResultWithCode("completed")
+
+    _run_sweep_with_backoff(
+        attempt=_attempt,
+        max_attempts=2,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    assert len(slept) == 1
+    assert slept[0] >= 60.0
+
+
+def test_retry_helper_uses_60s_minimum_backoff_on_ibkr_pacing_code_420() -> None:
+    """ErrorCode 420 (sustained order pacing) is ook pacing."""
+
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    slept: list[float] = []
+
+    def _attempt() -> _ResultWithCode:
+        if not slept:
+            return _ResultWithCode("error", error_code=420)
+        return _ResultWithCode("completed")
+
+    _run_sweep_with_backoff(
+        attempt=_attempt,
+        max_attempts=2,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    assert slept[0] >= 60.0
+
+
+def test_retry_helper_uses_exponential_for_connectivity_code_1100() -> None:
+    """ErrorCode 1100 (Connectivity lost) MAG snel retry'en — TWS kan
+    binnen seconden weer beschikbaar zijn, geen pacing-window."""
+
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    slept: list[float] = []
+
+    def _attempt() -> _ResultWithCode:
+        if not slept:
+            return _ResultWithCode("error", error_code=1100)
+        return _ResultWithCode("completed")
+
+    _run_sweep_with_backoff(
+        attempt=_attempt,
+        max_attempts=2,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    # 2.0 * 2 ** (1 - 1) = 2.0 — connectivity blijft snel.
+    assert slept == [2.0]
+
+
+def test_retry_helper_falls_back_to_exponential_when_no_error_code() -> None:
+    """Generieke error zonder code (legacy sweeps zonder error_code
+    field) blijft de oude 2/4/8 backoff gebruiken — backwards-compat."""
+
+    from portfolio_outlook_worker.scheduler import _run_sweep_with_backoff
+
+    slept: list[float] = []
+
+    def _attempt() -> _Result:
+        if not slept:
+            return _Result("error")
+        return _Result("completed")
+
+    _run_sweep_with_backoff(
+        attempt=_attempt,
+        max_attempts=2,
+        base_backoff_seconds=2.0,
+        sleep_fn=slept.append,
+    )
+    assert slept == [2.0]
 
 
 # ---- SELL-signal sweep trigger (V1.2 §BI) ---------------------------

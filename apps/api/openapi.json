@@ -2662,6 +2662,14 @@
             "title": "Pay Date",
             "type": "string"
           },
+          "rv_shortfall_local": {
+            "title": "Rv Shortfall Local",
+            "type": "string"
+          },
+          "rv_shortfall_pct": {
+            "title": "Rv Shortfall Pct",
+            "type": "string"
+          },
           "symbol": {
             "title": "Symbol",
             "type": "string"
@@ -2686,7 +2694,9 @@
           "withholding_local",
           "net_local",
           "country_code",
-          "note"
+          "note",
+          "rv_shortfall_pct",
+          "rv_shortfall_local"
         ],
         "title": "DividendOut",
         "type": "object"

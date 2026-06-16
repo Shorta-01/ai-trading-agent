@@ -187,7 +187,14 @@ class SchedulerSettings(BaseModel):
     # Default cron: elke 30 minuten op weekdagen (incl. off-hours
     # om laat-afgevuurde executions snel op te pikken). De endpoint
     # is idempotent en goedkoop dus 30-min cadence is veilig.
-    reconciliation_sweep_trigger_enabled: bool = False
+    #
+    # Audit-correctie 2026-06-16: default veranderd van ``False`` naar
+    # ``True``. De cron skip't gracefully zonder IBKR-connectie
+    # (zie ``scheduler._on_reconciliation_sweep_trigger`` log
+    # "reconciler tick skipped: IBKR gateway niet verbonden"), dus
+    # default-aan is veilig en voorkomt dat een verse deploy
+    # silent geen reconciliation doet.
+    reconciliation_sweep_trigger_enabled: bool = True
     reconciliation_sweep_cron: str = "*/30 * * * mon-fri"
 
     # Market-aware scheduler (replaces the legacy ``hour="7-21"`` dumb
