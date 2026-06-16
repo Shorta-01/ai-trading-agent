@@ -94,4 +94,19 @@ describe("AuditPage", () => {
     render(<AuditPage />);
     expect(await screen.findByText("Laden...")).toBeInTheDocument();
   });
+
+  it("renders the IBKR-config audit-trail discovery card with link", async () => {
+    // V1.2 §BZ vervolg: vanaf het audit-overzicht navigeert
+    // operator/accountant naar de IBKR-config audit-trail.
+    getRequestAuditRequestLogs.mockReturnValue(ok(EMPTY_LOGS));
+    getRequestAuditProviderSources.mockReturnValue(ok(EMPTY_SOURCES));
+    getRequestAuditFreshnessAudits.mockReturnValue(ok(EMPTY_FRESH));
+    render(<AuditPage />);
+    const card = await screen.findByTestId("audit-ibkr-config-card");
+    expect(card).toBeInTheDocument();
+    // Next.js Link forwarded data-testid is unreliable in jsdom; query
+    // via the rendered anchor text.
+    const link = screen.getByText(/Open IBKR-config audit-trail/);
+    expect(link.getAttribute("href")).toBe("/admin/audit/ibkr-config");
+  });
 });

@@ -797,6 +797,128 @@ def test_reload_does_not_write_event_when_account_id_unchanged(
         scheduler.stop()
 
 
+def test_reload_disconnects_reconciler_and_order_session_on_account_change(
+    monkeypatch,
+) -> None:
+    """V1.2 §BZ vervolg — proactive disconnect: na een account-id
+    wijziging moeten ``_reconciler_gateway`` en ``_order_adapter``
+    worden disconnected zodat de §BY reconnect-heartbeat ze
+    re-establishet tegen het nieuwe account."""
+
+    from portfolio_outlook_worker import runtime_config_overlay
+
+    reconciler_disconnect_calls: list[bool] = []
+    order_disconnect_calls: list[bool] = []
+
+    class _FakeGateway:
+        def is_connected(self) -> bool:
+            return True
+
+        def disconnect(self) -> None:
+            reconciler_disconnect_calls.append(True)
+
+    class _FakeIB:
+        def disconnect(self) -> None:
+            order_disconnect_calls.append(True)
+
+    class _FakeOrderAdapter:
+        def __init__(self) -> None:
+            self._ib = _FakeIB()
+
+        def is_connected(self) -> bool:
+            return True
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=_FakeGateway(),
+        order_adapter=_FakeOrderAdapter(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True, account_id="DU1111111"
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-disconnect-on-reload",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _fake_overlay(settings_obj):
+        settings_obj.ibkr.account_id = "U7654321"
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _fake_overlay,
+    )
+
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        scheduler._maybe_reload_runtime_config()
+        assert reconciler_disconnect_calls == [True]
+        assert order_disconnect_calls == [True]
+    finally:
+        scheduler.stop()
+
+
+def test_reload_does_not_disconnect_when_account_id_unchanged(
+    monkeypatch,
+) -> None:
+    """Operator save't dezelfde waarde → geen disconnect, anders
+    zou elke save nodeloze TWS-reconnects veroorzaken."""
+
+    from portfolio_outlook_worker import runtime_config_overlay
+
+    reconciler_disconnect_calls: list[bool] = []
+
+    class _FakeGateway:
+        def is_connected(self) -> bool:
+            return True
+
+        def disconnect(self) -> None:
+            reconciler_disconnect_calls.append(True)
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        reconciler_gateway=_FakeGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True, account_id="DU1111111"
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-no-disconnect",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _fake_overlay(settings_obj):
+        settings_obj.ibkr.account_id = "DU1111111"  # zelfde waarde
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _fake_overlay,
+    )
+
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        scheduler._maybe_reload_runtime_config()
+        assert reconciler_disconnect_calls == []
+    finally:
+        scheduler.stop()
+
+
 def test_sighup_runtime_config_reload_swallows_exceptions(monkeypatch) -> None:
     """Een crash in de overlay mag de scheduler-loop niet kapot maken."""
 
