@@ -1700,9 +1700,13 @@ asset_action_drafts = Table(
     Column("explanation_nl", Text, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_submission", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    # §CB.3 audit-correctie 2026-06-16: ``server_default="0"`` (string)
+    # → ``server_default=sa_false()``. Postgres interpreteert "0" anders
+    # dan false() in een Boolean kolom; sa_false() rendert naar het
+    # juiste dialect-specifieke literal (Postgres "false", SQLite 0).
+    Column("safe_for_submission", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_broker_submission", Boolean, nullable=False, server_default=sa_false()),
     Column("estimated_belgian_tob", MONEY_NUMERIC, nullable=True),
     Column("belgian_tob_security_class", Text, nullable=True),
     Column("stop_price", MONEY_NUMERIC, nullable=True),
@@ -1755,8 +1759,9 @@ asset_action_draft_submissions = Table(
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
     Column("last_state_transition_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    # §CB.3 audit-correctie 2026-06-16: zelfde fix als boven.
+    Column("safe_for_broker_submission", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -1817,8 +1822,9 @@ prediction_diary_entries = Table(
     Column("last_evaluated_at", DateTime(timezone=True), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_self_learning", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_model_retraining", Boolean, nullable=False, server_default="0"),
+    # §CB.3 audit-correctie 2026-06-16: ``sa_false()`` ipv string "0".
+    Column("safe_for_self_learning", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_model_retraining", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -1842,9 +1848,10 @@ decision_package_explanations = Table(
     Column("hallucinated_numbers_json", JSON, nullable=True),
     Column("generated_at", DateTime(timezone=True), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_self_learning", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    # §CB.3 audit-correctie 2026-06-16: ``sa_false()`` ipv string "0".
+    Column("safe_for_self_learning", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
     UniqueConstraint(
         "decision_package_id",
         "decision_package_content_hash",
@@ -1862,8 +1869,9 @@ explanation_evidence_ledger = Table(
     Column("evidence_reference_id", Text, nullable=False),
     Column("evidence_content_hash", Text, nullable=False),
     Column("linked_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_self_learning", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_model_retraining", Boolean, nullable=False, server_default="0"),
+    # §CB.3 audit-correctie 2026-06-16: ``sa_false()`` ipv string "0".
+    Column("safe_for_self_learning", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_model_retraining", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2171,8 +2179,8 @@ daily_briefings = Table(
     Column("help_nl", Text, nullable=False),
     Column("status", Text, nullable=False),
     Column("blocking_reason", Text, nullable=True),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
     UniqueConstraint("briefing_date", name="uq_daily_briefings_briefing_date"),
 )
 
@@ -2190,8 +2198,8 @@ briefing_alerts = Table(
     Column("body_nl", Text, nullable=False),
     Column("acknowledged_at", DateTime(timezone=True), nullable=True),
     Column("linked_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2206,8 +2214,8 @@ scheduler_runs = Table(
     Column("status", Text, nullable=False),
     Column("error_text", Text, nullable=True),
     Column("triggered_by", Text, nullable=False),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2225,8 +2233,8 @@ universe_scan_runs = Table(
     Column("ranked_count", Integer, nullable=False),
     Column("universe_size", Integer, nullable=False),
     Column("error_text", Text, nullable=True),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2247,8 +2255,8 @@ predictor_backtest_runs = Table(
     Column("sharpe_ratio", Numeric(12, 6), nullable=True),
     Column("blocking_reason", Text, nullable=True),
     Column("explanation_nl", Text, nullable=True),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2269,8 +2277,8 @@ prediction_diary_predictor_contributions = Table(
     Column("return_spread_pct", MONEY_NUMERIC, nullable=True),
     Column("explanation_nl", Text, nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2288,8 +2296,8 @@ claude_ai_budget_usage = Table(
     Column("cost_eur", Numeric(12, 6), nullable=False),
     Column("call_kind", Text, nullable=False),
     Column("explanation_nl", Text, nullable=True),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2319,8 +2327,8 @@ action_draft_order_conditions = Table(
     Column("execution_sec_type", Text, nullable=True),
     Column("execution_exchange", Text, nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
@@ -2346,8 +2354,8 @@ asset_fundamentals_snapshots = Table(
     Column("provider_code", Text, nullable=False),
     Column("fetched_at", DateTime(timezone=True), nullable=False),
     Column("stored_at", DateTime(timezone=True), nullable=False),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
     UniqueConstraint(
         "eodhd_symbol",
         "fetched_at",
@@ -2409,9 +2417,9 @@ asset_decision_packages = Table(
     Column("explanation_nl", Text, nullable=False),
     Column("status", Text, nullable=False),
     Column("blocking_reason", Text, nullable=True),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_broker_submission", Boolean, nullable=False, server_default=sa_false()),
     Column("research_evidence_count", Integer, nullable=False, server_default="0"),
     Column("research_credibility_summary", Text, nullable=True),
     Column("research_freshness_status", Text, nullable=True),
@@ -2444,9 +2452,9 @@ asset_suggestions = Table(
     Column("blockers_json", JSON, nullable=True),
     Column("status", Text, nullable=False),
     Column("blocking_reason", Text, nullable=True),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_orders", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_broker_submission", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_orders", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_broker_submission", Boolean, nullable=False, server_default=sa_false()),
     # Suggestion-grid display fields (migration 0066). All nullable so
     # the grid degrades gracefully for rows persisted before this slice.
     Column("branch_reason_nl", Text, nullable=True),
@@ -2492,9 +2500,9 @@ asset_forecasts = Table(
     Column("explanation_nl", Text, nullable=False),
     Column("status", Text, nullable=False),
     Column("blocking_reason", Text, nullable=True),
-    Column("safe_for_analysis", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_suggestions", Boolean, nullable=False, server_default="0"),
-    Column("safe_for_action_drafts", Boolean, nullable=False, server_default="0"),
+    Column("safe_for_analysis", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_suggestions", Boolean, nullable=False, server_default=sa_false()),
+    Column("safe_for_action_drafts", Boolean, nullable=False, server_default=sa_false()),
 )
 
 
