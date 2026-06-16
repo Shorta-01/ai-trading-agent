@@ -55,6 +55,7 @@ const updateMarketEventsSettings = vi.fn();
 const getNotificationSettings = vi.fn();
 const updateNotificationSettings = vi.fn();
 const sendTestEmail = vi.fn();
+const getIbkrConfigAudit = vi.fn();
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -107,6 +108,7 @@ vi.mock("@/lib/apiClient", () => ({
     updateNotificationSettings: (...a: unknown[]) =>
       updateNotificationSettings(...a),
     sendTestEmail: (...a: unknown[]) => sendTestEmail(...a),
+    getIbkrConfigAudit: (...a: unknown[]) => getIbkrConfigAudit(...a),
   },
 }));
 
@@ -324,6 +326,20 @@ beforeEach(() => {
   getNotificationSettings.mockReset();
   updateNotificationSettings.mockReset();
   sendTestEmail.mockReset();
+  getIbkrConfigAudit.mockReset();
+  // V1.2 §BZ vervolg — default mock voor het last-reload event;
+  // tests die specifiek een reload-event willen tonen overschrijven dit.
+  getIbkrConfigAudit.mockReturnValue(
+    ok({
+      events: [],
+      available: true,
+      storage_configured: true,
+      events_loaded: true,
+      active_count: 0,
+      status_nl: "Beschikbaar",
+      message_nl: "0 events",
+    }),
+  );
   getRiskLimits.mockReturnValue(ok(RISK_LIMITS));
   getTradingSettings.mockReturnValue(ok(TRADING));
   getConnectionSettings.mockReturnValue(ok(CONNECTION));
@@ -1299,5 +1315,142 @@ describe("InstellingenPage", () => {
     expect(
       screen.getByTestId("instellingen-notifications-test-result"),
     ).toHaveTextContent("Stub-modus");
+  });
+
+  it("shows 'no reload event yet' strip when audit-trail is empty", async () => {
+    // V1.2 §BZ vervolg: zonder ``runtime_config_reloaded`` event
+    // toont de operator-pagina een neutraal strookje "wijzigingen
+    // worden bij eerstvolgende heartbeat opgepikt".
+    render(<Page />);
+    expect(
+      await screen.findByTestId(
+        "instellingen-connection-no-reload-strip",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(
+        "instellingen-connection-last-reload-strip",
+      ),
+    ).toBeNull();
+  });
+
+  it("shows last-reload strip with timestamp + message when event exists", async () => {
+    // V1.2 §BZ vervolg: met een ``runtime_config_reloaded`` event in
+    // het audit-trail toont de pagina visueel wanneer de worker het
+    // laatst zijn config heeft opgepikt — en welk account-id nu actief
+    // is via het message-veld.
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-old",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "worker",
+            source_component: "scheduler",
+            event_code: "ibkr_account_id_changed",
+            title_nl: "irrelevant",
+            message_nl: "ander event",
+            help_nl: "",
+            created_at: "2026-05-01T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+          {
+            system_event_id: "evt-reload-1",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "worker",
+            source_component: "scheduler",
+            event_code: "runtime_config_reloaded",
+            title_nl: "Worker config opnieuw geladen",
+            message_nl:
+              "De worker heeft het nieuwe IBKR account-id opgepikt: DU1111111 → DU2222222.",
+            help_nl: "",
+            created_at: "2026-06-15T14:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 2,
+        status_nl: "Beschikbaar",
+        message_nl: "2 events",
+      }),
+    );
+    render(<Page />);
+    const strip = await screen.findByTestId(
+      "instellingen-connection-last-reload-strip",
+    );
+    expect(strip).toBeInTheDocument();
+    // Het message bevat de account-id wissel.
+    expect(strip.textContent).toContain("DU1111111");
+    expect(strip.textContent).toContain("DU2222222");
+    // Het neutrale "no-reload" strookje is verdwenen.
+    expect(
+      screen.queryByTestId(
+        "instellingen-connection-no-reload-strip",
+      ),
+    ).toBeNull();
+  });
+
+  it("picks the NEWEST runtime_config_reloaded event when there are multiple", async () => {
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        events: [
+          {
+            system_event_id: "evt-older",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "worker",
+            source_component: "scheduler",
+            event_code: "runtime_config_reloaded",
+            title_nl: "ouder",
+            message_nl: "OUDE event message",
+            help_nl: "",
+            created_at: "2026-04-01T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "resolved",
+          },
+          {
+            system_event_id: "evt-newer",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "worker",
+            source_component: "scheduler",
+            event_code: "runtime_config_reloaded",
+            title_nl: "nieuwer",
+            message_nl: "NIEUWE event message",
+            help_nl: "",
+            created_at: "2026-06-15T14:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 2,
+        status_nl: "Beschikbaar",
+        message_nl: "2 events",
+      }),
+    );
+    render(<Page />);
+    const strip = await screen.findByTestId(
+      "instellingen-connection-last-reload-strip",
+    );
+    // De nieuwste event message wordt getoond, niet de oudere.
+    expect(strip.textContent).toContain("NIEUWE event message");
+    expect(strip.textContent).not.toContain("OUDE event message");
   });
 });

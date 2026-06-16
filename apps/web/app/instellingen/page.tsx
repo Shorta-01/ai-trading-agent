@@ -1236,6 +1236,29 @@ export default function Page() {
     },
     ...FORM_QUERY_OPTIONS,
   });
+
+  // V1.2 §BZ vervolg — toon de operator op /instellingen visueel
+  // wanneer de worker zijn config heeft opgepikt. Bij elke geslaagde
+  // reload schrijft de scheduler een ``runtime_config_reloaded``
+  // SystemEvent (zie #678). We polled die elke 30 seconden zodat de
+  // operator binnen één heartbeat-window feedback krijgt.
+  const lastReloadEventQuery = useQuery({
+    queryKey: ["instellingen-last-worker-reload"],
+    queryFn: async () => {
+      const result = await apiClient.getIbkrConfigAudit();
+      if (!result.ok) return null;
+      const events = result.data.events ?? [];
+      const reloaded = events
+        .filter((e) => e.event_code === "runtime_config_reloaded")
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+      return reloaded[0] ?? null;
+    },
+    refetchInterval: 30_000,
+  });
+  const lastReloadEvent = lastReloadEventQuery.data ?? null;
   useEffect(() => {
     if (connectionQuery.data) applyConnection(connectionQuery.data);
   }, [connectionQuery.data]);
@@ -4314,9 +4337,55 @@ export default function Page() {
             </label>
 
             <p style={{ ...HELP_STYLE, marginTop: 12 }}>
-              Wijzigingen aan de IBKR-verbinding worden actief na herstart van
-              de worker.
+              Wijzigingen aan de IBKR-verbinding worden binnen één
+              heartbeat-cyclus (standaard 60 seconden) door de worker
+              opgepikt. Voor een directe wissel ondersteunt de worker ook
+              ``docker exec worker kill -SIGHUP 1``.
             </p>
+
+            {/* V1.2 §BZ vervolg — "worker laatst herladen" status-strip
+                zodat operator visueel ziet dat het auto-poll pad werkt.
+                Verschijnt zodra er ooit een ``runtime_config_reloaded``
+                SystemEvent is geschreven (zie #678). */}
+            {lastReloadEvent ? (
+              <div
+                data-testid="instellingen-connection-last-reload-strip"
+                style={{
+                  marginTop: 10,
+                  padding: "6px 10px",
+                  background: "#ecfdf5",
+                  border: "1px solid #6ee7b7",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  color: "#065f46",
+                }}
+              >
+                <strong>✓ Worker laatst herladen:</strong>{" "}
+                {new Date(lastReloadEvent.created_at).toLocaleString("nl-BE", {
+                  dateStyle: "short",
+                  timeStyle: "medium",
+                  timeZone: "Europe/Brussels",
+                })}{" "}
+                — {lastReloadEvent.message_nl}
+              </div>
+            ) : (
+              <div
+                data-testid="instellingen-connection-no-reload-strip"
+                style={{
+                  marginTop: 10,
+                  padding: "6px 10px",
+                  background: "#f3f4f6",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  color: "#4b5563",
+                  fontStyle: "italic",
+                }}
+              >
+                Nog geen worker-herlaadgebeurtenis gevonden. Wijzigingen
+                worden bij de eerstvolgende heartbeat opgepikt.
+              </div>
+            )}
 
             <SaveBar
               testId="instellingen-connection"
