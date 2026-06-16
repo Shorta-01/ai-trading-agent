@@ -1,6 +1,6 @@
 # CLAUDE.md — AI Trading Agent Operator Doctrine
 
-**Version**: V1.2 §BZ — vastgelegd Mon 2026-06-15 in een design-discussie met de operator (paper_only_mode flag geschrapt als doctrine-lock; mode-detectie loopt nu uitsluitend via de IBKR account-prefix). Initial V1.2 §AO vastgelegd Sat 2026-06-13.
+**Version**: V1.2 §BZ.1 — vastgelegd Tue 2026-06-16 (§BZ audit-trail infrastructuur expliciet vastgelegd als doctrine-lock; concrete implementatie geshipped in PRs #662-#686). Initial §BZ vastgelegd Mon 2026-06-15 (paper_only_mode flag geschrapt als doctrine-lock; mode-detectie loopt nu uitsluitend via de IBKR account-prefix). Initial V1.2 §AO vastgelegd Sat 2026-06-13.
 
 **Doel van dit document**: Bij elke nieuwe Claude Code sessie kan deze file als naslagwerk worden ingelezen zodat de doctrine niet opnieuw moet worden uitgelegd. De doctrine bepaalt **wat de software moet doen**; de bestaande `docs/intent/_trading-system-doctrine.md` blijft de technische uitwerking.
 
@@ -267,6 +267,15 @@ Bestaande pagina krijgt extra secties voor de doctrine:
 
 Alle bestaande doctrine-locks blijven:
 - **Mode-detectie via IBKR-account, NIET via software-flag** — een paper-account (`DU*`/`DF*`) bepaalt dat orders naar paper-IBKR gaan, een live-account (`U*`) dat ze naar live-IBKR gaan. **De software werkt fully en correctly in beide modi.** Er is geen `paper_only_mode` flag meer die functionaliteit blokkeert. Het §2 fundamentele principe (operator moet ALTIJD klikken; software plaatst NOOIT zelfstandig een order) is de veiligheidsgarantie tegen ongewenste live trades — niet een software-side mode-lock.
+- **§BZ audit-trail infrastructuur** — vastgelegd in PRs #662-#686. Mode-detectie loopt via één canonieke helper (`detect_account_mode_from_id` voor API, `_mode_from_account_id` voor worker) op basis van de account-id prefix. Elke mode-relevante event (mismatch, account-id wijziging, live-account open, runtime_config reload, reload-failed) wordt als `SystemEvent` gelogd in `system_events` met category `ibkr_config_mismatch` of `ibkr_config_change`. Operator-zichtbaarheid via:
+  - PAPER/LIVE pill bovenaan dashboard (klikbaar → `/admin/audit/ibkr-config`)
+  - Hint↔actual mismatch banner op /portefeuille (met dismiss-met-reden)
+  - Live-confirmation modal op bulk-submit knop
+  - Paper↔live save-confirmation modal op /instellingen
+  - "Worker laatst herladen" status-strip op /instellingen
+  - `/admin/audit/ibkr-config` dedicated audit-page (filters + CSV export + timeline)
+  - IBKR-config audit sectie in `/belasting` jaaroverzicht (PDF + CSV)
+  - Worker auto-pickup van runtime_config wijzigingen (SIGHUP + DB-poll heartbeat)
 - **`safe_for_*` flags** blijven op False voor decision-makers (orchestrator, suggestion, action-draft, etc.)
 - **AI verboden als forecaster** — Claude/LLM mag alleen NL uitleggen, nooit getallen origineren
 - **Belgian TOB-aware** — 0,35% × 2 = 0,70% round-trip blijft in alle berekeningen
