@@ -48,6 +48,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # §CB.3 audit-correctie 2026-06-16: pip-cache scheelt
+          # ~2 min per job (5 jobs × 2 min = 10 min per CI-run).
+          cache: 'pip'
       - run: pip install -e .[dev]
       - run: ruff check .
       - run: mypy src
@@ -87,6 +90,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # §CB.3 audit-correctie 2026-06-16: pip-cache scheelt
+          # ~2 min per job (5 jobs × 2 min = 10 min per CI-run).
+          cache: 'pip'
       - run: cd packages/domain && pip install -e .
       - run: cd packages/portfolio && pip install -e .[dev]
       - run: cd packages/portfolio && ruff check .
@@ -131,6 +137,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # §CB.3 audit-correctie 2026-06-16: pip-cache scheelt
+          # ~2 min per job (5 jobs × 2 min = 10 min per CI-run).
+          cache: 'pip'
       - run: pip install -e .[dev]
       - run: ruff check .
       - run: mypy src
@@ -174,6 +183,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # §CB.3 audit-correctie 2026-06-16: pip-cache scheelt
+          # ~2 min per job (5 jobs × 2 min = 10 min per CI-run).
+          cache: 'pip'
       - run: cd ../../packages/domain && pip install -e .
       - run: cd ../../packages/storage && pip install -e .
       - run: cd ../../packages/portfolio && pip install -e .
@@ -234,6 +246,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # §CB.3 audit-correctie 2026-06-16: pip-cache scheelt
+          # ~2 min per job (5 jobs × 2 min = 10 min per CI-run).
+          cache: 'pip'
       - run: cd ../../packages/domain && pip install -e .
       - run: cd ../../packages/storage && pip install -e .
       - run: cd ../../packages/portfolio && pip install -e .
@@ -280,6 +295,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          # §CB.3 audit-correctie 2026-06-16: npm-cache scheelt
+          # ~1 min op de web job (en is doctrine-correct: lock-file
+          # leeft in apps/web).
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
       - run: npm install --legacy-peer-deps
       - run: npm run lint
       - run: npm run build

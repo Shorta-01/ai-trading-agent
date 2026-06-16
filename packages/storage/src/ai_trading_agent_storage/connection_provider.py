@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -32,9 +33,64 @@ class CheckedStorageConnection:
     readiness: MigrationReadinessReport
 
 
+# §CB.3 audit-correctie 2026-06-16 — engine-pool per URL.
+#
+# Vóór: `create_engine()` werd per request aangeroepen en daarna
+# direct `dispose()`'d. Dat klinkt netjes maar betekent: per HTTP-call
+# een fris pool-object, een nieuwe TCP-handshake, een nieuwe
+# auth-uitwisseling met Postgres. Onder load (100+ daily refreshes
+# op het dashboard) levert dat onnodige connection-churn op en kan
+# Postgres' `max_connections` raken.
+#
+# Na: één engine per database-url, gecached in een module-level dict
+# met thread-safe access. SQLAlchemy's `QueuePool` (default) doet
+# zelf connection-pooling. We disposen niet meer per call; de engine
+# blijft leven voor de levensduur van het proces. Bij SQLite (tests
+# + lokale dev) heeft pool_size geen praktisch effect maar de cache
+# voorkomt het `create_engine` overhead.
+_DEFAULT_POOL_SIZE: int = 10
+_DEFAULT_MAX_OVERFLOW: int = 20
+_DEFAULT_POOL_RECYCLE_S: int = 3600  # Postgres idle-disconnect protection
+_DEFAULT_POOL_PRE_PING: bool = True  # detect dead connections lazily
+
+_engine_cache: dict[str, Engine] = {}
+_engine_cache_lock = threading.Lock()
+
+
+def _get_or_create_engine(database_url: str) -> Engine:
+    with _engine_cache_lock:
+        engine = _engine_cache.get(database_url)
+        if engine is not None:
+            return engine
+        # SQLite ondersteunt geen QueuePool-tuning op dezelfde manier;
+        # we passen alleen de pre-ping toe.
+        if database_url.startswith("sqlite"):
+            engine = create_engine(database_url, pool_pre_ping=_DEFAULT_POOL_PRE_PING)
+        else:
+            engine = create_engine(
+                database_url,
+                pool_size=_DEFAULT_POOL_SIZE,
+                max_overflow=_DEFAULT_MAX_OVERFLOW,
+                pool_recycle=_DEFAULT_POOL_RECYCLE_S,
+                pool_pre_ping=_DEFAULT_POOL_PRE_PING,
+            )
+        _engine_cache[database_url] = engine
+        return engine
+
+
+def _dispose_cached_engines() -> None:
+    """Test hook: dispose alle gecachte engines (voor pytest fixtures
+    die wisselen tussen in-memory SQLite-instanties)."""
+
+    with _engine_cache_lock:
+        for engine in _engine_cache.values():
+            engine.dispose()
+        _engine_cache.clear()
+
+
 @dataclass(frozen=True)
 class StorageConnectionProvider:
-    """Create engines/connections on-demand and close them reliably."""
+    """Open connections against a cached, pooled engine per database url."""
 
     settings: DatabaseConnectionSettings
 
@@ -46,10 +102,9 @@ class StorageConnectionProvider:
                 "Database-url ontbreekt; expliciete runtimeverbinding kan niet worden geopend."
             )
 
-        engine: Engine | None = None
+        engine = _get_or_create_engine(database_url)
         connection: Connection | None = None
         try:
-            engine = create_engine(database_url)
             connection = engine.connect()
             readiness = check_online_migration_readiness(connection)
 
@@ -67,5 +122,3 @@ class StorageConnectionProvider:
         finally:
             if connection is not None:
                 connection.close()
-            if engine is not None:
-                engine.dispose()

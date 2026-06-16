@@ -4,6 +4,10 @@
 
 FROM python:3.12-slim
 
+# §CB.3 audit-correctie 2026-06-16: non-root runtime user.
+RUN groupadd --system --gid 1000 appgroup \
+    && useradd --system --uid 1000 --gid appgroup --create-home appuser
+
 WORKDIR /app
 
 COPY packages/domain ./packages/domain
@@ -17,5 +21,8 @@ RUN pip install --no-cache-dir \
 COPY apps/worker/pyproject.toml ./apps/worker/pyproject.toml
 COPY apps/worker/src ./apps/worker/src
 RUN pip install --no-cache-dir ./apps/worker
+
+RUN chown -R appuser:appgroup /app
+USER appuser
 
 CMD ["python", "-m", "portfolio_outlook_worker.main"]

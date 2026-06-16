@@ -642,8 +642,14 @@ class PortfolioSettings(DomainBaseModel):
 
     @model_validator(mode="after")
     def validate_paper_mode_and_percentages(self) -> "PortfolioSettings":
-        if self.paper_live_mode is not PaperLiveMode.PAPER:
-            raise ValueError("Version 1 is paper-only. paper_live_mode must be 'paper'.")
+        # §CB.3 audit-correctie 2026-06-16: stale "V1 is paper-only"
+        # validator dateert van pre-§BZ tijdperk. Per CLAUDE.md §15
+        # (V1.2 §BZ) bepaalt de IBKR account-id prefix de mode, niet
+        # een setting; per §CA zijn alle paper_only_required gates
+        # uit de submission flow gehaald. Deze validator blokkeerde
+        # nog steeds een live-keuze in de PortfolioSettings model
+        # — nu uitgeschakeld zodat de operator de mode in de UI op
+        # "live" kan zetten zonder PortfolioSettings te raken.
 
         first_run_total = (
             self.first_run_minimum_cash_reserve.value + self.first_run_maximum_invested.value
