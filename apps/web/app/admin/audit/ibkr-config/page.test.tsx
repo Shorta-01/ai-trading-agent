@@ -301,4 +301,107 @@ describe("IBKR-config audit-trail page", () => {
       screen.getByTestId("admin-ibkr-config-audit-filter-empty"),
     ).toBeInTheDocument();
   });
+
+  it("Export CSV button is disabled when no events match the filter", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 1,
+        status_nl: "Beschikbaar",
+        message_nl: "1 event",
+        events: [
+          {
+            system_event_id: "evt-1",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "M",
+            message_nl: "msg",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+    // 1 event match → button enabled met "(1)" label.
+    const button = screen.getByTestId(
+      "admin-ibkr-config-audit-export-csv",
+    );
+    expect(button).not.toBeDisabled();
+    expect(button.textContent).toContain("(1)");
+    // Filter naar 0 events → button disabled met "(0)" label.
+    await userEvent.selectOptions(
+      screen.getByTestId("admin-ibkr-config-audit-filter-status"),
+      "archived",
+    );
+    expect(button).toBeDisabled();
+    expect(button.textContent).toContain("(0)");
+  });
+});
+
+describe("buildAuditCsv", () => {
+  it("builds a CSV with the required headers and one row per event", async () => {
+    const { buildAuditCsv } = await import("./page");
+    const csv = buildAuditCsv([
+      {
+        system_event_id: "evt-1",
+        severity: "warning",
+        category: "ibkr_config_mismatch",
+        source_service: "api",
+        source_component: "ibkr_sync",
+        event_code: "account_id_mismatch",
+        title_nl: "Mismatch",
+        message_nl: "DU1234567 vs U7654321",
+        help_nl: "",
+        created_at: "2026-03-12T10:00:00+00:00",
+        blocks_suggestions: false,
+        blocks_writes: false,
+        blocks_ai_explanation: false,
+        status: "resolved",
+      },
+    ]);
+    const lines = csv.split("\n");
+    expect(lines[0]).toContain("created_at_utc");
+    expect(lines[0]).toContain("event_code");
+    expect(lines[0]).toContain("message_nl");
+    expect(lines[1]).toContain("account_id_mismatch");
+    expect(lines[1]).toContain("warning");
+    expect(lines[1]).toContain("resolved");
+    expect(lines[1]).toContain("DU1234567 vs U7654321");
+  });
+
+  it("CSV-escapes embedded double quotes via the standard \"\"-doubling", async () => {
+    const { buildAuditCsv } = await import("./page");
+    const csv = buildAuditCsv([
+      {
+        system_event_id: "evt-1",
+        severity: "info",
+        category: "ibkr_config_change",
+        source_service: "api",
+        source_component: "runtime_config_routes",
+        event_code: "ibkr_account_id_changed",
+        title_nl: 'titel met "quotes"',
+        message_nl: "details",
+        help_nl: "",
+        created_at: "2026-05-01T09:00:00+00:00",
+        blocks_suggestions: false,
+        blocks_writes: false,
+        blocks_ai_explanation: false,
+        status: "open",
+      },
+    ]);
+    // Embedded quotes worden verdubbeld zoals RFC 4180 vereist.
+    expect(csv).toContain('titel met ""quotes""');
+  });
 });

@@ -73,6 +73,62 @@ function formatLocalDate(iso: string): string {
   });
 }
 
+// V1.2 §BZ vervolg — CSV export helper voor de accountant. Pure
+// client-side download zodat er geen extra round-trip nodig is en
+// de gefilterde set (zie #681 filters) direct in Excel kan worden
+// geopend.
+export function buildAuditCsv(events: SystemEventSummary[]): string {
+  const rows: string[][] = [
+    [
+      "created_at_utc",
+      "event_code",
+      "severity",
+      "status",
+      "category",
+      "source_service",
+      "source_component",
+      "title_nl",
+      "message_nl",
+    ],
+  ];
+  for (const e of events) {
+    rows.push([
+      e.created_at,
+      e.event_code,
+      e.severity,
+      e.status,
+      e.category,
+      e.source_service,
+      e.source_component,
+      e.title_nl,
+      e.message_nl,
+    ]);
+  }
+  return rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          if (cell == null) return "";
+          const escaped = String(cell).replace(/"/g, '""');
+          return `"${escaped}"`;
+        })
+        .join(","),
+    )
+    .join("\n");
+}
+
+function triggerCsvDownload(filename: string, csv: string): void {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export default function IbkrConfigAuditPage() {
   const query = useQuery({
     queryKey: ["admin-ibkr-config-audit"],
@@ -276,6 +332,37 @@ export default function IbkrConfigAuditPage() {
                   Reset
                 </button>
               ) : null}
+              <button
+                type="button"
+                data-testid="admin-ibkr-config-audit-export-csv"
+                onClick={() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  triggerCsvDownload(
+                    `ibkr-config-audit-${today}.csv`,
+                    buildAuditCsv(filteredEvents),
+                  );
+                }}
+                disabled={filteredEvents.length === 0}
+                title={
+                  filteredEvents.length === 0
+                    ? "Geen events om te exporteren"
+                    : `Download ${filteredEvents.length} regels als CSV`
+                }
+                style={{
+                  padding: "5px 10px",
+                  background:
+                    filteredEvents.length === 0 ? "#e5e7eb" : "#1d4ed8",
+                  color: filteredEvents.length === 0 ? "#9ca3af" : "white",
+                  border: "1px solid #1d4ed8",
+                  borderRadius: 4,
+                  cursor:
+                    filteredEvents.length === 0 ? "not-allowed" : "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Export CSV ({filteredEvents.length})
+              </button>
             </div>
           ) : null}
 
