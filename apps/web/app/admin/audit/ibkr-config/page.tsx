@@ -10,6 +10,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 
 import { apiClient, type SystemEventSummary } from "@/lib/apiClient";
 
@@ -82,6 +83,58 @@ export default function IbkrConfigAuditPage() {
   });
   const data = query.data;
 
+  // V1.2 §BZ vervolg — client-side filters voor accountant /
+  // operator. Filtering gebeurt client-side: het audit-log is een
+  // bounded subset (max 500 events per #675's repo-limit) en
+  // server-side filters zouden extra round-trips kosten zonder
+  // meetbare winst.
+  const [filterEventCode, setFilterEventCode] = useState<string>("__all__");
+  const [filterStatus, setFilterStatus] = useState<string>("__all__");
+  const [filterFromDate, setFilterFromDate] = useState<string>("");
+  const [filterToDate, setFilterToDate] = useState<string>("");
+
+  const events = useMemo(() => data?.events ?? [], [data?.events]);
+
+  const eventCodes = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of events) set.add(e.event_code);
+    return Array.from(set).sort();
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      if (filterEventCode !== "__all__" && e.event_code !== filterEventCode) {
+        return false;
+      }
+      if (filterStatus !== "__all__" && e.status !== filterStatus) {
+        return false;
+      }
+      if (filterFromDate) {
+        const from = new Date(filterFromDate).getTime();
+        if (new Date(e.created_at).getTime() < from) return false;
+      }
+      if (filterToDate) {
+        // Tot-datum inclusief: einde-van-dag (23:59:59).
+        const to = new Date(`${filterToDate}T23:59:59`).getTime();
+        if (new Date(e.created_at).getTime() > to) return false;
+      }
+      return true;
+    });
+  }, [events, filterEventCode, filterStatus, filterFromDate, filterToDate]);
+
+  const anyFilterActive =
+    filterEventCode !== "__all__"
+    || filterStatus !== "__all__"
+    || filterFromDate !== ""
+    || filterToDate !== "";
+
+  function resetFilters() {
+    setFilterEventCode("__all__");
+    setFilterStatus("__all__");
+    setFilterFromDate("");
+    setFilterToDate("");
+  }
+
   return (
     <main
       data-testid="admin-ibkr-config-audit-page"
@@ -112,7 +165,119 @@ export default function IbkrConfigAuditPage() {
             style={{ fontSize: 13, color: "#374151" }}
           >
             {data.active_count} events gevonden — {data.message_nl}
+            {anyFilterActive ? (
+              <span data-testid="admin-ibkr-config-audit-filter-count">
+                {" "}
+                ({filteredEvents.length} na filter)
+              </span>
+            ) : null}
           </p>
+
+          {data.events.length > 0 ? (
+            <div
+              data-testid="admin-ibkr-config-audit-filter-bar"
+              style={{
+                display: "flex",
+                gap: 12,
+                marginTop: 8,
+                marginBottom: 12,
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+              }}
+            >
+              <label style={{ fontSize: 12 }}>
+                <div style={{ color: "#6b7280", marginBottom: 2 }}>
+                  Event-code
+                </div>
+                <select
+                  data-testid="admin-ibkr-config-audit-filter-event-code"
+                  value={filterEventCode}
+                  onChange={(e) => setFilterEventCode(e.target.value)}
+                  style={{
+                    padding: "4px 6px",
+                    borderRadius: 4,
+                    border: "1px solid #d1d5db",
+                  }}
+                >
+                  <option value="__all__">Alle codes</option>
+                  {eventCodes.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ fontSize: 12 }}>
+                <div style={{ color: "#6b7280", marginBottom: 2 }}>
+                  Status
+                </div>
+                <select
+                  data-testid="admin-ibkr-config-audit-filter-status"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  style={{
+                    padding: "4px 6px",
+                    borderRadius: 4,
+                    border: "1px solid #d1d5db",
+                  }}
+                >
+                  <option value="__all__">Alle statussen</option>
+                  <option value="open">open</option>
+                  <option value="resolved">resolved</option>
+                  <option value="archived">archived</option>
+                </select>
+              </label>
+              <label style={{ fontSize: 12 }}>
+                <div style={{ color: "#6b7280", marginBottom: 2 }}>
+                  Vanaf
+                </div>
+                <input
+                  type="date"
+                  data-testid="admin-ibkr-config-audit-filter-from"
+                  value={filterFromDate}
+                  onChange={(e) => setFilterFromDate(e.target.value)}
+                  style={{
+                    padding: "4px 6px",
+                    borderRadius: 4,
+                    border: "1px solid #d1d5db",
+                  }}
+                />
+              </label>
+              <label style={{ fontSize: 12 }}>
+                <div style={{ color: "#6b7280", marginBottom: 2 }}>
+                  Tot
+                </div>
+                <input
+                  type="date"
+                  data-testid="admin-ibkr-config-audit-filter-to"
+                  value={filterToDate}
+                  onChange={(e) => setFilterToDate(e.target.value)}
+                  style={{
+                    padding: "4px 6px",
+                    borderRadius: 4,
+                    border: "1px solid #d1d5db",
+                  }}
+                />
+              </label>
+              {anyFilterActive ? (
+                <button
+                  type="button"
+                  data-testid="admin-ibkr-config-audit-filter-reset"
+                  onClick={resetFilters}
+                  style={{
+                    padding: "5px 10px",
+                    background: "#e5e7eb",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  Reset
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           {data.events.length === 0 ? (
             <p
@@ -126,6 +291,18 @@ export default function IbkrConfigAuditPage() {
               Geen events in het audit-trail. Dit betekent dat er
               sinds deployment geen mode-switches, mismatches of
               account-id wijzigingen zijn geweest.
+            </p>
+          ) : filteredEvents.length === 0 ? (
+            <p
+              data-testid="admin-ibkr-config-audit-filter-empty"
+              style={{
+                marginTop: 16,
+                color: "#6b7280",
+                fontStyle: "italic",
+              }}
+            >
+              Geen events match de huidige filters. Pas ze aan of
+              klik Reset.
             </p>
           ) : (
             <table
@@ -148,7 +325,7 @@ export default function IbkrConfigAuditPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.events.map((event: SystemEventSummary) => (
+                {filteredEvents.map((event: SystemEventSummary) => (
                   <tr
                     key={event.system_event_id}
                     data-testid={`audit-event-row-${event.system_event_id}`}

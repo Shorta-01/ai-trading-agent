@@ -123,4 +123,182 @@ describe("IBKR-config audit-trail page", () => {
       await screen.findByTestId("admin-ibkr-config-audit-error"),
     ).toBeInTheDocument();
   });
+
+  it("filters by event_code via the dropdown", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 2,
+        status_nl: "Beschikbaar",
+        message_nl: "2 events",
+        events: [
+          {
+            system_event_id: "evt-mismatch",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "Mismatch",
+            message_nl: "msg-1",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "resolved",
+          },
+          {
+            system_event_id: "evt-changed",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "api",
+            source_component: "runtime_config_routes",
+            event_code: "ibkr_account_id_changed",
+            title_nl: "Wijziging",
+            message_nl: "msg-2",
+            help_nl: "",
+            created_at: "2026-05-01T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+
+    // Beide rijen zichtbaar zonder filter.
+    expect(
+      screen.getByTestId("audit-event-row-evt-mismatch"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("audit-event-row-evt-changed"),
+    ).toBeInTheDocument();
+
+    // Filter op event_code = account_id_mismatch.
+    await userEvent.selectOptions(
+      screen.getByTestId("admin-ibkr-config-audit-filter-event-code"),
+      "account_id_mismatch",
+    );
+    expect(
+      screen.getByTestId("audit-event-row-evt-mismatch"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("audit-event-row-evt-changed"),
+    ).toBeNull();
+    // Filter-count strookje rapporteert het verschil.
+    expect(
+      screen.getByTestId("admin-ibkr-config-audit-filter-count").textContent,
+    ).toContain("1 na filter");
+  });
+
+  it("filters by status and resets via the Reset button", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 2,
+        status_nl: "Beschikbaar",
+        message_nl: "2 events",
+        events: [
+          {
+            system_event_id: "evt-1",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "M",
+            message_nl: "1",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+          {
+            system_event_id: "evt-2",
+            severity: "info",
+            category: "ibkr_config_change",
+            source_service: "api",
+            source_component: "runtime_config_routes",
+            event_code: "ibkr_account_id_changed",
+            title_nl: "C",
+            message_nl: "2",
+            help_nl: "",
+            created_at: "2026-05-01T09:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "resolved",
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+    await userEvent.selectOptions(
+      screen.getByTestId("admin-ibkr-config-audit-filter-status"),
+      "open",
+    );
+    expect(screen.getByTestId("audit-event-row-evt-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("audit-event-row-evt-2")).toBeNull();
+
+    // Reset button verschijnt en herstelt.
+    await userEvent.click(
+      screen.getByTestId("admin-ibkr-config-audit-filter-reset"),
+    );
+    expect(screen.getByTestId("audit-event-row-evt-1")).toBeInTheDocument();
+    expect(screen.getByTestId("audit-event-row-evt-2")).toBeInTheDocument();
+  });
+
+  it("renders the no-match message when filters exclude every row", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    getIbkrConfigAudit.mockReturnValue(
+      ok({
+        available: true,
+        storage_configured: true,
+        events_loaded: true,
+        active_count: 1,
+        status_nl: "Beschikbaar",
+        message_nl: "1 event",
+        events: [
+          {
+            system_event_id: "evt-1",
+            severity: "warning",
+            category: "ibkr_config_mismatch",
+            source_service: "api",
+            source_component: "ibkr_sync",
+            event_code: "account_id_mismatch",
+            title_nl: "M",
+            message_nl: "msg",
+            help_nl: "",
+            created_at: "2026-03-12T10:00:00+00:00",
+            blocks_suggestions: false,
+            blocks_writes: false,
+            blocks_ai_explanation: false,
+            status: "open",
+          },
+        ],
+      }),
+    );
+    render(<Page />);
+    await screen.findByTestId("admin-ibkr-config-audit-table");
+    await userEvent.selectOptions(
+      screen.getByTestId("admin-ibkr-config-audit-filter-status"),
+      "archived",
+    );
+    expect(
+      screen.getByTestId("admin-ibkr-config-audit-filter-empty"),
+    ).toBeInTheDocument();
+  });
 });
