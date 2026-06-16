@@ -81,14 +81,70 @@ def test_terminal_states_have_empty_outgoing_edges() -> None:
 
 
 def test_live_at_broker_states_cover_the_expected_window() -> None:
+    # §CB.2 audit-cleanup 2026-06-16: PENDING_CANCELLATION is óók
+    # "live at broker" — de cancel-sweep wacht op IBKR's antwoord.
     assert LIVE_AT_BROKER_STATES == frozenset(
         {
             ActionDraftState.SUBMITTED,
             ActionDraftState.AWAITING_IBKR_REPLY,
             ActionDraftState.REPLY_CONFIRMED,
             ActionDraftState.WORKING,
+            ActionDraftState.PENDING_CANCELLATION,
         }
     )
+
+
+def test_pending_cancellation_can_be_reached_from_all_in_flight_states() -> None:
+    """§CB.2 audit-cleanup 2026-06-16: de cancel-flow stuurt elke
+    in-flight state naar PENDING_CANCELLATION. Bevestig dat de state
+    machine dit toelaat vanuit alle 4 in-flight states."""
+
+    for from_state in (
+        ActionDraftState.SUBMITTED,
+        ActionDraftState.AWAITING_IBKR_REPLY,
+        ActionDraftState.REPLY_CONFIRMED,
+        ActionDraftState.WORKING,
+    ):
+        require_transition_allowed(
+            from_state=from_state,
+            to_state=ActionDraftState.PENDING_CANCELLATION,
+        )
+
+
+def test_pending_cancellation_resolves_to_terminal_states() -> None:
+    """De cancel kan worden geraced door een fill — daarom mag
+    PENDING_CANCELLATION zowel naar CANCELLED, FILLED, REJECTED als
+    FAILED gaan."""
+
+    for to_state in (
+        ActionDraftState.CANCELLED,
+        ActionDraftState.FILLED,
+        ActionDraftState.REJECTED,
+        ActionDraftState.FAILED,
+    ):
+        require_transition_allowed(
+            from_state=ActionDraftState.PENDING_CANCELLATION,
+            to_state=to_state,
+        )
+
+
+def test_requires_manual_review_can_be_reached_from_awaiting_reply() -> None:
+    """§CB.2: Pass C 24h timeout-escalation transitioneert naar
+    REQUIRES_MANUAL_REVIEW vanuit AWAITING_IBKR_REPLY."""
+
+    require_transition_allowed(
+        from_state=ActionDraftState.AWAITING_IBKR_REPLY,
+        to_state=ActionDraftState.REQUIRES_MANUAL_REVIEW,
+    )
+
+
+def test_requires_manual_review_is_terminal() -> None:
+    """REQUIRES_MANUAL_REVIEW is een terminal-state in V1.2; de
+    operator heeft (nog) geen UI-route om hem manueel naar een
+    terminal-state te schrijven."""
+
+    assert ActionDraftState.REQUIRES_MANUAL_REVIEW in TERMINAL_STATES
+    assert ALLOWED_TRANSITIONS[ActionDraftState.REQUIRES_MANUAL_REVIEW] == frozenset()
 
 
 def test_coerce_state_round_trips_known_values() -> None:

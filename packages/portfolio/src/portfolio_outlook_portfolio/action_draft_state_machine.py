@@ -14,18 +14,32 @@ release-1 blueprint §11:
       ↳ REPLY_CONFIRMED   (after openOrder confirms the order live)
       ↳ WORKING           (alias for REPLY_CONFIRMED used by downstream
                           views; same semantics — IBKR has accepted)
+      ↳ PENDING_CANCELLATION (operator clicked cancel on an in-flight
+                              order; cancel-sweep will pick this up
+                              and send the cancel to IBKR)
       ↳ FILLED / CANCELLED / REJECTED   (terminal at the IBKR side; await
                                           reconciliation)
       ↳ RECONCILED        (terminal local; sync confirmed terminal IBKR
                            state)
 
-Plus two safety-side terminals: ``EXPIRED`` (when the dry-run validity
-window closes before submission) and ``FAILED`` (when the orchestrator
-itself errors before the order was placed).
+Plus drie safety-side terminals/escalations:
+* ``EXPIRED`` — dry-run validity-window verlopen vóór submission
+* ``FAILED`` — orchestrator-fout vóór de order is geplaatst
+* ``REQUIRES_MANUAL_REVIEW`` — reconciliation Pass C 24h-timeout
+  escalation; de operator moet manueel uitzoeken of de order live
+  is bij IBKR (geen automatische actie meer)
 
 Every transition is one-way except DRAFT⇆SAFETY_CHECKED⇆USER_APPROVED: an
 edit can downgrade an approved draft back to DRAFT so a fresh dry-run
 must re-pass before the next approval.
+
+Audit-correctie §CB.2 (2026-06-16): ``PENDING_CANCELLATION`` en
+``REQUIRES_MANUAL_REVIEW`` waren in V1.0 niet in deze map opgenomen;
+``action_draft.py``'s cancel-route en ``pass_c_timeout_recovery.py``'s
+escalation schreven hun status rechtstreeks naar het storage-layer
+zonder ``require_transition_allowed`` te raadplegen. Nu opgenomen
+zodat de transitie-validatie ÉCHT de waarheid van de state-machine
+weerspiegelt.
 """
 
 from __future__ import annotations
@@ -42,12 +56,14 @@ class ActionDraftState(StrEnum):
     AWAITING_IBKR_REPLY = "awaiting_ibkr_reply"
     REPLY_CONFIRMED = "reply_confirmed"
     WORKING = "working"
+    PENDING_CANCELLATION = "pending_cancellation"
     FILLED = "filled"
     CANCELLED = "cancelled"
     REJECTED = "rejected"
     RECONCILED = "reconciled"
     EXPIRED = "expired"
     FAILED = "failed"
+    REQUIRES_MANUAL_REVIEW = "requires_manual_review"
 
 
 # Allowed transitions. Anything not in this map is **forbidden**.
@@ -78,6 +94,7 @@ ALLOWED_TRANSITIONS: Final[dict[ActionDraftState, frozenset[ActionDraftState]]] 
     ActionDraftState.SUBMITTED: frozenset(
         {
             ActionDraftState.AWAITING_IBKR_REPLY,
+            ActionDraftState.PENDING_CANCELLATION,
             ActionDraftState.REJECTED,
             ActionDraftState.FAILED,
         }
@@ -86,14 +103,17 @@ ALLOWED_TRANSITIONS: Final[dict[ActionDraftState, frozenset[ActionDraftState]]] 
         {
             ActionDraftState.REPLY_CONFIRMED,
             ActionDraftState.WORKING,
+            ActionDraftState.PENDING_CANCELLATION,
             ActionDraftState.REJECTED,
             ActionDraftState.CANCELLED,
             ActionDraftState.FAILED,
+            ActionDraftState.REQUIRES_MANUAL_REVIEW,
         }
     ),
     ActionDraftState.REPLY_CONFIRMED: frozenset(
         {
             ActionDraftState.WORKING,
+            ActionDraftState.PENDING_CANCELLATION,
             ActionDraftState.FILLED,
             ActionDraftState.CANCELLED,
             ActionDraftState.REJECTED,
@@ -102,8 +122,20 @@ ALLOWED_TRANSITIONS: Final[dict[ActionDraftState, frozenset[ActionDraftState]]] 
     ),
     ActionDraftState.WORKING: frozenset(
         {
+            ActionDraftState.PENDING_CANCELLATION,
             ActionDraftState.FILLED,
             ActionDraftState.CANCELLED,
+            ActionDraftState.REJECTED,
+            ActionDraftState.FAILED,
+        }
+    ),
+    # PENDING_CANCELLATION — cancel-sweep stuurt cancel; outcome
+    # bepaalt of de order alsnog gefilld werd (race tussen cancel en
+    # fill) of netjes geannuleerd. Beide terminal-paden mogelijk.
+    ActionDraftState.PENDING_CANCELLATION: frozenset(
+        {
+            ActionDraftState.CANCELLED,
+            ActionDraftState.FILLED,
             ActionDraftState.REJECTED,
             ActionDraftState.FAILED,
         }
@@ -114,6 +146,11 @@ ALLOWED_TRANSITIONS: Final[dict[ActionDraftState, frozenset[ActionDraftState]]] 
     ActionDraftState.RECONCILED: frozenset(),  # terminal
     ActionDraftState.EXPIRED: frozenset(),  # terminal
     ActionDraftState.FAILED: frozenset(),  # terminal
+    # REQUIRES_MANUAL_REVIEW — Pass C 24h escalation; geen
+    # auto-transitie meer. Operator moet manueel uitzoeken (zou
+    # vervolgens via een dedicated audit-tool naar een terminal
+    # state gezet kunnen worden, V1.3+).
+    ActionDraftState.REQUIRES_MANUAL_REVIEW: frozenset(),  # terminal for now
 }
 
 
@@ -122,6 +159,7 @@ TERMINAL_STATES: Final[frozenset[ActionDraftState]] = frozenset(
         ActionDraftState.RECONCILED,
         ActionDraftState.EXPIRED,
         ActionDraftState.FAILED,
+        ActionDraftState.REQUIRES_MANUAL_REVIEW,
     }
 )
 
@@ -132,6 +170,7 @@ LIVE_AT_BROKER_STATES: Final[frozenset[ActionDraftState]] = frozenset(
         ActionDraftState.AWAITING_IBKR_REPLY,
         ActionDraftState.REPLY_CONFIRMED,
         ActionDraftState.WORKING,
+        ActionDraftState.PENDING_CANCELLATION,
     }
 )
 
