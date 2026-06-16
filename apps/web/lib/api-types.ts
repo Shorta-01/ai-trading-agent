@@ -9423,7 +9423,7 @@ export interface components {
             explanation_nl: string;
             /**
              * Max Position Pct
-             * @default 10
+             * @default 50
              */
             max_position_pct: number | string;
             /**

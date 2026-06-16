@@ -77,6 +77,21 @@ class ExplanationPromptError(ValueError):
     """Raised when a configured explanation-prompt file is missing or empty."""
 
 
+class AnthropicTransientError(RuntimeError):
+    """Raised when the Anthropic API returns a transient failure (429/529/timeout/connection).
+
+    Audit-correctie §CB.1 (2026-06-16): tot deze guard ontbrak werd een
+    raw SDK exception (``RateLimitError``, ``OverloadedError``,
+    ``APIConnectionError``, ``APITimeoutError``) door de ``generate()``
+    call gepropageerd zonder graceful degradation. De caller
+    (``ai_explanation_sync``) ving wel een generieke ``Exception`` af
+    en logde explanation-failed, maar de scheduler kreeg geen
+    backoff-signaal en de eerstvolgende batch hamerde IBKR opnieuw met
+    een 429. Door deze exception klasse expliciet te raisen kan de
+    caller-laag de stub-fallback inschakelen én een cool-down toepassen.
+    """
+
+
 @lru_cache(maxsize=8)
 def load_explanation_system_prompt(path: str | None) -> str:
     """Resolve the Dutch explanation system prompt (intent ai-usage.md §2
@@ -283,7 +298,27 @@ class AnthropicExplanationProvider:
             system_prompt=self._system_prompt,
         )
         client = self._build_client()
-        message = client.messages.create(**payload)
+        try:
+            message = client.messages.create(**payload)
+        except Exception as exc:  # noqa: BLE001 — boundary
+            # Audit-correctie §CB.1 (2026-06-16): herken de Anthropic
+            # SDK error-types als transient en hertaal ze naar onze
+            # eigen exception zodat de caller de stub-fallback kan
+            # inschakelen. De SDK importeren we niet hard zodat
+            # tests met een fake client niets nodig hebben; we
+            # matchen op class-name.
+            exc_class = type(exc).__name__
+            if exc_class in {
+                "RateLimitError",
+                "OverloadedError",
+                "APIConnectionError",
+                "APITimeoutError",
+                "InternalServerError",
+            }:
+                raise AnthropicTransientError(
+                    f"Anthropic API transient failure ({exc_class}): {exc}"
+                ) from exc
+            raise
         usage = _extract_usage(message.usage)
         # Cache reads (cheap) count as cached_input_units; cache
         # creations + raw input count as input_units (full price).

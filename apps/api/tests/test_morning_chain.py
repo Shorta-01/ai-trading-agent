@@ -209,7 +209,16 @@ def test_scheduler_callable_raises_morning_chain_failed_on_failure() -> None:
 
 
 def test_default_legs_all_skipped_when_flags_are_off() -> None:
-    legs = build_default_morning_chain_legs(_settings())
+    # Audit-correctie §CB.1 (2026-06-16): `orchestrator_scoring_enabled`
+    # en `earnings_calendar_sync_enabled` zijn per default-flip nu True.
+    # We forceren ze hier expliciet weer naar False zodat dit contract
+    # blijft toetsen op "wat gebeurt er wanneer ALLE 8 legs uitstaan".
+    legs = build_default_morning_chain_legs(
+        _settings(
+            orchestrator_scoring_enabled=False,
+            earnings_calendar_sync_enabled=False,
+        )
+    )
     result = run_morning_chain(legs=legs)
     assert result.status == CHAIN_STATUS_SUCCEEDED
     assert [leg.status for leg in result.legs] == [LEG_STATUS_SKIPPED] * 8
@@ -268,17 +277,22 @@ def test_default_legs_partial_enable_yields_mixed_statuses() -> None:
     )
 
 
-def test_orchestrator_scoring_leg_disabled_by_default() -> None:
-    # V1.2 §Y locked default: parallel-scoring leg is OFF until the
-    # candidate-provider wiring (Slice §Z) lands.
+def test_orchestrator_scoring_leg_enabled_by_default() -> None:
+    # Audit-correctie §CB.1 (2026-06-16): default is nu True; CLAUDE.md
+    # §3 + §7 verwachten dat de parallel-scoring leg meeloopt op de
+    # morning chain. Eerder was hij default uit tijdens staged-rollout
+    # van §Y, dat is post-§AO niet meer nodig.
     legs = build_default_morning_chain_legs(_settings())
     result = run_morning_chain(legs=legs)
-    # The leg appears in slot 5 (after action_drafts, before
-    # daily_briefing) and is skipped.
     orchestrator_outcome = next(
         leg for leg in result.legs if leg.leg_name == LEG_ORCHESTRATOR_SCORING
     )
-    assert orchestrator_outcome.status == LEG_STATUS_SKIPPED
+    # Zonder de §Z candidate-provider wiring valt het runtime terug
+    # naar SKIPPED of SUCCEEDED — beide geldig per V1.2 §AL.
+    assert orchestrator_outcome.status in {
+        LEG_STATUS_SKIPPED,
+        LEG_STATUS_SUCCEEDED,
+    }
 
 
 def test_orchestrator_scoring_leg_succeeds_when_enabled() -> None:

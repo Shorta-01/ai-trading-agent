@@ -155,7 +155,11 @@ class SchedulerSettings(BaseModel):
     # Default cron: elke 10 minuten tijdens kantoor-uren weekdagen
     # — globaal venster dat US + Euronext market-hours dekt. Operator
     # kan dit verfijnen via env-var of runtime-config.
-    sell_signal_sweep_trigger_enabled: bool = False
+    # Audit-correctie §CB.1 (2026-06-16): default → True. CLAUDE.md §11
+    # zegt expliciet "SELL-monitoring blijft draaien" ook tijdens
+    # software-pauze; tot deze flip stond de sweep default uit waardoor
+    # de operator de cron handmatig moest aanzetten.
+    sell_signal_sweep_trigger_enabled: bool = True
     sell_signal_sweep_cron: str = "*/10 7-22 * * mon-fri"
 
     # Monthly report PDF auto-archive trigger — V1.2 §BN.
