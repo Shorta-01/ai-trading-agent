@@ -347,4 +347,19 @@ describe("BelastingPage", () => {
       await screen.findByTestId("tax-ibkr-config-audit-empty"),
     ).toBeInTheDocument();
   });
+
+  it("links from audit-section header to /admin/audit/ibkr-config full log", async () => {
+    // V1.2 §BZ vervolg: accountant wil soms méér dan het belastingjaar
+    // zien; de link gaat naar het volledige audit-log van alle jaren.
+    getTaxYearReport.mockResolvedValue({
+      ok: true as const,
+      data: makeReport(),
+    });
+    render(<BelastingPage />);
+    const link = await screen.findByTestId(
+      "tax-ibkr-config-audit-fulllog-link",
+    );
+    expect(link.getAttribute("href")).toBe("/admin/audit/ibkr-config");
+    expect(link.textContent).toContain("Volledig audit-log");
+  });
 });

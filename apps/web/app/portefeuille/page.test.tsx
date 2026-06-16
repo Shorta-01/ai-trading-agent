@@ -423,4 +423,26 @@ describe("PortfolioPage data state machine", () => {
       undefined,
     );
   });
+
+  it("PAPER/LIVE badge is een link naar /admin/audit/ibkr-config", async () => {
+    // V1.2 §BZ vervolg: discoverability — operator klikt de badge
+    // om snel naar het volledige audit-log te gaan zonder URL te
+    // typen of via /belasting te navigeren.
+    mockAllOk();
+    fns.getIbkrAccountMode.mockReturnValue(
+      ok({
+        status: "ok",
+        mode: "live",
+        display_label: "LIVE",
+        expected_environment: "live",
+        help_nl: "x",
+        safe_for_orders: false,
+        blocks_orders: true,
+      }),
+    );
+    render(<PortfolioPage />);
+    const pill = await screen.findByTestId("account-mode-pill-link");
+    expect(pill.getAttribute("href")).toBe("/admin/audit/ibkr-config");
+    expect(pill.textContent).toContain("LIVE");
+  });
 });

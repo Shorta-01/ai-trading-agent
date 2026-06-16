@@ -520,7 +520,27 @@ export default function BelastingPage() {
           marginTop: 16,
         }}
       >
-        <h2 style={{ margin: 0 }}>IBKR-config audit-trail (§BZ)</h2>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <h2 style={{ margin: 0 }}>IBKR-config audit-trail (§BZ)</h2>
+          <a
+            data-testid="tax-ibkr-config-audit-fulllog-link"
+            href="/admin/audit/ibkr-config"
+            style={{
+              fontSize: 12,
+              color: "#1d4ed8",
+              textDecoration: "underline",
+            }}
+          >
+            Volledig audit-log (alle jaren) →
+          </a>
+        </div>
         <p style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
           Chronologisch overzicht van mode-switches, account-mismatches
           en account-id wijzigingen voor dit belastingjaar — &ldquo;goed

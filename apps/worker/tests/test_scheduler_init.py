@@ -689,6 +689,114 @@ def test_sighup_runtime_config_reload_re_overlays_account_id(monkeypatch) -> Non
         scheduler.stop()
 
 
+def test_reload_writes_runtime_config_reloaded_system_event(monkeypatch) -> None:
+    """V1.2 §BZ vervolg — bij een succesvolle reload met
+    daadwerkelijke account-id wijziging MOET een SystemEvent worden
+    geschreven zodat de operator visueel bevestiging krijgt op
+    /portefeuille dat de auto-reload werkte."""
+
+    from portfolio_outlook_worker import error_capture, runtime_config_overlay
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True, account_id="DU1111111"
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reload-event",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _fake_overlay(settings_obj):
+        settings_obj.ibkr.account_id = "U7654321"  # paper → live wissel
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _fake_overlay,
+    )
+    captured: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        error_capture,
+        "record_worker_event",
+        lambda **kwargs: captured.append(kwargs),
+    )
+
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        scheduler._maybe_reload_runtime_config()
+        assert len(captured) == 1
+        evt = captured[0]
+        assert evt["event_code"] == "runtime_config_reloaded"
+        assert evt["category"] == "ibkr_config_change"
+        assert evt["severity"] == "info"
+        # Bevat zowel oude als nieuwe account-id zodat operator ziet
+        # dat de wijziging correct is opgepikt.
+        assert "DU1111111" in evt["message_nl"]
+        assert "U7654321" in evt["message_nl"]
+    finally:
+        scheduler.stop()
+
+
+def test_reload_does_not_write_event_when_account_id_unchanged(
+    monkeypatch,
+) -> None:
+    """Wanneer de overlay het account-id ongewijzigd laat (b.v. operator
+    save't dezelfde waarde), MOETEN we geen lege SystemEvent schrijven —
+    anders krijgt operator nuttig-loos noise op /portefeuille."""
+
+    from portfolio_outlook_worker import error_capture, runtime_config_overlay
+
+    scheduler = PortfolioScheduler(
+        gateway=IbkrGateway(),
+        storage_settings=StorageSettings(
+            enabled=False, database_url=None, writes_enabled=False
+        ),
+        ibkr_settings=IbkrSettings(
+            enabled=True, account_id="DU1111111"
+        ),
+        scheduler_settings=SchedulerSettings(
+            enabled=True,
+            timezone="Europe/Brussels",
+            heartbeat_interval_seconds=60,
+        ),
+        worker_id="worker-test-reload-noop",
+        scheduler_factory=_scheduler_factory,
+    )
+
+    def _fake_overlay(settings_obj):
+        # Operator save't dezelfde waarde als voorheen → geen wijziging.
+        settings_obj.ibkr.account_id = "DU1111111"
+
+    monkeypatch.setattr(
+        runtime_config_overlay,
+        "apply_worker_runtime_config_overlay",
+        _fake_overlay,
+    )
+    captured: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        error_capture,
+        "record_worker_event",
+        lambda **kwargs: captured.append(kwargs),
+    )
+
+    try:
+        scheduler.start()
+        scheduler._runtime_config_reload_requested = True
+        scheduler._maybe_reload_runtime_config()
+        assert captured == []
+    finally:
+        scheduler.stop()
+
+
 def test_sighup_runtime_config_reload_swallows_exceptions(monkeypatch) -> None:
     """Een crash in de overlay mag de scheduler-loop niet kapot maken."""
 

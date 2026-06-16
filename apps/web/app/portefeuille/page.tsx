@@ -468,8 +468,10 @@ export default function PortfolioPage() {
           <h2>Portefeuille</h2>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
             {accountMode ? (
-              <span
-                title={accountMode.help_nl}
+              <a
+                href="/admin/audit/ibkr-config"
+                data-testid="account-mode-pill-link"
+                title={`${accountMode.help_nl} — klik voor het audit-trail`}
                 style={{
                   padding: "0.15rem 0.5rem",
                   borderRadius: "0.4rem",
@@ -482,10 +484,11 @@ export default function PortfolioPage() {
                       ? "var(--ata-info, #38bdf8)"
                       : "var(--ata-muted, #64748b)",
                   color: "white",
+                  textDecoration: "none",
                 }}
               >
                 {accountMode.display_label}
-              </span>
+              </a>
             ) : null}
             <button className="sync-button" type="button" onClick={() => void runSync()} disabled={syncing}>
               {syncing ? "Synchroniseren..." : "Synchroniseer snapshots"}

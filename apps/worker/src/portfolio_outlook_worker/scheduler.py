@@ -1109,6 +1109,37 @@ class PortfolioScheduler:
                 previous_account_id,
                 new_account_id,
             )
+            # V1.2 §BZ vervolg — schrijf een SystemEvent zodat de
+            # operator visueel feedback krijgt dat de auto-reload
+            # werkt (banner verschijnt op /portefeuille).
+            if previous_account_id != new_account_id:
+                from portfolio_outlook_worker.error_capture import (
+                    record_worker_event,
+                )
+
+                record_worker_event(
+                    storage_settings=self._storage_settings,
+                    source_component="scheduler",
+                    event_code="runtime_config_reloaded",
+                    severity="info",
+                    category="ibkr_config_change",
+                    title_nl="Worker config opnieuw geladen",
+                    message_nl=(
+                        f"De worker heeft het nieuwe IBKR account-id "
+                        f"opgepikt: {previous_account_id} → "
+                        f"{new_account_id}. Sweeps + reconciler "
+                        f"gebruiken vanaf nu het nieuwe account."
+                    ),
+                    help_nl=(
+                        "Geen actie vereist. Deze melding is een "
+                        "bevestiging dat /instellingen wijzigingen "
+                        "binnen zijn gekomen."
+                    ),
+                    technical_summary=(
+                        f"previous={previous_account_id} "
+                        f"new={new_account_id}"
+                    ),
+                )
         except Exception:  # noqa: BLE001 — boundary
             logger.exception(
                 "Runtime-config reload mislukt; oude waarden blijven actief."
