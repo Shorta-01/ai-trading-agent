@@ -352,7 +352,7 @@ describe("IBKR-config audit-trail page", () => {
 
 describe("buildAuditCsv", () => {
   it("builds a CSV with the required headers and one row per event", async () => {
-    const { buildAuditCsv } = await import("./page");
+    const { buildAuditCsv } = await import("./csv");
     const csv = buildAuditCsv([
       {
         system_event_id: "evt-1",
@@ -382,7 +382,7 @@ describe("buildAuditCsv", () => {
   });
 
   it("CSV-escapes embedded double quotes via the standard \"\"-doubling", async () => {
-    const { buildAuditCsv } = await import("./page");
+    const { buildAuditCsv } = await import("./csv");
     const csv = buildAuditCsv([
       {
         system_event_id: "evt-1",
