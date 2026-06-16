@@ -147,14 +147,18 @@ function FieldLabel({
 // V1.2 §BZ vervolg: real-time PAPER/LIVE mode-preview onder het IBKR
 // account-id veld. Helpt de operator voor save al zien of hij paper
 // of live aan het configureren is.
-function AccountIdModePreview({ accountId }: { accountId: string }) {
+// V1.2 §BZ vervolg — gemeenschappelijke helper voor prefix-based
+// mode-detectie. Gebruikt door de preview-pill onder het account-id
+// input EN door de paper↔live save-confirm modal.
+function detectAccountIdMode(accountId: string): "paper" | "live" | "unknown" {
   const trimmed = accountId.trim().toUpperCase();
-  const mode: "paper" | "live" | "unknown" = trimmed.startsWith("DU")
-    || trimmed.startsWith("DF")
-    ? "paper"
-    : trimmed.startsWith("U")
-      ? "live"
-      : "unknown";
+  if (trimmed.startsWith("DU") || trimmed.startsWith("DF")) return "paper";
+  if (trimmed.startsWith("U")) return "live";
+  return "unknown";
+}
+
+function AccountIdModePreview({ accountId }: { accountId: string }) {
+  const mode = detectAccountIdMode(accountId);
 
   if (mode === "unknown") {
     return (
@@ -466,6 +470,13 @@ export default function Page() {
   const [universeError, setUniverseError] = useState<string | null>(null);
 
   // Section 4 — connection + AI.
+  // V1.2 §BZ vervolg — paper↔live wissel confirmation modal. Trigger't
+  // alleen bij een echte mode-wissel (paper→live of live→paper); save
+  // van een ongewijzigd account-id of paper→paper wisselt geen safety
+  // boundary en gaat direct door.
+  const [connectionSwitchConfirm, setConnectionSwitchConfirm] = useState<
+    null | { from: "paper" | "live" | "unknown"; to: "paper" | "live" }
+  >(null);
   const [connection, setConnection] =
     useState<ConnectionState>(EMPTY_CONNECTION);
   const [connectionKeySet, setConnectionKeySet] = useState(false);
@@ -4312,8 +4323,160 @@ export default function Page() {
               saving={connectionSaving}
               savedMessage={connectionSaved}
               error={connectionError}
-              onSave={() => void handleSaveConnection()}
+              onSave={() => {
+                const previousId =
+                  connectionQuery.data?.ibkr_account_id ?? "";
+                const previousMode = detectAccountIdMode(previousId);
+                const newMode = detectAccountIdMode(
+                  connection.ibkr_account_id,
+                );
+                // Trigger modal alleen bij een echte paper↔live wissel.
+                // unknown→X of X→unknown gaan direct door (geen mode-
+                // overgang qua safety boundary).
+                const isPaperLiveSwitch =
+                  (previousMode === "paper" && newMode === "live")
+                  || (previousMode === "live" && newMode === "paper");
+                if (isPaperLiveSwitch) {
+                  setConnectionSwitchConfirm({
+                    from: previousMode,
+                    to: newMode,
+                  });
+                  return;
+                }
+                void handleSaveConnection();
+              }}
             />
+            {connectionSwitchConfirm ? (
+              <div
+                data-testid="instellingen-connection-switch-confirm-modal"
+                role="alertdialog"
+                aria-labelledby="instellingen-switch-title"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(15,23,42,0.55)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                  padding: 16,
+                }}
+                onClick={() => setConnectionSwitchConfirm(null)}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    background: "white",
+                    borderRadius: 10,
+                    padding: 20,
+                    maxWidth: 480,
+                    width: "100%",
+                    border:
+                      connectionSwitchConfirm.to === "live"
+                        ? "3px solid #b91c1c"
+                        : "2px solid #38bdf8",
+                    boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
+                  }}
+                >
+                  <h2
+                    id="instellingen-switch-title"
+                    style={{
+                      margin: 0,
+                      color:
+                        connectionSwitchConfirm.to === "live"
+                          ? "#7f1d1d"
+                          : "#1e3a8a",
+                    }}
+                  >
+                    {connectionSwitchConfirm.to === "live"
+                      ? "⚠️ Wissel naar LIVE bevestigen"
+                      : "Wissel terug naar PAPER bevestigen"}
+                  </h2>
+                  <p style={{ marginTop: 10, lineHeight: 1.5 }}>
+                    Je staat op het punt het IBKR account-id te wijzigen
+                    van een{" "}
+                    <strong>
+                      {connectionSwitchConfirm.from === "paper"
+                        ? "PAPER"
+                        : "LIVE"}
+                    </strong>{" "}
+                    account naar een{" "}
+                    <strong>
+                      {connectionSwitchConfirm.to === "live"
+                        ? "LIVE"
+                        : "PAPER"}
+                    </strong>{" "}
+                    account.
+                  </p>
+                  {connectionSwitchConfirm.to === "live" ? (
+                    <p
+                      data-testid="instellingen-switch-confirm-live-warning"
+                      style={{
+                        background: "#fef2f2",
+                        border: "1px solid #b91c1c",
+                        borderRadius: 6,
+                        padding: 10,
+                        color: "#7f1d1d",
+                        fontSize: 13,
+                        marginTop: 6,
+                      }}
+                    >
+                      Vanaf het volgende worker-poll moment gaan
+                      goedgekeurde orders met ECHT geld naar de markt.
+                      Dit is niet ongedaan te maken.
+                    </p>
+                  ) : null}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      justifyContent: "flex-end",
+                      marginTop: 16,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      data-testid="instellingen-connection-switch-cancel"
+                      onClick={() => setConnectionSwitchConfirm(null)}
+                      style={{
+                        padding: "8px 14px",
+                        background: "#e5e7eb",
+                        border: "none",
+                        borderRadius: 6,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Annuleer
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="instellingen-connection-switch-confirm"
+                      onClick={() => {
+                        setConnectionSwitchConfirm(null);
+                        void handleSaveConnection();
+                      }}
+                      style={{
+                        padding: "8px 14px",
+                        background:
+                          connectionSwitchConfirm.to === "live"
+                            ? "#b91c1c"
+                            : "#1d4ed8",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 6,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {connectionSwitchConfirm.to === "live"
+                        ? "Ja, wissel naar LIVE"
+                        : "Ja, wissel naar PAPER"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </section>
         </>
       )}

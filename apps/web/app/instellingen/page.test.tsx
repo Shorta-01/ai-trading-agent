@@ -645,6 +645,97 @@ describe("InstellingenPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens paper→live confirmation modal and saves on confirm", async () => {
+    // V1.2 §BZ vervolg: wisseling van paper-prefix naar live-prefix
+    // MOET extra confirmation tonen voordat de save doorgaat.
+    updateConnectionSettings.mockReturnValue(
+      ok({ ...CONNECTION, ibkr_account_id: "U7654321" }),
+    );
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "U7654321");
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+
+    // Modal moet open zijn met live-warning, geen save-call yet.
+    const modal = await screen.findByTestId(
+      "instellingen-connection-switch-confirm-modal",
+    );
+    expect(modal).toBeInTheDocument();
+    expect(
+      screen.getByTestId("instellingen-switch-confirm-live-warning"),
+    ).toBeInTheDocument();
+    expect(updateConnectionSettings).not.toHaveBeenCalled();
+
+    // Klik Bevestig → save call triggert.
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-switch-confirm"),
+    );
+    await waitFor(() =>
+      expect(updateConnectionSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(updateConnectionSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ ibkr_account_id: "U7654321" }),
+    );
+  });
+
+  it("paper→live confirmation modal cancel does NOT trigger save", async () => {
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "U7654321");
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+
+    await screen.findByTestId(
+      "instellingen-connection-switch-confirm-modal",
+    );
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-switch-cancel"),
+    );
+
+    // Modal weg, geen save-call.
+    expect(
+      screen.queryByTestId(
+        "instellingen-connection-switch-confirm-modal",
+      ),
+    ).toBeNull();
+    expect(updateConnectionSettings).not.toHaveBeenCalled();
+  });
+
+  it("paper→paper save (DU to DF, both paper) does NOT open the switch modal", async () => {
+    // Beide accounts zijn paper → geen mode-overgang → direct save.
+    updateConnectionSettings.mockReturnValue(
+      ok({ ...CONNECTION, ibkr_account_id: "DF8888888" }),
+    );
+    render(<Page />);
+    const input = await screen.findByTestId(
+      "instellingen-connection-ibkr_account_id",
+    );
+    await userEvent.clear(input);
+    await userEvent.type(input, "DF8888888");
+    await userEvent.click(
+      screen.getByTestId("instellingen-connection-save-button"),
+    );
+
+    // Modal NIET zichtbaar, save direct getriggerd.
+    await waitFor(() =>
+      expect(updateConnectionSettings).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      screen.queryByTestId(
+        "instellingen-connection-switch-confirm-modal",
+      ),
+    ).toBeNull();
+  });
+
   it("omits claude_ai_api_key when the key input is left blank", async () => {
     updateConnectionSettings.mockReturnValue(ok(CONNECTION));
     render(<Page />);
