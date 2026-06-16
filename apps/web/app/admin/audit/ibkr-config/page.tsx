@@ -14,6 +14,8 @@ import { useMemo, useState } from "react";
 
 import { apiClient, type SystemEventSummary } from "@/lib/apiClient";
 
+import { buildAuditCsv, triggerCsvDownload } from "./csv";
+
 function StatusBadge({ status }: { status: string }) {
   const colour =
     status === "open"
@@ -73,61 +75,9 @@ function formatLocalDate(iso: string): string {
   });
 }
 
-// V1.2 §BZ vervolg — CSV export helper voor de accountant. Pure
-// client-side download zodat er geen extra round-trip nodig is en
-// de gefilterde set (zie #681 filters) direct in Excel kan worden
-// geopend.
-export function buildAuditCsv(events: SystemEventSummary[]): string {
-  const rows: string[][] = [
-    [
-      "created_at_utc",
-      "event_code",
-      "severity",
-      "status",
-      "category",
-      "source_service",
-      "source_component",
-      "title_nl",
-      "message_nl",
-    ],
-  ];
-  for (const e of events) {
-    rows.push([
-      e.created_at,
-      e.event_code,
-      e.severity,
-      e.status,
-      e.category,
-      e.source_service,
-      e.source_component,
-      e.title_nl,
-      e.message_nl,
-    ]);
-  }
-  return rows
-    .map((row) =>
-      row
-        .map((cell) => {
-          if (cell == null) return "";
-          const escaped = String(cell).replace(/"/g, '""');
-          return `"${escaped}"`;
-        })
-        .join(","),
-    )
-    .join("\n");
-}
-
-function triggerCsvDownload(filename: string, csv: string): void {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+// CSV export helpers live in ``./csv`` zodat Next.js' strict export-
+// rule op ``page.tsx`` files (alleen ``default``, ``metadata``, etc.)
+// niet getriggerd wordt. Zie ``./csv.ts`` voor de implementatie.
 
 export default function IbkrConfigAuditPage() {
   const query = useQuery({
