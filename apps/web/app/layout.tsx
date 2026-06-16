@@ -22,8 +22,6 @@ const navItems = [
   ["/volglijst", "Volglijst"],
   ["/suggesties", "Suggesties"],
   ["/ibkr-acties", "IBKR Acties"],
-  ["/onderzoek", "Onderzoek"],
-  ["/historiek", "Historiek"],
   ["/audit", "Audit"],
   ["/belasting", "Belasting"],
   ["/rapporten", "Rapporten"],

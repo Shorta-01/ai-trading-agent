@@ -237,10 +237,11 @@ def test_next_runs_lists_both_jobs_after_start() -> None:
         # Memory-backed scheduler returns next_run_time only after the
         # first tick; with no fires yet, APScheduler still populates
         # the trigger so next_run_time is set immediately.
-        # Sinds 2026-06-16 staat reconciliation_sweep_trigger_enabled
-        # default-aan (audit-correctie §AO/§AT) → het reconciliation-
-        # sweep job draait standaard mee, dus 3 jobs in plaats van 2.
-        assert len(runs) == 3
+        # Sinds 2026-06-16 staan default-aan: reconciliation_sweep
+        # (§BZ audit-cleanup) en sell_signal_sweep (§CB.1 — CLAUDE.md
+        # §11 "SELL-monitoring blijft draaien"). Plus heartbeat +
+        # pre_briefing = 4 jobs.
+        assert len(runs) == 4
     finally:
         scheduler.stop()
 

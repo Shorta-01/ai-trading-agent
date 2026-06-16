@@ -158,7 +158,12 @@ class UserStrategySettings(DomainBaseModel):
     preferred_regions: tuple[RegionPreference, ...] = (RegionPreference.GLOBAL,)
     preferred_sectors: tuple[SectorPreference, ...] = ()
     avoided_sectors: tuple[SectorPreference, ...] = ()
-    max_position_pct: Decimal = Decimal("10")
+    # CLAUDE.md §3 — hard cap per asset 50% (audit-correctie 2026-06-16
+    # §CB.1: oude default was 10% wat in conflict was met de
+    # confidence-tier (≥90% → 50% van portfolio). Een operator die
+    # een hoog-conviction kandidaat wil bijkopen tot 50% werd anders
+    # geblokkeerd door deze setting).
+    max_position_pct: Decimal = Decimal("50")
     min_cash_reserve_pct: Decimal = Decimal("5")
     currency_preference: CurrencyPreference = CurrencyPreference.EUR_PREFERRED_USD_ALLOWED
     prefer_simple_belgian_tax_admin: bool = True

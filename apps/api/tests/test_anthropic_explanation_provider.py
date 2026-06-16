@@ -16,6 +16,7 @@ from portfolio_outlook_api.anthropic_explanation_provider import (
     PROVIDER_CODE,
     SYSTEM_PROMPT_NL,
     AnthropicExplanationProvider,
+    AnthropicTransientError,
     ClaudeAiBudgetExceededError,
     ExplanationPromptError,
     load_explanation_system_prompt,
@@ -151,6 +152,74 @@ def test_generate_user_payload_includes_decision_package_hash() -> None:
 
 
 # ---- budget cap --------------------------------------------------------
+
+
+# Mimic Anthropic SDK exception classes by name; the source matches
+# on ``type(exc).__name__`` so the classes need the SDK names exactly.
+class RateLimitError(Exception):  # noqa: N818 — matches SDK name
+    """Mimics anthropic.RateLimitError without depending on the SDK."""
+
+
+class OverloadedError(Exception):  # noqa: N818 — matches SDK name
+    """Mimics anthropic.OverloadedError."""
+
+
+class APITimeoutError(Exception):  # noqa: N818 — matches SDK name
+    """Mimics anthropic.APITimeoutError."""
+
+
+class _RaisingMessagesAPI:
+    def __init__(self, *, exc: Exception) -> None:
+        self._exc = exc
+
+    def create(self, **kwargs: Any) -> Any:  # noqa: ARG002 — unused
+        raise self._exc
+
+
+class _RaisingAnthropicClient:
+    def __init__(self, *, exc: Exception) -> None:
+        self.messages = _RaisingMessagesAPI(exc=exc)
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        RateLimitError("Rate limit exceeded"),
+        OverloadedError("Overloaded"),
+        APITimeoutError("Timeout"),
+    ],
+)
+def test_generate_translates_transient_sdk_errors(exc: Exception) -> None:
+    """Audit-correctie §CB.1 — Anthropic SDK 429/529/timeout krijgen
+    een onze eigen ``AnthropicTransientError`` zodat de caller naar de
+    stub-fallback kan grijpen i.p.v. de exception door te laten lekken.
+    """
+
+    repo = _FakeBudgetRepo()
+    fake_client = _RaisingAnthropicClient(exc=exc)
+    provider = AnthropicExplanationProvider(
+        budget_repo=repo,
+        monthly_cap_eur=Decimal("50"),
+        client_factory=lambda: fake_client,
+    )
+    with pytest.raises(AnthropicTransientError):
+        provider.generate(_inputs())
+
+
+def test_generate_passes_through_non_transient_errors() -> None:
+    """ValueError / AttributeError etc. mogen NIET als transient
+    worden behandeld — die wijzen op een echte bug en moeten naar
+    boven propageren."""
+
+    repo = _FakeBudgetRepo()
+    fake_client = _RaisingAnthropicClient(exc=ValueError("malformed payload"))
+    provider = AnthropicExplanationProvider(
+        budget_repo=repo,
+        monthly_cap_eur=Decimal("50"),
+        client_factory=lambda: fake_client,
+    )
+    with pytest.raises(ValueError):
+        provider.generate(_inputs())
 
 
 def test_generate_raises_when_budget_exceeded() -> None:

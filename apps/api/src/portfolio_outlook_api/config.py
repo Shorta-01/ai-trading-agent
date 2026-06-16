@@ -190,14 +190,18 @@ class Settings(BaseSettings):
     daily_briefing_sync_enabled: bool = False
     daily_briefing_lookback_hours: int = 24
     # V1.2 §Y profit-harvest orchestrator parallel-scoring leg.
-    # Disabled by default so the doctrine can be validated against
-    # the live suggestion engine before the path is promoted.
-    orchestrator_scoring_enabled: bool = False
-    # V1.2 §AK earnings-calendar refresh leg. Disabled by default
-    # because it consumes EODHD quota every morning; the operator
-    # opts in once they want the orchestrator's earnings-window
-    # gate to bite on real upcoming dates.
-    earnings_calendar_sync_enabled: bool = False
+    # Audit-correctie §CB.1 (2026-06-16): default → True. CLAUDE.md
+    # §3 + §7 verwachten dat de orchestrator-scoring meeloopt op de
+    # morning chain; eerder stond hij default uit voor staged-rollout
+    # maar dat is niet meer nodig na §AO ship.
+    orchestrator_scoring_enabled: bool = True
+    # V1.2 §AK earnings-calendar refresh leg.
+    # Audit-correctie §CB.1 (2026-06-16): default → True. CLAUDE.md
+    # §15 doctrine-lock vereist een werkende earnings-gate; die werkt
+    # alleen als de calendar versgehouden wordt. De operator betaalt
+    # de EODHD quota toch al en kan via env override naar False als
+    # hij wil bezuinigen.
+    earnings_calendar_sync_enabled: bool = True
     scheduler_enabled: bool = False
     scheduler_timezone: str = "Europe/Brussels"
     scheduler_daily_briefing_cron: str = "30 6 * * *"
