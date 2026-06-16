@@ -2663,10 +2663,12 @@
             "type": "string"
           },
           "rv_shortfall_local": {
+            "default": "0",
             "title": "Rv Shortfall Local",
             "type": "string"
           },
           "rv_shortfall_pct": {
+            "default": "0",
             "title": "Rv Shortfall Pct",
             "type": "string"
           },
@@ -2694,9 +2696,7 @@
           "withholding_local",
           "net_local",
           "country_code",
-          "note",
-          "rv_shortfall_pct",
-          "rv_shortfall_local"
+          "note"
         ],
         "title": "DividendOut",
         "type": "object"
